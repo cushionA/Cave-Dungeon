@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'FILE=$(cat /dev/stdin | jq -r \".tool_input.file_path // empty\"); if [ -n \"$FILE\" ] && echo \"$FILE\" | grep -qE \"\\.cs$\" && ! echo \"$FILE\" | grep -qiE \"test\"; then echo \"[HOOK] C# implementation file modified: $FILE — consider running /run-tests\"; fi'"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,63 @@
+# Unity
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+*.csproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vs/
+.vscode/
+
+# Claude Code
+.claude/settings.local.json
+.claude/plans/
+
+# Build output
+TestResults.xml
+TestResults_*.xml
+build.log
+*.log
+
+# Feature database (local state)
+feature-log.db
+feature-log.db-wal
+feature-log.db-shm
+
+# Asset generation
+config/audio-index.json
+designs/asset-gen-request.json
+notebooks/asset_gen/
+
+# Environment
+.env
+
+# Binary assets — too large for Git
+*.wav
+*.mp3
+*.ogg
+*.fbx
+*.obj

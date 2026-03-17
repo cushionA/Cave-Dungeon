@@ -1,0 +1,16 @@
+{
+  "audio_libraries": [],
+  "image_generation": {
+    "method": "kaggle",
+    "kaggle": {
+      "kernel_id": "",
+      "dataset_id": "",
+      "model": "flux.2-klein-4b",
+      "lora": null,
+      "default_size": [512, 512],
+      "style_prompt_prefix": ""
+    }
+  },
+  "index_path": "config/audio-index.json",
+  "unity_project": "."
+}

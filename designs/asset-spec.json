@@ -1,0 +1,117 @@
+{
+  "_comment": "ワールド統一スケール仕様。派生値は計算で自動算出。",
+
+  "screen": {
+    "referenceWidth": 1920,
+    "referenceHeight": 1080,
+    "aspectRatio": "16:9"
+  },
+
+  "camera": {
+    "orthographicSize": 7,
+    "_derived_visibleWorldHeight": 14.0,
+    "_derived_visibleWorldWidth": 24.89,
+    "_comment": "visibleWorldHeight = orthographicSize * 2 = 14. visibleWorldWidth = visibleWorldHeight * 16/9 ≈ 24.89"
+  },
+
+  "tile": {
+    "pixelsPerUnit": 100,
+    "tilePixelSize": 100,
+    "_derived_tileWorldSize": 1.0,
+    "_comment": "tileWorldSize = tilePixelSize / pixelsPerUnit = 1.0 unit"
+  },
+
+  "sprites": {
+    "pixelsPerUnit": 100,
+    "categories": {
+      "player": {
+        "widthPixels": 120,
+        "heightPixels": 180,
+        "_derived_worldWidth": 1.2,
+        "_derived_worldHeight": 1.8,
+        "_comment": "プレイヤー: 約1.2x1.8タイル。HD等身のキャラクター"
+      },
+      "companion": {
+        "widthPixels": 120,
+        "heightPixels": 180,
+        "_derived_worldWidth": 1.2,
+        "_derived_worldHeight": 1.8,
+        "_comment": "仲間: プレイヤーと同等サイズ"
+      },
+      "enemySmall": {
+        "widthPixels": 80,
+        "heightPixels": 80,
+        "_derived_worldWidth": 0.8,
+        "_derived_worldHeight": 0.8,
+        "_comment": "小型敵: 0.8x0.8タイル"
+      },
+      "enemyMedium": {
+        "widthPixels": 120,
+        "heightPixels": 160,
+        "_derived_worldWidth": 1.2,
+        "_derived_worldHeight": 1.6,
+        "_comment": "中型敵: プレイヤーとほぼ同等"
+      },
+      "enemyLarge": {
+        "widthPixels": 240,
+        "heightPixels": 320,
+        "_derived_worldWidth": 2.4,
+        "_derived_worldHeight": 3.2,
+        "_comment": "大型敵/ボス: プレイヤーの約2倍"
+      },
+      "npc": {
+        "widthPixels": 120,
+        "heightPixels": 180,
+        "_derived_worldWidth": 1.2,
+        "_derived_worldHeight": 1.8,
+        "_comment": "NPC: プレイヤーと同等サイズ"
+      },
+      "item": {
+        "widthPixels": 32,
+        "heightPixels": 32,
+        "_derived_worldWidth": 0.32,
+        "_derived_worldHeight": 0.32,
+        "_comment": "アイテムアイコン"
+      },
+      "projectile": {
+        "widthPixels": 24,
+        "heightPixels": 24,
+        "_derived_worldWidth": 0.24,
+        "_derived_worldHeight": 0.24,
+        "_comment": "飛翔体（小型弾）"
+      },
+      "uiIcon": {
+        "widthPixels": 64,
+        "heightPixels": 64,
+        "_derived_worldWidth": 0.64,
+        "_derived_worldHeight": 0.64,
+        "_comment": "UI用アイコン（装備・アイテム表示用）"
+      }
+    }
+  },
+
+  "world": {
+    "playerHeight": 1.8,
+    "gravityScale": 3.0,
+    "_comment": "gravityScale 3.0: メトロイドヴァニア向け。重すぎず軽すぎない操作感"
+  },
+
+  "stage": {
+    "chunkColumns": 25,
+    "chunkRows": 14,
+    "_derived_chunkWorldWidth": 25.0,
+    "_derived_chunkWorldHeight": 14.0,
+    "_comment": "1チャンク = ほぼ1画面分 (25x14タイル ≈ 24.89x14 visible)"
+  },
+
+  "player": {
+    "moveSpeed": 6.0,
+    "dashSpeed": 12.0,
+    "dashDistance": 3.0,
+    "jumpHeight": 3.5,
+    "jumpDistance": 5.0,
+    "_derived_jumpDuration": 0.49,
+    "_derived_jumpGravity": 29.16,
+    "_comment": "jumpHeight=3.5タイル(プレイヤー身長の約2倍)。jumpDistance=5タイル。dashDistance=3タイル。moveSpeed=6unit/s(約1秒で1画面の1/4移動)。jumpDuration = sqrt(2*jumpHeight/gravity), gravity = Physics2D.gravity.y * gravityScale"
+  }
+}
