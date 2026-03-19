@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using R3;
 using Game.Core;
 using UnityEngine;
 
@@ -63,7 +64,7 @@ namespace Game.Tests.EditMode
         [TearDown]
         public void TearDown()
         {
-            _events.Clear();
+            _events.Dispose();
             _data.Dispose();
         }
 
@@ -160,7 +161,7 @@ namespace Game.Tests.EditMode
         {
             // Arrange: イベントリスナー
             bool damageEventFired = false;
-            _events.OnDamageDealt += (result, attacker, defender) => damageEventFired = true;
+            _events.OnDamageDealt.Subscribe(e => damageEventFired = true);
 
             EquipmentStatus equip = _data.GetEquipmentStatus(k_AttackerHash);
             int totalDamage = DamageCalculator.CalculateTotalDamage(

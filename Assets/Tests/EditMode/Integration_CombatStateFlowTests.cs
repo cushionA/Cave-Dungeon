@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using R3;
 using Game.Core;
 using UnityEngine;
 
@@ -52,7 +53,7 @@ namespace Game.Tests.EditMode
         [TearDown]
         public void TearDown()
         {
-            _events.Clear();
+            _events.Dispose();
             _data.Dispose();
         }
 
@@ -131,7 +132,7 @@ namespace Game.Tests.EditMode
         {
             // Arrange
             int hitCount = 0;
-            _events.OnDamageDealt += (result, attacker, defender) => hitCount++;
+            _events.OnDamageDealt.Subscribe(e => hitCount++);
 
             ElementalStatus atkStats = _data.GetCombatStats(k_PlayerHash).attack;
             ElementalStatus defStats = _data.GetCombatStats(k_EnemyHash).defense;

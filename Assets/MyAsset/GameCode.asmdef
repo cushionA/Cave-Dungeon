@@ -3,7 +3,10 @@
     "rootNamespace": "",
     "references": [
         "Game.Core",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "UniTask",
+        "R3.Unity",
+        "LitMotion"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

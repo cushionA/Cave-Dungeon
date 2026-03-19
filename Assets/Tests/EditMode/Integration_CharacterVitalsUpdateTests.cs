@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using R3;
 using Game.Core;
 using UnityEngine;
 
@@ -44,7 +45,7 @@ namespace Game.Tests.EditMode
         [TearDown]
         public void TearDown()
         {
-            _events.Clear();
+            _events.Dispose();
             _data.Dispose();
         }
 
@@ -55,12 +56,12 @@ namespace Game.Tests.EditMode
             bool deathFired = false;
             int deadHash = 0;
             int killerHash = 0;
-            _events.OnCharacterDeath += (dead, killer) =>
+            _events.OnCharacterDeath.Subscribe(e =>
             {
                 deathFired = true;
-                deadHash = dead;
-                killerHash = killer;
-            };
+                deadHash = e.deadHash;
+                killerHash = e.killerHash;
+            });
 
             // Act: 致死ダメージを計算→HP適用→死亡イベント
             int damage = DamageCalculator.CalculateTotalDamage(

@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using R3;
 using Game.Core;
 
 namespace Game.Tests.EditMode
@@ -39,7 +40,7 @@ namespace Game.Tests.EditMode
             // Arrange
             _core.Initialize(16);
             int receivedHash = -1;
-            _core.Events.OnCharacterRegistered += (int hash) => { receivedHash = hash; };
+            _core.Events.OnCharacterRegistered.Subscribe(hash => { receivedHash = hash; });
 
             CharacterVitals vitals = new CharacterVitals { currentHp = 100, maxHp = 100 };
             CombatStats combat = default;

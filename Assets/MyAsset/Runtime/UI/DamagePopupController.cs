@@ -1,5 +1,8 @@
 using UnityEngine;
 using Game.Core;
+using R3;
+using System;
+using Random = UnityEngine.Random;
 using System.Collections.Generic;
 
 namespace Game.Runtime
@@ -18,6 +21,7 @@ namespace Game.Runtime
 
         private List<PopupInstance> _activePopups;
         private Queue<GameObject> _pool;
+        private IDisposable _subscription;
 
         private struct PopupInstance
         {
@@ -45,16 +49,15 @@ namespace Game.Runtime
         {
             if (GameManager.Events != null)
             {
-                GameManager.Events.OnDamageDealt += OnDamageDealt;
+                _subscription = GameManager.Events.OnDamageDealt
+                    .Subscribe(e => OnDamageDealt(e.result, e.attackerHash, e.defenderHash));
             }
         }
 
         private void OnDisable()
         {
-            if (GameManager.Events != null)
-            {
-                GameManager.Events.OnDamageDealt -= OnDamageDealt;
-            }
+            _subscription?.Dispose();
+            _subscription = null;
         }
 
         private void Update()

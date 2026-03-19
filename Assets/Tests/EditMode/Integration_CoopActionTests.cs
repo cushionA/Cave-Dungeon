@@ -53,7 +53,7 @@ namespace Game.Tests.EditMode
         [TearDown]
         public void TearDown()
         {
-            _events.Clear();
+            _events.Dispose();
             _data.Dispose();
         }
 

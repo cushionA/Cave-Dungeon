@@ -3,7 +3,9 @@
     "rootNamespace": "Game.Core",
     "references": [
         "Unity.Collections",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "UniTask",
+        "R3.Unity"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

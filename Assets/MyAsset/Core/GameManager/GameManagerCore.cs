@@ -82,7 +82,7 @@ namespace Game.Core
             }
 
             _data?.Dispose();
-            _events?.Clear();
+            _events?.Dispose();
             _subManagers.Clear();
             _initialized = false;
             _disposed = true;

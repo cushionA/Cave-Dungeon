@@ -1,120 +1,147 @@
 using System;
+using R3;
 
 namespace Game.Core
 {
     /// <summary>
     /// ゲーム全体のイベントハブ。
-    /// 各システムはこのクラスのイベントを購読・発火する。
+    /// 各システムはこのクラスのObservableを購読し、Fireメソッドで発火する。
+    /// R3 Subject<T>ベースでゼロアロケーション通知を実現。
     /// </summary>
-    public class GameEvents
+    public class GameEvents : IDisposable
     {
         // ===== キャラクター登録・削除 =====
-        public event Action<int> OnCharacterRegistered;  // hash
-        public event Action<int> OnCharacterRemoved;     // hash
+        private readonly Subject<int> _onCharacterRegistered = new();
+        private readonly Subject<int> _onCharacterRemoved = new();
+        public Observable<int> OnCharacterRegistered => _onCharacterRegistered;
+        public Observable<int> OnCharacterRemoved => _onCharacterRemoved;
 
         // ===== ゲーム状態 =====
-        public event Action OnGamePaused;
-        public event Action OnGameResumed;
+        private readonly Subject<Unit> _onGamePaused = new();
+        private readonly Subject<Unit> _onGameResumed = new();
+        public Observable<Unit> OnGamePaused => _onGamePaused;
+        public Observable<Unit> OnGameResumed => _onGameResumed;
 
         // ===== シーン =====
-        public event Action<string> OnSceneLoadStarted;   // sceneName
-        public event Action<string> OnSceneLoadCompleted;  // sceneName
+        private readonly Subject<string> _onSceneLoadStarted = new();
+        private readonly Subject<string> _onSceneLoadCompleted = new();
+        public Observable<string> OnSceneLoadStarted => _onSceneLoadStarted;
+        public Observable<string> OnSceneLoadCompleted => _onSceneLoadCompleted;
 
         // ===== 戦闘 =====
-        public event Action<DamageResult, int, int> OnDamageDealt;           // result, attackerHash, defenderHash
-        public event Action<int, int> OnCharacterDeath;                       // deadHash, killerHash
-        public event Action<int, int, GuardResult> OnGuardEvent;              // defenderHash, attackerHash, result
-        public event Action<int, StatusEffectId> OnStatusEffectApplied;       // targetHash, effectId
+        private readonly Subject<(DamageResult result, int attackerHash, int defenderHash)> _onDamageDealt = new();
+        private readonly Subject<(int deadHash, int killerHash)> _onCharacterDeath = new();
+        private readonly Subject<(int defenderHash, int attackerHash, GuardResult result)> _onGuardEvent = new();
+        private readonly Subject<(int targetHash, StatusEffectId effectId)> _onStatusEffectApplied = new();
+        public Observable<(DamageResult result, int attackerHash, int defenderHash)> OnDamageDealt => _onDamageDealt;
+        public Observable<(int deadHash, int killerHash)> OnCharacterDeath => _onCharacterDeath;
+        public Observable<(int defenderHash, int attackerHash, GuardResult result)> OnGuardEvent => _onGuardEvent;
+        public Observable<(int targetHash, StatusEffectId effectId)> OnStatusEffectApplied => _onStatusEffectApplied;
 
         // ===== 成長・経済 =====
-        public event Action<int, int> OnExpGained;                            // characterHash, amount
-        public event Action<int, int> OnLevelUp;                              // characterHash, newLevel
-        public event Action<int, int> OnCurrencyChanged;                      // amount, newTotal
+        private readonly Subject<(int characterHash, int amount)> _onExpGained = new();
+        private readonly Subject<(int characterHash, int newLevel)> _onLevelUp = new();
+        private readonly Subject<(int amount, int newTotal)> _onCurrencyChanged = new();
+        public Observable<(int characterHash, int amount)> OnExpGained => _onExpGained;
+        public Observable<(int characterHash, int newLevel)> OnLevelUp => _onLevelUp;
+        public Observable<(int amount, int newTotal)> OnCurrencyChanged => _onCurrencyChanged;
 
         // ===== 装備・アビリティ =====
-        public event Action<int, EquipSlot> OnEquipmentChanged;               // ownerHash, slot
-        public event Action<int, AbilityFlag> OnAbilityFlagsChanged;          // ownerHash, newFlags
+        private readonly Subject<(int ownerHash, EquipSlot slot)> _onEquipmentChanged = new();
+        private readonly Subject<(int ownerHash, AbilityFlag newFlags)> _onAbilityFlagsChanged = new();
+        public Observable<(int ownerHash, EquipSlot slot)> OnEquipmentChanged => _onEquipmentChanged;
+        public Observable<(int ownerHash, AbilityFlag newFlags)> OnAbilityFlagsChanged => _onAbilityFlagsChanged;
 
         // ===== ワールド =====
-        public event Action<string, string> OnAreaTransition;                 // fromAreaId, toAreaId
-        public event Action<string> OnSavePointUsed;                          // savePointId
-        public event Action<int, string, int> OnItemAcquired;                 // characterHash, itemId, count
+        private readonly Subject<(string fromAreaId, string toAreaId)> _onAreaTransition = new();
+        private readonly Subject<string> _onSavePointUsed = new();
+        private readonly Subject<(int characterHash, string itemId, int count)> _onItemAcquired = new();
+        public Observable<(string fromAreaId, string toAreaId)> OnAreaTransition => _onAreaTransition;
+        public Observable<string> OnSavePointUsed => _onSavePointUsed;
+        public Observable<(int characterHash, string itemId, int count)> OnItemAcquired => _onItemAcquired;
 
         // ===== Section 2: 敵・仲間・連携 =====
-        public event Action<int, int> OnEnemyDefeated;                        // enemyHash, killerHash
-        public event Action OnCustomRulesChanged;
-        public event Action<int> OnCoopActivated;                             // companionHash
-        public event Action<string> OnGateOpened;                             // gateId
-        public event Action<int> OnCooldownReady;                             // actionId
-        public event Action OnFreeCoopActivated;
-        public event Action OnRest;
+        private readonly Subject<(int enemyHash, int killerHash)> _onEnemyDefeated = new();
+        private readonly Subject<Unit> _onCustomRulesChanged = new();
+        private readonly Subject<int> _onCoopActivated = new();
+        private readonly Subject<string> _onGateOpened = new();
+        private readonly Subject<int> _onCooldownReady = new();
+        private readonly Subject<Unit> _onFreeCoopActivated = new();
+        private readonly Subject<Unit> _onRest = new();
+        public Observable<(int enemyHash, int killerHash)> OnEnemyDefeated => _onEnemyDefeated;
+        public Observable<Unit> OnCustomRulesChanged => _onCustomRulesChanged;
+        public Observable<int> OnCoopActivated => _onCoopActivated;
+        public Observable<string> OnGateOpened => _onGateOpened;
+        public Observable<int> OnCooldownReady => _onCooldownReady;
+        public Observable<Unit> OnFreeCoopActivated => _onFreeCoopActivated;
+        public Observable<Unit> OnRest => _onRest;
 
         // ===== Fire methods =====
 
-        public void FireCharacterRegistered(int hash) => OnCharacterRegistered?.Invoke(hash);
-        public void FireCharacterRemoved(int hash) => OnCharacterRemoved?.Invoke(hash);
-        public void FireGamePaused() => OnGamePaused?.Invoke();
-        public void FireGameResumed() => OnGameResumed?.Invoke();
-        public void FireSceneLoadStarted(string sceneName) => OnSceneLoadStarted?.Invoke(sceneName);
-        public void FireSceneLoadCompleted(string sceneName) => OnSceneLoadCompleted?.Invoke(sceneName);
+        public void FireCharacterRegistered(int hash) => _onCharacterRegistered.OnNext(hash);
+        public void FireCharacterRemoved(int hash) => _onCharacterRemoved.OnNext(hash);
+        public void FireGamePaused() => _onGamePaused.OnNext(Unit.Default);
+        public void FireGameResumed() => _onGameResumed.OnNext(Unit.Default);
+        public void FireSceneLoadStarted(string sceneName) => _onSceneLoadStarted.OnNext(sceneName);
+        public void FireSceneLoadCompleted(string sceneName) => _onSceneLoadCompleted.OnNext(sceneName);
 
         public void FireDamageDealt(DamageResult result, int attackerHash, int defenderHash)
-            => OnDamageDealt?.Invoke(result, attackerHash, defenderHash);
+            => _onDamageDealt.OnNext((result, attackerHash, defenderHash));
         public void FireCharacterDeath(int deadHash, int killerHash)
-            => OnCharacterDeath?.Invoke(deadHash, killerHash);
+            => _onCharacterDeath.OnNext((deadHash, killerHash));
         public void FireGuardEvent(int defenderHash, int attackerHash, GuardResult result)
-            => OnGuardEvent?.Invoke(defenderHash, attackerHash, result);
+            => _onGuardEvent.OnNext((defenderHash, attackerHash, result));
         public void FireStatusEffectApplied(int targetHash, StatusEffectId effectId)
-            => OnStatusEffectApplied?.Invoke(targetHash, effectId);
+            => _onStatusEffectApplied.OnNext((targetHash, effectId));
 
-        public void FireExpGained(int characterHash, int amount) => OnExpGained?.Invoke(characterHash, amount);
-        public void FireLevelUp(int characterHash, int newLevel) => OnLevelUp?.Invoke(characterHash, newLevel);
-        public void FireCurrencyChanged(int amount, int newTotal) => OnCurrencyChanged?.Invoke(amount, newTotal);
+        public void FireExpGained(int characterHash, int amount) => _onExpGained.OnNext((characterHash, amount));
+        public void FireLevelUp(int characterHash, int newLevel) => _onLevelUp.OnNext((characterHash, newLevel));
+        public void FireCurrencyChanged(int amount, int newTotal) => _onCurrencyChanged.OnNext((amount, newTotal));
 
-        public void FireEquipmentChanged(int ownerHash, EquipSlot slot) => OnEquipmentChanged?.Invoke(ownerHash, slot);
+        public void FireEquipmentChanged(int ownerHash, EquipSlot slot) => _onEquipmentChanged.OnNext((ownerHash, slot));
         public void FireAbilityFlagsChanged(int ownerHash, AbilityFlag newFlags)
-            => OnAbilityFlagsChanged?.Invoke(ownerHash, newFlags);
+            => _onAbilityFlagsChanged.OnNext((ownerHash, newFlags));
 
-        public void FireAreaTransition(string fromAreaId, string toAreaId) => OnAreaTransition?.Invoke(fromAreaId, toAreaId);
-        public void FireSavePointUsed(string savePointId) => OnSavePointUsed?.Invoke(savePointId);
+        public void FireAreaTransition(string fromAreaId, string toAreaId) => _onAreaTransition.OnNext((fromAreaId, toAreaId));
+        public void FireSavePointUsed(string savePointId) => _onSavePointUsed.OnNext(savePointId);
         public void FireItemAcquired(int characterHash, string itemId, int count)
-            => OnItemAcquired?.Invoke(characterHash, itemId, count);
+            => _onItemAcquired.OnNext((characterHash, itemId, count));
 
-        public void FireEnemyDefeated(int enemyHash, int killerHash) => OnEnemyDefeated?.Invoke(enemyHash, killerHash);
-        public void FireCustomRulesChanged() => OnCustomRulesChanged?.Invoke();
-        public void FireCoopActivated(int companionHash) => OnCoopActivated?.Invoke(companionHash);
-        public void FireGateOpened(string gateId) => OnGateOpened?.Invoke(gateId);
-        public void FireCooldownReady(int actionId) => OnCooldownReady?.Invoke(actionId);
-        public void FireFreeCoopActivated() => OnFreeCoopActivated?.Invoke();
-        public void FireRest() => OnRest?.Invoke();
+        public void FireEnemyDefeated(int enemyHash, int killerHash) => _onEnemyDefeated.OnNext((enemyHash, killerHash));
+        public void FireCustomRulesChanged() => _onCustomRulesChanged.OnNext(Unit.Default);
+        public void FireCoopActivated(int companionHash) => _onCoopActivated.OnNext(companionHash);
+        public void FireGateOpened(string gateId) => _onGateOpened.OnNext(gateId);
+        public void FireCooldownReady(int actionId) => _onCooldownReady.OnNext(actionId);
+        public void FireFreeCoopActivated() => _onFreeCoopActivated.OnNext(Unit.Default);
+        public void FireRest() => _onRest.OnNext(Unit.Default);
 
-        public void Clear()
+        public void Dispose()
         {
-            OnCharacterRegistered = null;
-            OnCharacterRemoved = null;
-            OnGamePaused = null;
-            OnGameResumed = null;
-            OnSceneLoadStarted = null;
-            OnSceneLoadCompleted = null;
-            OnDamageDealt = null;
-            OnCharacterDeath = null;
-            OnGuardEvent = null;
-            OnStatusEffectApplied = null;
-            OnExpGained = null;
-            OnLevelUp = null;
-            OnCurrencyChanged = null;
-            OnEquipmentChanged = null;
-            OnAbilityFlagsChanged = null;
-            OnAreaTransition = null;
-            OnSavePointUsed = null;
-            OnItemAcquired = null;
-            OnEnemyDefeated = null;
-            OnCustomRulesChanged = null;
-            OnCoopActivated = null;
-            OnGateOpened = null;
-            OnCooldownReady = null;
-            OnFreeCoopActivated = null;
-            OnRest = null;
+            _onCharacterRegistered.Dispose();
+            _onCharacterRemoved.Dispose();
+            _onGamePaused.Dispose();
+            _onGameResumed.Dispose();
+            _onSceneLoadStarted.Dispose();
+            _onSceneLoadCompleted.Dispose();
+            _onDamageDealt.Dispose();
+            _onCharacterDeath.Dispose();
+            _onGuardEvent.Dispose();
+            _onStatusEffectApplied.Dispose();
+            _onExpGained.Dispose();
+            _onLevelUp.Dispose();
+            _onCurrencyChanged.Dispose();
+            _onEquipmentChanged.Dispose();
+            _onAbilityFlagsChanged.Dispose();
+            _onAreaTransition.Dispose();
+            _onSavePointUsed.Dispose();
+            _onItemAcquired.Dispose();
+            _onEnemyDefeated.Dispose();
+            _onCustomRulesChanged.Dispose();
+            _onCoopActivated.Dispose();
+            _onGateOpened.Dispose();
+            _onCooldownReady.Dispose();
+            _onFreeCoopActivated.Dispose();
+            _onRest.Dispose();
         }
     }
 }

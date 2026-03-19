@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using R3;
 using Game.Core;
 
 namespace Game.Tests.EditMode
@@ -28,7 +29,7 @@ namespace Game.Tests.EditMode
         [TearDown]
         public void TearDown()
         {
-            _events.Clear();
+            _events.Dispose();
             _data.Dispose();
         }
 
@@ -113,11 +114,11 @@ namespace Game.Tests.EditMode
             // Arrange
             int receivedHash = 0;
             AbilityFlag receivedFlags = AbilityFlag.None;
-            _events.OnAbilityFlagsChanged += (hash, newFlags) =>
+            _events.OnAbilityFlagsChanged.Subscribe(e =>
             {
-                receivedHash = hash;
-                receivedFlags = newFlags;
-            };
+                receivedHash = e.ownerHash;
+                receivedFlags = e.newFlags;
+            });
 
             // Act
             _events.FireAbilityFlagsChanged(k_PlayerHash, AbilityFlag.AirDash | AbilityFlag.Swim);

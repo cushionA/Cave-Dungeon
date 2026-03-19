@@ -1,5 +1,6 @@
 using System.Collections;
 using NUnit.Framework;
+using R3;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Game.Core;
@@ -68,7 +69,7 @@ namespace Game.Tests.PlayMode
             yield return null;
 
             bool deathFired = false;
-            GameManager.Events.OnCharacterDeath += (deadHash, killerHash) => deathFired = true;
+            GameManager.Events.OnCharacterDeath.Subscribe(e => deathFired = true);
 
             DamageData data = new DamageData
             {

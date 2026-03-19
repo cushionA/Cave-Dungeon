@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using R3;
 using Game.Core;
 using UnityEngine;
 
@@ -20,7 +21,7 @@ namespace Game.Tests.EditMode
         [TearDown]
         public void TearDown()
         {
-            _events.Clear();
+            _events.Dispose();
             _data.Dispose();
         }
 
@@ -138,7 +139,7 @@ namespace Game.Tests.EditMode
         {
             // Arrange: イベントリスナーでキャラ登録を追跡
             int registeredHash = 0;
-            _events.OnCharacterRegistered += (hash) => registeredHash = hash;
+            _events.OnCharacterRegistered.Subscribe(hash => registeredHash = hash);
 
             // Act: SoAにキャラ追加 → イベント発火
             CharacterVitals vitals = new CharacterVitals

@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using R3;
 using Game.Core;
 using UnityEngine;
 
@@ -40,7 +41,7 @@ namespace Game.Tests.EditMode
         [TearDown]
         public void TearDown()
         {
-            _events.Clear();
+            _events.Dispose();
             _data.Dispose();
         }
 
@@ -60,7 +61,7 @@ namespace Game.Tests.EditMode
             };
 
             bool eventFired = false;
-            _events.OnStatusEffectApplied += (hash, id) => eventFired = true;
+            _events.OnStatusEffectApplied.Subscribe(e => eventFired = true);
 
             // Act: 1ヒット目 → 60蓄積（閾値100未満）
             bool triggered1 = _statusManager.Accumulate(poisonInfo, 0f);
