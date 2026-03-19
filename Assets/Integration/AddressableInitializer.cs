@@ -21,35 +21,32 @@ namespace Game.Runtime
 
         private async UniTask InitializeAsync()
         {
-            // Addressables初期化
             await Addressables.InitializeAsync().Task;
 
-            // preloadラベルのアセットを一括ロード
             for (int i = 0; i < _preloadLabels.Length; i++)
             {
                 await Addressables.LoadAssetsAsync<Object>(_preloadLabels[i], null).Task;
             }
 
-            AILogger.Log("[Addressable] Preload complete");
+#if UNITY_EDITOR
+            Debug.Log("[Addressable] Preload complete");
+#endif
         }
 
-        /// <summary>
-        /// ステージ切替時にステージ固有アセットをプリロードする。
-        /// </summary>
         public async UniTask PreloadStageAsync(string stageId)
         {
             string label = $"stage-{stageId}";
             await Addressables.LoadAssetsAsync<Object>(label, null).Task;
-            AILogger.Log($"[Addressable] Stage {stageId} preloaded");
+#if UNITY_EDITOR
+            Debug.Log($"[Addressable] Stage {stageId} preloaded");
+#endif
         }
 
-        /// <summary>
-        /// ステージアセットを解放する。
-        /// </summary>
         public void ReleaseStage(string stageId)
         {
-            // Smart Addresser管理のグループはラベル単位でリリース
-            AILogger.Log($"[Addressable] Stage {stageId} released");
+#if UNITY_EDITOR
+            Debug.Log($"[Addressable] Stage {stageId} released");
+#endif
         }
     }
 }
