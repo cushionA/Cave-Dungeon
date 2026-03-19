@@ -158,6 +158,50 @@ paths:
 - スポーンはEnemySpawner（activateRange外は非アクティブ、休息でリスポーン）
 
 ### ゲートシステム
-- GateType: Clear / Ability / Key の3種
+- GateType: Clear / Ability / Key / Elemental の4種
 - 永続ゲート（ボスクリア等）はグローバルフラグ、一時ゲートはマップローカルフラグ
 - ISaveable実装でSaveSystemと連携
+
+## Section 3 固有ルール（/design-systems section-3 で追記）
+
+### ボスシステム
+- BossControllerはAIBrainをコンポジションで保持（継承ではない）
+- フェーズ遷移: BossPhaseManagerがHP閾値/タイマー/行動回数で判定
+- フェーズ遷移時にAIBrainのモード配列を差し替え（AIBrainコード変更なし）
+- フェーズ遷移中は無敵時間（既存DamageSystemのinvincibleフラグ）
+- アリーナロック: BossArenaManagerが出入口コライダー管理
+- 撃破後: ClearGate永続開放 + DropTable報酬
+
+### 召喚システム
+- MagicType.Summon で召喚魔法を定義（既存MagicCasterのCast()フローに乗る）
+- 召喚枠: 最大2枠（PartyManager.k_MaxSummonSlots）、パーティ最大4人
+- 枠満杯時は最古の召喚獣を解除して入れ替え
+- 召喚獣はSoAコンテナに通常キャラクターとして登録
+- 追従ロジックはFollowBehaviorを再利用（コンポジション）
+- SummonType: Combat（戦闘用）, Utility（足場/照明）, Decoy（囮/ヘイト集め）
+
+### 混乱魔術
+- 既存蓄積型状態異常モデルに統合（StatusEffectManager.AccumulateEffect）
+- 蓄積閾値超過→CharacterFlagsの陣営フラグ反転（Faction.Enemy → Faction.Ally）
+- AIの行動パターンは変更なし。TargetFilterの陣営条件だけ反転
+- 混乱敵はパーティ枠外。同時最大3体（PartyManager.k_MaxConfusedEnemies）
+- ボスは混乱耐性1.0（完全耐性）
+- confusionBreakDamage: 味方誤爆で混乱解除
+
+### 属性ゲート（環境パズル）
+- GateTypeにElemental追加。ElementalRequirementで7属性対応
+- 属性攻撃のヒット検知は専用（IDamageableではなく環境オブジェクトレイヤー）
+- multiHitRequired対応（弱点を数回殴る等のギミック）
+- 仲間の属性攻撃でも開放可能（連携パズル）
+
+### バックトラック報酬
+- AbilityFlag獲得時にBacktrackRewardManagerが全報酬を再評価
+- 能力獲得前はマップマーカー非表示（ネタバレ防止）
+- AbilityOrbを回収→新能力→更にバックトラック報酬が解放される連鎖
+- BacktrackRewardTableはエリアごとのScriptableObject
+- ISaveable実装で回収状態を永続化
+
+### パーティ管理
+- PartyManager静的クラスで枠管理
+- 最大パーティ: 4人（プレイヤー1 + 常駐仲間1 + 召喚最大2）
+- 混乱敵はパーティ枠外（別カウント、最大3体）

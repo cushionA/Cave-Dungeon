@@ -175,6 +175,111 @@ Game.Tests.EditMode — テスト参照追加
     └── Game.AI 参照追加
 ```
 
-## Section 3-4
+## Section 3: 世界の広がり
+
+### 実装順序（レイヤー順）
+```
+Layer 0 (Section 1-2の上に構築):
+  Common_Section3Types   ← Common_SharedTypes（共通Enum/Struct追加）
+
+Layer 1 (← Layer 0):
+  BossSystem_PhaseManager     ← AICore, DamageSystem
+  ConfusionMagic_Accumulation ← DamageSystem(StatusEffectManager)
+  BacktrackReward_Manager     ← MapSystem, EquipmentSystem, SaveSystem
+
+Layer 2 (← Layer 0-1):
+  BossSystem_Controller       ← BossSystem_PhaseManager, AICore(AIBrain)
+  BossSystem_Arena            ← BossSystem_Controller, GateSystem(GateRegistry)
+  ConfusionMagic_FactionSwitch ← ConfusionMagic_Accumulation, AICore(CharacterFlags)
+  ConfusionMagic_AIOverride   ← ConfusionMagic_FactionSwitch, AICore(TargetSelector)
+  ElementalGate_Interaction   ← GateSystem, DamageSystem(Element)
+  BacktrackReward_Checker     ← BacktrackReward_Manager, EquipmentSystem(AbilityFlag)
+
+Layer 3 (← Layer 0-2):
+  SummonSystem_Manager        ← MagicSystem(MagicCaster), CompanionAI(FollowBehavior)
+  SummonSystem_Controller     ← SummonSystem_Manager, AICore(AIBrain)
+  BossSystem_AddSpawn         ← BossSystem_Controller, EnemySystem(EnemySpawner)
+  BossSystem_Rewards          ← BossSystem_Controller, EnemySystem(DropTable)
+  ElementalGate_Integration   ← ElementalGate_Interaction, GateSystem(GateRegistry)
+  ConfusionMagic_Duration     ← ConfusionMagic_FactionSwitch
+  ConfusionMagic_Limits       ← ConfusionMagic_FactionSwitch
+  BacktrackReward_Reevaluation ← BacktrackReward_Checker
+  BacktrackReward_MapIntegration ← BacktrackReward_Manager, MapSystem
+
+Layer 4 (← Layer 0-3):
+  SummonSystem_Lifetime       ← SummonSystem_Manager
+  SummonSystem_MagicIntegration ← SummonSystem_Manager, MagicSystem
+  SummonSystem_PartyLimit     ← SummonSystem_Manager
+  ElementalGate_MultiHit      ← ElementalGate_Interaction
+  ElementalGate_HintDisplay   ← ElementalGate_Integration, MapSystem
+  BacktrackReward_Pickup      ← BacktrackReward_Checker
+```
+
+### 依存関係図（Section 3 追加分）
+```
+Section 1-2 基盤
+    │
+    ▼
+AICore ──────────► BossSystem
+DamageSystem ────────┘    │
+                          ├──► BossArena ──► GateSystem(ClearGate)
+                          └──► BossAddSpawn ──► EnemySystem(Spawner)
+
+DamageSystem ──────► ConfusionMagic
+(StatusEffect)           │
+AICore ──────────────────┘ (CharacterFlags反転)
+
+MagicSystem ─────► SummonSystem
+CompanionAI ─────────┘ (FollowBehavior再利用)
+AICore ──────────────┘ (AIBrain)
+
+GateSystem ──────► ElementalGate
+DamageSystem ────────┘ (Element属性検知)
+
+MapSystem ───────► BacktrackReward
+EquipmentSystem ─────┘ (AbilityFlag)
+SaveSystem ──────────┘ (永続化)
+```
+
+### システム間通信（Section 3）
+
+| 発信 | → | 受信 | 方式 | 内容 |
+|------|---|------|------|------|
+| BossController | → | BossArenaManager | メソッド呼び出し | アリーナロック/解除 |
+| BossController | → | GameManager.Events | OnBossPhaseChanged | フェーズ遷移通知 |
+| BossController | → | GameManager.Events | OnBossDefeated | 撃破通知→ClearGate開放 |
+| BossArenaManager | → | GateRegistry | Open(clearGateId) | 永続ゲート開放 |
+| StatusEffectManager | → | ConfusionEffectProcessor | ApplyConfusion | 蓄積閾値到達時 |
+| ConfusionEffectProcessor | → | CharacterFlags | SetFaction/SetState | 陣営反転 |
+| ConfusionEffectProcessor | → | GameManager.Events | OnEnemyConfused | 混乱開始通知 |
+| MagicCaster | → | SummonManager | TrySummon | MagicType.Summon発動時 |
+| SummonManager | → | GameManager.Events | OnSummonCreated/Dismissed | 召喚生成/解除 |
+| ElementalGateInteractor | → | GateController | TryOpen | 属性条件達成時 |
+| OnAbilityAcquired | → | BacktrackRewardManager | ReevaluateAll | 新能力獲得時 |
+| BacktrackRewardManager | → | MapSystem | マーカー更新 | 報酬アクセス可能化 |
+
+### asmdef 配置（Section 3）
+
+```
+Game.AI (既存拡張)
+    ├── Boss/              BossController, BossPhaseManager, BossArenaManager
+    ├── Summon/            SummonManager, SummonedCharacterController, SummonSpawner
+    └── Confusion/         ConfusionEffectProcessor, ConfusionAIOverride
+
+Game.World (既存拡張)
+    ├── Gate/              (既存) + ElementalGateInteractor
+    └── Backtrack/         BacktrackRewardManager, BacktrackRewardChecker, BacktrackRewardPickup
+
+Game.Core (既存拡張)
+    └── Common/            Section 3共通Enum/Struct、PartyManager（Section3Utilities.cs）
+
+Game.Core/ScriptableObjects (既存拡張)
+    ├── BossDefinition.cs
+    ├── SummonDefinition.cs
+    ├── ElementalGateDefinition.cs
+    └── BacktrackRewardTable.cs
+```
+
+## Section 4
 
 （未設計）

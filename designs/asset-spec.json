@@ -144,5 +144,60 @@
     "interactionRange": 3.0,
     "cooldownBase": 15.0,
     "_comment": "連携アクションパラメータ。interactionRange=連携可能距離(タイル)、cooldownBase=基本クールタイム(秒)"
+  },
+
+  "boss": {
+    "arenaLockDelay": 1.5,
+    "phaseTransitionInvincibleTime": 2.0,
+    "bossHpBarWidth": 600,
+    "_comment": "ボスパラメータ。arenaLockDelay=侵入→ロック猶予(秒)、phaseTransitionInvincibleTime=フェーズ遷移無敵(秒)"
+  },
+
+  "summon": {
+    "maxSlots": 2,
+    "maxPartySize": 4,
+    "defaultDuration": 60.0,
+    "spawnOffset": 2.0,
+    "_comment": "召喚パラメータ。maxSlots=召喚枠数、maxPartySize=パーティ最大人数、defaultDuration=デフォルト持続秒、spawnOffset=出現距離(タイル)"
+  },
+
+  "confusion": {
+    "maxConfusedEnemies": 3,
+    "defaultDuration": 15.0,
+    "bossResistance": 1.0,
+    "_comment": "混乱パラメータ。maxConfusedEnemies=同時最大混乱数、defaultDuration=基本持続秒、bossResistance=ボス耐性(1.0=完全耐性)"
+  },
+
+  "sprites_section3": {
+    "categories": {
+      "bossLarge": {
+        "widthPixels": 360,
+        "heightPixels": 480,
+        "_derived_worldWidth": 3.6,
+        "_derived_worldHeight": 4.8,
+        "_comment": "大型ボス: プレイヤーの約3倍"
+      },
+      "summonSmall": {
+        "widthPixels": 80,
+        "heightPixels": 100,
+        "_derived_worldWidth": 0.8,
+        "_derived_worldHeight": 1.0,
+        "_comment": "小型召喚獣"
+      },
+      "summonMedium": {
+        "widthPixels": 120,
+        "heightPixels": 150,
+        "_derived_worldWidth": 1.2,
+        "_derived_worldHeight": 1.5,
+        "_comment": "中型召喚獣"
+      },
+      "elementalGate": {
+        "widthPixels": 200,
+        "heightPixels": 200,
+        "_derived_worldWidth": 2.0,
+        "_derived_worldHeight": 2.0,
+        "_comment": "属性ゲートオブジェクト（氷壁、機械装置等）"
+      }
+    }
   }
 }

@@ -222,6 +222,7 @@ namespace Game.Core
         Silence,
         Weakness,
         Curse,
+        Confusion,
     }
 
     // ===== インタラクション・アイテム =====
@@ -302,6 +303,7 @@ namespace Game.Core
         Clear,
         Ability,
         Key,
+        Elemental,
     }
 
     public enum MagicType : byte
@@ -309,6 +311,7 @@ namespace Game.Core
         Attack,
         Recover,
         Support,
+        Summon,
     }
 
     public enum CastType : byte
@@ -404,5 +407,66 @@ namespace Game.Core
         InRange,    // operandA <= 値 <= operandB
         HasFlag,    // (値 & operandA) == operandA（AND判定）
         HasAny,     // (値 & operandA) != 0（OR判定）
+    }
+
+    // ===== Section 3: ボス・召喚・混乱・属性ゲート・バックトラック =====
+
+    /// <summary>
+    /// ボスフェーズ遷移条件の種類。
+    /// </summary>
+    public enum PhaseConditionType : byte
+    {
+        HpThreshold,       // HP割合が閾値以下
+        Timer,             // 経過時間
+        ActionCount,       // 特定行動の累計回数
+        AllAddsDefeated,   // 雑魚全滅
+        Custom,            // スクリプトで定義
+    }
+
+    /// <summary>
+    /// 召喚獣のタイプ。
+    /// </summary>
+    public enum SummonType : byte
+    {
+        Combat,      // 戦闘用召喚獣
+        Utility,     // 探索補助（足場、照明等）
+        Decoy,       // 囮（敵ヘイトを集める）
+    }
+
+    /// <summary>
+    /// 属性ゲートが要求する属性。
+    /// ElementalRequirement → Element のマッピングは ElementalRequirementMapper で行う。
+    /// </summary>
+    public enum ElementalRequirement : byte
+    {
+        Fire,        // 炎で点火/溶解
+        Thunder,     // 雷で通電/起動
+        Light,       // 聖で浄化/照射
+        Dark,        // 闇で暗幕/隠し通路
+        Slash,       // 斬撃で切断
+        Strike,      // 打撃で破壊
+        Pierce,      // 刺突で穿孔
+    }
+
+    /// <summary>
+    /// バックトラック報酬の種別。
+    /// </summary>
+    public enum BacktrackRewardType : byte
+    {
+        Item,         // アイテム
+        Currency,     // 通貨
+        AbilityOrb,   // 新能力
+        Shortcut,     // ショートカット開通
+        Lore,         // 世界観テキスト
+    }
+
+    /// <summary>
+    /// ボスアリーナの状態。
+    /// </summary>
+    public enum ArenaState : byte
+    {
+        Open,        // 通常通行可能
+        Locked,      // 戦闘中ロック
+        Cleared,     // クリア済み（永続開放）
     }
 }

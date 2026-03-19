@@ -110,7 +110,7 @@
 |---|------------|------|------------|------|
 | 1 | **MVP: 戦闘と探索の基盤** | 1エリアを探索し、基本戦闘・装備変更・ジャストガードが機能する。セーブ/マップ/ショップの基本インフラ | DataContainer, GameManager, InputSystem, PlayerMovement, EquipmentSystem, WeaponSystem, DamageSystem, ParryGuardSystem, MapSystem, LevelStreaming, SaveSystem, CurrencySystem, ShopSystem, LevelUpSystem, InventorySystem, UISystem_Basic | **実装済み** |
 | 2 | **AI・仲間・連携** | 仲間AI追従・スタンス・連携ボタン、敵AI、AIルール構築、魔法システム | AICore, CompanionAI_Basic, EnemySystem, AIRuleBuilder, CoopAction, GateSystem, CooldownReward, MagicSystem | **実装済み** |
-| 3 | **世界の広がり** | 複数エリア、ボス戦、属性パズル、召喚・混乱システム | BossSystem, ElementalGate, SummonSystem, ConfusionMagic | 未着手 |
+| 3 | **世界の広がり** | 複数エリア、ボス戦、属性パズル、召喚・混乱システム | BossSystem, ElementalGate, SummonSystem, ConfusionMagic, BacktrackReward | **計画済み** |
 | 4 | **エンドコンテンツ** | 高難度チャレンジ、ボスラッシュ、タイムアタック、AIカスタムの極致 | ChallengeMode, Leaderboard, AdvancedAITemplates | 未着手 |
 
 ### セクション分割の基準
@@ -200,10 +200,11 @@
 | CoopAction | 連携ボタンスキル（コンボ・行動割り込み） | 2 | CompanionAI_Basic, AICore, MagicSystem |
 | GateSystem | エリアゲート管理（Clear/Ability/Key） | 2 | MapSystem, SaveSystem |
 | CooldownReward | クールタイム消化→MP無料連携 | 2 | CoopAction |
-| BossSystem | ボスAI・フェーズ管理 | 3 | AICore, DamageSystem |
-| SummonSystem | 召喚仲間管理 | 3 | CompanionAI_Basic |
-| ConfusionMagic | 敵混乱・一時味方化 | 3 | DamageSystem, AICore |
-| BacktrackReward | バックトラック報酬管理 | 3 | MapSystem, EquipmentSystem |
+| BossSystem | ボスAI・フェーズ管理・アリーナ制御 | 3 | AICore, DamageSystem, GateSystem |
+| ElementalGate | 属性環境パズル（属性攻撃でゲート開放） | 3 | GateSystem, DamageSystem |
+| SummonSystem | 召喚仲間管理（最大2枠、寿命制御） | 3 | MagicSystem, CompanionAI_Basic, AICore |
+| ConfusionMagic | 敵混乱・一時味方化（蓄積型状態異常） | 3 | DamageSystem, AICore |
+| BacktrackReward | バックトラック報酬管理 | 3 | MapSystem, EquipmentSystem, SaveSystem |
 | ChallengeMode | 高難度コンテンツ管理 | 4 | 全システム |
 | Leaderboard | スコア・タイム記録 | 4 | ChallengeMode |
 
