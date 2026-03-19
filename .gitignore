@@ -61,3 +61,40 @@ notebooks/asset_gen/
 *.ogg
 *.fbx
 *.obj
+
+# Test results (generated)
+TestResults-*.xml
+
+# 有料アセット（ライセンス保護・再配布禁止）
+Assets/AnyPortrait/
+Assets/AssetInventory/
+Assets/DarkTonic/
+Assets/Destructible 2D/
+Assets/FunkyCode/
+Assets/Hovl Studio/
+Assets/Plugins/CW/
+Assets/Plugins/DarkTonic/
+Assets/Plugins/Editor/
+Assets/Plugins/Febucci/
+Assets/Plugins/Pixel Crushers/
+Assets/Plugins/RelationsInspector/
+Assets/Plugins/Sirenix/
+Assets/SensorToolkit/
+Assets/Sprite Shaders Ultimate/
+Assets/ThirdParty/Plugins/Febucci/
+Assets/ThirdParty/Plugins/Sirenix/
+Assets/ThirdParty/UltimateTextDamage/
+Assets/Resources/MasterAudio/
+Packages/com.febucci.text-animator-unity/
+Packages/com.singularitygroup.hotreload/
+
+# NuGet packages (restored from packages.config)
+Assets/Packages/
+
+# 有料アセットが生成するEditor/Gizmos/Resources
+Assets/Editor Default Resources/
+Assets/Gizmos/
+Assets/UI Toolkit/
+
+# Unity生成ログ・セットアップメモ
+unity-*.txt
