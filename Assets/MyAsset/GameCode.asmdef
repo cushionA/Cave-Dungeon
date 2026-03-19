@@ -1,7 +1,10 @@
 {
     "name": "GameCode",
     "rootNamespace": "",
-    "references": [],
+    "references": [
+        "Game.Core",
+        "Unity.InputSystem"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": true,
