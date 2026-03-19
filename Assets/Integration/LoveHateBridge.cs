@@ -117,7 +117,7 @@ namespace Game.Runtime
                 return 0f;
             }
 
-            return from.GetAffinity(to);
+            return from.GetAffinity(to.factionID);
         }
 
         /// <summary>
@@ -128,9 +128,9 @@ namespace Game.Runtime
             FactionMember from = FindFactionMember(fromHash);
             FactionMember to = FindFactionMember(toHash);
 
-            if (from != null && to != null)
+            if (from != null && to != null && _factionManager != null)
             {
-                from.SetPersonalAffinity(to.factionID, value);
+                _factionManager.SetPersonalAffinity(from.factionID, to.factionID, value);
             }
         }
 

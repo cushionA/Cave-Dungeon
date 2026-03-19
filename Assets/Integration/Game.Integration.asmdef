@@ -1,0 +1,25 @@
+{
+    "name": "Game.Integration",
+    "rootNamespace": "Game.Runtime",
+    "references": [
+        "Game.Core",
+        "UniTask",
+        "R3.Unity",
+        "LitMotion",
+        "Unity.Addressables",
+        "Unity.ResourceManager",
+        "com.rainyrizzle.anyportrait",
+        "Micosmo.SensorToolkit"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "R3.dll"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
