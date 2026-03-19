@@ -53,8 +53,7 @@
 - **コンボシステム**: 入力パターンに応じたコンボルート分岐
 - **チャージ攻撃**: 溜め時間に応じたダメージ倍率
 - **パリィ/ガード**: タイミング合わせの駆け引き
-- **属性システム**: 7属性（無・火・水・風・土・光・闇）、弱点倍率
-- **物理タイプ**: 斬撃/打撃/刺突、耐性による有効性の違い
+- **属性システム**: 7属性統一（斬撃/打撃/刺突/炎/雷/聖/闇）、弱点倍率。物理タイプもElementに統合
 - **状態異常**: 蓄積モデル（ヒットごとに蓄積→閾値超過で発症）
 
 ### 仲間AI
@@ -109,8 +108,8 @@
 
 | # | セクション名 | 概要 | 含むシステム | 状態 |
 |---|------------|------|------------|------|
-| 1 | **MVP: 戦闘と探索の基盤** | 1エリアを探索し、基本戦闘・装備変更・ジャストガードが機能する。セーブ/マップ/ショップの基本インフラ | DataContainer, GameManager, InputSystem, PlayerMovement, EquipmentSystem, WeaponSystem, DamageSystem, ParryGuardSystem, MapSystem, LevelStreaming, SaveSystem, CurrencySystem, ShopSystem, LevelUpSystem, InventorySystem, UISystem_Basic | **計画済み** |
-| 2 | **AI・仲間・連携** | 仲間AI追従・スタンス・連携ボタン、敵AI、AIルール構築、連携障害除去 | AICore, CompanionAI_Basic, EnemySystem, AIRuleBuilder, CoopAction, GateSystem, CooldownReward | 未着手 |
+| 1 | **MVP: 戦闘と探索の基盤** | 1エリアを探索し、基本戦闘・装備変更・ジャストガードが機能する。セーブ/マップ/ショップの基本インフラ | DataContainer, GameManager, InputSystem, PlayerMovement, EquipmentSystem, WeaponSystem, DamageSystem, ParryGuardSystem, MapSystem, LevelStreaming, SaveSystem, CurrencySystem, ShopSystem, LevelUpSystem, InventorySystem, UISystem_Basic | **実装済み** |
+| 2 | **AI・仲間・連携** | 仲間AI追従・スタンス・連携ボタン、敵AI、AIルール構築、魔法システム | AICore, CompanionAI_Basic, EnemySystem, AIRuleBuilder, CoopAction, GateSystem, CooldownReward, MagicSystem | **実装済み** |
 | 3 | **世界の広がり** | 複数エリア、ボス戦、属性パズル、召喚・混乱システム | BossSystem, ElementalGate, SummonSystem, ConfusionMagic | 未着手 |
 | 4 | **エンドコンテンツ** | 高難度チャレンジ、ボスラッシュ、タイムアタック、AIカスタムの極致 | ChallengeMode, Leaderboard, AdvancedAITemplates | 未着手 |
 
@@ -131,7 +130,7 @@
 - **PlayerMovement**: 移動、ジャンプ、ダッシュ（AbilityFlagシステム構築）
 - **EquipmentSystem**: 武器/盾/コア装着・ステータス再計算・アニメーション切替
 - **WeaponSystem**: 弱/強攻撃コンボ、スキル、落下攻撃、飛翔体
-- **DamageSystem**: ダメージ計算、属性、状態異常蓄積、アーマー
+- **DamageSystem**: ダメージ計算、7属性統一（斬撃/打撃/刺突/炎/雷/聖/闇）、状態異常蓄積、アーマー
 - **ParryGuardSystem**: ジャストガード（エフェクト・SE付）、JG不可警告、ガードブレイク
 - **MapSystem**: カメラ追従、ミニマップ、全体マップ
 - **LevelStreaming**: Additive Scene Loadingによるシームレス遷移
@@ -147,11 +146,12 @@
 
 含むシステム:
 - **AICore**: AIBrain、センサー、モードシステム、行動選択
-- **CompanionAI_Basic**: 仲間AI追従、スタンス切替、連携ボタン
+- **CompanionAI_Basic**: 仲間AI追従、スタンス切替
 - **EnemySystem**: 雑魚敵AI、スポーン、ドロップ
+- **MagicSystem**: 魔法発動（詠唱→発動→弾丸飛翔→ヒット）、プレイヤー/NPC共通
+- **CoopAction**: 連携ボタンスキル（コンボ対応、ターゲット条件、行動割り込み）
 - **AIRuleBuilder**: 条件→行動ルールのUI構築、優先度設定、プリセット保存
-- **CoopAction**: 連携アクションによる障害除去、環境インタラクション
-- **GateSystem**: 連携ゲート、エリアクリアゲート
+- **GateSystem**: エリアクリアゲート、能力ゲート、アイテムゲート
 - **CooldownReward**: クールタイム消化→MP無料連携
 
 #### セクション3: 世界の広がり
@@ -181,10 +181,10 @@
 | InputSystem | 入力管理（キーボード/ゲームパッド） | 1 | なし |
 | PlayerMovement | 移動・ジャンプ・ダッシュ・壁蹴り | 1 | InputSystem |
 | WeaponSystem | 武器装備・切替・コンボ・チャージ | 1 | InputSystem, DataContainer |
-| DamageSystem | ダメージ計算・属性・物理タイプ・状態異常 | 1 | DataContainer |
+| DamageSystem | ダメージ計算・7属性統一・状態異常 | 1 | DataContainer |
 | ParryGuardSystem | パリィ・ガード判定 | 1 | DamageSystem |
 | AICore | AIBrain・モードシステム・センサー | 2 | DataContainer |
-| CompanionAI_Basic | 仲間AI追従・スタンス切替・連携ボタン | 2 | AICore, PlayerMovement |
+| CompanionAI_Basic | 仲間AI追従・スタンス切替・連携割り込み受け | 2 | AICore, PlayerMovement |
 | EnemySystem | 雑魚敵AI・スポーン | 2 | AICore, DamageSystem |
 | MapSystem | タイルマップ・カメラ・ミニマップ・全体マップ・エリア遷移 | 1 | なし |
 | SaveSystem | セーブポイント・回復・ファストトラベル | 1 | MapSystem |
@@ -195,10 +195,11 @@
 | LevelStreaming | エリアのシームレスロード/アンロード | 1 | MapSystem |
 | InventorySystem | アイテム所持・管理・使用 | 1 | DataContainer |
 | UISystem_Basic | HUD（HP/MP/スタミナ/ミニマップ/通貨） | 1 | DataContainer |
-| AIRuleBuilder | 条件付きAIルール構築UI | 2 | CompanionAI_Basic |
-| CoopAction | 連携アクション・障害除去 | 2 | CompanionAI_Basic |
-| GateSystem | エリアゲート管理 | 2 | MapSystem, CoopAction |
-| CooldownReward | クールタイム消化→MP無料連携 | 2 | AIRuleBuilder, CoopAction |
+| MagicSystem | 魔法発動（ProjectileSystem + MagicAction） | 2 | DataContainer, DamageSystem |
+| AIRuleBuilder | 条件付きAIルール構築UI・モード管理・プリセット | 2 | CompanionAI_Basic |
+| CoopAction | 連携ボタンスキル（コンボ・行動割り込み） | 2 | CompanionAI_Basic, AICore, MagicSystem |
+| GateSystem | エリアゲート管理（Clear/Ability/Key） | 2 | MapSystem, SaveSystem |
+| CooldownReward | クールタイム消化→MP無料連携 | 2 | CoopAction |
 | BossSystem | ボスAI・フェーズ管理 | 3 | AICore, DamageSystem |
 | SummonSystem | 召喚仲間管理 | 3 | CompanionAI_Basic |
 | ConfusionMagic | 敵混乱・一時味方化 | 3 | DamageSystem, AICore |

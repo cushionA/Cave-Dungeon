@@ -97,7 +97,7 @@ DataContainer ──► GameManager           PlayerMovement
 
 ## Section 2: AI・仲間・連携
 
-### 追加システム
+### 実装順序（レイヤー順）
 ```
 Layer 0 (Section 1の上に構築):
   AICore              ← DataContainer, GameManager
@@ -107,22 +107,73 @@ Layer 1:
   EnemySystem         ← AICore, DamageSystem
 
 Layer 2:
+  MagicSystem         ← DataContainer, DamageSystem
   AIRuleBuilder       ← CompanionAI_Basic
-  CoopAction          ← CompanionAI_Basic
+  CoopAction          ← CompanionAI_Basic, InputSystem, AICore(TargetSelector), MagicSystem
+  GateSystem          ← MapSystem, SaveSystem, InventorySystem
 
 Layer 3:
-  GateSystem          ← MapSystem, CoopAction
-  CooldownReward      ← AIRuleBuilder, CoopAction
+  CooldownReward      ← AIRuleBuilder, CompanionAI_Basic
 ```
 
-### 追加通信
+### 依存関係図（Section 2 追加分）
+```
+Section 1 基盤
+    │
+    ▼
+DataContainer ──► AICore ──────────┐
+GameManager ──────┘                 │
+                                    ▼
+InputSystem ──► CompanionAI_Basic ──┬──► AIRuleBuilder ──► CooldownReward
+PlayerMovement ──┘    │             │
+                      │             └──► CoopAction（連携ボタンスキル）
+DamageSystem ──► EnemySystem
+
+                   MapSystem ──────► GateSystem
+                   SaveSystem ─────────┘
+                   InventorySystem ─────┘
+```
+
+### システム間通信（Section 2）
+
 | 発信 | → | 受信 | 方式 | 内容 |
 |------|---|------|------|------|
-| EnemySystem | → | CurrencySystem | C# event (OnCurrencyChanged) | 通貨ドロップ |
-| EnemySystem | → | LevelUpSystem | C# event (OnExpGained) | 経験値配布 |
-| EnemySystem | → | InventorySystem | C# event (OnItemAcquired) | アイテムドロップ |
+| EnemySystem | → | CurrencySystem | C# event (OnEnemyDefeated) | 通貨ドロップ |
+| EnemySystem | → | LevelUpSystem | C# event (OnEnemyDefeated) | 経験値配布 |
+| EnemySystem | → | InventorySystem | C# event (OnEnemyDefeated) | アイテムドロップ |
 | InputSystem | → | CompanionAI_Basic | cooperationPressed | 連携ボタン |
-| SaveSystem | → | EnemySystem | 休息通知 | 敵リスポーン |
+| SaveSystem | → | EnemySystem | 休息通知 (OnRest) | 敵リスポーン |
+| DamageSystem | → | AICore.DamageScoreTracker | OnDamageDealt | 累積ダメージスコア加算 |
+| AIRuleBuilder | → | CompanionAI_Basic | OnCustomRulesChanged | ルール更新通知 |
+| AIRuleBuilder | → | CooldownReward | OnCustomRulesChanged | ルールキャッシュ更新 |
+| CoopAction | → | UISystem | OnCoopActivated | 連携演出トリガー |
+| GateSystem | → | MapSystem | OnGateOpened | ミニマップ更新 |
+| GateSystem | → | SaveSystem | OnGateOpened | ゲート状態永続化 |
+| CooldownReward | → | UISystem | OnCooldownReady | クールタイム完了表示 |
+| CooldownReward | → | UISystem | OnFreeCoopActivated | MP無料演出 |
+| CompanionAI_Basic | → | CooldownReward | CooperationButton.Activate | MP無料判定要求 |
+
+### asmdef 配置（Section 2）
+
+```
+Game.AI (Assets/MyAsset/AI/) — Section 2で実装開始
+    ├── Core/           AIBrain, ConditionEvaluator, TargetSelector, DamageScoreTracker
+    ├── Companion/      CompanionController, FollowBehavior, StanceManager, CooperationButton
+    ├── Enemy/          EnemyController, EnemySpawner, DropTable, LootDropper
+    ├── RuleBuilder/    RuleEditorLogic, ConditionBuilder, RulePresetManager
+    ├── Cooldown/       CooldownRewardEvaluator, CooldownTracker
+    └── Data/           AIInfo, CompanionBehaviorSetting, AIRulePreset (ScriptableObjects)
+
+Game.World (Assets/MyAsset/World/) — 既存に追加
+    ├── Gate/           GateController, GateRegistry, GateConditionChecker
+    └── Coop/           CoopActionManager, CoopTrigger, CoopExecutor
+
+Game.Core (Assets/MyAsset/Core/Common/) — 既存に追加
+    └── Enums.cs        CoopActionType, GateType 追加
+
+Game.Tests.EditMode — テスト参照追加
+    └── Game.AI 参照追加
+```
 
 ## Section 3-4
 

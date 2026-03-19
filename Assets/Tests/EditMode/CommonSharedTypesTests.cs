@@ -11,14 +11,16 @@ namespace Game.Tests.EditMode
         {
             ElementalStatus status = new ElementalStatus
             {
-                physical = 10,
-                fire = 5,
-                thunder = 3,
-                light = 2,
-                dark = 1
+                slash = 10,
+                strike = 5,
+                pierce = 3,
+                fire = 2,
+                thunder = 1,
+                light = 4,
+                dark = 6
             };
 
-            Assert.AreEqual(21, status.Total);
+            Assert.AreEqual(31, status.Total);
         }
 
         [Test]
@@ -26,18 +28,40 @@ namespace Game.Tests.EditMode
         {
             ElementalStatus status = new ElementalStatus
             {
-                physical = 100,
+                slash = 100,
+                strike = 80,
+                pierce = 60,
                 fire = 50,
                 thunder = 30,
                 light = 20,
                 dark = 10
             };
 
+            Assert.AreEqual(100, status.Get(Element.Slash));
+            Assert.AreEqual(80, status.Get(Element.Strike));
+            Assert.AreEqual(60, status.Get(Element.Pierce));
             Assert.AreEqual(50, status.Get(Element.Fire));
             Assert.AreEqual(30, status.Get(Element.Thunder));
             Assert.AreEqual(20, status.Get(Element.Light));
             Assert.AreEqual(10, status.Get(Element.Dark));
-            Assert.AreEqual(100, status.Get(Element.None));
+            Assert.AreEqual(0, status.Get(Element.None));
+        }
+
+        [Test]
+        public void ElementalStatus_PhysicalTotal_ReturnsSumOfPhysicalElements()
+        {
+            ElementalStatus status = new ElementalStatus
+            {
+                slash = 10,
+                strike = 5,
+                pierce = 3,
+                fire = 100,
+                thunder = 100,
+                light = 100,
+                dark = 100
+            };
+
+            Assert.AreEqual(18, status.PhysicalTotal);
         }
 
         [Test]
@@ -70,7 +94,9 @@ namespace Game.Tests.EditMode
         {
             GuardStats stats = default;
 
-            Assert.AreEqual(0f, stats.physicalCut);
+            Assert.AreEqual(0f, stats.slashCut);
+            Assert.AreEqual(0f, stats.strikeCut);
+            Assert.AreEqual(0f, stats.pierceCut);
             Assert.AreEqual(0f, stats.fireCut);
             Assert.AreEqual(0f, stats.thunderCut);
             Assert.AreEqual(0f, stats.lightCut);
@@ -80,12 +106,17 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
-        public void StatusEffectApply_DefaultValues_AreNone()
+        public void StatusEffectInfo_DefaultValues_AreNone()
         {
-            StatusEffectApply apply = default;
+            StatusEffectInfo info = default;
 
-            Assert.AreEqual(StatusEffectId.None, apply.effectId);
-            Assert.AreEqual(0f, apply.accumulateValue);
+            Assert.AreEqual(StatusEffectId.None, info.effect);
+            Assert.AreEqual(0f, info.accumulateValue);
+            Assert.AreEqual(0f, info.duration);
+            Assert.AreEqual(0f, info.tickDamage);
+            Assert.AreEqual(0f, info.tickInterval);
+            Assert.AreEqual(0f, info.modifier);
+            Assert.AreEqual(0, info.maxStack);
         }
 
         [Test]
@@ -107,6 +138,16 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(0, mod.vit);
             Assert.AreEqual(3, mod.mnd);
             Assert.AreEqual(-1, mod.end);
+        }
+
+        [Test]
+        public void Element_Flags_CombineCorrectly()
+        {
+            Element combined = Element.Slash | Element.Fire;
+
+            Assert.IsTrue(combined.HasFlag(Element.Slash));
+            Assert.IsTrue(combined.HasFlag(Element.Fire));
+            Assert.IsFalse(combined.HasFlag(Element.Dark));
         }
     }
 }

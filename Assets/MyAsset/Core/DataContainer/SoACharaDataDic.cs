@@ -22,6 +22,8 @@ namespace Game.Core
         private CombatStats[] _combatStats;
         private CharacterFlags[] _flags;
         private MoveParams[] _moveParams;
+        private EquipmentStatus[] _equipmentStatus;
+        private CharacterStatusEffects[] _statusEffects;
 
         private int _count;
         private int _capacity;
@@ -50,13 +52,16 @@ namespace Game.Core
             _combatStats = new CombatStats[_capacity];
             _flags = new CharacterFlags[_capacity];
             _moveParams = new MoveParams[_capacity];
+            _equipmentStatus = new EquipmentStatus[_capacity];
+            _statusEffects = new CharacterStatusEffects[_capacity];
         }
 
         /// <summary>
         /// Registers a character entry. Returns the dense index.
         /// </summary>
         public int Add(int hash, CharacterVitals vitals, CombatStats combatStats,
-            CharacterFlags flags, MoveParams moveParams)
+            CharacterFlags flags, MoveParams moveParams,
+            EquipmentStatus equipmentStatus = default, CharacterStatusEffects statusEffects = default)
         {
             ThrowIfDisposed();
 
@@ -77,6 +82,8 @@ namespace Game.Core
             _combatStats[index] = combatStats;
             _flags[index] = flags;
             _moveParams[index] = moveParams;
+            _equipmentStatus[index] = equipmentStatus;
+            _statusEffects[index] = statusEffects;
 
             _count++;
             return index;
@@ -107,6 +114,8 @@ namespace Game.Core
                 _combatStats[removeIndex] = _combatStats[lastIndex];
                 _flags[removeIndex] = _flags[lastIndex];
                 _moveParams[removeIndex] = _moveParams[lastIndex];
+                _equipmentStatus[removeIndex] = _equipmentStatus[lastIndex];
+                _statusEffects[removeIndex] = _statusEffects[lastIndex];
 
                 // Update the moved element's hash mapping
                 _hashToIndex[lastHash] = removeIndex;
@@ -118,6 +127,8 @@ namespace Game.Core
             _combatStats[lastIndex] = default;
             _flags[lastIndex] = default;
             _moveParams[lastIndex] = default;
+            _equipmentStatus[lastIndex] = default;
+            _statusEffects[lastIndex] = default;
 
             _hashToIndex.Remove(hash);
             _count--;
@@ -164,6 +175,26 @@ namespace Game.Core
         }
 
         /// <summary>
+        /// Returns a reference to the EquipmentStatus for the given hash.
+        /// </summary>
+        public ref EquipmentStatus GetEquipmentStatus(int hash)
+        {
+            ThrowIfDisposed();
+            int index = ResolveIndex(hash);
+            return ref _equipmentStatus[index];
+        }
+
+        /// <summary>
+        /// Returns a reference to the CharacterStatusEffects for the given hash.
+        /// </summary>
+        public ref CharacterStatusEffects GetStatusEffects(int hash)
+        {
+            ThrowIfDisposed();
+            int index = ResolveIndex(hash);
+            return ref _statusEffects[index];
+        }
+
+        /// <summary>
         /// Tries to get the dense index for the given hash.
         /// Returns true if found.
         /// </summary>
@@ -187,6 +218,8 @@ namespace Game.Core
             _combatStats = null;
             _flags = null;
             _moveParams = null;
+            _equipmentStatus = null;
+            _statusEffects = null;
             _count = 0;
             _capacity = 0;
             _disposed = true;
@@ -210,18 +243,24 @@ namespace Game.Core
             CombatStats[] newCombatStats = new CombatStats[newCapacity];
             CharacterFlags[] newFlags = new CharacterFlags[newCapacity];
             MoveParams[] newMoveParams = new MoveParams[newCapacity];
+            EquipmentStatus[] newEquipmentStatus = new EquipmentStatus[newCapacity];
+            CharacterStatusEffects[] newStatusEffects = new CharacterStatusEffects[newCapacity];
 
             Array.Copy(_indexToHash, newIndexToHash, _count);
             Array.Copy(_vitals, newVitals, _count);
             Array.Copy(_combatStats, newCombatStats, _count);
             Array.Copy(_flags, newFlags, _count);
             Array.Copy(_moveParams, newMoveParams, _count);
+            Array.Copy(_equipmentStatus, newEquipmentStatus, _count);
+            Array.Copy(_statusEffects, newStatusEffects, _count);
 
             _indexToHash = newIndexToHash;
             _vitals = newVitals;
             _combatStats = newCombatStats;
             _flags = newFlags;
             _moveParams = newMoveParams;
+            _equipmentStatus = newEquipmentStatus;
+            _statusEffects = newStatusEffects;
             _capacity = newCapacity;
         }
 

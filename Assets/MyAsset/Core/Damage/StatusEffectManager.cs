@@ -7,14 +7,12 @@ namespace Game.Core
         public float tickTimer;
         public float tickInterval;
         public int tickDamage;
+        public float modifier;
     }
 
     public class StatusEffectManager
     {
         public const float k_DefaultThreshold = 100f;
-        public const float k_DefaultDuration = 10f;
-        public const float k_DefaultTickInterval = 2f;
-        public const int k_DefaultTickDamage = 5;
 
         private const int k_MaxStatusEffectTypes = 12; // StatusEffectId enum count
         private const int k_MaxActiveSlots = 3;
@@ -32,29 +30,33 @@ namespace Game.Core
             _activeCount = 0;
         }
 
-        /// <summary>蓄積追加。耐性(statusCut)で軽減。閾値超過で発症。戻り値:発症したか。</summary>
-        public bool Accumulate(StatusEffectId id, float value, float statusCut)
+        /// <summary>
+        /// 蓄積追加。耐性(statusCut)で軽減。閾値超過で発症。
+        /// StatusEffectInfoから持続時間・tickダメージ等を取得する。
+        /// </summary>
+        public bool Accumulate(StatusEffectInfo info, float statusCut)
         {
-            if (id == StatusEffectId.None)
+            if (info.effect == StatusEffectId.None)
             {
                 return false;
             }
 
-            float reducedValue = value * (1f - statusCut);
-            int index = (int)id;
+            float reducedValue = info.accumulateValue * (1f - statusCut);
+            int index = (int)info.effect;
             _accumulations[index] += reducedValue;
 
             if (_accumulations[index] >= k_DefaultThreshold)
             {
-                if (!IsActive(id) && _activeCount < k_MaxActiveSlots)
+                if (!IsActive(info.effect) && _activeCount < k_MaxActiveSlots)
                 {
                     _activeEffects[_activeCount] = new ActiveEffect
                     {
-                        id = id,
-                        remainTime = k_DefaultDuration,
+                        id = info.effect,
+                        remainTime = info.duration,
                         tickTimer = 0f,
-                        tickInterval = k_DefaultTickInterval,
-                        tickDamage = k_DefaultTickDamage,
+                        tickInterval = info.tickInterval > 0f ? info.tickInterval : 1f,
+                        tickDamage = (int)info.tickDamage,
+                        modifier = info.modifier,
                     };
                     _activeCount++;
                     _accumulations[index] = 0f;
@@ -63,6 +65,22 @@ namespace Game.Core
             }
 
             return false;
+        }
+
+        /// <summary>旧API互換: id+value+statusCutの簡易蓄積。</summary>
+        public bool Accumulate(StatusEffectId id, float value, float statusCut)
+        {
+            StatusEffectInfo info = new StatusEffectInfo
+            {
+                effect = id,
+                accumulateValue = value,
+                duration = 10f,
+                tickDamage = 5f,
+                tickInterval = 2f,
+                modifier = 0f,
+                maxStack = 0,
+            };
+            return Accumulate(info, statusCut);
         }
 
         /// <summary>効果Tick。deltaTime経過。戻り値:このフレームのtickダメージ合計。</summary>

@@ -30,10 +30,8 @@ namespace Game.Tests.EditMode
 
             CombatStats combat = new CombatStats
             {
-                physicalAttack = 25,
-                magicAttack = 10,
-                physicalDefense = 15,
-                magicDefense = 8,
+                attack = new ElementalStatus { slash = 25, fire = 10 },
+                defense = new ElementalStatus { slash = 15, fire = 8 },
                 criticalRate = 0.1f,
                 criticalMultiplier = 1.5f
             };
@@ -68,7 +66,8 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(new Vector2(1f, 2f), storedVitals.position);
 
             CombatStats storedCombat = dic.GetCombatStats(hash);
-            Assert.AreEqual(25, storedCombat.physicalAttack);
+            Assert.AreEqual(25, storedCombat.attack.slash);
+            Assert.AreEqual(10, storedCombat.attack.fire);
             Assert.AreEqual(0.1f, storedCombat.criticalRate, 0.001f);
 
             CharacterFlags storedFlags = dic.GetFlags(hash);
@@ -201,6 +200,45 @@ namespace Game.Tests.EditMode
             {
                 dic.TryGetValue(1, out int _);
             });
+        }
+
+        [Test]
+        public void SoACharaDataDic_EquipmentStatus_StoresAndRetrieves()
+        {
+            SoACharaDataDic dic = new SoACharaDataDic(4);
+            int hash = 1;
+
+            EquipmentStatus equip = new EquipmentStatus
+            {
+                weaponId = 5,
+                gripMode = GripMode.TwoHanded,
+                weightRatio = 0.8f
+            };
+
+            dic.Add(hash, default, default, default, default, equip);
+
+            ref EquipmentStatus stored = ref dic.GetEquipmentStatus(hash);
+            Assert.AreEqual(5, stored.weaponId);
+            Assert.AreEqual(GripMode.TwoHanded, stored.gripMode);
+            Assert.AreEqual(0.8f, stored.weightRatio, 0.001f);
+
+            dic.Dispose();
+        }
+
+        [Test]
+        public void CharacterFlags_ActState_PacksAndRetrievesCorrectly()
+        {
+            CharacterFlags flags = CharacterFlags.Pack(
+                CharacterBelong.Enemy,
+                CharacterFeature.Boss,
+                ActState.Attacking,
+                AbilityFlag.AirDash
+            );
+
+            Assert.AreEqual(CharacterBelong.Enemy, flags.Belong);
+            Assert.AreEqual(CharacterFeature.Boss, flags.Feature);
+            Assert.AreEqual(ActState.Attacking, flags.ActState);
+            Assert.AreEqual(AbilityFlag.AirDash, flags.AbilityFlags);
         }
     }
 }

@@ -64,28 +64,21 @@ public interface IEquippable
 
 ## 2. 共通Enum定義
 
-### 属性 (Element)
+### 属性 (Element) — 7属性統一
 ```csharp
 [Flags]
 public enum Element : byte
 {
-    None      = 0,
-    Fire      = 1 << 0,
-    Thunder   = 1 << 1,
-    Light     = 1 << 2,
-    Dark      = 1 << 3,
-    // 物理タイプは別enum（WeaponPhysicalType）で管理
+    None    = 0,
+    Slash   = 1 << 0,  // 斬撃
+    Strike  = 1 << 1,  // 打撃
+    Pierce  = 1 << 2,  // 刺突
+    Fire    = 1 << 3,  // 炎
+    Thunder = 1 << 4,  // 雷
+    Light   = 1 << 5,  // 聖
+    Dark    = 1 << 6,  // 闇
 }
-```
-
-### 物理タイプ (WeaponPhysicalType)
-```csharp
-public enum WeaponPhysicalType : byte
-{
-    Slash,    // 斬撃
-    Pierce,   // 刺突
-    Strike,   // 打撃
-}
+// ※ WeaponPhysicalType は廃止。物理タイプ（斬撃/打撃/刺突）もElementに統合
 ```
 
 ### 装備スロット (EquipSlot)
@@ -258,18 +251,20 @@ public enum GuardType : byte
 
 ## 3. 共通データ構造
 
-### ElementalStatus（属性ステータス）
+### ElementalStatus（属性ステータス — 7属性統一）
 ```csharp
 public struct ElementalStatus
 {
-    public int physical;   // 物理
-    public int fire;
-    public int thunder;
-    public int light;
-    public int dark;
+    public int slash;      // 斬撃
+    public int strike;     // 打撃
+    public int pierce;     // 刺突
+    public int fire;       // 炎
+    public int thunder;    // 雷
+    public int light;      // 聖
+    public int dark;       // 闇
 
     public int Get(Element element) { ... }
-    public int Total => physical + fire + thunder + light + dark;
+    public int Total => slash + strike + pierce + fire + thunder + light + dark;
 }
 ```
 
@@ -281,10 +276,9 @@ public struct DamageData
     public int defenderHash;
     public ElementalDamage damage;         // 各属性の最終ダメージ
     public float motionValue;              // モーション値
-    public float knockbackForce;
-    public Vector2 knockbackDirection;
-    public WeaponPhysicalType physicalType;
-    public StatusEffectApply statusEffect; // 状態異常蓄積
+    public Vector2 knockbackForce;         // 吹き飛ばし方向・力（統合済み）
+    public Element attackElement;          // 攻撃属性（physicalType廃止、Elementに統合）
+    public StatusEffectInfo statusEffect;  // 状態異常情報（旧StatusEffectApply）
     public AttackFeature feature;          // 攻撃特性フラグ
     public float armorBreakValue;          // アーマー削り値
     public float justGuardResistance;      // ジャストガード抵抗 (0-100)
@@ -316,12 +310,17 @@ public enum GuardResult : byte
 }
 ```
 
-### StatusEffectApply（状態異常蓄積データ）
+### StatusEffectInfo（状態異常情報 — 旧StatusEffectApply拡張）
 ```csharp
-public struct StatusEffectApply
+public struct StatusEffectInfo
 {
     public StatusEffectId effectId;
     public float accumulateValue;   // 蓄積量（装備値+モーション値の合算）
+    public float duration;          // 持続時間
+    public float tickDamage;        // Tick毎ダメージ
+    public float tickInterval;      // Tickの間隔(秒)
+    public float modifier;          // 効果の強さ倍率
+    public int maxStack;            // 最大スタック数
 }
 ```
 
@@ -470,8 +469,7 @@ public struct AttackMotionData
 {
     [Header("基本")]
     public float motionValue;              // ダメージ倍率
-    public Element attackElement;          // 攻撃属性（武器の該当属性攻撃力を参照）
-    public WeaponPhysicalType physicalType;
+    public Element attackElement;          // 攻撃属性（7属性統一、physicalType廃止）
     public AttackFeature feature;          // 攻撃特性フラグ
 
     [Header("コスト")]
@@ -486,7 +484,7 @@ public struct AttackMotionData
     public Vector2 knockbackForce;         // 吹き飛ばし方向・力
 
     [Header("状態異常")]
-    public StatusEffectApply statusEffect; // 蓄積（装備値 + このモーション値の合算）
+    public StatusEffectInfo statusEffect;  // 状態異常情報（旧StatusEffectApply）
 
     [Header("移動")]
     public float attackMoveDistance;        // 攻撃時移動距離
@@ -529,7 +527,7 @@ public class WeaponData : ScriptableObject, IEquippable
     public AnimationCurve intCurve;
 
     [Header("状態異常付与")]
-    public StatusEffectApply inflictStatus; // 装備由来の状態異常蓄積
+    public StatusEffectInfo inflictStatus; // 装備由来の状態異常蓄積
 
     [Header("モーション")]
     public AttackMotionData[] lightAttacks;     // 弱攻撃チェーン
@@ -566,7 +564,7 @@ public class ShieldData : ScriptableObject, IEquippable
     public ElementalStatus baseAttack;
 
     [Header("状態異常付与")]
-    public StatusEffectApply inflictStatus;
+    public StatusEffectInfo inflictStatus;
 
     [Header("ジャストガード")]
     public float justGuardStartTime;       // ガード開始から何秒後にJG判定開始

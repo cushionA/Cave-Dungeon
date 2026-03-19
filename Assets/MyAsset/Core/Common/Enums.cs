@@ -2,23 +2,19 @@ using System;
 
 namespace Game.Core
 {
-    // ===== 属性・物理タイプ =====
+    // ===== 属性（物理3種 + 属性4種 = 7属性） =====
 
     [Flags]
     public enum Element : byte
     {
         None    = 0,
-        Fire    = 1 << 0,
-        Thunder = 1 << 1,
-        Light   = 1 << 2,
-        Dark    = 1 << 3,
-    }
-
-    public enum WeaponPhysicalType : byte
-    {
-        Slash,
-        Pierce,
-        Strike,
+        Slash   = 1 << 0,  // 斬撃
+        Strike  = 1 << 1,  // 打撃
+        Pierce  = 1 << 2,  // 刺突
+        Fire    = 1 << 3,  // 炎
+        Thunder = 1 << 4,  // 雷
+        Light   = 1 << 5,  // 聖
+        Dark    = 1 << 6,  // 闇
     }
 
     // ===== 装備 =====
@@ -172,6 +168,44 @@ namespace Game.Core
         Combat,
     }
 
+    // ===== キャラクターランク =====
+
+    public enum CharacterRank : byte
+    {
+        F, E, D, C, B, A, S, SS,
+    }
+
+    // ===== 行動状態 =====
+
+    public enum ActState : byte
+    {
+        Neutral,
+        Running,
+        Jumping,
+        Falling,
+        OnGround,
+        Guarding,
+        AttackPrep,
+        Attacking,
+        AttackRecovery,
+        Knockbacked,
+        Stunned,
+        Dead,
+        Custom,
+    }
+
+    // ===== 攻撃カテゴリ =====
+
+    public enum AttackCategory : byte
+    {
+        Melee,
+        Ranged,
+        Magic,
+        Skill,
+        Support,
+        Summon,
+    }
+
     // ===== 状態異常 =====
 
     public enum StatusEffectId : byte
@@ -213,5 +247,162 @@ namespace Game.Core
         Material,
         KeyItem,
         Flavor,
+    }
+
+    // ===== Section 2: AI・魔法・ゲート =====
+
+    public enum ActionExecType : byte
+    {
+        Attack,
+        Cast,
+        Instant,
+        Sustained,
+        Broadcast,
+    }
+
+    public enum InstantAction : byte
+    {
+        Dodge,
+        WarpToTarget,
+        WarpBehind,
+        UseItem,
+        InteractObject,
+        BodySlam,
+    }
+
+    public enum SustainedAction : byte
+    {
+        MoveToTarget,
+        Follow,
+        Retreat,
+        Flee,
+        Patrol,
+        Guard,
+        Flank,
+        ShieldDeploy,
+        Decoy,
+        Cover,
+        Stealth,
+        Orbit,
+    }
+
+    public enum BroadcastAction : byte
+    {
+        DesignateTarget,
+        Rally,
+        Scatter,
+        Taunt,
+        FocusFire,
+        Disengage,
+        ModeSync,
+    }
+
+    public enum GateType : byte
+    {
+        Clear,
+        Ability,
+        Key,
+    }
+
+    public enum MagicType : byte
+    {
+        Attack,
+        Recover,
+        Support,
+    }
+
+    public enum CastType : byte
+    {
+        None,
+        Short,
+        Normal,
+        Long,
+    }
+
+    public enum FireType : byte
+    {
+        None,
+        Short,
+        Normal,
+        Swing,
+        Special,
+    }
+
+    public enum BulletMoveType : byte
+    {
+        Straight,
+        Homing,
+        Angle,
+        Rain,
+        Set,
+        Stop,
+    }
+
+    [Flags]
+    public enum BulletFeature : ushort
+    {
+        None        = 0,
+        Pierce      = 1 << 0,
+        Explode     = 1 << 1,
+        Reflect     = 1 << 2,
+        Gravity     = 1 << 3,
+        Platform    = 1 << 4,
+        Shield      = 1 << 5,
+        AreaEffect  = 1 << 6,
+        Knockback   = 1 << 7,
+    }
+
+    public enum ChildBulletTrigger : byte
+    {
+        None,
+        OnActivate,
+        OnTimer,
+        OnHit,
+        OnDestroy,
+    }
+
+    public enum AIConditionType : byte
+    {
+        None = 0,
+        Count,
+        HpRatio,
+        MpRatio,
+        StaminaRatio,
+        ArmorRatio,
+        Distance,
+        NearbyFaction,
+        ProjectileNear,
+        ObjectNearby,
+        DamageScore,
+        EventFired,
+        SelfActState,
+    }
+
+    public enum TargetSortKey : byte
+    {
+        Distance,
+        HpRatio,
+        HpValue,
+        AttackPower,
+        DefensePower,
+        TargetingCount,
+        LastAttacker,
+        DamageScore,
+        Self,
+        Player,
+        Sister,
+    }
+
+    public enum CompareOp : byte
+    {
+        Less,
+        LessEqual,
+        Equal,
+        GreaterEqual,
+        Greater,
+        NotEqual,
+        InRange,    // operandA <= 値 <= operandB
+        HasFlag,    // (値 & operandA) == operandA（AND判定）
+        HasAny,     // (値 & operandA) != 0（OR判定）
     }
 }

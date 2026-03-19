@@ -40,7 +40,8 @@ namespace Game.Tests.EditMode
 
             // Tick exactly one interval (default tickInterval=2.0)
             int damage = manager.Tick(2.0f);
-            Assert.AreEqual(StatusEffectManager.k_DefaultTickDamage, damage,
+            // Legacy Accumulate overload uses tickDamage=5, tickInterval=2.0
+            Assert.AreEqual(5, damage,
                 "Should deal tick damage after one interval");
         }
 

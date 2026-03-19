@@ -2,7 +2,7 @@ namespace Game.Core
 {
     /// <summary>
     /// ダメージ計算の静的ユーティリティ。
-    /// 基本ダメージ、属性倍率、クリティカル判定を提供する。
+    /// 7属性別ダメージ計算、弱点倍率、クリティカル判定を提供する。
     /// </summary>
     public static class DamageCalculator
     {
@@ -11,36 +11,71 @@ namespace Game.Core
         public const float k_ResistMult = 0.5f;
 
         /// <summary>
-        /// 基本ダメージ計算。attack * motionValue - defense。最小k_MinDamage。
+        /// 単一属性の基本ダメージ計算。
+        /// 式: (atk² × motionValue) / (atk + def)
         /// </summary>
         public static int CalculateBaseDamage(int attack, float motionValue, int defense)
         {
-            int raw = (int)(attack * motionValue) - defense;
+            if (attack <= 0)
+            {
+                return 0;
+            }
+
+            int atk = attack;
+            int def = defense > 0 ? defense : 0;
+            int raw = (int)((float)(atk * atk) * motionValue / (atk + def));
             return raw < k_MinDamage ? k_MinDamage : raw;
         }
 
         /// <summary>
-        /// 属性ダメージ計算。elementAttack * elementMult。
-        /// weakElement→k_WeaknessMult、resistElement→k_ResistMult、それ以外→1.0。
+        /// 7属性それぞれについてダメージ計算し、合計を返す。
+        /// 各属性: CalculateBaseDamage(atk, motionValue, def) × weakMult
         /// </summary>
-        public static int CalculateElementalDamage(
-            int elementAttack,
-            Element attackElement,
-            Element weakElement,
-            Element resistElement)
+        public static int CalculateTotalDamage(
+            ElementalStatus attackStats,
+            float motionValue,
+            ElementalStatus defenseStats,
+            Element weakElement)
         {
-            float multiplier = 1.0f;
+            int total = 0;
+            total += CalculateChannelDamage(attackStats.slash, motionValue, defenseStats.slash, Element.Slash, weakElement);
+            total += CalculateChannelDamage(attackStats.strike, motionValue, defenseStats.strike, Element.Strike, weakElement);
+            total += CalculateChannelDamage(attackStats.pierce, motionValue, defenseStats.pierce, Element.Pierce, weakElement);
+            total += CalculateChannelDamage(attackStats.fire, motionValue, defenseStats.fire, Element.Fire, weakElement);
+            total += CalculateChannelDamage(attackStats.thunder, motionValue, defenseStats.thunder, Element.Thunder, weakElement);
+            total += CalculateChannelDamage(attackStats.light, motionValue, defenseStats.light, Element.Light, weakElement);
+            total += CalculateChannelDamage(attackStats.dark, motionValue, defenseStats.dark, Element.Dark, weakElement);
+            return total < k_MinDamage ? k_MinDamage : total;
+        }
 
-            if (attackElement != Element.None && attackElement == weakElement)
+        /// <summary>
+        /// 単一属性チャネルのダメージ計算。attackが0なら0を返す。
+        /// </summary>
+        public static int CalculateChannelDamage(
+            int attack, float motionValue, int defense,
+            Element channel, Element weakElement)
+        {
+            if (attack <= 0)
             {
-                multiplier = k_WeaknessMult;
-            }
-            else if (attackElement != Element.None && attackElement == resistElement)
-            {
-                multiplier = k_ResistMult;
+                return 0;
             }
 
-            return (int)(elementAttack * multiplier);
+            int baseDmg = CalculateBaseDamage(attack, motionValue, defense);
+            float multiplier = GetWeaknessMultiplier(channel, weakElement);
+            return (int)(baseDmg * multiplier);
+        }
+
+        /// <summary>
+        /// 弱点倍率を取得。弱点ヒットならk_WeaknessMult、それ以外は1.0。
+        /// Flags比較: weakElementに該当チャネルが含まれていればHit。
+        /// </summary>
+        public static float GetWeaknessMultiplier(Element channel, Element weakElement)
+        {
+            if (channel != Element.None && (weakElement & channel) != 0)
+            {
+                return k_WeaknessMult;
+            }
+            return 1.0f;
         }
 
         /// <summary>

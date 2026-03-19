@@ -10,10 +10,11 @@ namespace Game.Tests.EditMode
         [Test]
         public void DamageCalculator_CalculateBaseDamage_AppliesFormula()
         {
-            // atk=100, motionValue=1.2, def=30 => 100*1.2-30 = 90
+            // 新式: (atk² × motionValue) / (atk + def)
+            // atk=100, motionValue=1.2, def=30 => (10000*1.2)/(130) = 92
             int result = DamageCalculator.CalculateBaseDamage(100, 1.2f, 30);
 
-            Assert.AreEqual(90, result);
+            Assert.AreEqual(92, result);
         }
 
         [Test]
@@ -28,22 +29,32 @@ namespace Game.Tests.EditMode
         // --- 属性ダメージ ---
 
         [Test]
-        public void DamageCalculator_CalculateElementalDamage_AppliesWeakness()
+        public void DamageCalculator_GetWeaknessMultiplier_AppliesWeakness()
         {
             // 弱点属性 => 1.5x
-            int weakResult = DamageCalculator.CalculateElementalDamage(
-                100, Element.Fire, Element.Fire, Element.Thunder);
-            Assert.AreEqual(150, weakResult);
+            float weakMult = DamageCalculator.GetWeaknessMultiplier(Element.Fire, Element.Fire);
+            Assert.AreEqual(DamageCalculator.k_WeaknessMult, weakMult, 0.001f);
 
-            // 耐性属性 => 0.5x
-            int resistResult = DamageCalculator.CalculateElementalDamage(
-                100, Element.Thunder, Element.Fire, Element.Thunder);
-            Assert.AreEqual(50, resistResult);
+            // 非弱点属性 => 1.0x
+            float normalMult = DamageCalculator.GetWeaknessMultiplier(Element.Light, Element.Fire);
+            Assert.AreEqual(1.0f, normalMult, 0.001f);
 
-            // 通常属性 => 1.0x
-            int normalResult = DamageCalculator.CalculateElementalDamage(
-                100, Element.Light, Element.Fire, Element.Thunder);
-            Assert.AreEqual(100, normalResult);
+            // None属性 => 1.0x
+            float noneMult = DamageCalculator.GetWeaknessMultiplier(Element.None, Element.Fire);
+            Assert.AreEqual(1.0f, noneMult, 0.001f);
+        }
+
+        [Test]
+        public void DamageCalculator_CalculateChannelDamage_AppliesWeaknessMultiplier()
+        {
+            // atk=100, motionValue=1.0, def=0, 弱点ヒット => baseDmg * 1.5
+            int weakResult = DamageCalculator.CalculateChannelDamage(100, 1.0f, 0, Element.Fire, Element.Fire);
+            int baseResult = DamageCalculator.CalculateBaseDamage(100, 1.0f, 0);
+            Assert.AreEqual((int)(baseResult * DamageCalculator.k_WeaknessMult), weakResult);
+
+            // 非弱点 => baseDmg * 1.0
+            int normalResult = DamageCalculator.CalculateChannelDamage(100, 1.0f, 0, Element.Light, Element.Fire);
+            Assert.AreEqual(baseResult, normalResult);
         }
 
         // --- クリティカル ---

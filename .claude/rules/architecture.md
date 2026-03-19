@@ -78,15 +78,24 @@ paths:
 - 過負荷（1.0超過）も可能だが大ペナルティ
 
 ### 戦闘
-- ダメージ式: (atk² × motionValue) / (atk + def) × 倍率
+- ダメージ式: 各属性チャネルごとに (atk² × motionValue) / (atk + def) を計算し合算
 - isAutoChain: 入力なしで自動的に次モーションへ遷移するフラグ
 - maxHitCount: モーションごとの最大ヒット数
 - justGuardResistance: ジャストガード時のアーマー削り軽減 (0-100)
 - AttackFeature.JustGuardImmune: ジャストガード不可攻撃
 
+### 属性システム（7属性統一）
+- Element = Slash(斬撃)/Strike(打撃)/Pierce(刺突)/Fire(炎)/Thunder(雷)/Light(聖)/Dark(闇)
+- [Flags] byte で複合属性を表現可能（例: 炎+斬撃の剣）
+- WeaponPhysicalType は廃止。物理タイプ（斬撃/打撃/刺突）もElementに統合
+- ElementalStatus: 7属性別のint値（slash, strike, pierce, fire, thunder, light, dark）
+- CombatStats: ElementalStatus attack / ElementalStatus defense（属性別攻防）
+- ダメージ計算は7属性チャネル別に (atk² × motionValue) / (atk + def) を算出し合算
+- GuardStats: 属性別カット率（slashCut, strikeCut, pierceCut, fireCut, thunderCut, lightCut, darkCut）
+
 ### 能力値スケーリング
 - 武器は STR/DEX/INT の AnimationCurve を持つ
-- STR → 物理・光、DEX → 物理・闇、INT → 火・雷
+- STR → 斬撃・聖、DEX → 刺突・闇、INT → 炎・雷
 - レベルアップで能力値ポイントを振り分け（セーブポイントで）
 
 ### Assembly構成
@@ -98,3 +107,57 @@ paths:
 - エリア境界にTrigger配置 → Additive Scene Loading
 - GameScene（永続） + エリアシーン（Additive）構成
 - プレイヤー・仲間・UIは永続シーンに属する
+
+## Section 2 固有ルール（/design-systems section-2 で追記）
+
+### 統一行動システム（ActionSlot）
+- **全行動をActionSlotで統一**。旧ActionData（ActState+param）は廃止
+- 敵AIも仲間AIも同じActionSlot/AIMode/ActionExecutorで動作
+- 実行パターン5分類（ActionExecType）:
+  - **Attack**: AttackMotionData参照、ヒットボックス・motionValue・コンボ管理
+  - **Cast**: 詠唱→発動→ProjectileSystem（魔法、チャージ攻撃、武器スキル飛翔体）
+  - **Instant**: アニメ1回再生（ワープ、回避、アイテム使用、環境物利用）
+  - **Sustained**: 開始→Tick→終了条件（移動、ガード、追従、挟撃等）。reactionTriggerでカウンター系
+  - **Broadcast**: 他キャラAI状態を操作（ターゲット指示、集合、挑発等）
+- ActionBase基底クラス: 共通フィールド（mpCost, staminaCost, cooldown）+ CanExecute/Execute/Interrupt/Tick
+- ActionExecutorはDictionary<ActionExecType, ActionBase>（switch文排除）
+
+### AI判定システム（Architect/07_AI判定システム再設計.md 準拠）
+- 3層判定: ターゲット切替 → 行動切替 → デフォルト行動（棒立ち防止）
+- AIConditionType(12種) + CompareOp(6種) で全条件を統一表現
+- AIRule.conditions は AND 結合、AIRule[] は優先度順（先勝ち = OR結合）
+- ヘイトシステム廃止 → DamageScore（累積ダメージ×倍率+時間減衰）で代替
+- TargetFilter のビット演算でCharacterFlagsを高速フィルタリング
+
+### AIBrain
+- AIBrainはMonoBehaviour。3層判定のEvaluate()を毎判定間隔で実行
+- ConditionEvaluator, TargetSelector, ActionExecutor はピュアロジック（MonoBehaviour非依存）
+- CompanionControllerはAIBrainを継承（モード手動切替+自動切替対応）
+
+### 仲間AIカスタム（AIRuleBuilder）
+- CompanionAIConfig: 最大4モード + モード自動切替条件 + ショートカット手動切替
+- ActionSlotの行動タイプは探索報酬で段階的に解放（メトロイドヴァニアの新能力=新戦術）
+- システムプリセット入手 = 完成済みパターン + 新ActionType解放（二重報酬）
+- 手動切替が最優先、タイムアウトで自動切替に復帰
+
+### 連携ボタンスキル（CoopAction）
+- 連携 = 仲間への指示スキル。CoopActionBase継承で多様な連携を追加
+- コンボ対応: 連打で最大N回連続発動（MP消費は初回のみ）
+- 各コンボ段ごとにAITargetSelectでターゲット条件を個別設定
+- 行動割り込み: 怯み中でなければ仲間の現在行動を中断→連携終了後に再開
+- クールタイム消化済み→MP無料、未消化→MP消費（タイマーは変えない）
+
+### 飛翔体システム（ProjectileSystem）
+- 全飛翔体の共通基盤（魔法弾、スキル衝撃波、チャージ弾、敵遠距離攻撃）
+- 弾丸はcasterHashのみ記録、命中時にコンテナから最新ステータス取得
+- キャスター死亡→弾丸自動消滅
+
+### 敵AI
+- 行動パターンはAIInfo（ScriptableObject）のAIMode配列（ActionSlot[]含む）で定義
+- DamageScoreTrackerで「最もダメージを与えてくる相手」をターゲットに選択
+- スポーンはEnemySpawner（activateRange外は非アクティブ、休息でリスポーン）
+
+### ゲートシステム
+- GateType: Clear / Ability / Key の3種
+- 永続ゲート（ボスクリア等）はグローバルフラグ、一時ゲートはマップローカルフラグ
+- ISaveable実装でSaveSystemと連携

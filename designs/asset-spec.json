@@ -113,5 +113,36 @@
     "_derived_jumpDuration": 0.49,
     "_derived_jumpGravity": 29.16,
     "_comment": "jumpHeight=3.5タイル(プレイヤー身長の約2倍)。jumpDistance=5タイル。dashDistance=3タイル。moveSpeed=6unit/s(約1秒で1画面の1/4移動)。jumpDuration = sqrt(2*jumpHeight/gravity), gravity = Physics2D.gravity.y * gravityScale"
+  },
+
+  "companion": {
+    "followDistance": 2.0,
+    "maxLeashDistance": 15.0,
+    "teleportThreshold": 15.0,
+    "supportHpThreshold": 0.5,
+    "_comment": "仲間AI追従パラメータ。followDistance以内で停止、maxLeashDistance超過でテレポート"
+  },
+
+  "ai": {
+    "sensorRange": 12.0,
+    "sensorAngle": 120,
+    "damageScoreDecayRate": 0.95,
+    "damageScoreMaxEntries": 8,
+    "hateMultiplier": 1.2,
+    "judgeIntervalTarget": 0.5,
+    "judgeIntervalAction": 0.3,
+    "_comment": "AI基本パラメータ。sensorRange=検知距離(タイル)、sensorAngle=視野角(度)、decayRate=DamageScore減衰率/秒"
+  },
+
+  "enemy": {
+    "spawnActivateRange": 20.0,
+    "respawnDelay": 30.0,
+    "_comment": "敵スポーンパラメータ。activateRange=有効化距離(タイル)、respawnDelay=リスポーン間隔(秒、休息時即リスポーン)"
+  },
+
+  "coop": {
+    "interactionRange": 3.0,
+    "cooldownBase": 15.0,
+    "_comment": "連携アクションパラメータ。interactionRange=連携可能距離(タイル)、cooldownBase=基本クールタイム(秒)"
   }
 }

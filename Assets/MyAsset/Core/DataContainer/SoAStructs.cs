@@ -19,18 +19,20 @@ namespace Game.Core
         public float maxArmor;
         public Vector2 position;
         public int level;
+        public float staminaRecoveryRate;     // スタミナ回復速度(/秒)
+        public float staminaRecoveryDelay;    // 消費後回復開始遅延(秒)
+        public byte hpRatio;                  // HP割合(0-100) AI判定用キャッシュ
+        public byte mpRatio;                  // MP割合(0-100) AI判定用キャッシュ
     }
 
     /// <summary>
-    /// Offensive and defensive combat parameters.
+    /// 7属性別の攻撃力・防御力 + クリティカル + ガード。
     /// </summary>
     [Serializable]
     public struct CombatStats
     {
-        public int physicalAttack;
-        public int magicAttack;
-        public int physicalDefense;
-        public int magicDefense;
+        public ElementalStatus attack;    // 7属性別攻撃力
+        public ElementalStatus defense;   // 7属性別防御力
         public float criticalRate;
         public float criticalMultiplier;
         public GuardStats guardStats;
@@ -38,31 +40,60 @@ namespace Game.Core
 
     /// <summary>
     /// All character state flags bit-packed into a single ulong.
-    /// Belong: bits 0-2, Feature: bits 8-23, AbilityFlags: bits 24-31.
+    /// Layout:
+    ///   [0-2]   CharacterBelong (3 bits)
+    ///   [3-8]   ActState (6 bits)
+    ///   [9-17]  CharacterFeature (9 bits)
+    ///   [18-23] Reserved/SpecialEffect (6 bits)
+    ///   [24-35] RecognizeObjectType (12 bits)
+    ///   [36-43] BrainEventFlagType (8 bits)
+    ///   [44-51] AbilityFlag (8 bits)
+    ///   [52-63] Reserved (12 bits)
     /// </summary>
     public struct CharacterFlags
     {
         public ulong flags;
 
-        // Belong: bits 0-2
+        // Belong: bits 0-2 (3 bits)
         public CharacterBelong Belong
         {
             get => (CharacterBelong)(flags & 0x7UL);
             set => flags = (flags & ~0x7UL) | ((ulong)value & 0x7UL);
         }
 
-        // Feature: bits 8-23
-        public CharacterFeature Feature
+        // ActState: bits 3-8 (6 bits)
+        public ActState ActState
         {
-            get => (CharacterFeature)((flags >> 8) & 0xFFFFUL);
-            set => flags = (flags & ~(0xFFFFUL << 8)) | (((ulong)value & 0xFFFFUL) << 8);
+            get => (ActState)((flags >> 3) & 0x3FUL);
+            set => flags = (flags & ~(0x3FUL << 3)) | (((ulong)value & 0x3FUL) << 3);
         }
 
-        // AbilityFlags: bits 24-31
+        // Feature: bits 9-17 (9 bits)
+        public CharacterFeature Feature
+        {
+            get => (CharacterFeature)((flags >> 9) & 0x1FFUL);
+            set => flags = (flags & ~(0x1FFUL << 9)) | (((ulong)value & 0x1FFUL) << 9);
+        }
+
+        // RecognizeObjectType: bits 24-35 (12 bits)
+        public ushort RecognizeObjectType
+        {
+            get => (ushort)((flags >> 24) & 0xFFFUL);
+            set => flags = (flags & ~(0xFFFUL << 24)) | (((ulong)value & 0xFFFUL) << 24);
+        }
+
+        // BrainEventFlagType: bits 36-43 (8 bits)
+        public byte BrainEventFlags
+        {
+            get => (byte)((flags >> 36) & 0xFFUL);
+            set => flags = (flags & ~(0xFFUL << 36)) | (((ulong)value & 0xFFUL) << 36);
+        }
+
+        // AbilityFlags: bits 44-51 (8 bits)
         public AbilityFlag AbilityFlags
         {
-            get => (AbilityFlag)((flags >> 24) & 0xFFUL);
-            set => flags = (flags & ~(0xFFUL << 24)) | (((ulong)value & 0xFFUL) << 24);
+            get => (AbilityFlag)((flags >> 44) & 0xFFUL);
+            set => flags = (flags & ~(0xFFUL << 44)) | (((ulong)value & 0xFFUL) << 44);
         }
 
         public static CharacterFlags Pack(CharacterBelong belong, CharacterFeature feature, AbilityFlag ability)
@@ -70,6 +101,17 @@ namespace Game.Core
             CharacterFlags f = default;
             f.Belong = belong;
             f.Feature = feature;
+            f.AbilityFlags = ability;
+            return f;
+        }
+
+        public static CharacterFlags Pack(CharacterBelong belong, CharacterFeature feature,
+            ActState actState, AbilityFlag ability)
+        {
+            CharacterFlags f = default;
+            f.Belong = belong;
+            f.Feature = feature;
+            f.ActState = actState;
             f.AbilityFlags = ability;
             return f;
         }
@@ -87,5 +129,54 @@ namespace Game.Core
         public float dashDuration;
         public float gravityScale;
         public float weightRatio;
+    }
+
+    /// <summary>
+    /// 装備由来のステータス合計。SoAコンテナで管理。
+    /// </summary>
+    [Serializable]
+    public struct EquipmentStatus
+    {
+        public int weaponId;
+        public int shieldId;
+        public int coreId;
+        public GripMode gripMode;
+        public ElementalStatus finalAttack;
+        public ElementalStatus finalDefense;
+        public GuardStats finalGuardStats;
+        public AbilityFlag activeFlags;
+        public float weightRatio;
+        public float totalWeight;
+        public float maxWeightCapacity;
+        public float justGuardStartTime;
+        public float justGuardDuration;
+    }
+
+    /// <summary>
+    /// キャラクターの状態異常蓄積・アクティブ効果。SoAコンテナで管理。
+    /// </summary>
+    [Serializable]
+    public struct CharacterStatusEffects
+    {
+        // 各状態異常の蓄積値（11種）
+        public float poisonAccum;
+        public float burnAccum;
+        public float bleedAccum;
+        public float stunAccum;
+        public float freezeAccum;
+        public float paralyzeAccum;
+        public float slowAccum;
+        public float blindAccum;
+        public float silenceAccum;
+        public float weaknessAccum;
+        public float curseAccum;
+
+        // アクティブ効果スロット（最大3）
+        public StatusEffectId activeSlot0;
+        public float remainTime0;
+        public StatusEffectId activeSlot1;
+        public float remainTime1;
+        public StatusEffectId activeSlot2;
+        public float remainTime2;
     }
 }
