@@ -275,7 +275,7 @@ namespace Game.Runtime
             handle = LMotion.Create(fromRatio * 100f, targetRatio * 100f, duration)
                 .WithEase(ease)
                 .WithDelay(delay)
-                .BindWithState(bar, (percent, b) =>
+                .Bind(bar, (percent, b) =>
                 {
                     b.style.width = Length.Percent(percent);
                 });

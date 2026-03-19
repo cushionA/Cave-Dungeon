@@ -128,7 +128,7 @@ namespace Game.Runtime
             Vector3 endPos = startPos + new Vector3(0f, _floatHeight, 0f);
             LMotion.Create(startPos, endPos, _duration)
                 .WithEase(Ease.OutCubic)
-                .BindWithState(popupTransform, (pos, t) =>
+                .Bind(popupTransform, (pos, t) =>
                 {
                     t.position = pos;
                 });
@@ -137,7 +137,7 @@ namespace Game.Runtime
             LMotion.Create(1f, 0f, _duration * 0.7f)
                 .WithEase(Ease.InQuad)
                 .WithDelay(_duration * 0.3f)
-                .BindWithState(textMesh, (alpha, tm) =>
+                .Bind(textMesh, (alpha, tm) =>
                 {
                     Color c = tm.color;
                     c.a = alpha;
@@ -149,7 +149,7 @@ namespace Game.Runtime
             {
                 LMotion.Create(_criticalScale, 1f, _duration * 0.4f)
                     .WithEase(Ease.OutBack)
-                    .BindWithState(popupTransform, (scale, t) =>
+                    .Bind(popupTransform, (scale, t) =>
                     {
                         t.localScale = new Vector3(scale, scale, 1f);
                     });

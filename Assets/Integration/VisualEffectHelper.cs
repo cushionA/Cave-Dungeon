@@ -27,7 +27,7 @@ namespace Game.Runtime
             // LitMotionでアニメーション
             LitMotion.LMotion.Create(1f, 0f, duration)
                 .WithEase(LitMotion.Ease.OutQuad)
-                .BindWithState(renderer.material, (value, mat) =>
+                .Bind(renderer.material, (value, mat) =>
                 {
                     mat.SetFloat("_HitEffectBlend", value);
                 });
