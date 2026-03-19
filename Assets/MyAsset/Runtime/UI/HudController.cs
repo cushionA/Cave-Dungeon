@@ -1,20 +1,26 @@
 using UnityEngine;
 using UnityEngine.UIElements;
 using Game.Core;
+using LitMotion;
 
 namespace Game.Runtime
 {
     /// <summary>
     /// HUD表示コントローラ。UI ToolkitベースでHP/MP/スタミナバーを更新する。
-    /// HudDataProvider（純ロジック）からデータを取得し、UIElementsに反映する。
+    /// LitMotionでバー幅をスムース補間する。
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     public class HudController : MonoBehaviour
     {
+        [Header("Animation")]
+        [SerializeField] private float _barTweenDuration = 0.25f;
+        [SerializeField] private float _damageTweenDuration = 0.6f;
+
         private UIDocument _uiDocument;
 
         // プレイヤーステータス
         private VisualElement _hpBarFill;
+        private VisualElement _hpBarDamage;
         private VisualElement _mpBarFill;
         private VisualElement _staminaBarFill;
         private Label _hpText;
@@ -38,6 +44,23 @@ namespace Game.Runtime
         private int _bossHash;
         private bool _showBoss;
 
+        // 前フレームの比率（トゥイーン差分検出用）
+        private float _prevHpRatio = -1f;
+        private float _prevMpRatio = -1f;
+        private float _prevStaminaRatio = -1f;
+        private float _prevCompanionHpRatio = -1f;
+        private float _prevCompanionMpRatio = -1f;
+        private float _prevBossHpRatio = -1f;
+
+        // アクティブなモーションハンドル
+        private MotionHandle _hpHandle;
+        private MotionHandle _hpDamageHandle;
+        private MotionHandle _mpHandle;
+        private MotionHandle _staminaHandle;
+        private MotionHandle _companionHpHandle;
+        private MotionHandle _companionMpHandle;
+        private MotionHandle _bossHpHandle;
+
         private void Awake()
         {
             _uiDocument = GetComponent<UIDocument>();
@@ -53,6 +76,7 @@ namespace Game.Runtime
 
             // プレイヤー
             _hpBarFill = root.Q<VisualElement>("hp-bar-fill");
+            _hpBarDamage = root.Q<VisualElement>("hp-bar-damage");
             _mpBarFill = root.Q<VisualElement>("mp-bar-fill");
             _staminaBarFill = root.Q<VisualElement>("stamina-bar-fill");
             _hpText = root.Q<Label>("hp-text");
@@ -71,6 +95,17 @@ namespace Game.Runtime
 
             // 通貨
             _currencyText = root.Q<Label>("currency-text");
+        }
+
+        private void OnDisable()
+        {
+            CancelHandle(ref _hpHandle);
+            CancelHandle(ref _hpDamageHandle);
+            CancelHandle(ref _mpHandle);
+            CancelHandle(ref _staminaHandle);
+            CancelHandle(ref _companionHpHandle);
+            CancelHandle(ref _companionMpHandle);
+            CancelHandle(ref _bossHpHandle);
         }
 
         private void Update()
@@ -96,9 +131,17 @@ namespace Game.Runtime
             ref CharacterVitals vitals = ref GameManager.Data.GetVitals(playerHash);
             (float hpRatio, float mpRatio, float staminaRatio) = HudDataProvider.GetVitalsRatios(vitals);
 
-            SetBarWidth(_hpBarFill, hpRatio);
-            SetBarWidth(_mpBarFill, mpRatio);
-            SetBarWidth(_staminaBarFill, staminaRatio);
+            // HP: 減少方向はダメージバー演出付き
+            TweenBar(_hpBarFill, ref _hpHandle, ref _prevHpRatio, hpRatio, _barTweenDuration);
+
+            // HPダメージバー（遅延で追従する赤バー）
+            if (_hpBarDamage != null && hpRatio < _prevHpRatio)
+            {
+                TweenBar(_hpBarDamage, ref _hpDamageHandle, ref _prevHpRatio, hpRatio, _damageTweenDuration, Ease.InQuad, _barTweenDuration);
+            }
+
+            TweenBar(_mpBarFill, ref _mpHandle, ref _prevMpRatio, mpRatio, _barTweenDuration);
+            TweenBar(_staminaBarFill, ref _staminaHandle, ref _prevStaminaRatio, staminaRatio, _barTweenDuration * 0.5f);
 
             if (_hpText != null)
             {
@@ -117,7 +160,6 @@ namespace Game.Runtime
                 return;
             }
 
-            // 仲間を探す（AllyHashesからPlayer以外）
             int companionHash = 0;
             for (int i = 0; i < CharacterRegistry.AllyHashes.Count; i++)
             {
@@ -139,8 +181,8 @@ namespace Game.Runtime
             ref CharacterVitals vitals = ref GameManager.Data.GetVitals(companionHash);
             (float hpRatio, float mpRatio, float _) = HudDataProvider.GetVitalsRatios(vitals);
 
-            SetBarWidth(_companionHpBarFill, hpRatio);
-            SetBarWidth(_companionMpBarFill, mpRatio);
+            TweenBar(_companionHpBarFill, ref _companionHpHandle, ref _prevCompanionHpRatio, hpRatio, _barTweenDuration);
+            TweenBar(_companionMpBarFill, ref _companionMpHandle, ref _prevCompanionMpRatio, mpRatio, _barTweenDuration);
 
             if (_companionHpText != null)
             {
@@ -164,7 +206,7 @@ namespace Game.Runtime
             _bossPanel.style.display = DisplayStyle.Flex;
             ref CharacterVitals vitals = ref GameManager.Data.GetVitals(_bossHash);
             float hpRatio = HudDataProvider.CalculateBarRatio(vitals.currentHp, vitals.maxHp);
-            SetBarWidth(_bossHpBarFill, hpRatio);
+            TweenBar(_bossHpBarFill, ref _bossHpHandle, ref _prevBossHpRatio, hpRatio, _barTweenDuration);
         }
 
         /// <summary>
@@ -200,12 +242,52 @@ namespace Game.Runtime
             }
         }
 
-        private static void SetBarWidth(VisualElement bar, float ratio)
+        /// <summary>
+        /// バー幅をLitMotionでスムース補間する。
+        /// 値が変わった場合のみトゥイーンを開始する。
+        /// </summary>
+        private void TweenBar(
+            VisualElement bar,
+            ref MotionHandle handle,
+            ref float prevRatio,
+            float targetRatio,
+            float duration,
+            Ease ease = Ease.OutCubic,
+            float delay = 0f)
         {
-            if (bar != null)
+            if (bar == null)
             {
-                bar.style.width = Length.Percent(ratio * 100f);
+                return;
             }
+
+            // 差分が小さければスキップ（毎フレーム不要なトゥイーン防止）
+            const float k_Threshold = 0.001f;
+            if (Mathf.Abs(targetRatio - prevRatio) < k_Threshold && prevRatio >= 0f)
+            {
+                return;
+            }
+
+            float fromRatio = prevRatio < 0f ? targetRatio : prevRatio;
+            prevRatio = targetRatio;
+
+            CancelHandle(ref handle);
+
+            handle = LMotion.Create(fromRatio * 100f, targetRatio * 100f, duration)
+                .WithEase(ease)
+                .WithDelay(delay)
+                .BindWithState(bar, (percent, b) =>
+                {
+                    b.style.width = Length.Percent(percent);
+                });
+        }
+
+        private static void CancelHandle(ref MotionHandle handle)
+        {
+            if (handle.IsActive())
+            {
+                handle.Cancel();
+            }
+            handle = default;
         }
     }
 }

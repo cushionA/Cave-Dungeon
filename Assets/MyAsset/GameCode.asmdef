@@ -6,7 +6,11 @@
         "Unity.InputSystem",
         "UniTask",
         "R3.Unity",
-        "LitMotion"
+        "LitMotion",
+        "Unity.Addressables",
+        "Unity.ResourceManager",
+        "com.rainyrizzle.anyportrait",
+        "Micosmo.SensorToolkit"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

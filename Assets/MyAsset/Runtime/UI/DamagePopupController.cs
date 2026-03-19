@@ -4,39 +4,34 @@ using R3;
 using System;
 using Random = UnityEngine.Random;
 using System.Collections.Generic;
+using LitMotion;
+using LitMotion.Extensions;
 
 namespace Game.Runtime
 {
     /// <summary>
     /// ダメージポップアップ表示コントローラ。
     /// GameManager.Events.OnDamageDealtを購読し、ワールド空間にダメージ数値を表示する。
-    /// 軽量実装：TextMesh使用（UI Toolkit非依存）。
+    /// LitMotionでトゥイーン駆動（Update手動管理を排除）。
     /// </summary>
     public class DamagePopupController : MonoBehaviour
     {
+        [Header("Pool")]
         [SerializeField] private int _poolSize = 10;
-        [SerializeField] private float _floatSpeed = 2.0f;
-        [SerializeField] private float _duration = 0.8f;
-        [SerializeField] private float _fadeSpeed = 2.0f;
 
-        private List<PopupInstance> _activePopups;
+        [Header("Animation")]
+        [SerializeField] private float _duration = 0.8f;
+        [SerializeField] private float _floatHeight = 1.5f;
+        [SerializeField] private float _horizontalSpread = 0.5f;
+        [SerializeField] private float _criticalScale = 1.4f;
+
         private Queue<GameObject> _pool;
         private IDisposable _subscription;
 
-        private struct PopupInstance
-        {
-            public GameObject gameObject;
-            public TextMesh textMesh;
-            public float remainingTime;
-            public Vector3 velocity;
-        }
-
         private void Awake()
         {
-            _activePopups = new List<PopupInstance>();
             _pool = new Queue<GameObject>();
 
-            // プール初期化
             for (int i = 0; i < _poolSize; i++)
             {
                 GameObject go = CreatePopupObject();
@@ -60,36 +55,6 @@ namespace Game.Runtime
             _subscription = null;
         }
 
-        private void Update()
-        {
-            float deltaTime = Time.deltaTime;
-
-            for (int i = _activePopups.Count - 1; i >= 0; i--)
-            {
-                PopupInstance popup = _activePopups[i];
-                popup.remainingTime -= deltaTime;
-
-                if (popup.remainingTime <= 0f)
-                {
-                    popup.gameObject.SetActive(false);
-                    _pool.Enqueue(popup.gameObject);
-                    _activePopups.RemoveAt(i);
-                    continue;
-                }
-
-                // 上に浮かぶ
-                popup.gameObject.transform.position += popup.velocity * deltaTime;
-
-                // フェードアウト
-                float alpha = Mathf.Clamp01(popup.remainingTime * _fadeSpeed);
-                Color color = popup.textMesh.color;
-                color.a = alpha;
-                popup.textMesh.color = color;
-
-                _activePopups[i] = popup;
-            }
-        }
-
         private void OnDamageDealt(DamageResult result, int attackerHash, int defenderHash)
         {
             if (result.totalDamage <= 0)
@@ -97,7 +62,6 @@ namespace Game.Runtime
                 return;
             }
 
-            // 被ダメ者の位置を取得
             Vector2 position = Vector2.zero;
             if (GameManager.Data != null && GameManager.Data.TryGetValue(defenderHash, out int _))
             {
@@ -111,7 +75,7 @@ namespace Game.Runtime
         }
 
         /// <summary>
-        /// ダメージポップアップを生成する。
+        /// ダメージポップアップを生成し、LitMotionでアニメーションする。
         /// </summary>
         public void SpawnPopup(DamagePopupData data)
         {
@@ -125,40 +89,74 @@ namespace Game.Runtime
                 go = CreatePopupObject();
             }
 
-            go.SetActive(true);
-            go.transform.position = new Vector3(
-                data.worldPosition.x + Random.Range(-0.3f, 0.3f),
-                data.worldPosition.y + 1.0f,
+            // 初期位置設定
+            float offsetX = Random.Range(-_horizontalSpread, _horizontalSpread);
+            Vector3 startPos = new Vector3(
+                data.worldPosition.x + offsetX,
+                data.worldPosition.y + 0.5f,
                 0f);
+
+            go.transform.position = startPos;
+            go.transform.localScale = Vector3.one;
+            go.SetActive(true);
 
             TextMesh textMesh = go.GetComponent<TextMesh>();
             textMesh.text = data.value.ToString();
 
+            // タイプ別の色・サイズ設定
+            Color baseColor;
             switch (data.type)
             {
-                case FeedbackType.Normal:
-                    textMesh.color = Color.white;
-                    textMesh.fontSize = 40;
-                    break;
                 case FeedbackType.Critical:
-                    textMesh.color = new Color(1f, 0.8f, 0.2f);
+                    baseColor = new Color(1f, 0.8f, 0.2f, 1f);
                     textMesh.fontSize = 50;
                     break;
                 case FeedbackType.Heal:
-                    textMesh.color = new Color(0.3f, 1f, 0.3f);
+                    baseColor = new Color(0.3f, 1f, 0.3f, 1f);
+                    textMesh.fontSize = 40;
+                    break;
+                default:
+                    baseColor = Color.white;
                     textMesh.fontSize = 40;
                     break;
             }
+            textMesh.color = baseColor;
 
-            PopupInstance instance = new PopupInstance
+            // --- LitMotion トゥイーン ---
+
+            // 1. Y方向に浮かぶ（EaseOutCubicで減速）
+            Vector3 endPos = startPos + new Vector3(0f, _floatHeight, 0f);
+            LMotion.Create(startPos, endPos, _duration)
+                .WithEase(Ease.OutCubic)
+                .BindToPosition(go.transform);
+
+            // 2. フェードアウト（後半で加速）
+            Color fadeColor = baseColor;
+            fadeColor.a = 0f;
+            LMotion.Create(baseColor, fadeColor, _duration)
+                .WithEase(Ease.InQuad)
+                .WithDelay(_duration * 0.3f)
+                .BindToColor(textMesh);
+
+            // 3. クリティカル時のスケールパンチ
+            if (data.type == FeedbackType.Critical)
             {
-                gameObject = go,
-                textMesh = textMesh,
-                remainingTime = _duration,
-                velocity = new Vector3(Random.Range(-0.5f, 0.5f), _floatSpeed, 0f)
-            };
+                LMotion.Create(_criticalScale, 1f, _duration * 0.4f)
+                    .WithEase(Ease.OutBack)
+                    .BindWithState(go.transform, (scale, t) =>
+                    {
+                        t.localScale = new Vector3(scale, scale, 1f);
+                    });
+            }
 
-            _activePopups.Add(instance);
+            // 4. 完了後にプールへ返却
+            LMotion.Create(0f, 1f, _duration)
+                .WithOnComplete(() =>
+                {
+                    go.SetActive(false);
+                    _pool.Enqueue(go);
+                })
+                .RunWithoutBinding();
         }
 
         private GameObject CreatePopupObject()
@@ -174,7 +172,6 @@ namespace Game.Runtime
             textMesh.color = Color.white;
             textMesh.fontStyle = FontStyle.Bold;
 
-            // ソートレイヤー最前面
             MeshRenderer renderer = go.GetComponent<MeshRenderer>();
             renderer.sortingOrder = 100;
 
