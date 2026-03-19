@@ -5,7 +5,6 @@ using System;
 using Random = UnityEngine.Random;
 using System.Collections.Generic;
 using LitMotion;
-using LitMotion.Extensions;
 
 namespace Game.Runtime
 {
@@ -123,27 +122,34 @@ namespace Game.Runtime
             textMesh.color = baseColor;
 
             // --- LitMotion トゥイーン ---
+            Transform popupTransform = go.transform;
 
             // 1. Y方向に浮かぶ（EaseOutCubicで減速）
             Vector3 endPos = startPos + new Vector3(0f, _floatHeight, 0f);
             LMotion.Create(startPos, endPos, _duration)
                 .WithEase(Ease.OutCubic)
-                .BindToPosition(go.transform);
+                .BindWithState(popupTransform, (pos, t) =>
+                {
+                    t.position = pos;
+                });
 
             // 2. フェードアウト（後半で加速）
-            Color fadeColor = baseColor;
-            fadeColor.a = 0f;
-            LMotion.Create(baseColor, fadeColor, _duration)
+            LMotion.Create(1f, 0f, _duration * 0.7f)
                 .WithEase(Ease.InQuad)
                 .WithDelay(_duration * 0.3f)
-                .BindToColor(textMesh);
+                .BindWithState(textMesh, (alpha, tm) =>
+                {
+                    Color c = tm.color;
+                    c.a = alpha;
+                    tm.color = c;
+                });
 
             // 3. クリティカル時のスケールパンチ
             if (data.type == FeedbackType.Critical)
             {
                 LMotion.Create(_criticalScale, 1f, _duration * 0.4f)
                     .WithEase(Ease.OutBack)
-                    .BindWithState(go.transform, (scale, t) =>
+                    .BindWithState(popupTransform, (scale, t) =>
                     {
                         t.localScale = new Vector3(scale, scale, 1f);
                     });

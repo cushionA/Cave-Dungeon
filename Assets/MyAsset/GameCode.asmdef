@@ -7,8 +7,7 @@
         "UniTask",
         "R3.Unity",
         "LitMotion",
-        "Unity.Addressables",
-        "Unity.ResourceManager",
+        "LitMotion.Extensions",
         "com.rainyrizzle.anyportrait",
         "Micosmo.SensorToolkit"
     ],
