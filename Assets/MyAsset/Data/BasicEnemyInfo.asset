@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 010d7ab7d77af164ca657e272b158b9f, type: 3}
+  m_Name: BasicEnemyInfo
+  m_EditorClassIdentifier: Game.Core::Game.Core.CharacterInfo
+  feature: 16
+  belong: 2
+  rank: 0
+  canFly: 0
+  targetingLimit: 0
+  maxHp: 50
+  maxMp: 50
+  maxStamina: 100
+  staminaRecoveryRate: 20
+  staminaRecoveryDelay: 0.5
+  baseAttack:
+    slash: 15
+    strike: 0
+    pierce: 0
+    fire: 0
+    thunder: 0
+    light: 0
+    dark: 0
+  baseDefense:
+    slash: 5
+    strike: 0
+    pierce: 0
+    fire: 0
+    thunder: 0
+    light: 0
+    dark: 0
+  weakPoint: 0
+  attackElement: 0
+  moveSpeed: 3
+  walkSpeed: 1.5
+  dashSpeed: 6
+  jumpHeight: 2
+  statusResistance: 0
+  physicalResistance:
+    slashResist: 0
+    strikeResist: 0
+    pierceResist: 0
+  initialActState: 0
