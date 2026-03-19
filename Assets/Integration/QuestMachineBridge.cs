@@ -22,7 +22,7 @@ namespace Game.Runtime
 
             // 敵撃破イベントをQuest Machineに通知
             _deathSubscription = GameManager.Events.OnCharacterDeath
-                .Subscribe(e => OnCharacterDeath(e.characterHash));
+                .Subscribe(e => OnCharacterDeath(e.deadHash));
         }
 
         private void OnDisable()
@@ -34,12 +34,14 @@ namespace Game.Runtime
         private void OnCharacterDeath(int characterHash)
         {
             // Quest Machineへメッセージ送信: "EnemyDefeated:ハッシュ"
-            MessageSystem.SendMessage(
+            PixelCrushers.MessageSystem.SendMessage(
                 gameObject,
                 "EnemyDefeated",
                 characterHash.ToString());
 
-            AILogger.Log($"[Quest] EnemyDefeated message sent: {characterHash}");
+#if UNITY_EDITOR
+            Debug.Log($"[Quest] EnemyDefeated message sent: {characterHash}");
+#endif
         }
 
         /// <summary>
@@ -47,13 +49,15 @@ namespace Game.Runtime
         /// </summary>
         public void NotifyItemCollected(string itemId, int amount)
         {
-            MessageSystem.SendMessage(
+            PixelCrushers.MessageSystem.SendMessage(
                 gameObject,
                 "ItemCollected",
                 itemId,
                 amount.ToString());
 
-            AILogger.Log($"[Quest] ItemCollected: {itemId} x{amount}");
+#if UNITY_EDITOR
+            Debug.Log($"[Quest] ItemCollected: {itemId} x{amount}");
+#endif
         }
 
         /// <summary>
@@ -61,12 +65,14 @@ namespace Game.Runtime
         /// </summary>
         public void NotifyAreaReached(string areaId)
         {
-            MessageSystem.SendMessage(
+            PixelCrushers.MessageSystem.SendMessage(
                 gameObject,
                 "AreaReached",
                 areaId);
 
-            AILogger.Log($"[Quest] AreaReached: {areaId}");
+#if UNITY_EDITOR
+            Debug.Log($"[Quest] AreaReached: {areaId}");
+#endif
         }
 
         /// <summary>
@@ -74,7 +80,7 @@ namespace Game.Runtime
         /// </summary>
         public void NotifyCustomEvent(string eventName, string parameter = "")
         {
-            MessageSystem.SendMessage(
+            PixelCrushers.MessageSystem.SendMessage(
                 gameObject,
                 eventName,
                 parameter);

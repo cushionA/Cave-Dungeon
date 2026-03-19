@@ -1,6 +1,7 @@
 using UnityEngine;
 using Game.Core;
 using PixelCrushers.LoveHate;
+using R3;
 
 namespace Game.Runtime
 {
@@ -53,12 +54,17 @@ namespace Game.Runtime
             }
 
             // 攻撃行為としてLove/Hateに記録
-            FactionMember attacker = FindFactionMember(attackerHash);
+            // DeedReporterコンポーネント経由でReportDeedを呼ぶ
+            GameObject attackerGo = FindGameObjectByHash(attackerHash);
             FactionMember defender = FindFactionMember(defenderHash);
 
-            if (attacker != null && defender != null)
+            if (attackerGo != null && defender != null)
             {
-                attacker.ReportDeed(_attackDeedTag, defender, _attackImpact);
+                DeedReporter reporter = attackerGo.GetComponent<DeedReporter>();
+                if (reporter != null)
+                {
+                    reporter.ReportDeed(_attackDeedTag, defender);
+                }
             }
         }
 
@@ -67,12 +73,16 @@ namespace Game.Runtime
         /// </summary>
         public void ReportHeal(int healerHash, int targetHash)
         {
-            FactionMember healer = FindFactionMember(healerHash);
+            GameObject healerGo = FindGameObjectByHash(healerHash);
             FactionMember target = FindFactionMember(targetHash);
 
-            if (healer != null && target != null)
+            if (healerGo != null && target != null)
             {
-                healer.ReportDeed(_healDeedTag, target, _healImpact);
+                DeedReporter reporter = healerGo.GetComponent<DeedReporter>();
+                if (reporter != null)
+                {
+                    reporter.ReportDeed(_healDeedTag, target);
+                }
             }
         }
 
@@ -81,12 +91,16 @@ namespace Game.Runtime
         /// </summary>
         public void ReportHelp(int helperHash, int targetHash)
         {
-            FactionMember helper = FindFactionMember(helperHash);
+            GameObject helperGo = FindGameObjectByHash(helperHash);
             FactionMember target = FindFactionMember(targetHash);
 
-            if (helper != null && target != null)
+            if (helperGo != null && target != null)
             {
-                helper.ReportDeed(_helpDeedTag, target, _helpImpact);
+                DeedReporter reporter = helperGo.GetComponent<DeedReporter>();
+                if (reporter != null)
+                {
+                    reporter.ReportDeed(_helpDeedTag, target);
+                }
             }
         }
 
@@ -116,21 +130,30 @@ namespace Game.Runtime
 
             if (from != null && to != null)
             {
-                from.SetPersonalAffinity(to, value);
+                from.SetPersonalAffinity(to.factionID, value);
             }
         }
 
         private FactionMember FindFactionMember(int characterHash)
         {
-            // CharacterRegistryからGameObjectを探し、FactionMemberを取得
-            // 本実装ではMonoBehaviour統合レイヤーで紐付ける
-            // 暫定: FindでFactionMember付きオブジェクトを検索
-            FactionMember[] members = FindObjectsByType<FactionMember>(FindObjectsSortMode.None);
-            for (int i = 0; i < members.Length; i++)
+            GameObject go = FindGameObjectByHash(characterHash);
+            if (go != null)
             {
-                if (members[i].gameObject.GetHashCode() == characterHash)
+                return go.GetComponent<FactionMember>();
+            }
+
+            return null;
+        }
+
+        private GameObject FindGameObjectByHash(int characterHash)
+        {
+            // CharacterHashHolderコンポーネントでハッシュとGameObjectを紐付ける
+            CharacterHashHolder[] holders = FindObjectsByType<CharacterHashHolder>(FindObjectsSortMode.None);
+            for (int i = 0; i < holders.Length; i++)
+            {
+                if (holders[i].Hash == characterHash)
                 {
-                    return members[i];
+                    return holders[i].gameObject;
                 }
             }
 

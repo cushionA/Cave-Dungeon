@@ -1,6 +1,7 @@
 using UnityEngine;
 using Game.Core;
 using DarkTonic.MasterAudio;
+using R3;
 
 namespace Game.Runtime
 {
@@ -33,7 +34,7 @@ namespace Game.Runtime
                 .Subscribe(e => OnDamageDealt(e.result));
 
             _deathSubscription = GameManager.Events.OnCharacterDeath
-                .Subscribe(e => OnCharacterDeath(e.characterHash));
+                .Subscribe(e => OnCharacterDeath(e.deadHash));
         }
 
         private void OnDisable()
@@ -46,13 +47,13 @@ namespace Game.Runtime
 
         private void OnDamageDealt(DamageResult result)
         {
-            if (result.wasParried)
+            if (result.guardResult == Game.Core.GuardResult.JustGuard)
             {
                 PlaySE(_parryGroup);
                 return;
             }
 
-            if (result.wasGuarded)
+            if (result.guardResult == Game.Core.GuardResult.Guarded)
             {
                 PlaySE(_guardGroup);
                 return;

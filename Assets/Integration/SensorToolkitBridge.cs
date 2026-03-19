@@ -44,7 +44,7 @@ namespace Game.Runtime
                 return System.Array.Empty<int>();
             }
 
-            System.Collections.Generic.List<GameObject> detected = _detectionSensor.Detections;
+            System.Collections.Generic.List<GameObject> detected = _detectionSensor.GetDetections();
             int[] hashes = new int[detected.Count];
 
             for (int i = 0; i < detected.Count; i++)
@@ -77,12 +77,12 @@ namespace Game.Runtime
         /// </summary>
         public GameObject GetNearestDetected()
         {
-            if (_detectionSensor == null || _detectionSensor.Detections.Count == 0)
+            if (_detectionSensor == null)
             {
                 return null;
             }
 
-            return _detectionSensor.GetNearest();
+            return _detectionSensor.GetNearestDetection();
         }
     }
 

@@ -50,13 +50,17 @@ namespace Game.Runtime
         {
             // 会話中はゲームを一時停止
             Time.timeScale = 0f;
-            AILogger.Log($"[Dialogue] Conversation started with {actor?.name}");
+#if UNITY_EDITOR
+            Debug.Log($"[Dialogue] Conversation started with {actor?.name}");
+#endif
         }
 
         private void OnConversationEnded(Transform actor)
         {
             Time.timeScale = 1f;
-            AILogger.Log($"[Dialogue] Conversation ended with {actor?.name}");
+#if UNITY_EDITOR
+            Debug.Log($"[Dialogue] Conversation ended with {actor?.name}");
+#endif
         }
 
         // === Lua関数 ===

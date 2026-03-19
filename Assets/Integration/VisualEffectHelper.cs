@@ -74,7 +74,9 @@ namespace Game.Runtime
             // Destructible 2DのAPIを直接呼ぶ
             // CW.Destructible2D.D2dDestructible.StampAll(hitPoint, ...) 等
             // 具体的なパラメータは実装時にアセットのAPIに合わせて調整
-            AILogger.Log($"[VFX] Destruction at {hitPoint} radius={radius}");
+#if UNITY_EDITOR
+            Debug.Log($"[VFX] Destruction at {hitPoint} radius={radius}");
+#endif
         }
     }
 }
