@@ -280,6 +280,57 @@ Game.Core/ScriptableObjects (既存拡張)
     └── BacktrackRewardTable.cs
 ```
 
-## Section 4
+## Section 4: エンドコンテンツ
 
-（未設計）
+### 実装順序（レイヤー順）
+```
+Layer 0 (Section 1-3の上に構築):
+  Common_Section4Types   ← Common_SharedTypes（共通Enum/Struct追加）
+
+Layer 1 (← Layer 0):
+  ChallengeMode_Runner   ← Common_Section4Types
+  ChallengeMode_Score    ← Common_Section4Types
+  AITemplates_Manager    ← Common_Section4Types, AIRuleBuilder
+
+Layer 2 (← Layer 0-1):
+  ChallengeMode_Manager  ← ChallengeMode_Runner, ChallengeMode_Score
+  ChallengeMode_BossRush ← ChallengeMode_Runner, BossSystem
+  ChallengeMode_Survival ← ChallengeMode_Runner, EnemySystem
+  AITemplates_ApplyRevert ← AITemplates_Manager
+  Leaderboard_RecordUpdate ← ChallengeMode_Score
+
+Layer 3 (← Layer 0-2):
+  Leaderboard_Statistics ← Leaderboard_RecordUpdate
+  AITemplates_Suggester  ← AITemplates_Manager
+```
+
+### 依存関係図（Section 4 追加分）
+```
+Section 1-3 基盤
+    │
+    ▼
+BossSystem ──────► ChallengeMode_BossRush ──┐
+EnemySystem ─────► ChallengeMode_Survival ──┤
+                                             ▼
+Common_Section4Types ──► ChallengeMode_Runner ──► ChallengeMode_Manager
+                    └──► ChallengeMode_Score ─────┘        │
+                                  │                        ▼
+                                  └──► Leaderboard_RecordUpdate ──► Leaderboard_Statistics
+
+AIRuleBuilder ──► AITemplates_Manager ──► AITemplates_ApplyRevert
+                              └──► AITemplates_Suggester
+```
+
+### asmdef 配置（Section 4）
+
+```
+Game.AI (既存拡張)
+    └── Templates/         AITemplateManager, AITemplateApplier, AITemplateSuggester
+
+Game.World (既存拡張)
+    └── Challenge/         ChallengeRunner, ChallengeScoreCalculator, ChallengeManager,
+                           BossRushLogic, SurvivalLogic, LeaderboardManager
+
+Game.Core (既存拡張)
+    └── Common/            Section 4共通Enum/Struct（Section4Structs.cs）
+```

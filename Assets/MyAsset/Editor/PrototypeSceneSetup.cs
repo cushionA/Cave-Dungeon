@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UIElements;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using Game.Core;
@@ -48,6 +49,13 @@ namespace Game.Editor
 
             // カメラ設定
             SetupCamera(player.transform);
+
+            // HUD
+            SetupHUD();
+
+            // ダメージポップアップ
+            GameObject popupController = new GameObject("[PLACEHOLDER]DamagePopups");
+            popupController.AddComponent<DamagePopupController>();
 
             // シーン保存
             EnsureDirectoryExists("Assets/Scenes");
@@ -241,6 +249,41 @@ namespace Game.Editor
             {
                 field.SetValue(cc, playerTransform);
             }
+        }
+
+        private static void SetupHUD()
+        {
+            GameObject hudObj = new GameObject("[PLACEHOLDER]HUD");
+
+            UIDocument uiDoc = hudObj.AddComponent<UIDocument>();
+
+            // UXMLアセットを読み込む
+            VisualTreeAsset hudUxml = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
+                "Assets/MyAsset/UI/HUD/HUD.uxml");
+            if (hudUxml != null)
+            {
+                uiDoc.visualTreeAsset = hudUxml;
+            }
+
+            // Panel Settings（なければ作成）
+            string panelSettingsPath = "Assets/MyAsset/UI/GamePanelSettings.asset";
+            UnityEngine.UIElements.PanelSettings panelSettings =
+                AssetDatabase.LoadAssetAtPath<UnityEngine.UIElements.PanelSettings>(panelSettingsPath);
+            if (panelSettings == null)
+            {
+                EnsureDirectoryExists("Assets/MyAsset/UI");
+                panelSettings = ScriptableObject.CreateInstance<UnityEngine.UIElements.PanelSettings>();
+                panelSettings.scaleMode = UnityEngine.UIElements.PanelScaleMode.ScaleWithScreenSize;
+                panelSettings.referenceResolution = new Vector2Int(1920, 1080);
+                AssetDatabase.CreateAsset(panelSettings, panelSettingsPath);
+            }
+            uiDoc.panelSettings = panelSettings;
+
+            // StyleSheet
+            StyleSheet hudUss = AssetDatabase.LoadAssetAtPath<StyleSheet>(
+                "Assets/MyAsset/UI/HUD/HUD.uss");
+
+            hudObj.AddComponent<HudController>();
         }
 
         private static void SetCharacterInfoField(BaseCharacter character, CharacterInfo info)

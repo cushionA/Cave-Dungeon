@@ -1,0 +1,44 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement name="hud-root" class="hud-root">
+        <!-- 左上: プレイヤーステータス -->
+        <ui:VisualElement name="player-status" class="status-panel">
+            <ui:Label name="player-name" text="Player" class="character-name" />
+            <ui:VisualElement name="hp-bar-container" class="bar-container">
+                <ui:VisualElement name="hp-bar-fill" class="bar-fill hp-fill" />
+                <ui:Label name="hp-text" text="100/100" class="bar-text" />
+            </ui:VisualElement>
+            <ui:VisualElement name="mp-bar-container" class="bar-container mp-bar">
+                <ui:VisualElement name="mp-bar-fill" class="bar-fill mp-fill" />
+                <ui:Label name="mp-text" text="50/50" class="bar-text" />
+            </ui:VisualElement>
+            <ui:VisualElement name="stamina-bar-container" class="bar-container stamina-bar">
+                <ui:VisualElement name="stamina-bar-fill" class="bar-fill stamina-fill" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- 左上下: 仲間ステータス -->
+        <ui:VisualElement name="companion-status" class="status-panel companion-panel">
+            <ui:Label name="companion-name" text="Companion" class="character-name companion-name-label" />
+            <ui:VisualElement name="companion-hp-bar-container" class="bar-container">
+                <ui:VisualElement name="companion-hp-bar-fill" class="bar-fill companion-hp-fill" />
+                <ui:Label name="companion-hp-text" text="80/80" class="bar-text" />
+            </ui:VisualElement>
+            <ui:VisualElement name="companion-mp-bar-container" class="bar-container mp-bar">
+                <ui:VisualElement name="companion-mp-bar-fill" class="bar-fill companion-mp-fill" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- 右上: ボスHPバー（ボス戦時のみ表示） -->
+        <ui:VisualElement name="boss-status" class="boss-panel">
+            <ui:Label name="boss-name" text="" class="boss-name" />
+            <ui:VisualElement name="boss-hp-bar-container" class="boss-bar-container">
+                <ui:VisualElement name="boss-hp-bar-fill" class="bar-fill boss-hp-fill" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- 右下: 通貨表示 -->
+        <ui:VisualElement name="currency-display" class="currency-panel">
+            <ui:Label name="currency-text" text="0 G" class="currency-text" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
