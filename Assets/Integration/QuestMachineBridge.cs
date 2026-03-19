@@ -1,18 +1,15 @@
 using UnityEngine;
 using Game.Core;
 using PixelCrushers.QuestMachine;
-using R3;
 
 namespace Game.Runtime
 {
     /// <summary>
     /// Quest MachineとGameManagerのイベントシステムを接続するブリッジ。
-    /// ゲーム内イベント（敵撃破、アイテム取得等）をQuest Machineのメッセージとして送信。
+    /// C# standard eventで購読（R3不要）。
     /// </summary>
     public class QuestMachineBridge : MonoBehaviour
     {
-        private System.IDisposable _deathSubscription;
-
         private void OnEnable()
         {
             if (GameManager.Events == null)
@@ -20,27 +17,28 @@ namespace Game.Runtime
                 return;
             }
 
-            // 敵撃破イベントをQuest Machineに通知
-            _deathSubscription = GameManager.Events.OnCharacterDeath
-                .Subscribe(e => OnCharacterDeath(e.deadHash));
+            GameManager.Events.OnCharacterDeathEvent += OnCharacterDeath;
         }
 
         private void OnDisable()
         {
-            _deathSubscription?.Dispose();
-            _deathSubscription = null;
+            if (GameManager.Events == null)
+            {
+                return;
+            }
+
+            GameManager.Events.OnCharacterDeathEvent -= OnCharacterDeath;
         }
 
-        private void OnCharacterDeath(int characterHash)
+        private void OnCharacterDeath(int deadHash, int killerHash)
         {
-            // Quest Machineへメッセージ送信: "EnemyDefeated:ハッシュ"
             PixelCrushers.MessageSystem.SendMessage(
                 gameObject,
                 "EnemyDefeated",
-                characterHash.ToString());
+                deadHash.ToString());
 
 #if UNITY_EDITOR
-            Debug.Log($"[Quest] EnemyDefeated message sent: {characterHash}");
+            Debug.Log($"[Quest] EnemyDefeated message sent: {deadHash}");
 #endif
         }
 

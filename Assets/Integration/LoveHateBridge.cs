@@ -1,13 +1,12 @@
 using UnityEngine;
 using Game.Core;
 using PixelCrushers.LoveHate;
-using R3;
 
 namespace Game.Runtime
 {
     /// <summary>
     /// Love/HateとGameManagerを接続するブリッジ。
-    /// ゲーム内の戦闘・会話イベントを好感度・陣営システムに反映する。
+    /// C# standard eventで購読（R3不要）。
     /// </summary>
     public class LoveHateBridge : MonoBehaviour
     {
@@ -16,13 +15,7 @@ namespace Game.Runtime
         [SerializeField] private string _helpDeedTag = "Help";
         [SerializeField] private string _healDeedTag = "Heal";
 
-        [Header("Impact Values")]
-        [SerializeField] private float _attackImpact = -10f;
-        [SerializeField] private float _helpImpact = 5f;
-        [SerializeField] private float _healImpact = 15f;
-
         private FactionManager _factionManager;
-        private System.IDisposable _damageSubscription;
 
         private void Awake()
         {
@@ -36,25 +29,26 @@ namespace Game.Runtime
                 return;
             }
 
-            _damageSubscription = GameManager.Events.OnDamageDealt
-                .Subscribe(e => OnDamageDealt(e.attackerHash, e.defenderHash, e.result));
+            GameManager.Events.OnDamageDealtEvent += OnDamageDealt;
         }
 
         private void OnDisable()
         {
-            _damageSubscription?.Dispose();
-            _damageSubscription = null;
+            if (GameManager.Events == null)
+            {
+                return;
+            }
+
+            GameManager.Events.OnDamageDealtEvent -= OnDamageDealt;
         }
 
-        private void OnDamageDealt(int attackerHash, int defenderHash, DamageResult result)
+        private void OnDamageDealt(DamageResult result, int attackerHash, int defenderHash)
         {
             if (_factionManager == null)
             {
                 return;
             }
 
-            // 攻撃行為としてLove/Hateに記録
-            // DeedReporterコンポーネント経由でReportDeedを呼ぶ
             GameObject attackerGo = FindGameObjectByHash(attackerHash);
             FactionMember defender = FindFactionMember(defenderHash);
 
@@ -68,9 +62,6 @@ namespace Game.Runtime
             }
         }
 
-        /// <summary>
-        /// 回復行為を好感度に反映する。
-        /// </summary>
         public void ReportHeal(int healerHash, int targetHash)
         {
             GameObject healerGo = FindGameObjectByHash(healerHash);
@@ -86,9 +77,6 @@ namespace Game.Runtime
             }
         }
 
-        /// <summary>
-        /// 援助行為を好感度に反映する。
-        /// </summary>
         public void ReportHelp(int helperHash, int targetHash)
         {
             GameObject helperGo = FindGameObjectByHash(helperHash);
@@ -104,9 +92,6 @@ namespace Game.Runtime
             }
         }
 
-        /// <summary>
-        /// 2キャラ間の好感度を取得する。
-        /// </summary>
         public float GetAffinity(int fromHash, int toHash)
         {
             FactionMember from = FindFactionMember(fromHash);
@@ -120,9 +105,6 @@ namespace Game.Runtime
             return from.GetAffinity(to.factionID);
         }
 
-        /// <summary>
-        /// 陣営の好感度を直接設定する（イベントシーン等で使用）。
-        /// </summary>
         public void SetAffinity(int fromHash, int toHash, float value)
         {
             FactionMember from = FindFactionMember(fromHash);
@@ -147,7 +129,6 @@ namespace Game.Runtime
 
         private GameObject FindGameObjectByHash(int characterHash)
         {
-            // CharacterHashHolderコンポーネントでハッシュとGameObjectを紐付ける
             CharacterHashHolder[] holders = FindObjectsByType<CharacterHashHolder>(FindObjectsSortMode.None);
             for (int i = 0; i < holders.Length; i++)
             {

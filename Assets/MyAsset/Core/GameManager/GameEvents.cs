@@ -76,6 +76,10 @@ namespace Game.Core
         public Observable<Unit> OnFreeCoopActivated => _onFreeCoopActivated;
         public Observable<Unit> OnRest => _onRest;
 
+        // ===== C# Standard Events (for Assembly-CSharp integration layer) =====
+        public event Action<DamageResult, int, int> OnDamageDealtEvent;
+        public event Action<int, int> OnCharacterDeathEvent;
+
         // ===== Fire methods =====
 
         public void FireCharacterRegistered(int hash) => _onCharacterRegistered.OnNext(hash);
@@ -86,9 +90,15 @@ namespace Game.Core
         public void FireSceneLoadCompleted(string sceneName) => _onSceneLoadCompleted.OnNext(sceneName);
 
         public void FireDamageDealt(DamageResult result, int attackerHash, int defenderHash)
-            => _onDamageDealt.OnNext((result, attackerHash, defenderHash));
+        {
+            _onDamageDealt.OnNext((result, attackerHash, defenderHash));
+            OnDamageDealtEvent?.Invoke(result, attackerHash, defenderHash);
+        }
         public void FireCharacterDeath(int deadHash, int killerHash)
-            => _onCharacterDeath.OnNext((deadHash, killerHash));
+        {
+            _onCharacterDeath.OnNext((deadHash, killerHash));
+            OnCharacterDeathEvent?.Invoke(deadHash, killerHash);
+        }
         public void FireGuardEvent(int defenderHash, int attackerHash, GuardResult result)
             => _onGuardEvent.OnNext((defenderHash, attackerHash, result));
         public void FireStatusEffectApplied(int targetHash, StatusEffectId effectId)
