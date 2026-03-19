@@ -1,20 +1,19 @@
 using UnityEngine;
 using Game.Core;
-using SensorToolkit;
+using Micosmo.SensorToolkit;
 
 namespace Game.Runtime
 {
     /// <summary>
     /// SensorToolkit 2とゲームのAI SensorSystemを接続するブリッジ。
-    /// SensorToolkitの物理ベースセンサーをAI判定のソースとして利用する。
-    /// 自前SensorSystemのvision/hearing判定をSensorToolkitのRange/RaySensorで代替可能。
+    /// 2Dゲーム用にRangeSensor2D/RaySensor2Dを使用。
     /// </summary>
-    [RequireComponent(typeof(RangeSensor))]
+    [RequireComponent(typeof(RangeSensor2D))]
     public class SensorToolkitBridge : MonoBehaviour
     {
         [Header("Sensor References")]
-        [SerializeField] private RangeSensor _detectionSensor;
-        [SerializeField] private RaySensor _losSensor;
+        [SerializeField] private RangeSensor2D _detectionSensor;
+        [SerializeField] private RaySensor2D _losSensor;
 
         [Header("Game Settings")]
         [SerializeField] private int _ownerHash;
@@ -31,13 +30,12 @@ namespace Game.Runtime
 
             if (_detectionSensor == null)
             {
-                _detectionSensor = GetComponent<RangeSensor>();
+                _detectionSensor = GetComponent<RangeSensor2D>();
             }
         }
 
         /// <summary>
         /// SensorToolkitの検出結果をゲーム用ハッシュリストに変換する。
-        /// AIのJudgmentLoopから呼ばれる。
         /// </summary>
         public int[] GetDetectedHashes()
         {
@@ -51,7 +49,6 @@ namespace Game.Runtime
 
             for (int i = 0; i < detected.Count; i++)
             {
-                // CharacterHashコンポーネントからハッシュを取得
                 CharacterHashHolder holder = detected[i].GetComponent<CharacterHashHolder>();
                 if (holder != null)
                 {
