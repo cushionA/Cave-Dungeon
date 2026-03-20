@@ -9,13 +9,16 @@ namespace Game.Core
     /// </summary>
     public static class BulletFeatureProcessor
     {
+        private static readonly Vector2 s_Gravity = new Vector2(0f, -9.81f);
+        private static List<int> s_ExplosionBuffer = new List<int>();
+
         public static void ProcessFeatures(Projectile projectile, float deltaTime)
         {
             BulletFeature features = projectile.Profile.features;
 
             if ((features & BulletFeature.Gravity) != 0)
             {
-                projectile.Velocity += new Vector2(0f, -9.81f) * deltaTime;
+                projectile.Velocity += s_Gravity * deltaTime;
             }
         }
 
@@ -32,10 +35,15 @@ namespace Game.Core
         /// <summary>
         /// Finds all character hashes within explosion radius from center position.
         /// </summary>
+        /// <summary>
+        /// 爆発範囲内の全キャラクターハッシュを返す。
+        /// 返却リストは内部バッファのため次回呼び出しで上書きされる。
+        /// </summary>
         public static List<int> GetExplosionTargets(Vector2 center, float radius,
             List<int> allHashes, SoACharaDataDic data)
         {
-            List<int> targets = new List<int>();
+            s_ExplosionBuffer.Clear();
+            float sqrRadius = radius * radius;
             for (int i = 0; i < allHashes.Count; i++)
             {
                 int hash = allHashes[i];
@@ -44,13 +52,13 @@ namespace Game.Core
                     continue;
                 }
                 ref CharacterVitals v = ref data.GetVitals(hash);
-                float dist = Vector2.Distance(center, v.position);
-                if (dist <= radius)
+                float sqrDist = (center - v.position).sqrMagnitude;
+                if (sqrDist <= sqrRadius)
                 {
-                    targets.Add(hash);
+                    s_ExplosionBuffer.Add(hash);
                 }
             }
-            return targets;
+            return s_ExplosionBuffer;
         }
 
         public static bool ShouldReflect(BulletFeature features)

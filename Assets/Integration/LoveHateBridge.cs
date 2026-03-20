@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using Game.Core;
 using PixelCrushers.LoveHate;
@@ -16,6 +17,9 @@ namespace Game.Runtime
         [SerializeField] private string _healDeedTag = "Heal";
 
         private FactionManager _factionManager;
+
+        // hash → GameObject キャッシュ（FindObjectsByType毎回呼び出し回避）
+        private static Dictionary<int, CharacterHashHolder> _holderCache = new Dictionary<int, CharacterHashHolder>();
 
         private void Awake()
         {
@@ -42,52 +46,61 @@ namespace Game.Runtime
             GameManager.Events.OnDamageDealtEvent -= OnDamageDealt;
         }
 
+        /// <summary>
+        /// CharacterHashHolderの登録。BaseCharacterなどから呼ぶ。
+        /// </summary>
+        public static void RegisterHolder(CharacterHashHolder holder)
+        {
+            _holderCache[holder.Hash] = holder;
+        }
+
+        /// <summary>
+        /// CharacterHashHolderの登録解除。
+        /// </summary>
+        public static void UnregisterHolder(CharacterHashHolder holder)
+        {
+            _holderCache.Remove(holder.Hash);
+        }
+
+        /// <summary>
+        /// キャッシュをクリアする（シーン遷移時など）。
+        /// </summary>
+        public static void ClearCache()
+        {
+            _holderCache.Clear();
+        }
+
         private void OnDamageDealt(DamageResult result, int attackerHash, int defenderHash)
+        {
+            ReportDeedInternal(attackerHash, defenderHash, _attackDeedTag);
+        }
+
+        public void ReportHeal(int healerHash, int targetHash)
+        {
+            ReportDeedInternal(healerHash, targetHash, _healDeedTag);
+        }
+
+        public void ReportHelp(int helperHash, int targetHash)
+        {
+            ReportDeedInternal(helperHash, targetHash, _helpDeedTag);
+        }
+
+        private void ReportDeedInternal(int actorHash, int targetHash, string deedTag)
         {
             if (_factionManager == null)
             {
                 return;
             }
 
-            GameObject attackerGo = FindGameObjectByHash(attackerHash);
-            FactionMember defender = FindFactionMember(defenderHash);
-
-            if (attackerGo != null && defender != null)
-            {
-                DeedReporter reporter = attackerGo.GetComponent<DeedReporter>();
-                if (reporter != null)
-                {
-                    reporter.ReportDeed(_attackDeedTag, defender);
-                }
-            }
-        }
-
-        public void ReportHeal(int healerHash, int targetHash)
-        {
-            GameObject healerGo = FindGameObjectByHash(healerHash);
+            GameObject actorGo = FindGameObjectByHash(actorHash);
             FactionMember target = FindFactionMember(targetHash);
 
-            if (healerGo != null && target != null)
+            if (actorGo != null && target != null)
             {
-                DeedReporter reporter = healerGo.GetComponent<DeedReporter>();
+                DeedReporter reporter = actorGo.GetComponent<DeedReporter>();
                 if (reporter != null)
                 {
-                    reporter.ReportDeed(_healDeedTag, target);
-                }
-            }
-        }
-
-        public void ReportHelp(int helperHash, int targetHash)
-        {
-            GameObject helperGo = FindGameObjectByHash(helperHash);
-            FactionMember target = FindFactionMember(targetHash);
-
-            if (helperGo != null && target != null)
-            {
-                DeedReporter reporter = helperGo.GetComponent<DeedReporter>();
-                if (reporter != null)
-                {
-                    reporter.ReportDeed(_helpDeedTag, target);
+                    reporter.ReportDeed(deedTag, target);
                 }
             }
         }
@@ -127,11 +140,18 @@ namespace Game.Runtime
             return null;
         }
 
-        private GameObject FindGameObjectByHash(int characterHash)
+        private static GameObject FindGameObjectByHash(int characterHash)
         {
+            if (_holderCache.TryGetValue(characterHash, out CharacterHashHolder holder) && holder != null)
+            {
+                return holder.gameObject;
+            }
+
+            // キャッシュミス時のフォールバック
             CharacterHashHolder[] holders = FindObjectsByType<CharacterHashHolder>(FindObjectsSortMode.None);
             for (int i = 0; i < holders.Length; i++)
             {
+                _holderCache[holders[i].Hash] = holders[i];
                 if (holders[i].Hash == characterHash)
                 {
                     return holders[i].gameObject;

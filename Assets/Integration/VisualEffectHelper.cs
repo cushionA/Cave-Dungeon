@@ -10,6 +10,22 @@ namespace Game.Runtime
     /// </summary>
     public static class VisualEffectHelper
     {
+        private static readonly int s_HitEffectBlend = Shader.PropertyToID("_HitEffectBlend");
+        private static readonly int s_OutlineAlpha = Shader.PropertyToID("_OutlineAlpha");
+        private static readonly int s_OutlineColor = Shader.PropertyToID("_OutlineColor");
+        private static readonly int s_OutlineWidth = Shader.PropertyToID("_OutlineWidth");
+
+        private static MaterialPropertyBlock s_PropertyBlock;
+
+        private static MaterialPropertyBlock GetPropertyBlock()
+        {
+            if (s_PropertyBlock == null)
+            {
+                s_PropertyBlock = new MaterialPropertyBlock();
+            }
+            return s_PropertyBlock;
+        }
+
         // === Sprite Shaders Ultimate ===
 
         /// <summary>
@@ -18,18 +34,19 @@ namespace Game.Runtime
         /// </summary>
         public static void ApplyHitFlash(SpriteRenderer renderer, float duration = 0.1f)
         {
-            if (renderer == null || renderer.material == null)
+            if (renderer == null)
             {
                 return;
             }
 
-            // Sprite Shaders Ultimateの _HitEffectBlend プロパティを制御
-            // LitMotionでアニメーション
             LitMotion.LMotion.Create(1f, 0f, duration)
                 .WithEase(LitMotion.Ease.OutQuad)
-                .Bind(renderer.material, (value, mat) =>
+                .Bind(renderer, (value, r) =>
                 {
-                    mat.SetFloat("_HitEffectBlend", value);
+                    MaterialPropertyBlock block = GetPropertyBlock();
+                    r.GetPropertyBlock(block);
+                    block.SetFloat(s_HitEffectBlend, value);
+                    r.SetPropertyBlock(block);
                 });
         }
 
@@ -39,14 +56,17 @@ namespace Game.Runtime
         /// </summary>
         public static void SetOutline(SpriteRenderer renderer, Color color, float width = 1f)
         {
-            if (renderer == null || renderer.material == null)
+            if (renderer == null)
             {
                 return;
             }
 
-            renderer.material.SetFloat("_OutlineAlpha", 1f);
-            renderer.material.SetColor("_OutlineColor", color);
-            renderer.material.SetFloat("_OutlineWidth", width);
+            MaterialPropertyBlock block = GetPropertyBlock();
+            renderer.GetPropertyBlock(block);
+            block.SetFloat(s_OutlineAlpha, 1f);
+            block.SetColor(s_OutlineColor, color);
+            block.SetFloat(s_OutlineWidth, width);
+            renderer.SetPropertyBlock(block);
         }
 
         /// <summary>
@@ -54,12 +74,15 @@ namespace Game.Runtime
         /// </summary>
         public static void ClearOutline(SpriteRenderer renderer)
         {
-            if (renderer == null || renderer.material == null)
+            if (renderer == null)
             {
                 return;
             }
 
-            renderer.material.SetFloat("_OutlineAlpha", 0f);
+            MaterialPropertyBlock block = GetPropertyBlock();
+            renderer.GetPropertyBlock(block);
+            block.SetFloat(s_OutlineAlpha, 0f);
+            renderer.SetPropertyBlock(block);
         }
 
         // === Destructible 2D ===
@@ -71,9 +94,7 @@ namespace Game.Runtime
         /// </summary>
         public static void ApplyDestruction(GameObject target, Vector2 hitPoint, float radius)
         {
-            // Destructible 2DのAPIを直接呼ぶ
-            // CW.Destructible2D.D2dDestructible.StampAll(hitPoint, ...) 等
-            // 具体的なパラメータは実装時にアセットのAPIに合わせて調整
+            // TODO: Destructible 2DのAPIを実装時に接続
 #if UNITY_EDITOR
             Debug.Log($"[VFX] Destruction at {hitPoint} radius={radius}");
 #endif

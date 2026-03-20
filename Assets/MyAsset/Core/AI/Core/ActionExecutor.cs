@@ -45,6 +45,7 @@ namespace Game.Core
 
             if (_currentAction != null && _currentAction.IsExecuting)
             {
+                _currentAction.OnCompleted -= HandleActionCompleted;
                 _currentAction.Cancel();
             }
 

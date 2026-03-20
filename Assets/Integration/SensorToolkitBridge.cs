@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using Game.Core;
 using Micosmo.SensorToolkit;
@@ -18,7 +19,8 @@ namespace Game.Runtime
         [Header("Game Settings")]
         [SerializeField] private int _ownerHash;
 
-        private SensorSystem _sensorSystem;
+        // 再利用バッファ（GCアロケーション回避）
+        private List<int> _hashBuffer = new List<int>();
 
         /// <summary>
         /// ゲームAIのSensorSystemと接続する。
@@ -26,7 +28,6 @@ namespace Game.Runtime
         public void Initialize(int ownerHash, SensorSystem sensorSystem)
         {
             _ownerHash = ownerHash;
-            _sensorSystem = sensorSystem;
 
             if (_detectionSensor == null)
             {
@@ -36,27 +37,28 @@ namespace Game.Runtime
 
         /// <summary>
         /// SensorToolkitの検出結果をゲーム用ハッシュリストに変換する。
+        /// 返却されたリストは次回呼び出しで再利用されるため、保持しないこと。
         /// </summary>
-        public int[] GetDetectedHashes()
+        public List<int> GetDetectedHashes()
         {
+            _hashBuffer.Clear();
+
             if (_detectionSensor == null)
             {
-                return System.Array.Empty<int>();
+                return _hashBuffer;
             }
 
-            System.Collections.Generic.List<GameObject> detected = _detectionSensor.GetDetections();
-            int[] hashes = new int[detected.Count];
-
+            List<GameObject> detected = _detectionSensor.GetDetections();
             for (int i = 0; i < detected.Count; i++)
             {
                 CharacterHashHolder holder = detected[i].GetComponent<CharacterHashHolder>();
                 if (holder != null)
                 {
-                    hashes[i] = holder.Hash;
+                    _hashBuffer.Add(holder.Hash);
                 }
             }
 
-            return hashes;
+            return _hashBuffer;
         }
 
         /// <summary>
@@ -83,21 +85,6 @@ namespace Game.Runtime
             }
 
             return _detectionSensor.GetNearestDetection();
-        }
-    }
-
-    /// <summary>
-    /// GameObjectにキャラクターハッシュを保持するコンポーネント。
-    /// SensorToolkitがGameObject単位で検出するため、ハッシュとの紐付けに使用。
-    /// </summary>
-    public class CharacterHashHolder : MonoBehaviour
-    {
-        [SerializeField] private int _hash;
-        public int Hash => _hash;
-
-        public void SetHash(int hash)
-        {
-            _hash = hash;
         }
     }
 }

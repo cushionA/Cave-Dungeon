@@ -42,22 +42,41 @@ namespace Game.Core
         public void Return(Projectile projectile)
         {
             projectile.Reset();
-            _active.Remove(projectile);
+            int index = _active.IndexOf(projectile);
+            if (index >= 0)
+            {
+                SwapRemoveAt(index);
+            }
             _pool.Add(projectile);
         }
 
         public void ReturnAllDead()
         {
-            for (int i = _active.Count - 1; i >= 0; i--)
+            int i = 0;
+            while (i < _active.Count)
             {
                 if (!_active[i].IsAlive)
                 {
                     Projectile p = _active[i];
                     p.Reset();
-                    _active.RemoveAt(i);
+                    SwapRemoveAt(i);
                     _pool.Add(p);
                 }
+                else
+                {
+                    i++;
+                }
             }
+        }
+
+        private void SwapRemoveAt(int index)
+        {
+            int lastIndex = _active.Count - 1;
+            if (index < lastIndex)
+            {
+                _active[index] = _active[lastIndex];
+            }
+            _active.RemoveAt(lastIndex);
         }
 
         public void Clear()

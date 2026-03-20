@@ -36,14 +36,16 @@ namespace Game.Core
                     ref CombatStats casterStats = ref data.GetCombatStats(projectile.CasterHash);
                     ref CombatStats targetStats = ref data.GetCombatStats(targetHash);
 
-                    int damage = DamageCalculator.CalculateTotalDamage(
+                    int rawDamage = DamageCalculator.CalculateTotalDamage(
                         casterStats.attack, magic.motionValue, targetStats.defense,
                         magic.attackElement);
 
                     ref CharacterVitals targetVitals = ref data.GetVitals(targetHash);
-                    targetVitals.currentHp -= damage;
-                    result.damage = damage;
-                    result.isKill = targetVitals.currentHp <= 0;
+                    (int actualDamage, bool isKill, bool _) = HpArmorLogic.ApplyDamage(
+                        ref targetVitals.currentHp, ref targetVitals.currentArmor,
+                        rawDamage, 0f);
+                    result.damage = actualDamage;
+                    result.isKill = isKill;
                     break;
                 }
 

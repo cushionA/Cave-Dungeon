@@ -24,18 +24,35 @@ namespace Game.Runtime
         [SerializeField] private float _horizontalSpread = 0.5f;
         [SerializeField] private float _criticalScale = 1.4f;
 
-        private Queue<GameObject> _pool;
+        [Header("Colors")]
+        [SerializeField] private Color _criticalColor = new Color(1f, 0.8f, 0.2f, 1f);
+        [SerializeField] private Color _healColor = new Color(0.3f, 1f, 0.3f, 1f);
+
+        private struct PoolEntry
+        {
+            public GameObject gameObject;
+            public TextMesh textMesh;
+            public Transform transform;
+            public MotionHandle positionHandle;
+            public MotionHandle fadeHandle;
+            public MotionHandle scaleHandle;
+            public MotionHandle completionHandle;
+        }
+
+        private Queue<PoolEntry> _pool;
+        private List<PoolEntry> _active;
         private IDisposable _subscription;
 
         private void Awake()
         {
-            _pool = new Queue<GameObject>();
+            _pool = new Queue<PoolEntry>();
+            _active = new List<PoolEntry>();
 
             for (int i = 0; i < _poolSize; i++)
             {
-                GameObject go = CreatePopupObject();
-                go.SetActive(false);
-                _pool.Enqueue(go);
+                PoolEntry entry = CreatePoolEntry();
+                entry.gameObject.SetActive(false);
+                _pool.Enqueue(entry);
             }
         }
 
@@ -52,6 +69,11 @@ namespace Game.Runtime
         {
             _subscription?.Dispose();
             _subscription = null;
+        }
+
+        private void OnDestroy()
+        {
+            CancelAllActive();
         }
 
         private void OnDamageDealt(DamageResult result, int attackerHash, int defenderHash)
@@ -78,15 +100,18 @@ namespace Game.Runtime
         /// </summary>
         public void SpawnPopup(DamagePopupData data)
         {
-            GameObject go;
+            PoolEntry entry;
             if (_pool.Count > 0)
             {
-                go = _pool.Dequeue();
+                entry = _pool.Dequeue();
             }
             else
             {
-                go = CreatePopupObject();
+                entry = CreatePoolEntry();
             }
+
+            // 実行中のトゥイーンをキャンセル
+            CancelHandles(ref entry);
 
             // 初期位置設定
             float offsetX = Random.Range(-_horizontalSpread, _horizontalSpread);
@@ -95,49 +120,46 @@ namespace Game.Runtime
                 data.worldPosition.y + 0.5f,
                 0f);
 
-            go.transform.position = startPos;
-            go.transform.localScale = Vector3.one;
-            go.SetActive(true);
+            entry.transform.position = startPos;
+            entry.transform.localScale = Vector3.one;
+            entry.gameObject.SetActive(true);
 
-            TextMesh textMesh = go.GetComponent<TextMesh>();
-            textMesh.text = data.value.ToString();
+            entry.textMesh.text = data.value.ToString();
 
             // タイプ別の色・サイズ設定
             Color baseColor;
             switch (data.type)
             {
                 case FeedbackType.Critical:
-                    baseColor = new Color(1f, 0.8f, 0.2f, 1f);
-                    textMesh.fontSize = 50;
+                    baseColor = _criticalColor;
+                    entry.textMesh.fontSize = 50;
                     break;
                 case FeedbackType.Heal:
-                    baseColor = new Color(0.3f, 1f, 0.3f, 1f);
-                    textMesh.fontSize = 40;
+                    baseColor = _healColor;
+                    entry.textMesh.fontSize = 40;
                     break;
                 default:
                     baseColor = Color.white;
-                    textMesh.fontSize = 40;
+                    entry.textMesh.fontSize = 40;
                     break;
             }
-            textMesh.color = baseColor;
+            entry.textMesh.color = baseColor;
 
             // --- LitMotion トゥイーン ---
-            Transform popupTransform = go.transform;
-
             // 1. Y方向に浮かぶ（EaseOutCubicで減速）
             Vector3 endPos = startPos + new Vector3(0f, _floatHeight, 0f);
-            LMotion.Create(startPos, endPos, _duration)
+            entry.positionHandle = LMotion.Create(startPos, endPos, _duration)
                 .WithEase(Ease.OutCubic)
-                .Bind(popupTransform, (pos, t) =>
+                .Bind(entry.transform, (pos, t) =>
                 {
                     t.position = pos;
                 });
 
             // 2. フェードアウト（後半で加速）
-            LMotion.Create(1f, 0f, _duration * 0.7f)
+            entry.fadeHandle = LMotion.Create(1f, 0f, _duration * 0.7f)
                 .WithEase(Ease.InQuad)
                 .WithDelay(_duration * 0.3f)
-                .Bind(textMesh, (alpha, tm) =>
+                .Bind(entry.textMesh, (alpha, tm) =>
                 {
                     Color c = tm.color;
                     c.a = alpha;
@@ -147,25 +169,34 @@ namespace Game.Runtime
             // 3. クリティカル時のスケールパンチ
             if (data.type == FeedbackType.Critical)
             {
-                LMotion.Create(_criticalScale, 1f, _duration * 0.4f)
+                entry.scaleHandle = LMotion.Create(_criticalScale, 1f, _duration * 0.4f)
                     .WithEase(Ease.OutBack)
-                    .Bind(popupTransform, (scale, t) =>
+                    .Bind(entry.transform, (scale, t) =>
                     {
                         t.localScale = new Vector3(scale, scale, 1f);
                     });
             }
 
             // 4. 完了後にプールへ返却
-            LMotion.Create(0f, 1f, _duration)
+            PoolEntry capturedEntry = entry;
+            entry.completionHandle = LMotion.Create(0f, 1f, _duration)
                 .WithOnComplete(() =>
                 {
-                    go.SetActive(false);
-                    _pool.Enqueue(go);
+                    ReturnToPool(capturedEntry);
                 })
                 .RunWithoutBinding();
+
+            _active.Add(entry);
         }
 
-        private GameObject CreatePopupObject()
+        private void ReturnToPool(PoolEntry entry)
+        {
+            entry.gameObject.SetActive(false);
+            _active.Remove(entry);
+            _pool.Enqueue(entry);
+        }
+
+        private PoolEntry CreatePoolEntry()
         {
             GameObject go = new GameObject("DamagePopup");
             go.transform.SetParent(transform);
@@ -181,7 +212,39 @@ namespace Game.Runtime
             MeshRenderer renderer = go.GetComponent<MeshRenderer>();
             renderer.sortingOrder = 100;
 
-            return go;
+            return new PoolEntry
+            {
+                gameObject = go,
+                textMesh = textMesh,
+                transform = go.transform
+            };
+        }
+
+        private static void CancelHandles(ref PoolEntry entry)
+        {
+            CancelHandle(ref entry.positionHandle);
+            CancelHandle(ref entry.fadeHandle);
+            CancelHandle(ref entry.scaleHandle);
+            CancelHandle(ref entry.completionHandle);
+        }
+
+        private static void CancelHandle(ref MotionHandle handle)
+        {
+            if (handle.IsActive())
+            {
+                handle.Cancel();
+            }
+            handle = default;
+        }
+
+        private void CancelAllActive()
+        {
+            for (int i = _active.Count - 1; i >= 0; i--)
+            {
+                PoolEntry entry = _active[i];
+                CancelHandles(ref entry);
+            }
+            _active.Clear();
         }
     }
 }

@@ -44,8 +44,17 @@ namespace Game.Runtime
         private int _bossHash;
         private bool _showBoss;
 
+        // テキスト変更検出用キャッシュ（毎フレーム文字列アロケーション回避）
+        private int _cachedHp = -1;
+        private int _cachedMaxHp = -1;
+        private int _cachedMp = -1;
+        private int _cachedMaxMp = -1;
+        private int _cachedCompanionHp = -1;
+        private int _cachedCompanionMaxHp = -1;
+
         // 前フレームの比率（トゥイーン差分検出用）
         private float _prevHpRatio = -1f;
+        private float _prevDamageBarRatio = -1f;
         private float _prevMpRatio = -1f;
         private float _prevStaminaRatio = -1f;
         private float _prevCompanionHpRatio = -1f;
@@ -131,24 +140,28 @@ namespace Game.Runtime
             ref CharacterVitals vitals = ref GameManager.Data.GetVitals(playerHash);
             (float hpRatio, float mpRatio, float staminaRatio) = HudDataProvider.GetVitalsRatios(vitals);
 
-            // HP: 減少方向はダメージバー演出付き
-            TweenBar(_hpBarFill, ref _hpHandle, ref _prevHpRatio, hpRatio, _barTweenDuration);
-
-            // HPダメージバー（遅延で追従する赤バー）
-            if (_hpBarDamage != null && hpRatio < _prevHpRatio)
+            // HPダメージバー（遅延で追従する赤バー）-- HPバーより先に判定する
+            if (_hpBarDamage != null && _prevHpRatio >= 0f && hpRatio < _prevHpRatio)
             {
-                TweenBar(_hpBarDamage, ref _hpDamageHandle, ref _prevHpRatio, hpRatio, _damageTweenDuration, Ease.InQuad, _barTweenDuration);
+                TweenBar(_hpBarDamage, ref _hpDamageHandle, ref _prevDamageBarRatio, _prevHpRatio, _damageTweenDuration, Ease.InQuad, _barTweenDuration);
             }
+
+            // HP: メインバー
+            TweenBar(_hpBarFill, ref _hpHandle, ref _prevHpRatio, hpRatio, _barTweenDuration);
 
             TweenBar(_mpBarFill, ref _mpHandle, ref _prevMpRatio, mpRatio, _barTweenDuration);
             TweenBar(_staminaBarFill, ref _staminaHandle, ref _prevStaminaRatio, staminaRatio, _barTweenDuration * 0.5f);
 
-            if (_hpText != null)
+            if (_hpText != null && (vitals.currentHp != _cachedHp || vitals.maxHp != _cachedMaxHp))
             {
+                _cachedHp = vitals.currentHp;
+                _cachedMaxHp = vitals.maxHp;
                 _hpText.text = $"{vitals.currentHp}/{vitals.maxHp}";
             }
-            if (_mpText != null)
+            if (_mpText != null && (vitals.currentMp != _cachedMp || vitals.maxMp != _cachedMaxMp))
             {
+                _cachedMp = vitals.currentMp;
+                _cachedMaxMp = vitals.maxMp;
                 _mpText.text = $"{vitals.currentMp}/{vitals.maxMp}";
             }
         }
@@ -184,8 +197,10 @@ namespace Game.Runtime
             TweenBar(_companionHpBarFill, ref _companionHpHandle, ref _prevCompanionHpRatio, hpRatio, _barTweenDuration);
             TweenBar(_companionMpBarFill, ref _companionMpHandle, ref _prevCompanionMpRatio, mpRatio, _barTweenDuration);
 
-            if (_companionHpText != null)
+            if (_companionHpText != null && (vitals.currentHp != _cachedCompanionHp || vitals.maxHp != _cachedCompanionMaxHp))
             {
+                _cachedCompanionHp = vitals.currentHp;
+                _cachedCompanionMaxHp = vitals.maxHp;
                 _companionHpText.text = $"{vitals.currentHp}/{vitals.maxHp}";
             }
         }
