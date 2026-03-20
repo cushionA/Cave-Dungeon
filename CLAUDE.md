@@ -19,6 +19,7 @@
 - `Architect/04_ダメージ・被弾システム.md` — ダメージ計算、パリィ、ガード、多属性
 - `Architect/05_AIシステム.md` — ルールベースAI、仲間AI、認識システム
 - `Architect/06_情報クラス群.md` — CharacterInfo、AttackInfo、AIInfo の詳細定義
+- `Architect/08_アニメーションシステム.md` — AnimatorBridge、ActionAnimationProfile、OverrideController設計
 - `Architect/参考コード/` — 既存コードの参考資料
 
 ## 原則

@@ -30,6 +30,12 @@ namespace Game.Core
         public int paramId;
         public float paramValue;
         public string displayName;
+
+        /// <summary>メインアニメーションスロット（Action_NのN）。-1 = アニメなし</summary>
+        public int animSlotIndex;
+
+        /// <summary>サブアニメーションスロット（詠唱→発動の発動側）。-1 = 単一フェーズ</summary>
+        public int subAnimSlotIndex;
     }
 
     [Serializable]
