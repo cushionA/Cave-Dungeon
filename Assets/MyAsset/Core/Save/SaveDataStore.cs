@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -51,7 +52,7 @@ namespace Game.Core
             foreach (KeyValuePair<string, object> kvp in slotData.entries)
             {
                 string json = JsonConvert.SerializeObject(kvp.Value);
-                string typeName = kvp.Value != null ? kvp.Value.GetType().AssemblyQualifiedName : "null";
+                string typeName = kvp.Value != null ? kvp.Value.GetType().FullName : "null";
 
                 fileData.entries[kvp.Key] = new SaveEntryData
                 {
@@ -97,7 +98,7 @@ namespace Game.Core
                         continue;
                     }
 
-                    Type type = Type.GetType(entryData.typeName);
+                    Type type = ResolveType(entryData.typeName);
                     if (type != null)
                     {
                         object value = JsonConvert.DeserializeObject(entryData.json, type);
@@ -128,6 +129,32 @@ namespace Game.Core
         public bool HasSlotFile(int slotIndex)
         {
             return File.Exists(GetSlotFilePath(slotIndex));
+        }
+
+        /// <summary>
+        /// FullNameから型を解決する。Type.GetTypeで見つからない場合は
+        /// 全アセンブリを検索するフォールバックを行う。
+        /// </summary>
+        private static Type ResolveType(string typeName)
+        {
+            Type type = Type.GetType(typeName);
+            if (type != null)
+            {
+                return type;
+            }
+
+            // FullNameの場合Type.GetTypeが失敗することがあるので全アセンブリから検索
+            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            for (int i = 0; i < assemblies.Length; i++)
+            {
+                type = assemblies[i].GetType(typeName);
+                if (type != null)
+                {
+                    return type;
+                }
+            }
+
+            return null;
         }
 
         private string GetSlotFilePath(int slotIndex)

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 
 namespace Game.Core
 {
@@ -23,6 +24,17 @@ namespace Game.Core
                 for (int i = 0; i < items.Count; i++)
                 {
                     _items.Add(items[i]);
+                }
+            }
+            else if (data is JArray jArray)
+            {
+                List<ItemEntry> converted = jArray.ToObject<List<ItemEntry>>();
+                if (converted != null)
+                {
+                    for (int i = 0; i < converted.Count; i++)
+                    {
+                        _items.Add(converted[i]);
+                    }
                 }
             }
         }

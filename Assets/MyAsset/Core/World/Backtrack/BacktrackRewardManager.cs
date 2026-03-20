@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 
 namespace Game.Core
 {
@@ -194,6 +195,14 @@ namespace Game.Core
             if (data is string[] ids)
             {
                 LoadCollectedIds(ids);
+            }
+            else if (data is JArray jArray)
+            {
+                string[] converted = jArray.ToObject<string[]>();
+                if (converted != null)
+                {
+                    LoadCollectedIds(converted);
+                }
             }
         }
     }

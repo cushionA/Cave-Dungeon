@@ -171,6 +171,10 @@ namespace Game.Core
         {
             _saveables.Clear();
             _registeredIds.Clear();
+            for (int i = 0; i < _slots.Length; i++)
+            {
+                _slots[i] = null;
+            }
         }
     }
 }

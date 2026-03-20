@@ -1,4 +1,5 @@
 using System;
+using Newtonsoft.Json.Linq;
 
 namespace Game.Core
 {
@@ -152,13 +153,24 @@ namespace Game.Core
 
         void ISaveable.Deserialize(object data)
         {
-            if (data is LevelUpSaveData saveData)
+            LevelUpSaveData saveData;
+            if (data is LevelUpSaveData direct)
             {
-                _level = Math.Max(1, saveData.level);
-                _currentExp = Math.Max(0, saveData.currentExp);
-                _availablePoints = Math.Max(0, saveData.availablePoints);
-                _allocatedStats = saveData.allocatedStats;
+                saveData = direct;
             }
+            else if (data is JObject jObj)
+            {
+                saveData = jObj.ToObject<LevelUpSaveData>();
+            }
+            else
+            {
+                return;
+            }
+
+            _level = Math.Max(1, saveData.level);
+            _currentExp = Math.Max(0, saveData.currentExp);
+            _availablePoints = Math.Max(0, saveData.availablePoints);
+            _allocatedStats = saveData.allocatedStats;
         }
     }
 

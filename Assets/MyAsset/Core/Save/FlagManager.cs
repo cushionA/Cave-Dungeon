@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 
 namespace Game.Core
 {
@@ -124,28 +125,39 @@ namespace Game.Core
 
         void ISaveable.Deserialize(object data)
         {
-            if (data is FlagSaveData saveData)
+            FlagSaveData saveData;
+            if (data is FlagSaveData direct)
             {
-                _globalFlags.Clear();
-                if (saveData.globalFlags != null)
-                {
-                    foreach (KeyValuePair<string, bool> kvp in saveData.globalFlags)
-                    {
-                        _globalFlags[kvp.Key] = kvp.Value;
-                    }
-                }
-
-                _mapLocalFlags.Clear();
-                if (saveData.mapLocalFlags != null)
-                {
-                    foreach (KeyValuePair<string, Dictionary<string, bool>> kvp in saveData.mapLocalFlags)
-                    {
-                        _mapLocalFlags[kvp.Key] = new Dictionary<string, bool>(kvp.Value);
-                    }
-                }
-
-                _currentMapId = saveData.currentMapId;
+                saveData = direct;
             }
+            else if (data is JObject jObj)
+            {
+                saveData = jObj.ToObject<FlagSaveData>();
+            }
+            else
+            {
+                return;
+            }
+
+            _globalFlags.Clear();
+            if (saveData.globalFlags != null)
+            {
+                foreach (KeyValuePair<string, bool> kvp in saveData.globalFlags)
+                {
+                    _globalFlags[kvp.Key] = kvp.Value;
+                }
+            }
+
+            _mapLocalFlags.Clear();
+            if (saveData.mapLocalFlags != null)
+            {
+                foreach (KeyValuePair<string, Dictionary<string, bool>> kvp in saveData.mapLocalFlags)
+                {
+                    _mapLocalFlags[kvp.Key] = new Dictionary<string, bool>(kvp.Value);
+                }
+            }
+
+            _currentMapId = saveData.currentMapId;
         }
     }
 }

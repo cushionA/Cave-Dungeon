@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 
 namespace Game.Core
 {
@@ -75,6 +76,14 @@ namespace Game.Core
             if (data is Dictionary<string, bool> gateData)
             {
                 DeserializeAll(gateData);
+            }
+            else if (data is JObject jObj)
+            {
+                Dictionary<string, bool> converted = jObj.ToObject<Dictionary<string, bool>>();
+                if (converted != null)
+                {
+                    DeserializeAll(converted);
+                }
             }
         }
     }
