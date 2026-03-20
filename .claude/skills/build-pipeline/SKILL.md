@@ -28,7 +28,7 @@ argument-hint: <game concept or "continue">
 `designs/pipeline-state.json` で全体の進行状態を追跡する:
 ```json
 {
-  "phase": "design|planning|implementation|review",
+  "phase": "design|planning|implementation|code-review|review",
   "currentSection": 1,
   "totalSections": null,
   "currentBranch": "feature/pipeline-xxx",
@@ -89,7 +89,15 @@ argument-hint: <game concept or "continue">
 
 ### Phase 4: レビュー (review)
 
-セクション実装完了後:
+セクション実装完了後、2段階のレビューを実施する。
+
+#### Phase 4a: コードレビュー（自動）
+
+`/simplify` を実行し、セクション内の全変更コードをレビュー・修正する。
+修正後はテスト全体を再実行してリグレッションがないことを確認する。
+
+#### Phase 4b: 検証と報告
+
 1. テスト全体を実行（MCP経由 `run_tests` またはCLI）
 2. コンソールエラーを確認（MCP経由 `read_console`）
 3. 結果をユーザーに報告
