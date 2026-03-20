@@ -176,8 +176,9 @@ namespace Game.Tests.EditMode
             int hpBefore = defVitals.currentHp;
             float armorBefore = defVitals.currentArmor;
 
+            float actionArmor = 0f;
             (int actualDmg, bool isKill, bool armorBroken) = HpArmorLogic.ApplyDamage(
-                ref defVitals.currentHp, ref defVitals.currentArmor, totalDamage, 20f);
+                ref defVitals.currentHp, ref defVitals.currentArmor, totalDamage, 20f, ref actionArmor);
 
             // イベント発火
             DamageResult damageResult = new DamageResult

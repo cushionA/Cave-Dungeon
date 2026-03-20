@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace Game.Core
 {
     /// <summary>
@@ -12,6 +14,12 @@ namespace Game.Core
         /// <summary>強化ガード受付時間（秒）。JustGuardWindowより短い。</summary>
         public const float k_EnhancedGuardWindow = 0.05f;
 
+        /// <summary>ジャストガード時のスタミナ回復量</summary>
+        public const float k_JustGuardStaminaRecovery = 15f;
+
+        /// <summary>ジャストガード時のアーマー回復量</summary>
+        public const float k_JustGuardArmorRecovery = 10f;
+
         private const float k_ReductionGuarded = 0.7f;
         private const float k_ReductionJustGuard = 1.0f;
         private const float k_ReductionEnhancedGuard = 0.9f;
@@ -22,17 +30,22 @@ namespace Game.Core
         /// 判定優先順:
         ///   1. isGuarding=false => NoGuard
         ///   2. Unparriable => NoGuard
-        ///   3. guardTimeSinceStart &lt;= JustGuardWindow &amp;&amp; !JustGuardImmune => JustGuard
-        ///   4. guardTimeSinceStart &lt;= EnhancedGuardWindow => EnhancedGuard
-        ///   5. attackPower > guardStrength => GuardBreak
-        ///   6. else => Guarded
+        ///   3. ガード方向不一致 => NoGuard
+        ///   4. GuardAttack効果中 => ガードブレイクをGuardedに昇格
+        ///   5. guardTimeSinceStart &lt;= JustGuardWindow &amp;&amp; !JustGuardImmune => JustGuard
+        ///   6. guardTimeSinceStart &lt;= EnhancedGuardWindow => EnhancedGuard
+        ///   7. attackPower > guardStrength => GuardBreak（GuardAttack中はGuarded）
+        ///   8. else => Guarded
         /// </summary>
         public static GuardResult Judge(
             bool isGuarding,
             float guardTimeSinceStart,
             float guardStrength,
             float attackPower,
-            AttackFeature attackFeature)
+            AttackFeature attackFeature,
+            GuardDirection guardDirection,
+            bool isAttackFromFront,
+            bool hasGuardAttackEffect)
         {
             if (!isGuarding)
             {
@@ -40,6 +53,12 @@ namespace Game.Core
             }
 
             if ((attackFeature & AttackFeature.Unparriable) != 0)
+            {
+                return GuardResult.NoGuard;
+            }
+
+            // ガード方向チェック
+            if (!IsGuardDirectionValid(guardDirection, isAttackFromFront))
             {
                 return GuardResult.NoGuard;
             }
@@ -58,10 +77,47 @@ namespace Game.Core
 
             if (attackPower > guardStrength)
             {
+                // GuardAttack効果中はブレイクしない
+                if (hasGuardAttackEffect)
+                {
+                    return GuardResult.Guarded;
+                }
                 return GuardResult.GuardBreak;
             }
 
             return GuardResult.Guarded;
+        }
+
+        /// <summary>
+        /// 旧シグネチャ互換（方向チェック・GuardAttack なし）。
+        /// </summary>
+        public static GuardResult Judge(
+            bool isGuarding,
+            float guardTimeSinceStart,
+            float guardStrength,
+            float attackPower,
+            AttackFeature attackFeature)
+        {
+            return Judge(isGuarding, guardTimeSinceStart, guardStrength, attackPower,
+                attackFeature, GuardDirection.Front, true, false);
+        }
+
+        /// <summary>
+        /// ガード方向が攻撃方向に対して有効か判定する。
+        /// </summary>
+        public static bool IsGuardDirectionValid(GuardDirection guardDirection, bool isAttackFromFront)
+        {
+            switch (guardDirection)
+            {
+                case GuardDirection.Front:
+                    return isAttackFromFront;
+                case GuardDirection.Back:
+                    return !isAttackFromFront;
+                case GuardDirection.Both:
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         /// <summary>
@@ -83,6 +139,17 @@ namespace Game.Core
                 default:
                     return k_ReductionNone;
             }
+        }
+
+        /// <summary>
+        /// ジャストガード成功時のスタミナ・アーマー回復を適用する。
+        /// </summary>
+        public static void ApplyJustGuardRecovery(
+            ref float currentStamina, float maxStamina,
+            ref float currentArmor, float maxArmor)
+        {
+            currentStamina = Mathf.Min(maxStamina, currentStamina + k_JustGuardStaminaRecovery);
+            currentArmor = Mathf.Min(maxArmor, currentArmor + k_JustGuardArmorRecovery);
         }
     }
 }

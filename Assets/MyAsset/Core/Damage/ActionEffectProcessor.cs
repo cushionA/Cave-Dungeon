@@ -14,6 +14,8 @@ namespace Game.Core
             public bool isInvincible;
             public bool hasSuperArmor;
             public bool hasGuardPoint;
+            public bool hasGuardAttackEffect;
+            public bool hasKnockbackImmunity;
             public float actionArmorValue;
             public float damageReduction;
         }
@@ -60,6 +62,12 @@ namespace Game.Core
                         break;
                     case ActionEffectType.GuardPoint:
                         state.hasGuardPoint = true;
+                        break;
+                    case ActionEffectType.GuardAttack:
+                        state.hasGuardAttackEffect = true;
+                        break;
+                    case ActionEffectType.KnockbackImmunity:
+                        state.hasKnockbackImmunity = true;
                         break;
                 }
             }

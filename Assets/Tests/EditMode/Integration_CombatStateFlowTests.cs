@@ -109,8 +109,9 @@ namespace Game.Tests.EditMode
 
             // Act: 1撃目 armorBreak=40 → アーマー0
             int dmgHit1 = DamageCalculator.CalculateTotalDamage(atkStats, 1.0f, defStats, Element.None);
+            float actionArmor1 = 0f;
             (int actual1, bool kill1, bool armorBroken) = HpArmorLogic.ApplyDamage(
-                ref enemyVitals.currentHp, ref enemyVitals.currentArmor, dmgHit1, 40f);
+                ref enemyVitals.currentHp, ref enemyVitals.currentArmor, dmgHit1, 40f, ref actionArmor1);
 
             int hpAfterHit1 = enemyVitals.currentHp;
 
@@ -120,8 +121,9 @@ namespace Game.Tests.EditMode
 
             // 2撃目: アーマー0状態でのダメージ → アーマーブレイクボーナスなし
             int dmgHit2 = DamageCalculator.CalculateTotalDamage(atkStats, 1.0f, defStats, Element.None);
+            float actionArmor2 = 0f;
             (int actual2, bool kill2, bool armorBroken2) = HpArmorLogic.ApplyDamage(
-                ref enemyVitals.currentHp, ref enemyVitals.currentArmor, dmgHit2, 0f);
+                ref enemyVitals.currentHp, ref enemyVitals.currentArmor, dmgHit2, 0f, ref actionArmor2);
 
             // Assert: HPが確実に減少
             Assert.Less(enemyVitals.currentHp, hpAfterHit1);
@@ -143,7 +145,8 @@ namespace Game.Tests.EditMode
             {
                 int dmg = DamageCalculator.CalculateTotalDamage(atkStats, motionValues[i], defStats, Element.None);
                 ref CharacterVitals enemyVitals = ref _data.GetVitals(k_EnemyHash);
-                HpArmorLogic.ApplyDamage(ref enemyVitals.currentHp, ref enemyVitals.currentArmor, dmg, 0f);
+                float actionArmorCombo = 0f;
+                HpArmorLogic.ApplyDamage(ref enemyVitals.currentHp, ref enemyVitals.currentArmor, dmg, 0f, ref actionArmorCombo);
 
                 DamageResult result = new DamageResult
                 {

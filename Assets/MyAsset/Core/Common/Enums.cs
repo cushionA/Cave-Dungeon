@@ -101,14 +101,50 @@ namespace Game.Core
 
     public enum ActionEffectType : byte
     {
-        Armor,            // 行動アーマー（value = アーマー量、ベースに加算）
-        SuperArmor,       // スーパーアーマー（怯まない）
-        Invincible,       // 完全無敵
-        DamageReduction,  // ダメージ軽減（value = 軽減率 0-1）
-        GuardPoint,       // ガードポイント（特定フレームだけガード判定）
+        Armor,              // 行動アーマー（value = アーマー量、ベースに加算）
+        SuperArmor,         // スーパーアーマー（怯まない）
+        Invincible,         // 完全無敵
+        DamageReduction,    // ダメージ軽減（value = 軽減率 0-1）
+        GuardPoint,         // ガードポイント（特定フレームだけガード判定）
+        GuardAttack,        // ガード攻撃（スタミナ削りきられてもブレイクしないガード）
+        KnockbackImmunity,  // 吹き飛ばし無効（Knockback→Flinchに変換）
+    }
+
+    // ===== 状況ダメージボーナス =====
+
+    /// <summary>
+    /// 状況ダメージボーナスの種別（重複なし、最大値を適用）。
+    /// UI表示用（"COUNTER!" 等）にDamageResultに格納する。
+    /// </summary>
+    public enum SituationalBonus : byte
+    {
+        None,
+        Counter,        // 攻撃中の敵にヒット
+        Backstab,       // 背面からの攻撃
+        StaggerHit,     // 怯み中の敵にヒット
+    }
+
+    // ===== 被弾リアクション =====
+
+    /// <summary>
+    /// 被弾時のリアクション種別。DamageResultに格納され、状態機械がActStateに変換する。
+    /// </summary>
+    public enum HitReaction : byte
+    {
+        None,        // リアクションなし（SuperArmor、アーマー吸収）
+        Flinch,      // 怯み（短い硬直）
+        Knockback,   // 吹き飛ばし
+        GuardBreak,  // ガードブレイク
     }
 
     // ===== ガード =====
+
+    public enum GuardDirection : byte
+    {
+        Front,      // 前方のみガード
+        Back,       // 後方のみガード
+        Both,       // 前後両方ガード
+    }
 
     public enum GuardType : byte
     {
@@ -199,8 +235,10 @@ namespace Game.Core
         AttackPrep,
         Attacking,
         AttackRecovery,
-        Knockbacked,
-        Stunned,
+        Flinch,          // 怯み（短い硬直、アーマー0で被弾時）
+        Knockbacked,     // 吹き飛ばし（着地→起き上がり完了まで持続）
+        GuardBroken,     // ガードブレイク（固定時間硬直）
+        Stunned,         // スタン（状態異常蓄積による気絶）
         Dead,
         Custom,
     }

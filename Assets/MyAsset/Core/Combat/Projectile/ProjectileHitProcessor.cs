@@ -41,9 +41,10 @@ namespace Game.Core
                         magic.attackElement);
 
                     ref CharacterVitals targetVitals = ref data.GetVitals(targetHash);
+                    float actionArmor = 0f;
                     (int actualDamage, bool isKill, bool _) = HpArmorLogic.ApplyDamage(
                         ref targetVitals.currentHp, ref targetVitals.currentArmor,
-                        rawDamage, 0f);
+                        rawDamage, 0f, ref actionArmor);
                     result.damage = actualDamage;
                     result.isKill = isKill;
                     break;

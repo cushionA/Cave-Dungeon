@@ -270,5 +270,47 @@ namespace Game.Tests.EditMode
         {
             Assert.AreEqual(0f, ActionEffectProcessor.GetActiveValue(null, 0.5f, ActionEffectType.Armor));
         }
+
+        // ===== KnockbackImmunity テスト =====
+
+        [Test]
+        public void Evaluate_KnockbackImmunity_SetsFlag()
+        {
+            ActionEffect[] effects = new ActionEffect[]
+            {
+                new ActionEffect
+                {
+                    type = ActionEffectType.KnockbackImmunity,
+                    startTime = 0f,
+                    duration = 5f,
+                    value = 0f
+                }
+            };
+
+            ActionEffectProcessor.EffectState state =
+                ActionEffectProcessor.Evaluate(effects, 1f);
+
+            Assert.IsTrue(state.hasKnockbackImmunity);
+        }
+
+        [Test]
+        public void Evaluate_KnockbackImmunity_Inactive_FlagFalse()
+        {
+            ActionEffect[] effects = new ActionEffect[]
+            {
+                new ActionEffect
+                {
+                    type = ActionEffectType.KnockbackImmunity,
+                    startTime = 2f,
+                    duration = 1f,
+                    value = 0f
+                }
+            };
+
+            ActionEffectProcessor.EffectState state =
+                ActionEffectProcessor.Evaluate(effects, 0.5f);
+
+            Assert.IsFalse(state.hasKnockbackImmunity);
+        }
     }
 }
