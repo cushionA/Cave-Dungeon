@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -14,9 +15,12 @@ namespace Game.Tests.PlayMode
     /// </summary>
     public class CharacterRegistryIntegrationTests
     {
+        private List<GameObject> _spawnedObjects;
+
         [UnitySetUp]
         public IEnumerator Setup()
         {
+            _spawnedObjects = new List<GameObject>();
             TestSceneHelper.CreateGameManager();
             yield return null;
         }
@@ -24,6 +28,14 @@ namespace Game.Tests.PlayMode
         [UnityTearDown]
         public IEnumerator TearDown()
         {
+            foreach (GameObject obj in _spawnedObjects)
+            {
+                if (obj != null)
+                {
+                    Object.DestroyImmediate(obj);
+                }
+            }
+            _spawnedObjects.Clear();
             TestSceneHelper.Cleanup();
             yield return null;
         }
@@ -35,6 +47,7 @@ namespace Game.Tests.PlayMode
             // CharacterInfoはScriptableObjectなのでnameプロパティを設定
             info.name = "TestHero";
             GameObject charObj = TestSceneHelper.CreateBaseCharacterObject(info, Vector3.zero);
+            _spawnedObjects.Add(charObj);
 
             yield return null; // Start → RegisterName
 
@@ -44,17 +57,15 @@ namespace Game.Tests.PlayMode
             Assert.IsTrue(found, "Name should be resolvable after BaseCharacter.Start");
             Assert.AreEqual(bc.ObjectHash, resolvedHash,
                 "Resolved hash should match ObjectHash");
-
-            Object.DestroyImmediate(charObj);
         }
 
         [UnityTest]
-        public IEnumerator CharacterRegistry_RegisterPlayer_PlayerHashIsSet()
+        public IEnumerator CharacterRegistry_ManualRegisterPlayer_PlayerHashIsSet()
         {
-            // PlayerCharacterの代わりに手動でCharacterRegistryを操作
             CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo(
                 feature: CharacterFeature.Player);
             GameObject charObj = TestSceneHelper.CreateBaseCharacterObject(info, Vector3.zero);
+            _spawnedObjects.Add(charObj);
 
             yield return null; // Start
 
@@ -67,20 +78,19 @@ namespace Game.Tests.PlayMode
 
             Assert.AreEqual(hash, CharacterRegistry.PlayerHash,
                 "PlayerHash should be set after RegisterPlayer");
-            Assert.Contains(hash, CharacterRegistry.AllHashes,
+            Assert.IsTrue(CharacterRegistry.AllHashes.Contains(hash),
                 "AllHashes should contain the player hash");
-            Assert.Contains(hash, CharacterRegistry.AllyHashes,
+            Assert.IsTrue(CharacterRegistry.AllyHashes.Contains(hash),
                 "AllyHashes should contain the player hash");
-
-            Object.DestroyImmediate(charObj);
         }
 
         [UnityTest]
-        public IEnumerator CharacterRegistry_RegisterEnemy_EnemyHashesContainsHash()
+        public IEnumerator CharacterRegistry_ManualRegisterEnemy_EnemyHashesContainsHash()
         {
             CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo(
                 belong: CharacterBelong.Enemy, feature: CharacterFeature.Minion);
             GameObject charObj = TestSceneHelper.CreateBaseCharacterObject(info, Vector3.zero);
+            _spawnedObjects.Add(charObj);
 
             yield return null; // Start
 
@@ -90,12 +100,10 @@ namespace Game.Tests.PlayMode
             // EnemyCharacter.Startが行うことを手動で再現
             CharacterRegistry.RegisterEnemy(hash);
 
-            Assert.Contains(hash, CharacterRegistry.AllHashes,
+            Assert.IsTrue(CharacterRegistry.AllHashes.Contains(hash),
                 "AllHashes should contain the enemy hash");
-            Assert.Contains(hash, CharacterRegistry.EnemyHashes,
+            Assert.IsTrue(CharacterRegistry.EnemyHashes.Contains(hash),
                 "EnemyHashes should contain the enemy hash");
-
-            Object.DestroyImmediate(charObj);
         }
 
         [UnityTest]
@@ -104,6 +112,7 @@ namespace Game.Tests.PlayMode
             CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo();
             info.name = "UnregisterTarget";
             GameObject charObj = TestSceneHelper.CreateBaseCharacterObject(info, Vector3.zero);
+            _spawnedObjects.Add(charObj);
 
             yield return null; // Start
 
@@ -112,7 +121,7 @@ namespace Game.Tests.PlayMode
 
             // 手動登録してから解除
             CharacterRegistry.RegisterEnemy(hash);
-            Assert.Contains(hash, CharacterRegistry.EnemyHashes);
+            Assert.IsTrue(CharacterRegistry.EnemyHashes.Contains(hash));
 
             CharacterRegistry.Unregister(hash);
 
@@ -124,8 +133,6 @@ namespace Game.Tests.PlayMode
             // 名前マッピングも削除される
             bool found = CharacterRegistry.TryGetHashByName("UnregisterTarget", out int _);
             Assert.IsFalse(found, "Name mapping should be removed after Unregister");
-
-            Object.DestroyImmediate(charObj);
         }
 
         [UnityTest]
@@ -134,10 +141,12 @@ namespace Game.Tests.PlayMode
             CharacterInfo info1 = TestSceneHelper.CreateTestCharacterInfo();
             info1.name = "Char1";
             GameObject charObj1 = TestSceneHelper.CreateBaseCharacterObject(info1, Vector3.zero);
+            _spawnedObjects.Add(charObj1);
 
             CharacterInfo info2 = TestSceneHelper.CreateTestCharacterInfo();
             info2.name = "Char2";
             GameObject charObj2 = TestSceneHelper.CreateBaseCharacterObject(info2, new Vector3(2, 0, 0));
+            _spawnedObjects.Add(charObj2);
 
             yield return null; // Start for both
 
@@ -156,9 +165,6 @@ namespace Game.Tests.PlayMode
                 "EnemyHashes should be empty after Clear");
             Assert.AreEqual(0, CharacterRegistry.PlayerHash,
                 "PlayerHash should be 0 after Clear");
-
-            Object.DestroyImmediate(charObj1);
-            Object.DestroyImmediate(charObj2);
         }
     }
 }

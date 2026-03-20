@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using NUnit.Framework;
 using R3;
 using UnityEngine;
@@ -15,9 +16,12 @@ namespace Game.Tests.PlayMode
     /// </summary>
     public class BaseCharacterLifecycleTests
     {
+        private List<GameObject> _spawnedObjects;
+
         [UnitySetUp]
         public IEnumerator Setup()
         {
+            _spawnedObjects = new List<GameObject>();
             TestSceneHelper.CreateGameManager();
             yield return null; // Awake完了を待つ
         }
@@ -25,6 +29,14 @@ namespace Game.Tests.PlayMode
         [UnityTearDown]
         public IEnumerator TearDown()
         {
+            foreach (GameObject obj in _spawnedObjects)
+            {
+                if (obj != null)
+                {
+                    Object.DestroyImmediate(obj);
+                }
+            }
+            _spawnedObjects.Clear();
             TestSceneHelper.Cleanup();
             yield return null;
         }
@@ -36,6 +48,7 @@ namespace Game.Tests.PlayMode
         {
             CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo(maxHp: 200);
             GameObject charObj = TestSceneHelper.CreateBaseCharacterObject(info, Vector3.zero);
+            _spawnedObjects.Add(charObj);
 
             yield return null; // Start
 
@@ -50,8 +63,6 @@ namespace Game.Tests.PlayMode
             Assert.AreEqual(200, vitals.maxHp, "maxHp should match CharacterInfo.maxHp");
             Assert.AreEqual(50, vitals.currentMp, "currentMp should match CharacterInfo.maxMp");
             Assert.AreEqual(50, vitals.maxMp, "maxMp should match CharacterInfo.maxMp");
-
-            Object.DestroyImmediate(charObj);
         }
 
         [UnityTest]
@@ -63,6 +74,7 @@ namespace Game.Tests.PlayMode
 
             CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo();
             GameObject charObj = TestSceneHelper.CreateBaseCharacterObject(info, Vector3.zero);
+            _spawnedObjects.Add(charObj);
 
             yield return null; // Start → RegisterCharacter → FireCharacterRegistered
 
@@ -71,7 +83,6 @@ namespace Game.Tests.PlayMode
                 "OnCharacterRegistered should fire with the character's ObjectHash");
 
             subscription.Dispose();
-            Object.DestroyImmediate(charObj);
         }
 
         [UnityTest]
@@ -95,6 +106,7 @@ namespace Game.Tests.PlayMode
                 "Character should be unregistered from SoA after OnDestroy");
         }
 
+
         [UnityTest]
         public IEnumerator BaseCharacter_OnDestroy_FiresCharacterRemovedEvent()
         {
@@ -117,6 +129,7 @@ namespace Game.Tests.PlayMode
                 "OnCharacterRemoved should fire with the destroyed character's hash");
 
             subscription.Dispose();
+            // charObj is already destroyed — no cleanup needed
         }
 
         [UnityTest]
@@ -124,6 +137,7 @@ namespace Game.Tests.PlayMode
         {
             CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo();
             GameObject charObj = TestSceneHelper.CreateBaseCharacterObject(info, Vector3.zero);
+            _spawnedObjects.Add(charObj);
 
             // ObjectHashはAwakeで設定されるので、同フレームでアクセス可能
             BaseCharacter bc = charObj.GetComponent<BaseCharacter>();
@@ -131,7 +145,6 @@ namespace Game.Tests.PlayMode
                 "ObjectHash should equal the GameObject's InstanceID");
 
             yield return null;
-            Object.DestroyImmediate(charObj);
         }
 
         [UnityTest]
@@ -139,23 +152,26 @@ namespace Game.Tests.PlayMode
         {
             CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo(maxHp: 100);
             GameObject charObj = TestSceneHelper.CreateBaseCharacterObject(info, Vector3.zero);
+            _spawnedObjects.Add(charObj);
 
             yield return null; // Start
 
             BaseCharacter bc = charObj.GetComponent<BaseCharacter>();
             Assert.IsTrue(bc.IsAlive, "IsAlive should be true when HP > 0");
-
-            Object.DestroyImmediate(charObj);
         }
 
         [UnityTest]
         public IEnumerator BaseCharacter_WithoutCharacterInfo_DoesNotRegister()
         {
+            // CharacterInfoがnullの場合、エラーログが出ることを許容する
+            LogAssert.ignoreFailingMessages = true;
+
             // CharacterInfoをnullのまま作成
             GameObject go = new GameObject("TestCharNoInfo");
             go.AddComponent<Rigidbody2D>();
             go.AddComponent<BoxCollider2D>();
             BaseCharacter bc = go.AddComponent<BaseCharacter>();
+            _spawnedObjects.Add(go);
             // _characterInfoを設定しない
 
             yield return null; // Start — should log error but not crash
@@ -164,7 +180,7 @@ namespace Game.Tests.PlayMode
             Assert.IsFalse(GameManager.Data.TryGetValue(hash, out int _),
                 "Character without CharacterInfo should not be registered in SoA");
 
-            Object.DestroyImmediate(go);
+            LogAssert.ignoreFailingMessages = false;
         }
     }
 }
