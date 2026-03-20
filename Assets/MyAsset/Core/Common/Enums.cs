@@ -110,6 +110,20 @@ namespace Game.Core
         KnockbackImmunity,  // 吹き飛ばし無効（Knockback→Flinchに変換）
     }
 
+    // ===== 状況ダメージボーナス =====
+
+    /// <summary>
+    /// 状況ダメージボーナスの種別（重複なし、最大値を適用）。
+    /// UI表示用（"COUNTER!" 等）にDamageResultに格納する。
+    /// </summary>
+    public enum SituationalBonus : byte
+    {
+        None,
+        Counter,        // 攻撃中の敵にヒット
+        Backstab,       // 背面からの攻撃
+        StaggerHit,     // 怯み中の敵にヒット
+    }
+
     // ===== 被弾リアクション =====
 
     /// <summary>

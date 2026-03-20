@@ -73,7 +73,8 @@ namespace Game.Tests.EditMode
 
             ref CharacterVitals vitals = ref _data.GetVitals(1);
             int hpBefore = vitals.currentHp;
-            HpArmorLogic.ApplyDamage(ref vitals.currentHp, ref vitals.currentArmor, damage, 0f);
+            float actionArmor = 0f;
+            HpArmorLogic.ApplyDamage(ref vitals.currentHp, ref vitals.currentArmor, damage, 0f, ref actionArmor);
 
             if (vitals.currentHp <= 0)
             {
@@ -97,16 +98,18 @@ namespace Game.Tests.EditMode
 
             // Act: 1撃目 armorBreak=30 → アーマー枯渇
             int rawDamage1 = 40;
+            float actionArmor1 = 0f;
             (int actual1, bool kill1, bool armorBroken1) = HpArmorLogic.ApplyDamage(
-                ref vitals.currentHp, ref vitals.currentArmor, rawDamage1, 30f);
+                ref vitals.currentHp, ref vitals.currentArmor, rawDamage1, 30f, ref actionArmor1);
 
             int hpAfterHit1 = vitals.currentHp;
             float armorAfterHit1 = vitals.currentArmor;
 
             // 2撃目: アーマー0で全ダメージがHPへ
             int rawDamage2 = 30;
+            float actionArmor2 = 0f;
             (int actual2, bool kill2, bool armorBroken2) = HpArmorLogic.ApplyDamage(
-                ref vitals.currentHp, ref vitals.currentArmor, rawDamage2, 0f);
+                ref vitals.currentHp, ref vitals.currentArmor, rawDamage2, 0f, ref actionArmor2);
 
             // Assert
             Assert.AreEqual(0f, armorAfterHit1, 0.001f);

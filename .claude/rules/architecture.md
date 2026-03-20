@@ -177,6 +177,12 @@ paths:
 - 攻撃方向とガード方向不一致 → GuardResult.NoGuard
 - ジャストガード成功時: スタミナ+15、アーマー+10 回復
 
+### 状況ダメージボーナス
+- SituationalBonusLogic: Counter(1.3x)/Backstab(1.25x)/StaggerHit(1.2x)
+- 重複なし: 複数条件満たす場合は最大倍率のみ適用
+- ガード成功時は適用しない（NoGuard/GuardBreak時のみ）
+- DamageResult.situationalBonus にUI表示用の種別を記録
+
 ### 連携ボタンスキル（CoopAction）
 - 連携 = 仲間への指示スキル。CoopActionBase継承で多様な連携を追加
 - コンボ対応: 連打で最大N回連続発動（MP消費は初回のみ）

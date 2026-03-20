@@ -82,7 +82,8 @@ namespace Game.Tests.EditMode
 
             // Act: HPを0にする
             ref CharacterVitals enemyVitals = ref _data.GetVitals(k_EnemyHash);
-            HpArmorLogic.ApplyDamage(ref enemyVitals.currentHp, ref enemyVitals.currentArmor, 10, 0f);
+            float actionArmor = 0f;
+            HpArmorLogic.ApplyDamage(ref enemyVitals.currentHp, ref enemyVitals.currentArmor, 10, 0f, ref actionArmor);
             Assert.AreEqual(0, _data.GetVitals(k_EnemyHash).currentHp);
 
             // コントローラー非活性化

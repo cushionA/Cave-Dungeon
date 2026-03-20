@@ -485,5 +485,158 @@ namespace Game.Tests.EditMode
             Assert.IsTrue(state.isInvincible,
                 "無敵フラグが立っている場合、ダメージ処理自体がスキップされる");
         }
+
+        // ===== 状況ダメージボーナス結合テスト =====
+
+        [Test]
+        public void SituationalBonus_CounterDuringAttack_IncreasesDamage()
+        {
+            // ベースダメージ 100
+            int baseDamage = 100;
+
+            // 対象が攻撃中 → カウンターボーナス
+            (float mult, SituationalBonus bonus) =
+                SituationalBonusLogic.Evaluate(
+                    isTargetAttacking: true,
+                    isAttackFromBehind: false,
+                    isTargetInHitstun: false);
+
+            int boostedDamage = UnityEngine.Mathf.FloorToInt(baseDamage * mult);
+
+            // HitReaction: アーマー0、吹き飛ばしなし → Flinch
+            HitReaction reaction = HitReactionLogic.Determine(
+                hasSuperArmor: false,
+                hasKnockbackImmunity: false,
+                totalArmorBefore: 0f,
+                hasKnockbackForce: false,
+                GuardResult.NoGuard,
+                ActState.Attacking);
+
+            Assert.AreEqual(SituationalBonus.Counter, bonus);
+            Assert.AreEqual(130, boostedDamage, "カウンター: 100 * 1.3 = 130");
+            Assert.AreEqual(HitReaction.Flinch, reaction);
+        }
+
+        [Test]
+        public void SituationalBonus_BackstabFromBehind_IncreasesDamage()
+        {
+            int baseDamage = 100;
+
+            (float mult, SituationalBonus bonus) =
+                SituationalBonusLogic.Evaluate(
+                    isTargetAttacking: false,
+                    isAttackFromBehind: true,
+                    isTargetInHitstun: false);
+
+            int boostedDamage = UnityEngine.Mathf.FloorToInt(baseDamage * mult);
+
+            Assert.AreEqual(SituationalBonus.Backstab, bonus);
+            Assert.AreEqual(125, boostedDamage, "背面攻撃: 100 * 1.25 = 125");
+        }
+
+        [Test]
+        public void SituationalBonus_StaggerHitOnFlinch_IncreasesDamage()
+        {
+            int baseDamage = 100;
+            ActState targetState = ActState.Flinch;
+
+            bool isInHitstun = HitReactionLogic.IsInHitstun(targetState);
+
+            (float mult, SituationalBonus bonus) =
+                SituationalBonusLogic.Evaluate(
+                    isTargetAttacking: false,
+                    isAttackFromBehind: false,
+                    isTargetInHitstun: isInHitstun);
+
+            int boostedDamage = UnityEngine.Mathf.FloorToInt(baseDamage * mult);
+
+            Assert.AreEqual(SituationalBonus.StaggerHit, bonus);
+            Assert.AreEqual(120, boostedDamage, "怯み中ヒット: 100 * 1.2 = 120");
+        }
+
+        [Test]
+        public void SituationalBonus_GuardSuccess_NoBonusApplied()
+        {
+            // ガード成功時は状況ボーナスを適用しない（DamageReceiverと同じ条件分岐）
+            GuardResult guardResult = GuardJudgmentLogic.Judge(
+                isGuarding: true,
+                guardTimeSinceStart: 0.5f,
+                guardStrength: 100f,
+                attackPower: 50f,
+                attackFeature: AttackFeature.None,
+                guardDirection: GuardDirection.Front,
+                isAttackFromFront: true,
+                hasGuardAttackEffect: false);
+
+            // DamageReceiverでの条件: NoGuard or GuardBreak 時のみボーナス適用
+            bool shouldApplyBonus = guardResult == GuardResult.NoGuard
+                || guardResult == GuardResult.GuardBreak;
+
+            Assert.AreEqual(GuardResult.Guarded, guardResult);
+            Assert.IsFalse(shouldApplyBonus,
+                "ガード成功時は状況ボーナスを適用しない");
+        }
+
+        [Test]
+        public void SituationalBonus_CounterBackstab_OnlyCounterApplied()
+        {
+            // カウンター + 背面攻撃 → 最大値のカウンターのみ
+            int baseDamage = 100;
+
+            (float mult, SituationalBonus bonus) =
+                SituationalBonusLogic.Evaluate(
+                    isTargetAttacking: true,
+                    isAttackFromBehind: true,
+                    isTargetInHitstun: false);
+
+            int boostedDamage = UnityEngine.Mathf.FloorToInt(baseDamage * mult);
+
+            Assert.AreEqual(SituationalBonus.Counter, bonus,
+                "重複なし: カウンター(1.3) > 背面(1.25) → カウンターのみ");
+            Assert.AreEqual(130, boostedDamage);
+        }
+
+        [Test]
+        public void FullFlow_CounterBonus_WithDamageCalc_And_ArmorBreak()
+        {
+            // フルフロー: カウンターボーナス → ダメージ計算 → アーマー消費 → HitReaction
+
+            // Step 1: ダメージ計算
+            ElementalStatus attackStats = new ElementalStatus { slash = 50 };
+            ElementalStatus defenseStats = new ElementalStatus { slash = 20 };
+            int rawDamage = DamageCalculator.CalculateTotalDamage(
+                attackStats, 1.0f, defenseStats, Element.None);
+
+            // Step 2: 状況ボーナス（対象はAttacking中）
+            (float mult, SituationalBonus bonus) =
+                SituationalBonusLogic.Evaluate(
+                    isTargetAttacking: true,
+                    isAttackFromBehind: false,
+                    isTargetInHitstun: false);
+            int boostedDamage = UnityEngine.Mathf.FloorToInt(rawDamage * mult);
+
+            // Step 3: HPとアーマーに適用
+            int hp = 200;
+            float baseArmor = 0f;
+            float actionArmor = 0f;
+
+            HpArmorLogic.ApplyDamage(
+                ref hp, ref baseArmor, boostedDamage, 0f, ref actionArmor);
+
+            // Step 4: HitReaction
+            HitReaction reaction = HitReactionLogic.Determine(
+                hasSuperArmor: false,
+                hasKnockbackImmunity: false,
+                totalArmorBefore: 0f,
+                hasKnockbackForce: false,
+                GuardResult.NoGuard,
+                ActState.Attacking);
+
+            Assert.AreEqual(SituationalBonus.Counter, bonus);
+            Assert.Greater(rawDamage, 0, "ベースダメージが計算される");
+            Assert.Greater(boostedDamage, rawDamage, "カウンターボーナスでダメージ増加");
+            Assert.AreEqual(200 - boostedDamage, hp);
+            Assert.AreEqual(HitReaction.Flinch, reaction);
+        }
     }
 }

@@ -169,6 +169,7 @@ namespace Game.Core
         public int totalDamage;
         public GuardResult guardResult;
         public HitReaction hitReaction;
+        public SituationalBonus situationalBonus;
         public bool isCritical;
         public bool isKill;
         public float armorDamage;

@@ -146,6 +146,9 @@ namespace Game.Runtime
             ref CharacterVitals vitals = ref GameManager.Data.GetVitals(hash);
             ref CombatStats combat = ref GameManager.Data.GetCombatStats(hash);
 
+            // 現在のActStateを取得（ヒットスタン中の吹き飛ばし判定・状況ボーナスに必要）
+            ActState currentActState = GameManager.Data.GetFlags(hash).ActState;
+
             // Step 2: ガード判定
             bool isAttackFromFront = IsAttackFromFront(data);
             GuardResult guardResult = GuardJudgmentLogic.Judge(
@@ -166,10 +169,28 @@ namespace Game.Runtime
                     ref vitals.currentArmor, vitals.maxArmor);
             }
 
-            // Step 4: ダメージ計算（ガード軽減 + ActionEffect軽減）
+            // Step 4: ダメージ計算（状況ボーナス + ガード軽減 + ActionEffect軽減）
             float guardReduction = GuardJudgmentLogic.GetDamageReduction(guardResult);
             int rawDamage = DamageCalculator.CalculateTotalDamage(
                 data.damage, data.motionValue, combat.defense, Element.None);
+
+            // 状況ダメージボーナス（ガード成功時は適用しない）
+            SituationalBonus situationalBonus = SituationalBonus.None;
+            if (guardResult == GuardResult.NoGuard || guardResult == GuardResult.GuardBreak)
+            {
+                bool isFromBehind = !isAttackFromFront;
+                bool isTargetAttacking = SituationalBonusLogic.IsTargetAttacking(currentActState);
+                bool isInHitstun = HitReactionLogic.IsInHitstun(currentActState);
+
+                (float bonusMult, SituationalBonus bonus) =
+                    SituationalBonusLogic.Evaluate(isTargetAttacking, isFromBehind, isInHitstun);
+
+                if (bonusMult > 1.0f)
+                {
+                    rawDamage = Mathf.FloorToInt(rawDamage * bonusMult);
+                    situationalBonus = bonus;
+                }
+            }
 
             // ガード軽減適用
             int reducedDamage = Mathf.FloorToInt(rawDamage * (1f - guardReduction));
@@ -211,9 +232,6 @@ namespace Game.Runtime
             float totalArmorBefore = armorBefore + effectState.actionArmorValue;
             bool hasKnockbackForce = data.knockbackForce.sqrMagnitude > 0.01f;
 
-            // 現在のActStateを取得（ヒットスタン中の吹き飛ばし判定に必要）
-            ActState currentActState = GameManager.Data.GetFlags(hash).ActState;
-
             HitReaction hitReaction = HitReactionLogic.Determine(
                 effectState.hasSuperArmor,
                 effectState.hasKnockbackImmunity,
@@ -227,6 +245,7 @@ namespace Game.Runtime
                 totalDamage = hpResult.actualDamage,
                 guardResult = guardResult,
                 hitReaction = hitReaction,
+                situationalBonus = situationalBonus,
                 isCritical = false,
                 isKill = hpResult.isKill,
                 armorDamage = armorBefore - vitals.currentArmor,

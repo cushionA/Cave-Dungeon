@@ -6,12 +6,12 @@ using Game.Core;
 
 namespace Game.Editor
 {
-    [CustomEditor(typeof(CharacterInfo))]
+    [CustomEditor(typeof(Game.Core.CharacterInfo))]
     public class CharacterInfoEditor : OdinEditor
     {
         public override void OnInspectorGUI()
         {
-            CharacterInfo info = (CharacterInfo)target;
+            Game.Core.CharacterInfo info = (Game.Core.CharacterInfo)target;
 
             // タイトル
             GUIStyle titleStyle = new GUIStyle(EditorStyles.boldLabel)
