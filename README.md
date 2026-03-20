@@ -166,4 +166,4 @@ python tools/feature-db.py get "名前"  # 個別確認
 
 ## ライセンス
 
-Private Repository
+MIT
