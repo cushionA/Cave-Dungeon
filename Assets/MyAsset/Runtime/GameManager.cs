@@ -48,8 +48,8 @@ namespace Game.Runtime
                 maxMp = info.maxMp,
                 currentStamina = info.maxStamina,
                 maxStamina = info.maxStamina,
-                currentArmor = 100f,
-                maxArmor = 100f,
+                currentArmor = info.maxArmor,
+                maxArmor = info.maxArmor,
                 staminaRecoveryRate = info.staminaRecoveryRate,
                 staminaRecoveryDelay = info.staminaRecoveryDelay,
                 level = 1

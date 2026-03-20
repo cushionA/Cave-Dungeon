@@ -13,6 +13,8 @@ namespace Game.Core
 
         private readonly Dictionary<int, float> _accumulations;
         private readonly Dictionary<int, ConfusionState> _confusedEntities;
+        private readonly List<int> _tempKeys = new List<int>(8);
+        private readonly List<int> _tempExpired = new List<int>(4);
 
         public int ConfusedCount => _confusedEntities.Count;
 
@@ -106,34 +108,32 @@ namespace Game.Core
         /// </summary>
         public void Tick(float deltaTime)
         {
-            // Pass 1: 残時間を減算し、期限切れキーを収集
-            List<int> expiredKeys = null;
-            List<int> allKeys = new List<int>(_confusedEntities.Keys);
+            // Pass 1: 残時間を減算し、期限切れキーを収集（再利用リスト使用）
+            _tempKeys.Clear();
+            _tempExpired.Clear();
 
-            for (int i = 0; i < allKeys.Count; i++)
+            foreach (int key in _confusedEntities.Keys)
             {
-                int key = allKeys[i];
+                _tempKeys.Add(key);
+            }
+
+            for (int i = 0; i < _tempKeys.Count; i++)
+            {
+                int key = _tempKeys[i];
                 ConfusionState state = _confusedEntities[key];
                 state.remainingDuration -= deltaTime;
                 _confusedEntities[key] = state;
 
                 if (state.remainingDuration <= 0f)
                 {
-                    if (expiredKeys == null)
-                    {
-                        expiredKeys = new List<int>();
-                    }
-                    expiredKeys.Add(key);
+                    _tempExpired.Add(key);
                 }
             }
 
             // Pass 2: 期限切れを解除
-            if (expiredKeys != null)
+            for (int i = 0; i < _tempExpired.Count; i++)
             {
-                for (int i = 0; i < expiredKeys.Count; i++)
-                {
-                    ClearConfusion(expiredKeys[i]);
-                }
+                ClearConfusion(_tempExpired[i]);
             }
         }
 
@@ -188,10 +188,14 @@ namespace Game.Core
         /// </summary>
         public void ClearAll()
         {
-            List<int> keys = new List<int>(_confusedEntities.Keys);
-            for (int i = 0; i < keys.Count; i++)
+            _tempKeys.Clear();
+            foreach (int key in _confusedEntities.Keys)
             {
-                ClearConfusion(keys[i]);
+                _tempKeys.Add(key);
+            }
+            for (int i = 0; i < _tempKeys.Count; i++)
+            {
+                ClearConfusion(_tempKeys[i]);
             }
             _accumulations.Clear();
         }

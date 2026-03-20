@@ -14,17 +14,25 @@ namespace Game.Core
         public override int MaxComboCount => 1;
         public override float ComboInputWindow => 0.5f;
 
+        private SoACharaDataDic _data;
         private float _shieldDuration;
         private float _shieldTimer;
         private bool _shieldActive;
         private Vector2 _shieldPosition;
+        private int _companionHash;
 
         public bool IsShieldActive => _shieldActive;
         public Vector2 ShieldPosition => _shieldPosition;
         public float ShieldDuration => _shieldDuration;
 
         public ShieldCoopAction(float shieldDuration = 5f)
+            : this(null, shieldDuration)
         {
+        }
+
+        public ShieldCoopAction(SoACharaDataDic data, float shieldDuration = 5f)
+        {
+            _data = data;
             _shieldDuration = shieldDuration;
         }
 
@@ -32,7 +40,15 @@ namespace Game.Core
         {
             _shieldActive = true;
             _shieldTimer = _shieldDuration;
-            _shieldPosition = new Vector2(0f, 0f);
+            _companionHash = companionHash;
+
+            // コンパニオンの現在位置にシールドを展開
+            // NOTE: TryGetValue+GetVitalsで2回hash→index解決が走るが、
+            // SoACharaDataDicにインデックス直接アクセスAPIがないため現状回避不可
+            if (_data != null && _data.TryGetValue(companionHash, out int _))
+            {
+                _shieldPosition = _data.GetVitals(companionHash).position;
+            }
         }
 
         /// <summary>
@@ -49,6 +65,13 @@ namespace Game.Core
             if (_shieldTimer <= 0f)
             {
                 _shieldActive = false;
+                return;
+            }
+
+            // シールド位置をコンパニオンに追従（TryGetValue+GetVitalsの二重lookup、上記NOTE参照）
+            if (_data != null && _data.TryGetValue(_companionHash, out int _))
+            {
+                _shieldPosition = _data.GetVitals(_companionHash).position;
             }
         }
 

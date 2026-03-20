@@ -13,13 +13,16 @@ namespace Game.Runtime
     public class PlayerInputHandler : MonoBehaviour
     {
         private PlayerInput _playerInput;
+        private BaseCharacter _character;
         private MovementInfo _currentInput;
 
         // ボタン状態追跡
         private bool _jumpPressed;
         private bool _jumpHeld;
         private bool _dashPressed;
-        private bool _attackPressed;
+        private int _attackButtonId = -1; // -1=none, 0=Light, 1=Heavy, 2=Skill
+        private bool _guardHeld;
+        private bool _isCharging; // TODO: チャージ攻撃入力の実装時にtrue設定を追加
         private Vector2 _moveDirection;
 
         public MovementInfo CurrentInput => _currentInput;
@@ -27,6 +30,7 @@ namespace Game.Runtime
         private void Awake()
         {
             _playerInput = GetComponent<PlayerInput>();
+            _character = GetComponent<BaseCharacter>();
         }
 
         // --- InputSystem Callbacks (Message mode) ---
@@ -61,12 +65,41 @@ namespace Game.Runtime
         {
             if (value.isPressed)
             {
-                _attackPressed = true;
+                _attackButtonId = 0; // Light
             }
+        }
+
+        public void OnHeavyAttack(InputValue value)
+        {
+            if (value.isPressed)
+            {
+                _attackButtonId = 1; // Heavy
+            }
+        }
+
+        public void OnSkill(InputValue value)
+        {
+            if (value.isPressed)
+            {
+                _attackButtonId = 2; // Skill
+            }
+        }
+
+        public void OnGuard(InputValue value)
+        {
+            _guardHeld = value.isPressed;
         }
 
         private void Update()
         {
+            // InputConverterで攻撃タイプを判定
+            AttackInputType? attackInput = null;
+            if (_attackButtonId >= 0)
+            {
+                bool isAirborne = _character != null && !_character.IsGrounded;
+                attackInput = InputConverter.ConvertAttackInput(_attackButtonId, isAirborne, _isCharging);
+            }
+
             // MovementInfoを更新
             _currentInput = new MovementInfo
             {
@@ -74,8 +107,8 @@ namespace Game.Runtime
                 jumpPressed = _jumpPressed,
                 jumpHeld = _jumpHeld,
                 dashPressed = _dashPressed,
-                attackInput = _attackPressed ? (AttackInputType?)AttackInputType.LightAttack : null,
-                guardHeld = false,
+                attackInput = attackInput,
+                guardHeld = _guardHeld,
                 interactPressed = false,
                 cooperationPressed = false,
                 weaponSwitchPressed = false,
@@ -90,7 +123,7 @@ namespace Game.Runtime
             // per-frameフラグをクリア（consumed）
             _jumpPressed = false;
             _dashPressed = false;
-            _attackPressed = false;
+            _attackButtonId = -1;
         }
     }
 }

@@ -19,7 +19,7 @@ namespace Game.Core
         /// based on magic type and registers the hit on the projectile.
         /// </summary>
         public static HitResult ProcessHit(Projectile projectile, int targetHash,
-            SoACharaDataDic data, MagicDefinition magic)
+            SoACharaDataDic data, MagicDefinition magic, GameEvents events = null)
         {
             HitResult result = new HitResult { magicType = magic.magicType };
 
@@ -47,6 +47,29 @@ namespace Game.Core
                         rawDamage, 0f, ref actionArmor);
                     result.damage = actualDamage;
                     result.isKill = isKill;
+
+                    // HP率キャッシュ更新
+                    targetVitals.hpRatio = targetVitals.maxHp > 0
+                        ? (byte)(100 * targetVitals.currentHp / targetVitals.maxHp)
+                        : (byte)0;
+
+                    // GameEventsに通知（HUD・音声・クエスト等の外部システム連携）
+                    if (events != null)
+                    {
+                        DamageResult damageResult = new DamageResult
+                        {
+                            totalDamage = actualDamage,
+                            guardResult = GuardResult.NoGuard,
+                            hitReaction = isKill ? HitReaction.Knockback : HitReaction.Flinch,
+                            isKill = isKill
+                        };
+                        events.FireDamageDealt(damageResult, projectile.CasterHash, targetHash);
+
+                        if (isKill)
+                        {
+                            events.FireCharacterDeath(targetHash, projectile.CasterHash);
+                        }
+                    }
                     break;
                 }
 

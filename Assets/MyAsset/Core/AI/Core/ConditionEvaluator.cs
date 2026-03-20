@@ -12,9 +12,9 @@ namespace Game.Core
         /// Evaluates a single AICondition against the data container.
         /// </summary>
         public static bool Evaluate(AICondition condition, int ownerHash, int targetHash,
-            SoACharaDataDic data, float currentTime)
+            SoACharaDataDic data, float currentTime, DamageScoreTracker scoreTracker = null)
         {
-            float value = GetConditionValue(condition, ownerHash, targetHash, data, currentTime);
+            float value = GetConditionValue(condition, ownerHash, targetHash, data, currentTime, scoreTracker);
             return Compare(value, condition.compareOp, condition.operandA, condition.operandB);
         }
 
@@ -23,7 +23,7 @@ namespace Game.Core
         /// Null or empty array returns true (no conditions = always valid).
         /// </summary>
         public static bool EvaluateAll(AICondition[] conditions, int ownerHash, int targetHash,
-            SoACharaDataDic data, float currentTime)
+            SoACharaDataDic data, float currentTime, DamageScoreTracker scoreTracker = null)
         {
             if (conditions == null || conditions.Length == 0)
             {
@@ -32,7 +32,7 @@ namespace Game.Core
 
             for (int i = 0; i < conditions.Length; i++)
             {
-                if (!Evaluate(conditions[i], ownerHash, targetHash, data, currentTime))
+                if (!Evaluate(conditions[i], ownerHash, targetHash, data, currentTime, scoreTracker))
                 {
                     return false;
                 }
@@ -46,7 +46,7 @@ namespace Game.Core
         /// TargetFilter in the condition determines which characters to evaluate.
         /// </summary>
         public static float GetConditionValue(AICondition condition, int ownerHash, int targetHash,
-            SoACharaDataDic data, float currentTime)
+            SoACharaDataDic data, float currentTime, DamageScoreTracker scoreTracker = null)
         {
             switch (condition.conditionType)
             {
@@ -108,9 +108,12 @@ namespace Game.Core
 
                 case AIConditionType.DamageScore:
                 {
-                    // DamageScoreEntry[]はDamageScoreTracker側で管理。
-                    // SoAコンテナ統合はSection 2 AI統合時に実施。
-                    return 0f;
+                    if (scoreTracker == null)
+                    {
+                        return 0f;
+                    }
+                    int scoreTargetHash = ResolveTargetHash(condition.filter, ownerHash, targetHash);
+                    return scoreTracker.GetScore(scoreTargetHash, currentTime);
                 }
 
                 case AIConditionType.Count:

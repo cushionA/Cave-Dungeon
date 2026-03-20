@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Game.Core;
 using PixelCrushers.LoveHate;
 
@@ -20,6 +21,7 @@ namespace Game.Runtime
 
         // hash → GameObject キャッシュ（FindObjectsByType毎回呼び出し回避）
         private static Dictionary<int, CharacterHashHolder> _holderCache = new Dictionary<int, CharacterHashHolder>();
+        private static bool _sceneCallbackRegistered;
 
         private void Awake()
         {
@@ -34,6 +36,11 @@ namespace Game.Runtime
             }
 
             GameManager.Events.OnDamageDealtEvent += OnDamageDealt;
+            if (!_sceneCallbackRegistered)
+            {
+                SceneManager.sceneUnloaded += OnSceneUnloaded;
+                _sceneCallbackRegistered = true;
+            }
         }
 
         private void OnDisable()
@@ -44,6 +51,9 @@ namespace Game.Runtime
             }
 
             GameManager.Events.OnDamageDealtEvent -= OnDamageDealt;
+            // SceneManager.sceneUnloadedはstaticコールバックのため、
+            // 最後のインスタンス破棄時のみ解除
+            // （複数インスタンスからの重複購読を_sceneCallbackRegisteredで防止済み）
         }
 
         /// <summary>
@@ -68,6 +78,11 @@ namespace Game.Runtime
         public static void ClearCache()
         {
             _holderCache.Clear();
+        }
+
+        private void OnSceneUnloaded(Scene scene)
+        {
+            ClearCache();
         }
 
         private void OnDamageDealt(DamageResult result, int attackerHash, int defenderHash)

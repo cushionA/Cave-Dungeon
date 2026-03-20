@@ -47,8 +47,8 @@ namespace Game.Core
     ///   [18-23] Reserved/SpecialEffect (6 bits)
     ///   [24-35] RecognizeObjectType (12 bits)
     ///   [36-43] BrainEventFlagType (8 bits)
-    ///   [44-51] AbilityFlag (8 bits)
-    ///   [52-63] Reserved (12 bits)
+    ///   [44-59] AbilityFlag (16 bits)
+    ///   [60-63] Reserved (4 bits)
     /// </summary>
     public struct CharacterFlags
     {
@@ -89,11 +89,11 @@ namespace Game.Core
             set => flags = (flags & ~(0xFFUL << 36)) | (((ulong)value & 0xFFUL) << 36);
         }
 
-        // AbilityFlags: bits 44-51 (8 bits)
+        // AbilityFlags: bits 44-59 (16 bits)
         public AbilityFlag AbilityFlags
         {
-            get => (AbilityFlag)((flags >> 44) & 0xFFUL);
-            set => flags = (flags & ~(0xFFUL << 44)) | (((ulong)value & 0xFFUL) << 44);
+            get => (AbilityFlag)((flags >> 44) & 0xFFFFUL);
+            set => flags = (flags & ~(0xFFFFUL << 44)) | (((ulong)value & 0xFFFFUL) << 44);
         }
 
         public static CharacterFlags Pack(CharacterBelong belong, CharacterFeature feature, AbilityFlag ability)

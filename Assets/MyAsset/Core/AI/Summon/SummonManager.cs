@@ -151,7 +151,24 @@ namespace Game.Core
         }
 
         /// <summary>
-        /// アクティブスロットの情報を取得する。
+        /// アクティブスロットの情報をバッファに書き込む。書き込んだ数を返す。
+        /// buffer は最低 PartyManager.k_MaxSummonSlots の長さが必要。
+        /// </summary>
+        public int GetActiveSlots(SummonSlot[] buffer)
+        {
+            int idx = 0;
+            for (int i = 0; i < _slots.Length; i++)
+            {
+                if (_occupied[i])
+                {
+                    buffer[idx++] = _slots[i];
+                }
+            }
+            return idx;
+        }
+
+        /// <summary>
+        /// アクティブスロットの情報を取得する（アロケーションあり、非ホットパス用）。
         /// </summary>
         public SummonSlot[] GetActiveSlots()
         {

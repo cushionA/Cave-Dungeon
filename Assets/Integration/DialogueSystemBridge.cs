@@ -104,7 +104,11 @@ namespace Game.Runtime
                 return false;
             }
 
-            int hash = characterName.GetHashCode();
+            if (!CharacterRegistry.TryGetHashByName(characterName, out int hash))
+            {
+                return false;
+            }
+
             if (!GameManager.Data.TryGetValue(hash, out int _))
             {
                 return false;

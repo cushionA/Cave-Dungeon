@@ -13,6 +13,10 @@ namespace Game.Core
         /// Selects the best target from candidates based on filter and sort criteria.
         /// Returns 0 if no valid target found.
         /// </summary>
+        // ホットパスでの毎回アロケーション回避用の再利用バッファ
+        // NOTE: メインスレッド専用。Job System等から呼ばないこと
+        private static readonly List<int> s_FilterBuffer = new List<int>(32);
+
         public static int SelectTarget(AITargetSelect select, int ownerHash,
             List<int> candidateHashes, SoACharaDataDic data, float currentTime)
         {
@@ -21,24 +25,26 @@ namespace Game.Core
                 return 0;
             }
 
-            List<int> filtered = FilterCandidates(select.filter, ownerHash, candidateHashes, data);
-            if (filtered.Count == 0)
+            s_FilterBuffer.Clear();
+            FilterCandidates(select.filter, ownerHash, candidateHashes, data, s_FilterBuffer);
+            if (s_FilterBuffer.Count == 0)
             {
                 return 0;
             }
 
-            return SortAndPick(select.sortKey, select.isDescending, ownerHash, filtered, data, currentTime);
+            return SortAndPick(select.sortKey, select.isDescending, ownerHash, s_FilterBuffer, data, currentTime);
         }
 
         /// <summary>
         /// Filters candidates by TargetFilter criteria.
         /// Checks belong, feature, weakPoint, distance range.
         /// </summary>
-        public static List<int> FilterCandidates(TargetFilter filter, int ownerHash,
-            List<int> candidates, SoACharaDataDic data)
+        /// <summary>
+        /// Filters candidates into the provided output list (zero-alloc).
+        /// </summary>
+        public static void FilterCandidates(TargetFilter filter, int ownerHash,
+            List<int> candidates, SoACharaDataDic data, List<int> output)
         {
-            List<int> result = new List<int>();
-
             for (int i = 0; i < candidates.Count; i++)
             {
                 int hash = candidates[i];
@@ -126,9 +132,18 @@ namespace Game.Core
                     }
                 }
 
-                result.Add(hash);
+                output.Add(hash);
             }
+        }
 
+        /// <summary>
+        /// Filters candidates by TargetFilter criteria (allocating version for backward compat).
+        /// </summary>
+        public static List<int> FilterCandidates(TargetFilter filter, int ownerHash,
+            List<int> candidates, SoACharaDataDic data)
+        {
+            List<int> result = new List<int>();
+            FilterCandidates(filter, ownerHash, candidates, data, result);
             return result;
         }
 
