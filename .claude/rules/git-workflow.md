@@ -122,6 +122,17 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 - `/build-pipeline` 実行中は、各機能完了時にコミット+プッシュを提案する
 - destructive操作（reset --hard, push --force, branch -D）は必ずユーザー確認
 
+## プルリクエストルール
+
+PR作成時は以下の手順で進める:
+
+1. **コードレビュー実行**: PR作成前に `/simplify` を実行し、変更コードをレビュー・修正する
+2. **テスト確認**: 全テストがPassしていることを確認する
+3. **PR作成**: `gh pr create` でPRを作成する
+   - タイトル: 日本語、70文字以内
+   - 本文: Summary（変更概要）+ Test plan（テスト計画）を記載
+4. **レビュー結果の記載**: `/simplify` で検出・修正した項目があればPR本文に含める
+
 ## バージョニング（必要時）
 
 セマンティックバージョニング: `v大.中.小`
