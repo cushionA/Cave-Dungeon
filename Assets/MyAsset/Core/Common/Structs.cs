@@ -35,9 +35,14 @@ namespace Game.Core
         public int dark;
 
         [ShowInInspector, ReadOnly, LabelText("合計")]
+        [Tooltip("物理: 斬+打+突 / 魔法: 炎+雷+聖+闇")]
         public int Total => slash + strike + pierce + fire + thunder + light + dark;
 
+        [ShowInInspector, ReadOnly, LabelText("物理計")]
         public int PhysicalTotal => slash + strike + pierce;
+
+        [ShowInInspector, ReadOnly, LabelText("魔法計")]
+        public int MagicalTotal => fire + thunder + light + dark;
 
         public int Get(Element element)
         {
@@ -168,9 +173,31 @@ namespace Game.Core
         public StatusEffectId appliedEffect;
     }
 
+    /// <summary>
+    /// 行動中に発生する特殊効果（アーマー、無敵、ダメージ軽減など）。
+    /// 開始時間と持続時間で発生区間を制御する。
+    /// </summary>
+    [Serializable, InlineProperty]
+    public struct ActionEffect
+    {
+        [EnumToggleButtons] public ActionEffectType type;
+        [MinValue(0), LabelText("開始(秒)")] public float startTime;
+        [MinValue(0), LabelText("持続(秒)")] public float duration;
+        [MinValue(0), LabelText("効果量")] public float value;
+
+        public float EndTime => startTime + duration;
+
+        public bool IsActive(float elapsedTime)
+        {
+            return elapsedTime >= startTime && elapsedTime < EndTime;
+        }
+    }
+
     [Serializable]
     public struct AttackMotionData
     {
+        [FoldoutGroup("基本")]
+        [LabelText("行動名")] public string actionName;
         [FoldoutGroup("基本")]
         [MinValue(0)] public float motionValue;
         [FoldoutGroup("基本")]
@@ -210,5 +237,9 @@ namespace Game.Core
 
         [FoldoutGroup("ガード関連")]
         [Range(0f, 100f)] public float justGuardResistance;
+
+        [FoldoutGroup("行動特殊効果")]
+        [ListDrawerSettings(ShowFoldout = true)]
+        public ActionEffect[] actionEffects;
     }
 }

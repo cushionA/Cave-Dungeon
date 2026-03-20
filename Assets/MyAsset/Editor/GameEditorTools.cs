@@ -184,9 +184,20 @@ namespace Game.Editor
         {
             GameObject[] allObjects = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
             int missingCount = 0;
+            int totalObjects = allObjects.Length;
 
-            foreach (GameObject go in allObjects)
+            for (int objIndex = 0; objIndex < totalObjects; objIndex++)
             {
+                GameObject go = allObjects[objIndex];
+
+                if (EditorUtility.DisplayCancelableProgressBar(
+                    "Missing参照を検出中",
+                    $"{objIndex + 1}/{totalObjects}: {go.name}",
+                    (float)(objIndex + 1) / totalObjects))
+                {
+                    break;
+                }
+
                 Component[] components = go.GetComponents<Component>();
                 for (int i = 0; i < components.Length; i++)
                 {
@@ -214,6 +225,7 @@ namespace Game.Editor
                 }
             }
 
+            EditorUtility.ClearProgressBar();
             Debug.Log($"Missing参照検出完了: {missingCount}件");
         }
 

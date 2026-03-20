@@ -118,6 +118,10 @@ namespace Game.Core
         public AnimationClip chargeLoopClip;
         [FoldoutGroup("アニメーション")]
         public AnimationClip recoveryClip;
+
+        [FoldoutGroup("行動特殊効果")]
+        [ListDrawerSettings(ShowFoldout = true)]
+        public ActionEffect[] actionEffects;
     }
 
     [Serializable]
