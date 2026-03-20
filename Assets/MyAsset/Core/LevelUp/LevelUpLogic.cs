@@ -3,10 +3,22 @@ using System;
 namespace Game.Core
 {
     /// <summary>
+    /// LevelUpLogicのセーブデータ。
+    /// </summary>
+    [Serializable]
+    public struct LevelUpSaveData
+    {
+        public int level;
+        public int currentExp;
+        public int availablePoints;
+        public StatModifier allocatedStats;
+    }
+
+    /// <summary>
     /// Handles experience accumulation, level-up judgment, stat point allocation,
     /// and vitals recalculation.
     /// </summary>
-    public class LevelUpLogic
+    public class LevelUpLogic : ISaveable
     {
         public const int k_PointsPerLevel = 3;
         public const int k_HpPerVit = 10;
@@ -121,6 +133,32 @@ namespace Game.Core
             result.maxMp = baseVitals.maxMp + (_allocatedStats.mnd * k_MpPerMnd);
             result.level = _level;
             return result;
+        }
+
+        // ===== ISaveable =====
+
+        public string SaveId => "LevelUpLogic";
+
+        object ISaveable.Serialize()
+        {
+            return new LevelUpSaveData
+            {
+                level = _level,
+                currentExp = _currentExp,
+                availablePoints = _availablePoints,
+                allocatedStats = _allocatedStats
+            };
+        }
+
+        void ISaveable.Deserialize(object data)
+        {
+            if (data is LevelUpSaveData saveData)
+            {
+                _level = Math.Max(1, saveData.level);
+                _currentExp = Math.Max(0, saveData.currentExp);
+                _availablePoints = Math.Max(0, saveData.availablePoints);
+                _allocatedStats = saveData.allocatedStats;
+            }
         }
     }
 
