@@ -68,6 +68,9 @@ namespace Game.Core
         private readonly Subject<int> _onCooldownReady = new();
         private readonly Subject<Unit> _onFreeCoopActivated = new();
         private readonly Subject<Unit> _onRest = new();
+        private readonly Subject<int> _onCompanionVanish = new();
+        private readonly Subject<int> _onCompanionReturn = new();
+        private readonly Subject<int> _onCompanionStanceChanged = new();
         public Observable<(int enemyHash, int killerHash)> OnEnemyDefeated => _onEnemyDefeated;
         public Observable<Unit> OnCustomRulesChanged => _onCustomRulesChanged;
         public Observable<int> OnCoopActivated => _onCoopActivated;
@@ -75,6 +78,9 @@ namespace Game.Core
         public Observable<int> OnCooldownReady => _onCooldownReady;
         public Observable<Unit> OnFreeCoopActivated => _onFreeCoopActivated;
         public Observable<Unit> OnRest => _onRest;
+        public Observable<int> OnCompanionVanish => _onCompanionVanish;
+        public Observable<int> OnCompanionReturn => _onCompanionReturn;
+        public Observable<int> OnCompanionStanceChanged => _onCompanionStanceChanged;
 
         // ===== C# Standard Events (for Assembly-CSharp integration layer) =====
         public event Action<DamageResult, int, int> OnDamageDealtEvent;
@@ -124,6 +130,9 @@ namespace Game.Core
         public void FireCooldownReady(int actionId) => _onCooldownReady.OnNext(actionId);
         public void FireFreeCoopActivated() => _onFreeCoopActivated.OnNext(Unit.Default);
         public void FireRest() => _onRest.OnNext(Unit.Default);
+        public void FireCompanionVanish(int companionHash) => _onCompanionVanish.OnNext(companionHash);
+        public void FireCompanionReturn(int companionHash) => _onCompanionReturn.OnNext(companionHash);
+        public void FireCompanionStanceChanged(int companionHash) => _onCompanionStanceChanged.OnNext(companionHash);
 
         public void Dispose()
         {
@@ -152,6 +161,9 @@ namespace Game.Core
             _onCooldownReady.Dispose();
             _onFreeCoopActivated.Dispose();
             _onRest.Dispose();
+            _onCompanionVanish.Dispose();
+            _onCompanionReturn.Dispose();
+            _onCompanionStanceChanged.Dispose();
         }
     }
 }

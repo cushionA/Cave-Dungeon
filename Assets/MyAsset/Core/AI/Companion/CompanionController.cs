@@ -5,7 +5,7 @@ namespace Game.Core
 {
     /// <summary>
     /// Top-level controller for companion AI. Integrates JudgmentLoop, ModeController,
-    /// FollowBehavior, and StanceManager into a single update loop.
+    /// FollowBehavior, StanceManager, and CompanionMpManager into a single update loop.
     /// </summary>
     public class CompanionController
     {
@@ -13,6 +13,7 @@ namespace Game.Core
         private ModeController _modeController;
         private FollowBehavior _followBehavior;
         private StanceManager _stanceManager;
+        private CompanionMpManager _mpManager;
         private ActionExecutor _executor;
         private SoACharaDataDic _data;
         private int _companionHash;
@@ -22,9 +23,16 @@ namespace Game.Core
         public ModeController ModeController => _modeController;
         public FollowBehavior FollowBehavior => _followBehavior;
         public StanceManager StanceManager => _stanceManager;
+        public CompanionMpManager MpManager => _mpManager;
         public int CompanionHash => _companionHash;
 
-        public CompanionController(int companionHash, int playerHash, SoACharaDataDic data)
+        public CompanionController(
+            int companionHash,
+            int playerHash,
+            SoACharaDataDic data,
+            float maxMp,
+            int initialReserveMp,
+            CompanionMpSettings mpSettings)
         {
             _companionHash = companionHash;
             _playerHash = playerHash;
@@ -41,6 +49,7 @@ namespace Game.Core
             _modeController = new ModeController(_judgmentLoop);
             _followBehavior = new FollowBehavior();
             _stanceManager = new StanceManager();
+            _mpManager = new CompanionMpManager(maxMp, initialReserveMp, mpSettings);
         }
 
         /// <summary>
@@ -54,11 +63,21 @@ namespace Game.Core
         /// <summary>
         /// Main update loop. Evaluates follow behavior, mode transitions, and AI judgment.
         /// Teleports the companion if too far from the player.
+        /// Vanished state skips AI judgment and only ticks MP recovery.
         /// </summary>
         public void Tick(float deltaTime, List<int> candidates, float currentTime)
         {
             if (!_data.TryGetValue(_companionHash, out int _) ||
                 !_data.TryGetValue(_playerHash, out int _))
+            {
+                return;
+            }
+
+            // MP回復は常にTick（消滅中も回復する）
+            _mpManager.Tick(deltaTime);
+
+            // 消滅中はAI判定をスキップ
+            if (_mpManager.IsVanished)
             {
                 return;
             }
@@ -77,6 +96,14 @@ namespace Game.Core
             _modeController.EvaluateTransitions(
                 _companionHash, _judgmentLoop.CurrentTargetHash, _data, currentTime);
             _judgmentLoop.Tick(deltaTime, candidates, currentTime);
+        }
+
+        /// <summary>
+        /// 連携発動可否。消滅中は連携拒否。
+        /// </summary>
+        public bool CanAcceptCoop()
+        {
+            return !_mpManager.IsVanished;
         }
     }
 }
