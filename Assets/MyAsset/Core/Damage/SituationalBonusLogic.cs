@@ -1,5 +1,33 @@
+using System;
+using Sirenix.OdinInspector;
+using UnityEngine;
+
 namespace Game.Core
 {
+    /// <summary>
+    /// 状況ダメージボーナスの設定値。ScriptableObjectから注入可能。
+    /// </summary>
+    [Serializable]
+    public struct SituationalBonusConfig
+    {
+        [LabelText("カウンター倍率"), MinValue(1f)]
+        public float counterMultiplier;
+
+        [LabelText("背面攻撃倍率"), MinValue(1f)]
+        public float backstabMultiplier;
+
+        [LabelText("怯み中ヒット倍率"), MinValue(1f)]
+        public float staggerHitMultiplier;
+
+        /// <summary>デフォルト設定を返す。</summary>
+        public static SituationalBonusConfig Default => new SituationalBonusConfig
+        {
+            counterMultiplier = 1.3f,
+            backstabMultiplier = 1.25f,
+            staggerHitMultiplier = 1.2f,
+        };
+    }
+
     /// <summary>
     /// 状況ダメージボーナス判定ロジック。
     /// カウンター・背面攻撃・怯み中ヒットのボーナス倍率を判定する。
@@ -7,50 +35,49 @@ namespace Game.Core
     /// </summary>
     public static class SituationalBonusLogic
     {
-        /// <summary>カウンターボーナス倍率（攻撃中の敵にヒット）</summary>
-        public const float k_CounterBonusMult = 1.3f;
-
-        /// <summary>背面攻撃ボーナス倍率</summary>
-        public const float k_BackstabBonusMult = 1.25f;
-
-        /// <summary>怯み中ヒットボーナス倍率</summary>
-        public const float k_StaggerHitBonusMult = 1.2f;
-
         /// <summary>
         /// 状況ボーナスを評価する。重複なし（最大値のみ適用）。
-        /// 優先順: Counter(1.3) > Backstab(1.25) > StaggerHit(1.2)
         /// </summary>
-        /// <param name="isTargetAttacking">対象が攻撃状態か</param>
-        /// <param name="isAttackFromBehind">背面からの攻撃か</param>
-        /// <param name="isTargetInHitstun">対象が怯み/スタン中か</param>
-        /// <returns>(倍率, ボーナス種別)</returns>
+        public static (float multiplier, SituationalBonus bonus) Evaluate(
+            bool isTargetAttacking,
+            bool isAttackFromBehind,
+            bool isTargetInHitstun,
+            in SituationalBonusConfig config)
+        {
+            float bestMult = 1.0f;
+            SituationalBonus bestBonus = SituationalBonus.None;
+
+            if (isTargetAttacking && config.counterMultiplier > bestMult)
+            {
+                bestMult = config.counterMultiplier;
+                bestBonus = SituationalBonus.Counter;
+            }
+
+            if (isAttackFromBehind && config.backstabMultiplier > bestMult)
+            {
+                bestMult = config.backstabMultiplier;
+                bestBonus = SituationalBonus.Backstab;
+            }
+
+            if (isTargetInHitstun && config.staggerHitMultiplier > bestMult)
+            {
+                bestMult = config.staggerHitMultiplier;
+                bestBonus = SituationalBonus.StaggerHit;
+            }
+
+            return (bestMult, bestBonus);
+        }
+
+        /// <summary>
+        /// デフォルト設定で評価する（旧シグネチャ互換）。
+        /// </summary>
         public static (float multiplier, SituationalBonus bonus) Evaluate(
             bool isTargetAttacking,
             bool isAttackFromBehind,
             bool isTargetInHitstun)
         {
-            float bestMult = 1.0f;
-            SituationalBonus bestBonus = SituationalBonus.None;
-
-            if (isTargetAttacking && k_CounterBonusMult > bestMult)
-            {
-                bestMult = k_CounterBonusMult;
-                bestBonus = SituationalBonus.Counter;
-            }
-
-            if (isAttackFromBehind && k_BackstabBonusMult > bestMult)
-            {
-                bestMult = k_BackstabBonusMult;
-                bestBonus = SituationalBonus.Backstab;
-            }
-
-            if (isTargetInHitstun && k_StaggerHitBonusMult > bestMult)
-            {
-                bestMult = k_StaggerHitBonusMult;
-                bestBonus = SituationalBonus.StaggerHit;
-            }
-
-            return (bestMult, bestBonus);
+            return Evaluate(isTargetAttacking, isAttackFromBehind, isTargetInHitstun,
+                SituationalBonusConfig.Default);
         }
 
         /// <summary>

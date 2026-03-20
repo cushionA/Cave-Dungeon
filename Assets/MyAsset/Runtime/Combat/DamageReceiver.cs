@@ -26,6 +26,9 @@ namespace Game.Runtime
         private float _armorRecoveryRate;
         private float _maxArmor;
 
+        // 状況ボーナス設定（外部から注入可能）
+        private SituationalBonusConfig _bonusConfig = SituationalBonusConfig.Default;
+
         public int ObjectHash => _character != null ? _character.ObjectHash : 0;
         public bool IsAlive => _character != null && _character.IsAlive;
 
@@ -73,6 +76,14 @@ namespace Game.Runtime
             _maxArmor = maxArmor;
             _armorRecoveryRate = recoveryRate;
             _armorRecoveryDelay = recoveryDelay;
+        }
+
+        /// <summary>
+        /// 状況ダメージボーナス設定を注入する。
+        /// </summary>
+        public void SetBonusConfig(SituationalBonusConfig config)
+        {
+            _bonusConfig = config;
         }
 
         private void Update()
@@ -135,23 +146,70 @@ namespace Game.Runtime
             // Step 1: 無敵チェック
             if (effectState.isInvincible)
             {
-                return new DamageResult
-                {
-                    totalDamage = 0,
-                    guardResult = GuardResult.NoGuard,
-                    isKill = false
-                };
+                return CreateInvincibleResult();
             }
 
             ref CharacterVitals vitals = ref GameManager.Data.GetVitals(hash);
             ref CombatStats combat = ref GameManager.Data.GetCombatStats(hash);
-
-            // 現在のActStateを取得（ヒットスタン中の吹き飛ばし判定・状況ボーナスに必要）
             ActState currentActState = GameManager.Data.GetFlags(hash).ActState;
 
             // Step 2: ガード判定
             bool isAttackFromFront = IsAttackFromFront(data);
-            GuardResult guardResult = GuardJudgmentLogic.Judge(
+            GuardResult guardResult = EvaluateGuard(data, combat, isAttackFromFront, effectState);
+
+            // Step 3: ジャストガード回復
+            ApplyJustGuardRecovery(guardResult, ref vitals);
+
+            // Step 4: ダメージ計算
+            int reducedDamage = CalculateDamage(
+                data, guardResult, combat, currentActState,
+                isAttackFromFront, effectState,
+                out SituationalBonus situationalBonus);
+
+            // Step 5: アーマー削り + HP適用
+            (int actualDamage, bool isKill, float armorBefore) = ApplyDamageToVitals(
+                data, guardResult, effectState, reducedDamage, ref vitals);
+
+            // Step 6: 被弾リアクション判定
+            float totalArmorBefore = armorBefore + effectState.actionArmorValue;
+            bool hasKnockbackForce = data.knockbackForce.sqrMagnitude > 0.01f;
+            HitReaction hitReaction = HitReactionLogic.Determine(
+                effectState.hasSuperArmor,
+                effectState.hasKnockbackImmunity,
+                totalArmorBefore,
+                hasKnockbackForce,
+                guardResult,
+                currentActState);
+
+            // Step 7: 結果構築 + イベント + ノックバック
+            DamageResult result = BuildResult(
+                actualDamage, guardResult, hitReaction, situationalBonus,
+                isKill, armorBefore - vitals.currentArmor);
+
+            FireEvents(result, hash, data);
+            ApplyKnockback(data, hitReaction, hasKnockbackForce);
+
+            return result;
+        }
+
+        // ===== ステップ別メソッド =====
+
+        private static DamageResult CreateInvincibleResult()
+        {
+            return new DamageResult
+            {
+                totalDamage = 0,
+                guardResult = GuardResult.NoGuard,
+                hitReaction = HitReaction.None,
+                isKill = false
+            };
+        }
+
+        private GuardResult EvaluateGuard(
+            DamageData data, CombatStats combat,
+            bool isAttackFromFront, ActionEffectProcessor.EffectState effectState)
+        {
+            return GuardJudgmentLogic.Judge(
                 _isGuarding,
                 _guardTimeSinceStart,
                 combat.guardStats.guardStrength,
@@ -160,22 +218,30 @@ namespace Game.Runtime
                 combat.guardStats.guardDirection,
                 isAttackFromFront,
                 effectState.hasGuardAttackEffect);
+        }
 
-            // Step 3: ジャストガード回復
+        private static void ApplyJustGuardRecovery(GuardResult guardResult, ref CharacterVitals vitals)
+        {
             if (guardResult == GuardResult.JustGuard)
             {
                 GuardJudgmentLogic.ApplyJustGuardRecovery(
                     ref vitals.currentStamina, vitals.maxStamina,
                     ref vitals.currentArmor, vitals.maxArmor);
             }
+        }
 
-            // Step 4: ダメージ計算（状況ボーナス + ガード軽減 + ActionEffect軽減）
+        private int CalculateDamage(
+            DamageData data, GuardResult guardResult, CombatStats combat,
+            ActState currentActState, bool isAttackFromFront,
+            ActionEffectProcessor.EffectState effectState,
+            out SituationalBonus situationalBonus)
+        {
             float guardReduction = GuardJudgmentLogic.GetDamageReduction(guardResult);
             int rawDamage = DamageCalculator.CalculateTotalDamage(
                 data.damage, data.motionValue, combat.defense, Element.None);
 
             // 状況ダメージボーナス（ガード成功時は適用しない）
-            SituationalBonus situationalBonus = SituationalBonus.None;
+            situationalBonus = SituationalBonus.None;
             if (guardResult == GuardResult.NoGuard || guardResult == GuardResult.GuardBreak)
             {
                 bool isFromBehind = !isAttackFromFront;
@@ -183,7 +249,7 @@ namespace Game.Runtime
                 bool isInHitstun = HitReactionLogic.IsInHitstun(currentActState);
 
                 (float bonusMult, SituationalBonus bonus) =
-                    SituationalBonusLogic.Evaluate(isTargetAttacking, isFromBehind, isInHitstun);
+                    SituationalBonusLogic.Evaluate(isTargetAttacking, isFromBehind, isInHitstun, _bonusConfig);
 
                 if (bonusMult > 1.0f)
                 {
@@ -201,7 +267,14 @@ namespace Game.Runtime
                 reducedDamage = Mathf.FloorToInt(reducedDamage * (1f - effectState.damageReduction));
             }
 
-            // Step 5: アーマー削り（行動アーマー優先消費）
+            return reducedDamage;
+        }
+
+        private (int actualDamage, bool isKill, float armorBefore) ApplyDamageToVitals(
+            DamageData data, GuardResult guardResult,
+            ActionEffectProcessor.EffectState effectState,
+            int reducedDamage, ref CharacterVitals vitals)
+        {
             float actionArmor = effectState.actionArmorValue;
             float armorBefore = vitals.currentArmor;
 
@@ -228,50 +301,47 @@ namespace Game.Runtime
                 ? (byte)(100 * vitals.currentHp / vitals.maxHp)
                 : (byte)0;
 
-            // Step 6: 被弾リアクション判定
-            float totalArmorBefore = armorBefore + effectState.actionArmorValue;
-            bool hasKnockbackForce = data.knockbackForce.sqrMagnitude > 0.01f;
+            return (hpResult.actualDamage, hpResult.isKill, armorBefore);
+        }
 
-            HitReaction hitReaction = HitReactionLogic.Determine(
-                effectState.hasSuperArmor,
-                effectState.hasKnockbackImmunity,
-                totalArmorBefore,
-                hasKnockbackForce,
-                guardResult,
-                currentActState);
-
-            DamageResult result = new DamageResult
+        private static DamageResult BuildResult(
+            int actualDamage, GuardResult guardResult, HitReaction hitReaction,
+            SituationalBonus situationalBonus, bool isKill, float armorDamage)
+        {
+            return new DamageResult
             {
-                totalDamage = hpResult.actualDamage,
+                totalDamage = actualDamage,
                 guardResult = guardResult,
                 hitReaction = hitReaction,
                 situationalBonus = situationalBonus,
                 isCritical = false,
-                isKill = hpResult.isKill,
-                armorDamage = armorBefore - vitals.currentArmor,
+                isKill = isKill,
+                armorDamage = armorDamage,
                 appliedEffect = StatusEffectId.None
             };
+        }
 
-            // イベント発火
+        private static void FireEvents(DamageResult result, int hash, DamageData data)
+        {
             if (GameManager.Events != null)
             {
                 GameManager.Events.FireDamageDealt(result, data.attackerHash, data.defenderHash);
 
-                if (hpResult.isKill)
+                if (result.isKill)
                 {
                     GameManager.Events.FireCharacterDeath(hash, data.attackerHash);
                 }
             }
+        }
 
-            // ノックバック適用（リアクションがKnockbackの場合のみ）
+        private void ApplyKnockback(DamageData data, HitReaction hitReaction, bool hasKnockbackForce)
+        {
             if (_rb != null && hasKnockbackForce && hitReaction == HitReaction.Knockback)
             {
                 Vector2 knockback = HpArmorLogic.CalculateKnockback(
                     data.knockbackForce, 0f);
                 _rb.AddForce(knockback, ForceMode2D.Impulse);
             }
-
-            return result;
         }
 
         /// <summary>
