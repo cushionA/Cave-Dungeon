@@ -148,6 +148,20 @@ paths:
 - **二重MPプール**: currentMP は reserveMP から自然補充。reserveMP はアイテム/チェックポイントのみ回復
 - **MP回復行動**: SustainedAction.MpRecover。停止してMP加速回復。怯みで中断、再開可
 
+### 行動特殊効果（ActionEffect）
+- 全行動（攻撃・回避・ガード・スキル・魔法）に「開始時間+持続時間」の特殊効果を複数設定可能
+- ActionEffectType: Armor / SuperArmor / Invincible / DamageReduction / GuardPoint
+- 設定箇所: AttackInfo.motionInfo.actionEffects, AttackMotionData.actionEffects, AbilityData
+- Armor は合算、DamageReduction は最大値、その他は OR
+- 旧 DashAbility の _invincibleStart/_invincibleEnd は ActionEffect に統合
+
+### アーマーシステム
+- 二層構造: ベースアーマー（CharacterInfo.maxArmor） + 行動アーマー（ActionEffect.Armor）
+- 被弾時は行動アーマーから優先消費 → 残りがベースアーマーへ
+- 両方 0 でアーマーブレイク（1.3倍ダメージボーナス）
+- ベースアーマー自然回復: armorRecoveryDelay 経過後に armorRecoveryRate/秒で回復
+- 行動アーマーは回復しない（ActionEffect の有効区間のみ存在）
+
 ### 連携ボタンスキル（CoopAction）
 - 連携 = 仲間への指示スキル。CoopActionBase継承で多様な連携を追加
 - コンボ対応: 連打で最大N回連続発動（MP消費は初回のみ）

@@ -97,6 +97,17 @@ namespace Game.Core
         Carry,
     }
 
+    // ===== 行動特殊効果 =====
+
+    public enum ActionEffectType : byte
+    {
+        Armor,            // 行動アーマー（value = アーマー量、ベースに加算）
+        SuperArmor,       // スーパーアーマー（怯まない）
+        Invincible,       // 完全無敵
+        DamageReduction,  // ダメージ軽減（value = 軽減率 0-1）
+        GuardPoint,       // ガードポイント（特定フレームだけガード判定）
+    }
+
     // ===== ガード =====
 
     public enum GuardType : byte

@@ -98,6 +98,24 @@ namespace Game.Core
         public float jumpHeight;
 
         // ─────────────────────────────────────────────
+        //  アーマー
+        // ─────────────────────────────────────────────
+        [TitleGroup("アーマー")]
+        [Tooltip("ベースアーマー最大値")]
+        [MinValue(0)]
+        public float maxArmor;
+
+        [TitleGroup("アーマー")]
+        [Tooltip("アーマー自然回復速度（/秒）")]
+        [MinValue(0)]
+        public float armorRecoveryRate;
+
+        [TitleGroup("アーマー")]
+        [Tooltip("被弾後のアーマー回復開始までの遅延（秒）")]
+        [MinValue(0)]
+        public float armorRecoveryDelay;
+
+        // ─────────────────────────────────────────────
         //  耐性
         // ─────────────────────────────────────────────
         [TitleGroup("耐性")]

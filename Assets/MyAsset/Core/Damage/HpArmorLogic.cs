@@ -14,28 +14,45 @@ namespace Game.Core
         public const float k_ArmorBreakBonusMult = 1.3f;
 
         /// <summary>
-        /// Apply damage to a character. If armorBreakValue > 0, armor is reduced first.
-        /// When armor reaches 0, armorBroken is flagged and rawDamage receives a bonus multiplier.
+        /// Apply damage to a character with action armor priority.
+        /// Action armor is consumed first, then base armor.
+        /// When total armor (action + base) reaches 0, armorBroken bonus applies.
         /// HP is clamped to a minimum of 0.
         /// </summary>
         /// <param name="currentHp">Current HP (modified in place).</param>
-        /// <param name="currentArmor">Current armor (modified in place).</param>
+        /// <param name="currentArmor">Current base armor (modified in place).</param>
         /// <param name="rawDamage">Base damage before armor break bonus.</param>
         /// <param name="armorBreakValue">Amount of armor to destroy.</param>
+        /// <param name="actionArmor">Current action armor (modified in place). 0 if no action armor active.</param>
         /// <returns>(actualDamage, isKill, armorBroken)</returns>
         public static (int actualDamage, bool isKill, bool armorBroken) ApplyDamage(
-            ref int currentHp, ref float currentArmor, int rawDamage, float armorBreakValue)
+            ref int currentHp, ref float currentArmor, int rawDamage, float armorBreakValue,
+            ref float actionArmor)
         {
             bool armorBroken = false;
             int actualDamage = rawDamage;
 
-            // Step 1: Apply armor break
+            // Step 1: Apply armor break (action armor first, then base armor)
             if (armorBreakValue > 0f)
             {
-                currentArmor -= armorBreakValue;
+                float remaining = armorBreakValue;
 
-                // Step 2: Check if armor is broken
-                if (currentArmor <= 0f)
+                // Step 1a: Consume action armor first
+                if (actionArmor > 0f)
+                {
+                    float absorbed = Mathf.Min(actionArmor, remaining);
+                    actionArmor -= absorbed;
+                    remaining -= absorbed;
+                }
+
+                // Step 1b: Remaining break value goes to base armor
+                if (remaining > 0f)
+                {
+                    currentArmor -= remaining;
+                }
+
+                // Step 2: Check if all armor is broken
+                if (currentArmor <= 0f && actionArmor <= 0f)
                 {
                     armorBroken = true;
                     actualDamage = Mathf.FloorToInt(rawDamage * k_ArmorBreakBonusMult);
@@ -49,6 +66,24 @@ namespace Game.Core
             bool isKill = currentHp <= 0;
 
             return (actualDamage, isKill, armorBroken);
+        }
+
+        /// <summary>
+        /// Apply armor recovery over time. Recovery starts after delay has elapsed.
+        /// </summary>
+        /// <param name="currentArmor">Current armor (modified in place).</param>
+        /// <param name="maxArmor">Maximum armor value.</param>
+        /// <param name="recoveryRate">Recovery per second.</param>
+        /// <param name="deltaTime">Time elapsed this frame.</param>
+        public static void RecoverArmor(ref float currentArmor, float maxArmor,
+            float recoveryRate, float deltaTime)
+        {
+            if (currentArmor >= maxArmor || recoveryRate <= 0f)
+            {
+                return;
+            }
+
+            currentArmor = Mathf.Min(maxArmor, currentArmor + recoveryRate * deltaTime);
         }
 
         /// <summary>
