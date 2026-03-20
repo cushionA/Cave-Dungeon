@@ -22,7 +22,7 @@ namespace Game.Runtime
         private bool _dashPressed;
         private int _attackButtonId = -1; // -1=none, 0=Light, 1=Heavy, 2=Skill
         private bool _guardHeld;
-        private bool _isCharging;
+        private bool _isCharging; // TODO: チャージ攻撃入力の実装時にtrue設定を追加
         private Vector2 _moveDirection;
 
         public MovementInfo CurrentInput => _currentInput;

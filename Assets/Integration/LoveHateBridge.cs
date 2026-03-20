@@ -21,6 +21,7 @@ namespace Game.Runtime
 
         // hash → GameObject キャッシュ（FindObjectsByType毎回呼び出し回避）
         private static Dictionary<int, CharacterHashHolder> _holderCache = new Dictionary<int, CharacterHashHolder>();
+        private static bool _sceneCallbackRegistered;
 
         private void Awake()
         {
@@ -35,7 +36,11 @@ namespace Game.Runtime
             }
 
             GameManager.Events.OnDamageDealtEvent += OnDamageDealt;
-            SceneManager.sceneUnloaded += OnSceneUnloaded;
+            if (!_sceneCallbackRegistered)
+            {
+                SceneManager.sceneUnloaded += OnSceneUnloaded;
+                _sceneCallbackRegistered = true;
+            }
         }
 
         private void OnDisable()
@@ -46,7 +51,9 @@ namespace Game.Runtime
             }
 
             GameManager.Events.OnDamageDealtEvent -= OnDamageDealt;
-            SceneManager.sceneUnloaded -= OnSceneUnloaded;
+            // SceneManager.sceneUnloadedはstaticコールバックのため、
+            // 最後のインスタンス破棄時のみ解除
+            // （複数インスタンスからの重複購読を_sceneCallbackRegisteredで防止済み）
         }
 
         /// <summary>

@@ -14,6 +14,7 @@ namespace Game.Runtime
         private static readonly List<int> _allyHashes = new List<int>(4);
         private static readonly List<int> _enemyHashes = new List<int>(16);
         private static readonly Dictionary<string, int> _nameToHash = new Dictionary<string, int>(16);
+        private static readonly Dictionary<int, string> _hashToName = new Dictionary<int, string>(16);
         private static int _playerHash;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -53,6 +54,7 @@ namespace Game.Runtime
         public static void RegisterName(string name, int hash)
         {
             _nameToHash[name] = hash;
+            _hashToName[hash] = name;
         }
 
         /// <summary>
@@ -73,19 +75,11 @@ namespace Game.Runtime
                 _playerHash = 0;
             }
 
-            // 名前マッピングから削除
-            string nameToRemove = null;
-            foreach (KeyValuePair<string, int> kvp in _nameToHash)
+            // 名前マッピングから削除（逆引きDictionaryでO(1)）
+            if (_hashToName.TryGetValue(hash, out string name))
             {
-                if (kvp.Value == hash)
-                {
-                    nameToRemove = kvp.Key;
-                    break;
-                }
-            }
-            if (nameToRemove != null)
-            {
-                _nameToHash.Remove(nameToRemove);
+                _nameToHash.Remove(name);
+                _hashToName.Remove(hash);
             }
         }
 
@@ -95,6 +89,7 @@ namespace Game.Runtime
             _allyHashes.Clear();
             _enemyHashes.Clear();
             _nameToHash.Clear();
+            _hashToName.Clear();
             _playerHash = 0;
         }
     }

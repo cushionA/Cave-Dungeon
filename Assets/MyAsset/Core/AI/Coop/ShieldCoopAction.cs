@@ -43,6 +43,8 @@ namespace Game.Core
             _companionHash = companionHash;
 
             // コンパニオンの現在位置にシールドを展開
+            // NOTE: TryGetValue+GetVitalsで2回hash→index解決が走るが、
+            // SoACharaDataDicにインデックス直接アクセスAPIがないため現状回避不可
             if (_data != null && _data.TryGetValue(companionHash, out int _))
             {
                 _shieldPosition = _data.GetVitals(companionHash).position;
@@ -66,7 +68,7 @@ namespace Game.Core
                 return;
             }
 
-            // シールド位置をコンパニオンに追従
+            // シールド位置をコンパニオンに追従（TryGetValue+GetVitalsの二重lookup、上記NOTE参照）
             if (_data != null && _data.TryGetValue(_companionHash, out int _))
             {
                 _shieldPosition = _data.GetVitals(_companionHash).position;

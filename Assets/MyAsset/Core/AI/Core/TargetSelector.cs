@@ -14,6 +14,7 @@ namespace Game.Core
         /// Returns 0 if no valid target found.
         /// </summary>
         // ホットパスでの毎回アロケーション回避用の再利用バッファ
+        // NOTE: メインスレッド専用。Job System等から呼ばないこと
         private static readonly List<int> s_FilterBuffer = new List<int>(32);
 
         public static int SelectTarget(AITargetSelect select, int ownerHash,

@@ -45,11 +45,10 @@ namespace Game.Core
                 : WarpTarget.Behind;
 
             // 位置差分でターゲットのfacingを推定
-            ref CharacterVitals companionV2 = ref _data.GetVitals(companionHash);
-            float facingSign = (companionV2.position.x < targetV.position.x) ? 1f : -1f;
+            ref CharacterVitals companionV = ref _data.GetVitals(companionHash);
+            float facingSign = (companionV.position.x < targetV.position.x) ? 1f : -1f;
 
             Vector2 warpPos = CalculateWarpPosition(targetV.position, warpType, facingSign);
-            ref CharacterVitals companionV = ref _data.GetVitals(companionHash);
             companionV.position = warpPos;
             LastWarpPosition = warpPos;
         }

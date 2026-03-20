@@ -60,7 +60,7 @@ namespace Game.Core
                         {
                             totalDamage = actualDamage,
                             guardResult = GuardResult.NoGuard,
-                            hitReaction = HitReaction.None,
+                            hitReaction = isKill ? HitReaction.Knockback : HitReaction.Flinch,
                             isKill = isKill
                         };
                         events.FireDamageDealt(damageResult, projectile.CasterHash, targetHash);
