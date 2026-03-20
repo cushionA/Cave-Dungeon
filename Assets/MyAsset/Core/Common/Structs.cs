@@ -161,6 +161,7 @@ namespace Game.Core
         public AttackFeature feature;
         public float armorBreakValue;
         public float justGuardResistance;
+        public float critRoll;
         public bool isProjectile;
     }
 

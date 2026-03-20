@@ -237,6 +237,7 @@ namespace Game.Core
         AttackRecovery,
         Flinch,          // 怯み（短い硬直、アーマー0で被弾時）
         Knockbacked,     // 吹き飛ばし（着地→起き上がり完了まで持続）
+        WakeUp,          // 起き上がり（無敵、持続時間経過後Neutralへ遷移）
         GuardBroken,     // ガードブレイク（固定時間硬直）
         Stunned,         // スタン（状態異常蓄積による気絶）
         Dead,

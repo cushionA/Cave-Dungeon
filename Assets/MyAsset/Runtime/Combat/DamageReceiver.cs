@@ -12,6 +12,9 @@ namespace Game.Runtime
         private BaseCharacter _character;
         private Rigidbody2D _rb;
 
+        // 状態異常管理
+        private StatusEffectManager _statusEffectManager;
+
         // ガード状態（外部から設定される）
         private bool _isGuarding;
         private float _guardTimeSinceStart;
@@ -86,6 +89,14 @@ namespace Game.Runtime
             _bonusConfig = config;
         }
 
+        /// <summary>
+        /// StatusEffectManagerを設定する。初期化時にCharacterSetupから呼ばれる。
+        /// </summary>
+        public void SetStatusEffectManager(StatusEffectManager manager)
+        {
+            _statusEffectManager = manager;
+        }
+
         private void Update()
         {
             float dt = Time.deltaTime;
@@ -143,15 +154,15 @@ namespace Game.Runtime
             ActionEffectProcessor.EffectState effectState =
                 ActionEffectProcessor.Evaluate(_currentActionEffects, _actionElapsedTime);
 
-            // Step 1: 無敵チェック
-            if (effectState.isInvincible)
+            // Step 1: 無敵チェック（ActionEffect無敵 or 起き上がり無敵）
+            ActState currentActState = GameManager.Data.GetFlags(hash).ActState;
+            if (effectState.isInvincible || WakeUpLogic.IsWakeUpState(currentActState))
             {
                 return CreateInvincibleResult();
             }
 
             ref CharacterVitals vitals = ref GameManager.Data.GetVitals(hash);
             ref CombatStats combat = ref GameManager.Data.GetCombatStats(hash);
-            ActState currentActState = GameManager.Data.GetFlags(hash).ActState;
 
             // Step 2: ガード判定
             bool isAttackFromFront = IsAttackFromFront(data);
@@ -164,7 +175,7 @@ namespace Game.Runtime
             int reducedDamage = CalculateDamage(
                 data, guardResult, combat, currentActState,
                 isAttackFromFront, effectState,
-                out SituationalBonus situationalBonus);
+                out SituationalBonus situationalBonus, out bool isCritical);
 
             // Step 5: アーマー削り + HP適用
             (int actualDamage, bool isKill, float armorBefore) = ApplyDamageToVitals(
@@ -181,10 +192,14 @@ namespace Game.Runtime
                 guardResult,
                 currentActState);
 
+            // Step 6.5: 状態異常蓄積
+            StatusEffectId appliedEffect = ApplyStatusEffect(
+                data.statusEffectInfo, guardResult, combat.guardStats.statusCut, hash);
+
             // Step 7: 結果構築 + イベント + ノックバック
             DamageResult result = BuildResult(
                 actualDamage, guardResult, hitReaction, situationalBonus,
-                isKill, armorBefore - vitals.currentArmor);
+                isCritical, isKill, armorBefore - vitals.currentArmor, appliedEffect);
 
             FireEvents(result, hash, data);
             ApplyKnockback(data, hitReaction, hasKnockbackForce);
@@ -234,11 +249,15 @@ namespace Game.Runtime
             DamageData data, GuardResult guardResult, CombatStats combat,
             ActState currentActState, bool isAttackFromFront,
             ActionEffectProcessor.EffectState effectState,
-            out SituationalBonus situationalBonus)
+            out SituationalBonus situationalBonus, out bool isCritical)
         {
             float guardReduction = GuardJudgmentLogic.GetDamageReduction(guardResult);
             int rawDamage = DamageCalculator.CalculateTotalDamage(
                 data.damage, data.motionValue, combat.defense, Element.None);
+
+            // クリティカル判定
+            isCritical = DamageCalculator.IsCritical(combat.criticalRate, data.critRoll);
+            rawDamage = DamageCalculator.ApplyCritical(rawDamage, combat.criticalMultiplier, isCritical);
 
             // 状況ダメージボーナス（ガード成功時は適用しない）
             situationalBonus = SituationalBonus.None;
@@ -306,7 +325,8 @@ namespace Game.Runtime
 
         private static DamageResult BuildResult(
             int actualDamage, GuardResult guardResult, HitReaction hitReaction,
-            SituationalBonus situationalBonus, bool isKill, float armorDamage)
+            SituationalBonus situationalBonus, bool isCritical, bool isKill,
+            float armorDamage, StatusEffectId appliedEffect)
         {
             return new DamageResult
             {
@@ -314,11 +334,48 @@ namespace Game.Runtime
                 guardResult = guardResult,
                 hitReaction = hitReaction,
                 situationalBonus = situationalBonus,
-                isCritical = false,
+                isCritical = isCritical,
                 isKill = isKill,
                 armorDamage = armorDamage,
-                appliedEffect = StatusEffectId.None
+                appliedEffect = appliedEffect
             };
+        }
+
+        /// <summary>
+        /// 状態異常蓄積を適用する。ガード成功時はstatusEffectを無効化する。
+        /// </summary>
+        private StatusEffectId ApplyStatusEffect(
+            StatusEffectInfo info, GuardResult guardResult, float statusCut, int targetHash)
+        {
+            if (_statusEffectManager == null)
+            {
+                return StatusEffectId.None;
+            }
+
+            if (info.effect == StatusEffectId.None)
+            {
+                return StatusEffectId.None;
+            }
+
+            // ガード成功時は状態異常蓄積しない
+            if (guardResult == GuardResult.Guarded
+                || guardResult == GuardResult.JustGuard
+                || guardResult == GuardResult.EnhancedGuard)
+            {
+                return StatusEffectId.None;
+            }
+
+            bool triggered = _statusEffectManager.Accumulate(info, statusCut);
+            if (triggered)
+            {
+                if (GameManager.Events != null)
+                {
+                    GameManager.Events.FireStatusEffectApplied(targetHash, info.effect);
+                }
+                return info.effect;
+            }
+
+            return StatusEffectId.None;
         }
 
         private static void FireEvents(DamageResult result, int hash, DamageData data)
