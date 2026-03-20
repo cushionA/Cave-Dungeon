@@ -469,4 +469,55 @@ namespace Game.Core
         Locked,      // 戦闘中ロック
         Cleared,     // クリア済み（永続開放）
     }
+
+    // ===== Section 4: チャレンジ・テンプレート・リーダーボード =====
+
+    /// <summary>
+    /// チャレンジモードの種別。
+    /// </summary>
+    public enum ChallengeType : byte
+    {
+        BossRush,
+        TimeAttack,
+        Survival,
+        Restriction,
+        ScoreAttack,
+    }
+
+    /// <summary>
+    /// チャレンジの達成ランク。
+    /// </summary>
+    public enum ChallengeRank : byte
+    {
+        None,
+        Bronze,
+        Silver,
+        Gold,
+        Platinum,
+    }
+
+    /// <summary>
+    /// チャレンジの進行状態。
+    /// </summary>
+    public enum ChallengeState : byte
+    {
+        Ready,
+        Running,
+        Completed,
+        Failed,
+    }
+
+    /// <summary>
+    /// AIテンプレートのカテゴリ。
+    /// </summary>
+    public enum AITemplateCategory : byte
+    {
+        General,
+        BossFight,
+        MobClear,
+        SupportFocus,
+        Aggressive,
+        Defensive,
+        Custom,
+    }
 }

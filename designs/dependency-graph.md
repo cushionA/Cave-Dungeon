@@ -288,16 +288,16 @@ Layer 0 (Section 1-3の上に構築):
   Common_Section4Types   ← Common_SharedTypes（共通Enum/Struct追加）
 
 Layer 1 (← Layer 0):
-  ChallengeMode_Runner   ← Common_Section4Types
+  ChallengeMode_Runner   ← Common_Section4Types, GameEvents(OnCharacterDeath/OnDamageDealt)
   ChallengeMode_Score    ← Common_Section4Types
-  AITemplates_Manager    ← Common_Section4Types, AIRuleBuilder
+  AITemplates_Manager    ← Common_Section4Types, PresetManager, CompanionAIConfig, SaveManager(ISaveable)
 
 Layer 2 (← Layer 0-1):
-  ChallengeMode_Manager  ← ChallengeMode_Runner, ChallengeMode_Score
-  ChallengeMode_BossRush ← ChallengeMode_Runner, BossSystem
-  ChallengeMode_Survival ← ChallengeMode_Runner, EnemySystem
-  AITemplates_ApplyRevert ← AITemplates_Manager
-  Leaderboard_RecordUpdate ← ChallengeMode_Score
+  ChallengeMode_Manager  ← ChallengeMode_Runner, ChallengeMode_Score, SaveManager(ISaveable)
+  ChallengeMode_BossRush ← ChallengeMode_Runner, BossControllerLogic(StartEncounter/OnBossDefeated)
+  ChallengeMode_Survival ← ChallengeMode_Runner, GameEvents(OnEnemyDefeated)
+  AITemplates_ApplyRevert ← AITemplates_Manager, GameEvents(FireCustomRulesChanged)
+  Leaderboard_RecordUpdate ← ChallengeMode_Score, GameEvents(FireNewRecord), SaveManager(ISaveable)
 
 Layer 3 (← Layer 0-2):
   Leaderboard_Statistics ← Leaderboard_RecordUpdate
@@ -309,28 +309,48 @@ Layer 3 (← Layer 0-2):
 Section 1-3 基盤
     │
     ▼
-BossSystem ──────► ChallengeMode_BossRush ──┐
-EnemySystem ─────► ChallengeMode_Survival ──┤
-                                             ▼
-Common_Section4Types ──► ChallengeMode_Runner ──► ChallengeMode_Manager
-                    └──► ChallengeMode_Score ─────┘        │
-                                  │                        ▼
-                                  └──► Leaderboard_RecordUpdate ──► Leaderboard_Statistics
+BossControllerLogic ──► ChallengeMode_BossRush ──┐
+  (.StartEncounter()     (BossRushLogic)          │
+   .OnBossDefeated)                               │
+                                                  ▼
+GameEvents ─────────► ChallengeMode_Runner ──► ChallengeMode_Manager (ISaveable)
+  (.OnCharacterDeath     (状態管理/タイマー)       │
+   .OnDamageDealt                                  │
+   .OnEnemyDefeated) ──► ChallengeMode_Survival    │
+                          (SurvivalLogic)          │
+                                                   ▼
+Common_Section4Types ──► ChallengeMode_Score ──► Leaderboard_RecordUpdate ──► Leaderboard_Statistics
+                          (static計算)           (ISaveable, FireNewRecord)
 
-AIRuleBuilder ──► AITemplates_Manager ──► AITemplates_ApplyRevert
-                              └──► AITemplates_Suggester
+PresetManager ──────► AITemplates_Manager ──► AITemplates_ApplyRevert
+CompanionAIConfig ──────┘  (ISaveable)         (FireCustomRulesChanged)
+                              └──► AITemplates_Suggester (static)
 ```
+
+### システム間通信（Section 4）
+
+| 発信 | → | 受信 | 方式 | 内容 |
+|------|---|------|------|------|
+| ChallengeManager | → | GameEvents | FireChallengeStarted | チャレンジ開始通知 |
+| ChallengeManager | → | GameEvents | FireChallengeCompleted | チャレンジ完了通知 |
+| ChallengeManager | → | GameEvents | FireChallengeFailed | チャレンジ失敗通知 |
+| GameEvents.OnCharacterDeath | → | ChallengeRunner | Observable購読 | 死亡回数カウント |
+| GameEvents.OnDamageDealt | → | ChallengeRunner | Observable購読 | ダメージ集計 |
+| GameEvents.OnEnemyDefeated | → | SurvivalLogic | Observable購読 | Wave進行 |
+| BossControllerLogic | → | BossRushLogic | C# event購読 | ボス撃破→次ボスへ |
+| LeaderboardManager | → | GameEvents | FireNewRecord | 新記録UI通知 |
+| AITemplateManager | → | GameEvents | FireCustomRulesChanged | テンプレート適用通知 |
 
 ### asmdef 配置（Section 4）
 
 ```
 Game.AI (既存拡張)
-    └── Templates/         AITemplateManager, AITemplateApplier, AITemplateSuggester
+    └── Templates/         AITemplateManager, AITemplateSuggester
 
 Game.World (既存拡張)
     └── Challenge/         ChallengeRunner, ChallengeScoreCalculator, ChallengeManager,
                            BossRushLogic, SurvivalLogic, LeaderboardManager
 
 Game.Core (既存拡張)
-    └── Common/            Section 4共通Enum/Struct（Section4Structs.cs）
+    └── Common/            Section 4共通Enum/Struct（Section4Structs.cs, Enums.cs追記）
 ```

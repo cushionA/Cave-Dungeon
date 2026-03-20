@@ -205,3 +205,24 @@ paths:
 - PartyManager静的クラスで枠管理
 - 最大パーティ: 4人（プレイヤー1 + 常駐仲間1 + 召喚最大2）
 - 混乱敵はパーティ枠外（別カウント、最大3体）
+
+## Section 4 固有ルール（/design-systems section-4 で追記）
+
+### チャレンジモード
+- ChallengeRunner は純ロジック（MonoBehaviour非依存）。状態管理・タイマー・勝敗判定
+- ボスラッシュは BossControllerLogic.StartEncounter() を順番に呼ぶ（新戦闘ロジック不要）
+- スコア計算は ChallengeScoreCalculator（static class）に集約
+- ChallengeManager は ISaveable でアンロック状態を永続化
+- チャレンジイベントは GameEvents の R3 Subject パターンに統一
+
+### AIテンプレート
+- 既存 CompanionAIConfig（Section 2）をそのまま内包する AITemplateData で管理
+- AITemplateManager は PresetManager を内部活用（重複構造を作らない）
+- ImportExport は YAGNI で除外。将来のオンライン共有時に別途設計
+- テンプレート適用後は GameEvents.FireCustomRulesChanged() で既存AI更新フローに乗せる
+- Revert は直前1回分のみ保持（スタックにしない）
+
+### リーダーボード
+- LeaderboardManager は ISaveable で記録永続化
+- 新記録時は GameEvents.FireNewRecord() でUI通知
+- ローカルのみ（オンラインランキングは対象外）
