@@ -7,6 +7,18 @@ namespace Game.Tests.EditMode
 {
     public class CompanionAI_ControllerTests
     {
+        private static CompanionMpSettings DefaultMpSettings()
+        {
+            return new CompanionMpSettings
+            {
+                baseRecoveryRate = 5f,
+                mpRecoverActionRate = 10f,
+                vanishRecoveryMultiplier = 1.3f,
+                returnThresholdRatio = 0.5f,
+                maxReserveMp = 100
+            };
+        }
+
         [Test]
         public void CompanionController_Initialize_HasComponents()
         {
@@ -16,7 +28,7 @@ namespace Game.Tests.EditMode
             data.Add(2, new CharacterVitals { position = new Vector2(1f, 0f) },
                 default, default, default);
 
-            CompanionController controller = new CompanionController(1, 2, data);
+            CompanionController controller = new CompanionController(1, 2, data, 100f, 50, DefaultMpSettings());
 
             Assert.IsNotNull(controller.JudgmentLoop);
             Assert.IsNotNull(controller.ModeController);
@@ -35,7 +47,7 @@ namespace Game.Tests.EditMode
             data.Add(2, new CharacterVitals { position = new Vector2(100f, 0f) },
                 default, default, default);
 
-            CompanionController controller = new CompanionController(1, 2, data);
+            CompanionController controller = new CompanionController(1, 2, data, 100f, 50, DefaultMpSettings());
             AIMode[] modes = new AIMode[]
             {
                 new AIMode { modeName = "Default", judgeInterval = new Vector2(10f, 10f) }
@@ -59,7 +71,7 @@ namespace Game.Tests.EditMode
             data.Add(2, new CharacterVitals { position = new Vector2(1f, 0f) },
                 default, default, default);
 
-            CompanionController controller = new CompanionController(1, 2, data);
+            CompanionController controller = new CompanionController(1, 2, data, 100f, 50, DefaultMpSettings());
             controller.StanceManager.SetStance(CompanionStance.Supportive);
 
             Assert.AreEqual(CompanionStance.Supportive, controller.StanceManager.CurrentStance);
@@ -72,7 +84,7 @@ namespace Game.Tests.EditMode
         {
             SoACharaDataDic data = new SoACharaDataDic();
 
-            CompanionController controller = new CompanionController(999, 888, data);
+            CompanionController controller = new CompanionController(999, 888, data, 100f, 50, DefaultMpSettings());
 
             Assert.DoesNotThrow(() => controller.Tick(0.1f, new List<int>(), 0f));
 
@@ -88,7 +100,7 @@ namespace Game.Tests.EditMode
             data.Add(2, new CharacterVitals { position = new Vector2(1f, 0f) },
                 default, default, default);
 
-            CompanionController controller = new CompanionController(1, 2, data);
+            CompanionController controller = new CompanionController(1, 2, data, 100f, 50, DefaultMpSettings());
             AIMode[] modes = new AIMode[]
             {
                 new AIMode { modeName = "Combat", judgeInterval = Vector2.one },

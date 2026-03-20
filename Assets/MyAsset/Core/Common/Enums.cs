@@ -285,6 +285,7 @@ namespace Game.Core
         Cover,
         Stealth,
         Orbit,
+        MpRecover,
     }
 
     public enum BroadcastAction : byte

@@ -140,6 +140,14 @@ paths:
 - システムプリセット入手 = 完成済みパターン + 新ActionType解放（二重報酬）
 - 手動切替が最優先、タイムアウトで自動切替に復帰
 
+### 仲間MPシステム
+- 仲間はHPを使用しない。被ダメージはバリア（盾判定 = ダメージ計算式準拠）でMP消費
+- MP 0 → 消滅（ワープ退場）。死亡ではなく一時退場
+- currentMP が maxMP の50%に回復したら復帰
+- 消滅中: 連携使用不可、MP回復倍率 1.3x（CompanionMpSettings.vanishRecoveryMultiplier で設定可変）
+- **二重MPプール**: currentMP は reserveMP から自然補充。reserveMP はアイテム/チェックポイントのみ回復
+- **MP回復行動**: SustainedAction.MpRecover。停止してMP加速回復。怯みで中断、再開可
+
 ### 連携ボタンスキル（CoopAction）
 - 連携 = 仲間への指示スキル。CoopActionBase継承で多様な連携を追加
 - コンボ対応: 連打で最大N回連続発動（MP消費は初回のみ）
