@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Game.Core;
 using PixelCrushers.LoveHate;
 
@@ -34,6 +35,7 @@ namespace Game.Runtime
             }
 
             GameManager.Events.OnDamageDealtEvent += OnDamageDealt;
+            SceneManager.sceneUnloaded += OnSceneUnloaded;
         }
 
         private void OnDisable()
@@ -44,6 +46,7 @@ namespace Game.Runtime
             }
 
             GameManager.Events.OnDamageDealtEvent -= OnDamageDealt;
+            SceneManager.sceneUnloaded -= OnSceneUnloaded;
         }
 
         /// <summary>
@@ -68,6 +71,11 @@ namespace Game.Runtime
         public static void ClearCache()
         {
             _holderCache.Clear();
+        }
+
+        private void OnSceneUnloaded(Scene scene)
+        {
+            ClearCache();
         }
 
         private void OnDamageDealt(DamageResult result, int attackerHash, int defenderHash)

@@ -44,7 +44,11 @@ namespace Game.Core
                 ? _comboTargets[comboIndex]
                 : WarpTarget.Behind;
 
-            Vector2 warpPos = CalculateWarpPosition(targetV.position, warpType);
+            // 位置差分でターゲットのfacingを推定
+            ref CharacterVitals companionV2 = ref _data.GetVitals(companionHash);
+            float facingSign = (companionV2.position.x < targetV.position.x) ? 1f : -1f;
+
+            Vector2 warpPos = CalculateWarpPosition(targetV.position, warpType, facingSign);
             ref CharacterVitals companionV = ref _data.GetVitals(companionHash);
             companionV.position = warpPos;
             LastWarpPosition = warpPos;
@@ -52,17 +56,19 @@ namespace Game.Core
 
         /// <summary>
         /// Calculates the warp destination relative to the target position.
+        /// facingSign: 1 = target facing right, -1 = target facing left.
         /// </summary>
-        public static Vector2 CalculateWarpPosition(Vector2 targetPos, WarpTarget warpType)
+        public static Vector2 CalculateWarpPosition(Vector2 targetPos, WarpTarget warpType, float facingSign = 1f)
         {
             switch (warpType)
             {
                 case WarpTarget.Behind:
-                    return targetPos + new Vector2(-1.5f, 0f);
+                    // Behind は facing の反対側
+                    return targetPos + new Vector2(-1.5f * facingSign, 0f);
                 case WarpTarget.Beside:
                     return targetPos + new Vector2(0f, 1.5f);
                 case WarpTarget.NearAlly:
-                    return targetPos + new Vector2(2f, 0f);
+                    return targetPos + new Vector2(2f * facingSign, 0f);
                 default:
                     return targetPos;
             }

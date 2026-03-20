@@ -70,6 +70,19 @@ namespace Game.Runtime
 
             GameManager.Instance.RegisterCharacter(_objectHash, _characterInfo);
             _isRegistered = true;
+
+            // 名前→ハッシュのマッピングを登録（DialogueSystem等の外部連携用）
+            CharacterRegistry.RegisterName(_characterInfo.name, _objectHash);
+
+            // アーマー回復パラメータをDamageReceiverに設定
+            DamageReceiver receiver = GetComponent<DamageReceiver>();
+            if (receiver != null)
+            {
+                receiver.SetArmorRecoveryParams(
+                    _characterInfo.maxArmor,
+                    _characterInfo.armorRecoveryRate,
+                    _characterInfo.armorRecoveryDelay);
+            }
         }
 
         protected virtual void OnDestroy()
