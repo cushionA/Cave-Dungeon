@@ -150,10 +150,12 @@ paths:
 
 ### 行動特殊効果（ActionEffect）
 - 全行動（攻撃・回避・ガード・スキル・魔法）に「開始時間+持続時間」の特殊効果を複数設定可能
-- ActionEffectType: Armor / SuperArmor / Invincible / DamageReduction / GuardPoint
+- ActionEffectType: Armor / SuperArmor / Invincible / DamageReduction / GuardPoint / GuardAttack / KnockbackImmunity
 - 設定箇所: AttackInfo.motionInfo.actionEffects, AttackMotionData.actionEffects, AbilityData
 - Armor は合算、DamageReduction は最大値、その他は OR
 - 旧 DashAbility の _invincibleStart/_invincibleEnd は ActionEffect に統合
+- GuardAttack: ガード中にブレイク不可（GuardBreak→Guardedに昇格）
+- KnockbackImmunity: 吹き飛ばし→怯みに変換。一部の敵は永続、プレイヤーはコア装備で付与
 
 ### アーマーシステム
 - 二層構造: ベースアーマー（CharacterInfo.maxArmor） + 行動アーマー（ActionEffect.Armor）
@@ -161,6 +163,19 @@ paths:
 - 両方 0 でアーマーブレイク（1.3倍ダメージボーナス）
 - ベースアーマー自然回復: armorRecoveryDelay 経過後に armorRecoveryRate/秒で回復
 - 行動アーマーは回復しない（ActionEffect の有効区間のみ存在）
+
+### 被弾リアクションシステム
+- HitReactionLogic（static class）がアーマー・特殊効果・攻撃属性からリアクション判定
+- HitReaction: None / Flinch / Knockback / GuardBreak
+- アーマー > 0 → 怯まない、アーマー = 0 → Flinch、吹き飛ばし力あり → Knockback
+- ヒットスタン中（Flinch/GuardBroken/Stunned）に吹き飛ばし → アーマー無視でKnockback
+- SuperArmor → 絶対怯まない（ヒットスタン中の吹き飛ばしも無効）
+- 吹き飛ばし判定: knockbackForce.sqrMagnitude > 0.01（方向違いで打ち上げも包含）
+
+### ガード方向
+- GuardStats.guardDirection: Front / Back / Both
+- 攻撃方向とガード方向不一致 → GuardResult.NoGuard
+- ジャストガード成功時: スタミナ+15、アーマー+10 回復
 
 ### 連携ボタンスキル（CoopAction）
 - 連携 = 仲間への指示スキル。CoopActionBase継承で多様な連携を追加

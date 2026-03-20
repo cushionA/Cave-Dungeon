@@ -84,6 +84,7 @@ namespace Game.Core
 
         [MinValue(0)] public float guardStrength;
         [Range(0f, 1f)] public float statusCut;
+        [EnumToggleButtons] public GuardDirection guardDirection;
     }
 
     [Serializable]
@@ -167,6 +168,7 @@ namespace Game.Core
     {
         public int totalDamage;
         public GuardResult guardResult;
+        public HitReaction hitReaction;
         public bool isCritical;
         public bool isKill;
         public float armorDamage;
