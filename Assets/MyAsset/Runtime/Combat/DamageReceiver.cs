@@ -175,7 +175,7 @@ namespace Game.Runtime
             int reducedDamage = CalculateDamage(
                 data, guardResult, combat, currentActState,
                 isAttackFromFront, effectState,
-                out SituationalBonus situationalBonus, out bool isCritical);
+                out SituationalBonus situationalBonus);
 
             // Step 5: アーマー削り + HP適用
             (int actualDamage, bool isKill, float armorBefore) = ApplyDamageToVitals(
@@ -199,7 +199,7 @@ namespace Game.Runtime
             // Step 7: 結果構築 + イベント + ノックバック
             DamageResult result = BuildResult(
                 actualDamage, guardResult, hitReaction, situationalBonus,
-                isCritical, isKill, armorBefore - vitals.currentArmor, appliedEffect);
+                isKill, armorBefore - vitals.currentArmor, appliedEffect);
 
             FireEvents(result, hash, data);
             ApplyKnockback(data, hitReaction, hasKnockbackForce);
@@ -249,15 +249,11 @@ namespace Game.Runtime
             DamageData data, GuardResult guardResult, CombatStats combat,
             ActState currentActState, bool isAttackFromFront,
             ActionEffectProcessor.EffectState effectState,
-            out SituationalBonus situationalBonus, out bool isCritical)
+            out SituationalBonus situationalBonus)
         {
             float guardReduction = GuardJudgmentLogic.GetDamageReduction(guardResult);
             int rawDamage = DamageCalculator.CalculateTotalDamage(
                 data.damage, data.motionValue, combat.defense, Element.None);
-
-            // クリティカル判定
-            isCritical = DamageCalculator.IsCritical(combat.criticalRate, data.critRoll);
-            rawDamage = DamageCalculator.ApplyCritical(rawDamage, combat.criticalMultiplier, isCritical);
 
             // 状況ダメージボーナス（ガード成功時は適用しない）
             situationalBonus = SituationalBonus.None;
@@ -325,7 +321,7 @@ namespace Game.Runtime
 
         private static DamageResult BuildResult(
             int actualDamage, GuardResult guardResult, HitReaction hitReaction,
-            SituationalBonus situationalBonus, bool isCritical, bool isKill,
+            SituationalBonus situationalBonus, bool isKill,
             float armorDamage, StatusEffectId appliedEffect)
         {
             return new DamageResult
@@ -334,7 +330,7 @@ namespace Game.Runtime
                 guardResult = guardResult,
                 hitReaction = hitReaction,
                 situationalBonus = situationalBonus,
-                isCritical = isCritical,
+                isCritical = false,
                 isKill = isKill,
                 armorDamage = armorDamage,
                 appliedEffect = appliedEffect

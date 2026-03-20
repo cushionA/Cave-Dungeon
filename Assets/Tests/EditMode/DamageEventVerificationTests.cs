@@ -21,24 +21,7 @@ namespace Game.Tests.EditMode
             _events.Dispose();
         }
 
-        // --- DamageResult構造体にクリティカル・状態異常が正しく含まれるか ---
-
-        [Test]
-        public void DamageResult_ContainsCriticalInfo()
-        {
-            DamageResult result = new DamageResult
-            {
-                totalDamage = 150,
-                isCritical = true,
-                appliedEffect = StatusEffectId.None,
-                guardResult = GuardResult.NoGuard,
-                hitReaction = HitReaction.Flinch,
-                isKill = false
-            };
-
-            Assert.IsTrue(result.isCritical, "isCriticalが正しく設定されるべき");
-            Assert.AreEqual(150, result.totalDamage);
-        }
+        // --- DamageResult構造体に状態異常が正しく含まれるか ---
 
         [Test]
         public void DamageResult_ContainsStatusEffectInfo()
@@ -60,7 +43,7 @@ namespace Game.Tests.EditMode
         // --- FireDamageDealtイベントでDamageResultが正しく伝達されるか ---
 
         [Test]
-        public void FireDamageDealt_TransmitsCriticalFlag()
+        public void FireDamageDealt_TransmitsFullResult()
         {
             DamageResult receivedResult = default;
             int receivedAttacker = 0;
@@ -76,7 +59,6 @@ namespace Game.Tests.EditMode
             DamageResult firedResult = new DamageResult
             {
                 totalDamage = 200,
-                isCritical = true,
                 appliedEffect = StatusEffectId.Burn,
                 guardResult = GuardResult.NoGuard,
                 hitReaction = HitReaction.Knockback,
@@ -88,7 +70,6 @@ namespace Game.Tests.EditMode
             _events.FireDamageDealt(firedResult, 42, 99);
 
             Assert.AreEqual(200, receivedResult.totalDamage);
-            Assert.IsTrue(receivedResult.isCritical);
             Assert.AreEqual(StatusEffectId.Burn, receivedResult.appliedEffect);
             Assert.AreEqual(GuardResult.NoGuard, receivedResult.guardResult);
             Assert.AreEqual(HitReaction.Knockback, receivedResult.hitReaction);

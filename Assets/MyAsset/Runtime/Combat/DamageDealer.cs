@@ -84,7 +84,6 @@ namespace Game.Runtime
                 feature = _currentMotion.feature,
                 armorBreakValue = _currentMotion.armorBreakValue,
                 justGuardResistance = _currentMotion.justGuardResistance,
-                critRoll = Random.value,
                 isProjectile = false
             };
 
