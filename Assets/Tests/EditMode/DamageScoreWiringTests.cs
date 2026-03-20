@@ -19,7 +19,7 @@ namespace Game.Tests.EditMode
         {
             _events = new GameEvents();
             _tracker = new DamageScoreTracker();
-            _connector = new DamageScoreConnector(_tracker, _events);
+            _connector = new DamageScoreConnector(_tracker, _events, k_DefenderHash);
         }
 
         [TearDown]
@@ -85,6 +85,18 @@ namespace Game.Tests.EditMode
 
             float score = _tracker.GetScore(k_AttackerHash, 0f);
             Assert.AreEqual(0f, score, 0.001f, "0ダメージではスコア蓄積しない");
+        }
+
+        [Test]
+        public void DamageScoreConnector_DifferentDefender_DoesNotAccumulate()
+        {
+            int otherDefenderHash = 99;
+
+            DamageResult result = new DamageResult { totalDamage = 100 };
+            _events.FireDamageDealt(result, k_AttackerHash, otherDefenderHash);
+
+            float score = _tracker.GetScore(k_AttackerHash, 0f);
+            Assert.AreEqual(0f, score, 0.001f, "異なるdefenderHashのダメージは蓄積しない");
         }
 
         [Test]

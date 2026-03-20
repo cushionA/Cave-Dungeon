@@ -59,6 +59,8 @@ namespace Game.Core
             }
 
             // 非関連状態はパススルー
+            // Note: Knockbacked && !isGrounded のケースもここに来る。
+            // 吹き飛ばし空中中は追撃可能（仕様）。着地するまでWakeUpに遷移しない。
             return new Result
             {
                 newState = currentState,

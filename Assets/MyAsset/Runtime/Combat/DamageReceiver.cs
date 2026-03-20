@@ -354,9 +354,7 @@ namespace Game.Runtime
             }
 
             // ガード成功時は状態異常蓄積しない
-            if (guardResult == GuardResult.Guarded
-                || guardResult == GuardResult.JustGuard
-                || guardResult == GuardResult.EnhancedGuard)
+            if (GuardJudgmentLogic.IsGuardSucceeded(guardResult))
             {
                 return StatusEffectId.None;
             }
