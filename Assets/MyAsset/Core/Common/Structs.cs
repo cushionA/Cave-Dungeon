@@ -1,4 +1,5 @@
 using System;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace Game.Core
@@ -7,18 +8,35 @@ namespace Game.Core
     /// 7属性（斬撃/打撃/刺突/炎/雷/聖/闇）のステータス値。
     /// 攻撃力・防御力・ダメージの各チャネルで使用する。
     /// </summary>
-    [Serializable]
+    [Serializable, InlineProperty]
     public struct ElementalStatus
     {
+        [HorizontalGroup("Physical", LabelWidth = 40)]
+        [LabelText("斬")]
         public int slash;
+        [HorizontalGroup("Physical", LabelWidth = 40)]
+        [LabelText("打")]
         public int strike;
+        [HorizontalGroup("Physical", LabelWidth = 40)]
+        [LabelText("突")]
         public int pierce;
+
+        [HorizontalGroup("Magical", LabelWidth = 40)]
+        [LabelText("炎")]
         public int fire;
+        [HorizontalGroup("Magical", LabelWidth = 40)]
+        [LabelText("雷")]
         public int thunder;
+        [HorizontalGroup("Magical", LabelWidth = 40)]
+        [LabelText("聖")]
         public int light;
+        [HorizontalGroup("Magical", LabelWidth = 40)]
+        [LabelText("闇")]
         public int dark;
 
+        [ShowInInspector, ReadOnly, LabelText("合計")]
         public int Total => slash + strike + pierce + fire + thunder + light + dark;
+
         public int PhysicalTotal => slash + strike + pierce;
 
         public int Get(Element element)
@@ -40,18 +58,27 @@ namespace Game.Core
     /// <summary>
     /// 7属性別のガードカット率。
     /// </summary>
-    [Serializable]
+    [Serializable, InlineProperty]
     public struct GuardStats
     {
-        public float slashCut;
-        public float strikeCut;
-        public float pierceCut;
-        public float fireCut;
-        public float thunderCut;
-        public float lightCut;
-        public float darkCut;
-        public float guardStrength;
-        public float statusCut;
+        [HorizontalGroup("Cuts", LabelWidth = 40)]
+        [LabelText("斬"), Range(0f, 1f)] public float slashCut;
+        [HorizontalGroup("Cuts", LabelWidth = 40)]
+        [LabelText("打"), Range(0f, 1f)] public float strikeCut;
+        [HorizontalGroup("Cuts", LabelWidth = 40)]
+        [LabelText("突"), Range(0f, 1f)] public float pierceCut;
+
+        [HorizontalGroup("MagicCuts", LabelWidth = 40)]
+        [LabelText("炎"), Range(0f, 1f)] public float fireCut;
+        [HorizontalGroup("MagicCuts", LabelWidth = 40)]
+        [LabelText("雷"), Range(0f, 1f)] public float thunderCut;
+        [HorizontalGroup("MagicCuts", LabelWidth = 40)]
+        [LabelText("聖"), Range(0f, 1f)] public float lightCut;
+        [HorizontalGroup("MagicCuts", LabelWidth = 40)]
+        [LabelText("闇"), Range(0f, 1f)] public float darkCut;
+
+        [MinValue(0)] public float guardStrength;
+        [Range(0f, 1f)] public float statusCut;
     }
 
     [Serializable]
@@ -73,23 +100,27 @@ namespace Game.Core
     public struct StatusEffectInfo
     {
         public StatusEffectId effect;
-        public float accumulateValue;   // 1ヒット蓄積量
-        public float duration;          // 発症持続時間(秒)
-        public float tickDamage;        // tick毎ダメージ(DoT)
-        public float tickInterval;      // tick間隔(秒)
-        public float modifier;          // 効果量(速度低下率等)
-        public byte maxStack;           // 最大スタック数(0=スタック不可)
+        [MinValue(0)] public float accumulateValue;
+        [MinValue(0)] public float duration;
+        [MinValue(0)] public float tickDamage;
+        [MinValue(0)] public float tickInterval;
+        [Range(0f, 1f)] public float modifier;
+        [Tooltip("0=スタック不可")]
+        public byte maxStack;
     }
 
     /// <summary>
     /// 物理タイプ別耐性（斬撃/打撃/刺突）。
     /// </summary>
-    [Serializable]
+    [Serializable, InlineProperty]
     public struct PhysicalResistance
     {
-        public float slashResist;
-        public float strikeResist;
-        public float pierceResist;
+        [HorizontalGroup("Resist", LabelWidth = 40)]
+        [LabelText("斬"), Range(0f, 1f)] public float slashResist;
+        [HorizontalGroup("Resist", LabelWidth = 40)]
+        [LabelText("打"), Range(0f, 1f)] public float strikeResist;
+        [HorizontalGroup("Resist", LabelWidth = 40)]
+        [LabelText("突"), Range(0f, 1f)] public float pierceResist;
     }
 
     public struct MovementInfo
@@ -118,8 +149,8 @@ namespace Game.Core
         public int defenderHash;
         public ElementalStatus damage;
         public float motionValue;
-        public Vector2 knockbackForce;          // XY軸別の吹き飛ばし強度
-        public Element attackElement;           // 主属性
+        public Vector2 knockbackForce;
+        public Element attackElement;
         public StatusEffectInfo statusEffectInfo;
         public AttackFeature feature;
         public float armorBreakValue;
@@ -140,36 +171,44 @@ namespace Game.Core
     [Serializable]
     public struct AttackMotionData
     {
-        [Header("基本")]
-        public float motionValue;
-        public Element attackElement;
+        [FoldoutGroup("基本")]
+        [MinValue(0)] public float motionValue;
+        [FoldoutGroup("基本")]
+        [EnumToggleButtons] public Element attackElement;
+        [FoldoutGroup("基本")]
         public AttackFeature feature;
 
-        [Header("コスト")]
-        public float staminaCost;
-        public float mpCost;
+        [FoldoutGroup("コスト")]
+        [MinValue(0)] public float staminaCost;
+        [FoldoutGroup("コスト")]
+        [MinValue(0)] public float mpCost;
 
-        [Header("ヒット")]
-        public int maxHitCount;
-        public float armorBreakValue;
+        [FoldoutGroup("ヒット")]
+        [MinValue(1)] public int maxHitCount;
+        [FoldoutGroup("ヒット")]
+        [MinValue(0)] public float armorBreakValue;
 
-        [Header("ノックバック")]
+        [FoldoutGroup("ノックバック")]
         public Vector2 knockbackForce;
 
-        [Header("状態異常")]
-        public StatusEffectInfo statusEffect;
+        [FoldoutGroup("状態異常")]
+        [InlineProperty] public StatusEffectInfo statusEffect;
 
-        [Header("移動")]
-        public float attackMoveDistance;
-        public float attackMoveDuration;
+        [FoldoutGroup("移動")]
+        [MinValue(0)] public float attackMoveDistance;
+        [FoldoutGroup("移動")]
+        [MinValue(0)] public float attackMoveDuration;
+        [FoldoutGroup("移動")]
         public AttackContactType contactType;
 
-        [Header("コンボ")]
+        [FoldoutGroup("コンボ")]
         public bool isAutoChain;
+        [FoldoutGroup("コンボ")]
         public bool isChainEndPoint;
-        public float inputWindow;
+        [FoldoutGroup("コンボ")]
+        [MinValue(0)] public float inputWindow;
 
-        [Header("ガード関連")]
-        public float justGuardResistance;
+        [FoldoutGroup("ガード関連")]
+        [Range(0f, 100f)] public float justGuardResistance;
     }
 }

@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace Game.Core
@@ -10,30 +11,67 @@ namespace Game.Core
     [CreateAssetMenu(fileName = "NewChallenge", menuName = "Game/Challenge/ChallengeDefinition")]
     public class ChallengeDefinition : ScriptableObject
     {
-        [Header("基本情報")]
+        [TitleGroup("基本情報")]
         [SerializeField] private string challengeId;
+
+        [TitleGroup("基本情報")]
         [SerializeField] private string challengeName;
+
+        [TitleGroup("基本情報")]
+        [TextArea(2, 4)]
         [SerializeField] private string description;
+
+        [TitleGroup("基本情報")]
+        [EnumToggleButtons]
         [SerializeField] private ChallengeType challengeType;
 
-        [Header("制限")]
+        [TitleGroup("制限")]
+        [MinValue(0)]
         [SerializeField] private float timeLimit;
+
+        [TitleGroup("制限")]
+        [MinValue(0)]
         [SerializeField] private int maxDeathCount;
 
-        [Header("コンテンツ")]
+        [TitleGroup("コンテンツ")]
+        [ShowIf("@challengeType == ChallengeType.BossRush")]
         [SerializeField] private string[] bossIds;
+
+        [TitleGroup("コンテンツ")]
+        [ShowIf("@challengeType == ChallengeType.Survival")]
+        [MinValue(0)]
         [SerializeField] private int waveCount;
+
+        [TitleGroup("コンテンツ")]
+        [ShowIf("@challengeType == ChallengeType.Survival")]
+        [MinValue(0)]
         [SerializeField] private int enemiesPerWave;
+
+        [TitleGroup("コンテンツ")]
+        [MinValue(0)]
         [SerializeField] private int levelCap;
 
-        [Header("ランク閾値")]
+        [TitleGroup("ランク閾値")]
+        [MinValue(0)]
         [SerializeField] private float silverTimeThreshold;
+
+        [TitleGroup("ランク閾値")]
+        [MinValue(0)]
         [SerializeField] private float goldTimeThreshold;
+
+        [TitleGroup("ランク閾値")]
+        [MinValue(0)]
         [SerializeField] private int goldScoreThreshold;
+
+        [TitleGroup("ランク閾値")]
+        [MinValue(0)]
         [SerializeField] private int platinumScoreThreshold;
 
-        [Header("報酬")]
+        [TitleGroup("報酬")]
+        [MinValue(0)]
         [SerializeField] private int currencyReward;
+
+        [TitleGroup("報酬")]
         [SerializeField] private string itemRewardId;
 
         // === Properties ===

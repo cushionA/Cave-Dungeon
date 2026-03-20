@@ -1,4 +1,5 @@
 using System;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace Game.Core
@@ -10,16 +11,20 @@ namespace Game.Core
     [CreateAssetMenu(fileName = "NewAIInfo", menuName = "Game/AIInfo")]
     public class AIInfo : ScriptableObject
     {
-        [Header("モード設定")]
+        [TitleGroup("モード設定")]
+        [ListDrawerSettings(ShowFoldout = true, DraggableItems = true)]
         public CharacterModeData[] modes;
 
-        [Header("行動定義")]
+        [TitleGroup("行動定義")]
+        [ListDrawerSettings(ShowFoldout = true, DraggableItems = true)]
         public ActData[] actDataList;
 
-        [Header("クールタイム")]
+        [TitleGroup("クールタイム")]
+        [InlineProperty]
         public CoolTimeData coolTimeData;
 
-        [Header("仲間AI設定")]
+        [TitleGroup("仲間AI設定")]
+        [InlineProperty]
         public CompanionBehaviorSetting companionSetting;
     }
 
@@ -51,19 +56,35 @@ namespace Game.Core
     [Serializable]
     public struct CharacterModeData
     {
+        [EnumToggleButtons]
         public CharacterMode mode;
+
+        [FoldoutGroup("検知範囲")]
+        [MinValue(0)]
         public float detectionRange;
+
+        [FoldoutGroup("検知範囲")]
+        [MinValue(0)]
         public float combatRange;
+
+        [FoldoutGroup("検知範囲")]
+        [Range(0f, 1f)]
         public float retreatHpThreshold;
+
+        [Tooltip("actDataList のインデックス")]
         public int[] availableActIndices;
+
+        [ListDrawerSettings(ShowFoldout = true)]
         public TransitionCondition[] transitions;
     }
 
     [Serializable]
     public struct TransitionCondition
     {
+        [EnumToggleButtons]
         public CharacterMode targetMode;
         public TriggerType trigger;
+        [MinValue(0)]
         public float threshold;
     }
 
@@ -80,21 +101,49 @@ namespace Game.Core
     [Serializable]
     public struct ActData
     {
+        [LabelText("$actName")]
+        [FoldoutGroup("基本")]
         public string actName;
+
+        [FoldoutGroup("基本")]
+        [EnumToggleButtons]
         public ActType actType;
+
+        [FoldoutGroup("基本")]
+        [Tooltip("AttackInfo配列のインデックス")]
         public int attackInfoIndex;
-        public TriggerJudgeData triggerJudge;
-        public TargetJudgeData targetJudge;
-        public ActJudgeData actJudge;
+
+        [FoldoutGroup("基本")]
+        [Range(0f, 100f)]
         public float weight;
+
+        [FoldoutGroup("基本")]
+        [MinValue(0)]
         public float coolTime;
+
+        [FoldoutGroup("基本")]
+        [Tooltip("0=無制限")]
+        [MinValue(0)]
         public int maxUseCount;
+
+        [FoldoutGroup("判定条件")]
+        [InlineProperty]
+        public TriggerJudgeData triggerJudge;
+
+        [FoldoutGroup("判定条件")]
+        [InlineProperty]
+        public TargetJudgeData targetJudge;
+
+        [FoldoutGroup("判定条件")]
+        [InlineProperty]
+        public ActJudgeData actJudge;
     }
 
     [Serializable]
     public struct TriggerJudgeData
     {
         public TriggerConditionType condition;
+        [MinValue(0)]
         public float value;
         public ComparisonOperator comparison;
     }
@@ -123,8 +172,11 @@ namespace Game.Core
     public struct TargetJudgeData
     {
         public TargetSelectionType selectionType;
+        [MinValue(0)]
         public float maxRange;
+        [MinValue(0)]
         public float minRange;
+        [EnumToggleButtons]
         public CharacterBelong targetBelong;
         public TargetFilter targetFilter;
     }
@@ -143,9 +195,13 @@ namespace Game.Core
     [Serializable]
     public struct ActJudgeData
     {
+        [MinValue(0)]
         public float requiredMp;
+        [MinValue(0)]
         public float requiredStamina;
+        [Range(0f, 1f)]
         public float minHpRatio;
+        [Range(0f, 1f)]
         public float maxHpRatio;
         public bool requireLineOfSight;
         public bool requireGrounded;
@@ -154,20 +210,20 @@ namespace Game.Core
     [Serializable]
     public struct CoolTimeData
     {
-        public float globalCoolTime;
-        public float attackCoolTime;
-        public float skillCoolTime;
-        public float guardCoolTime;
-        public float dodgeCoolTime;
-        public float healCoolTime;
+        [MinValue(0)] public float globalCoolTime;
+        [MinValue(0)] public float attackCoolTime;
+        [MinValue(0)] public float skillCoolTime;
+        [MinValue(0)] public float guardCoolTime;
+        [MinValue(0)] public float dodgeCoolTime;
+        [MinValue(0)] public float healCoolTime;
     }
 
     [Serializable]
     public struct CompanionBehaviorSetting
     {
-        public float followDistance;
-        public float maxLeashDistance;
-        public float supportHpThreshold;
+        [MinValue(0)] public float followDistance;
+        [MinValue(0)] public float maxLeashDistance;
+        [Range(0f, 1f)] public float supportHpThreshold;
         public bool autoHeal;
         public bool prioritizePlayerTarget;
         public CompanionStance defaultStance;
