@@ -185,7 +185,7 @@ namespace Game.Core
         [EnumToggleButtons] public ActionEffectType type;
         [MinValue(0), LabelText("開始(秒)")] public float startTime;
         [MinValue(0), LabelText("持続(秒)")] public float duration;
-        [MinValue(0), LabelText("効果量")] public float value;
+        [LabelText("効果量")] public float value;
 
         public float EndTime => startTime + duration;
 
