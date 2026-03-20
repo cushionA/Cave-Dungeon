@@ -37,7 +37,7 @@ namespace Game.Core
     /// <summary>
     /// Manages the magic casting flow: MP check, cooldown, cast time, fire, and interrupt.
     /// </summary>
-    public class MagicCaster
+    public class MagicCaster : IDisposable
     {
         private CooldownTracker _cooldowns;
         private CastState _state;
@@ -149,6 +149,13 @@ namespace Game.Core
         {
             OnFired?.Invoke(_casterHash, _currentMagic);
             _state = CastState.Idle;
+        }
+
+        public void Dispose()
+        {
+            OnCastStarted = null;
+            OnFired = null;
+            OnCastInterrupted = null;
         }
     }
 }

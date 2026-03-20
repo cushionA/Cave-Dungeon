@@ -90,11 +90,15 @@ namespace Game.Tests.PlayMode
         }
 
         /// <summary>
-        /// CharacterInfoフィールドをリフレクションで設定する。
-        /// テスト用のためSerializeFieldへの直接アクセスが必要。
+        /// CharacterInfoを設定する。
+        /// UNITY_INCLUDE_TESTS定義時はBaseCharacterの公開メソッドを使用。
         /// </summary>
         public static void SetCharacterInfo(BaseCharacter character, CharacterInfo info)
         {
+#if UNITY_INCLUDE_TESTS
+            character.SetCharacterInfoForTest(info);
+#else
+            // フォールバック: リフレクション
             System.Type type = typeof(BaseCharacter);
             System.Reflection.FieldInfo field = type.GetField("_characterInfo",
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -102,6 +106,7 @@ namespace Game.Tests.PlayMode
             {
                 field.SetValue(character, info);
             }
+#endif
         }
 
         /// <summary>

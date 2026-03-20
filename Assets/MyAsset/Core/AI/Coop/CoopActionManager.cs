@@ -14,7 +14,7 @@ namespace Game.Core
         public virtual void OnComboEnd(int companionHash) { }
     }
 
-    public class CoopActionManager
+    public class CoopActionManager : IDisposable
     {
         private CoopActionBase _currentAction;
         private CoopInterruptionHandler _interruptionHandler;
@@ -101,6 +101,11 @@ namespace Game.Core
             _currentComboIndex = 0;
             _comboTimer.Reset();
             _interruptionHandler.ResumeFromCoop();
+        }
+
+        public void Dispose()
+        {
+            OnCoopActivated = null;
         }
     }
 }

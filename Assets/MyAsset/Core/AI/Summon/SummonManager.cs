@@ -6,7 +6,7 @@ namespace Game.Core
     /// 召喚枠管理（最大2枠）の純ロジッククラス。
     /// 召喚追加/解除/全解除/寿命Tickを管理する。
     /// </summary>
-    public class SummonManager
+    public class SummonManager : IDisposable
     {
         private readonly SummonSlot[] _slots;
         private readonly bool[] _occupied;
@@ -194,6 +194,12 @@ namespace Game.Core
                 }
             }
             return -1;
+        }
+
+        public void Dispose()
+        {
+            OnSummonCreated = null;
+            OnSummonDismissed = null;
         }
     }
 }

@@ -16,7 +16,7 @@ namespace Game.Core
     /// <summary>
     /// Manages companion stance and provides weight multipliers for AI action evaluation.
     /// </summary>
-    public class StanceManager
+    public class StanceManager : IDisposable
     {
         private CompanionStance _currentStance;
 
@@ -110,6 +110,11 @@ namespace Game.Core
                 default:
                     return baseWeight;
             }
+        }
+
+        public void Dispose()
+        {
+            OnStanceChanged = null;
         }
     }
 }

@@ -68,18 +68,13 @@ namespace Game.Core
         }
 
         /// <summary>
-        /// weightRatio > threshold の場合、速度に (1 - (weightRatio - threshold)) を乗算する係数を返す。
-        /// 最小0.5。threshold以下なら1.0を返す。
+        /// weightRatio > threshold の場合、速度に減衰係数を返す。
+        /// 0.7以下→1.0、0.7~1.0→線形補間で1.0→0.5。
+        /// EquipmentStatCalculator.CalculatePerformanceMultiplierと同一ロジック。
         /// </summary>
         public static float CalculateWeightPenalty(float weightRatio)
         {
-            if (weightRatio <= k_WeightPenaltyThreshold)
-            {
-                return 1.0f;
-            }
-
-            float penalty = 1.0f - (weightRatio - k_WeightPenaltyThreshold);
-            return Mathf.Max(penalty, k_WeightPenaltyMinimum);
+            return EquipmentStatCalculator.CalculatePerformanceMultiplier(weightRatio);
         }
     }
 }

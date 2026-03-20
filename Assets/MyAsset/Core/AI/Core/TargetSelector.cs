@@ -18,7 +18,8 @@ namespace Game.Core
         private static readonly List<int> s_FilterBuffer = new List<int>(32);
 
         public static int SelectTarget(AITargetSelect select, int ownerHash,
-            List<int> candidateHashes, SoACharaDataDic data, float currentTime)
+            List<int> candidateHashes, SoACharaDataDic data, float currentTime,
+            DamageScoreTracker scoreTracker = null)
         {
             if (candidateHashes == null || candidateHashes.Count == 0)
             {
@@ -32,7 +33,7 @@ namespace Game.Core
                 return 0;
             }
 
-            return SortAndPick(select.sortKey, select.isDescending, ownerHash, s_FilterBuffer, data, currentTime);
+            return SortAndPick(select.sortKey, select.isDescending, ownerHash, s_FilterBuffer, data, currentTime, scoreTracker);
         }
 
         /// <summary>
@@ -102,13 +103,22 @@ namespace Game.Core
                     }
                 }
 
-                // WeakPoint filter
+                // WeakPoint filter: 指定属性の防御値が0以下なら弱点とみなす
                 if (filter.weakPoint != 0)
                 {
                     ref CombatStats combat = ref data.GetCombatStats(hash);
-                    // Check if target has weakness to specified element
-                    // (simplified: check if defense for that element is low)
-                    // Full implementation depends on weakness system
+                    bool hasWeakness = false;
+                    if ((filter.weakPoint & Element.Slash) != 0 && combat.defense.slash <= 0) { hasWeakness = true; }
+                    if ((filter.weakPoint & Element.Strike) != 0 && combat.defense.strike <= 0) { hasWeakness = true; }
+                    if ((filter.weakPoint & Element.Pierce) != 0 && combat.defense.pierce <= 0) { hasWeakness = true; }
+                    if ((filter.weakPoint & Element.Fire) != 0 && combat.defense.fire <= 0) { hasWeakness = true; }
+                    if ((filter.weakPoint & Element.Thunder) != 0 && combat.defense.thunder <= 0) { hasWeakness = true; }
+                    if ((filter.weakPoint & Element.Light) != 0 && combat.defense.light <= 0) { hasWeakness = true; }
+                    if ((filter.weakPoint & Element.Dark) != 0 && combat.defense.dark <= 0) { hasWeakness = true; }
+                    if (!hasWeakness)
+                    {
+                        continue;
+                    }
                 }
 
                 // Distance range filter
@@ -152,7 +162,8 @@ namespace Game.Core
         /// isDescending=true selects the highest value, false selects the lowest.
         /// </summary>
         public static int SortAndPick(TargetSortKey sortKey, bool isDescending,
-            int ownerHash, List<int> candidates, SoACharaDataDic data, float currentTime)
+            int ownerHash, List<int> candidates, SoACharaDataDic data, float currentTime,
+            DamageScoreTracker scoreTracker = null)
         {
             if (candidates.Count == 1)
             {
@@ -160,11 +171,11 @@ namespace Game.Core
             }
 
             int bestIndex = 0;
-            float bestValue = GetSortValue(sortKey, ownerHash, candidates[0], data, currentTime);
+            float bestValue = GetSortValue(sortKey, ownerHash, candidates[0], data, currentTime, scoreTracker);
 
             for (int i = 1; i < candidates.Count; i++)
             {
-                float value = GetSortValue(sortKey, ownerHash, candidates[i], data, currentTime);
+                float value = GetSortValue(sortKey, ownerHash, candidates[i], data, currentTime, scoreTracker);
                 bool isBetter = isDescending ? value > bestValue : value < bestValue;
                 if (isBetter)
                 {
@@ -177,7 +188,7 @@ namespace Game.Core
         }
 
         private static float GetSortValue(TargetSortKey key, int ownerHash, int targetHash,
-            SoACharaDataDic data, float currentTime)
+            SoACharaDataDic data, float currentTime, DamageScoreTracker scoreTracker = null)
         {
             switch (key)
             {
@@ -209,20 +220,35 @@ namespace Game.Core
                 }
                 case TargetSortKey.TargetingCount:
                 {
-                    // 狙われている数（ランタイムで集計が必要、暫定0）
-                    return 0f;
+                    // 対象のRecognizeObjectTypeビットが立っている数をカウント
+                    ref CharacterFlags tf = ref data.GetFlags(targetHash);
+                    int bits = tf.RecognizeObjectType;
+                    int popCount = 0;
+                    while (bits != 0)
+                    {
+                        popCount += bits & 1;
+                        bits >>= 1;
+                    }
+                    return popCount;
                 }
                 case TargetSortKey.LastAttacker:
                 {
-                    // DamageScoreEntry[]はDamageScoreTracker側で管理。
-                    // SoAコンテナ統合はSection 2 AI統合時に実施。
-                    return 0f;
+                    // DamageScoreTrackerから最高スコアの攻撃者ハッシュと一致するか
+                    if (scoreTracker == null)
+                    {
+                        return 0f;
+                    }
+                    int topAttacker = scoreTracker.GetHighestScoreAttacker(currentTime);
+                    return targetHash == topAttacker ? 1f : 0f;
                 }
                 case TargetSortKey.DamageScore:
                 {
-                    // DamageScoreEntry[]はDamageScoreTracker側で管理。
-                    // SoAコンテナ統合はSection 2 AI統合時に実施。
-                    return 0f;
+                    // DamageScoreTrackerから対象の累積ダメージスコアを取得
+                    if (scoreTracker == null)
+                    {
+                        return 0f;
+                    }
+                    return scoreTracker.GetScore(targetHash, currentTime);
                 }
                 case TargetSortKey.Self:
                 {

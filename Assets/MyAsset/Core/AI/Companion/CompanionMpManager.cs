@@ -7,7 +7,7 @@ namespace Game.Core
     /// 仲間MPシステム。二重MPプール（currentMP/reserveMP）管理、
     /// バリアダメージ処理、消滅/復帰フロー、MP回復行動を統括する。
     /// </summary>
-    public class CompanionMpManager
+    public class CompanionMpManager : IDisposable
     {
         private float _currentMp;
         private float _maxMp;
@@ -157,6 +157,12 @@ namespace Game.Core
         {
             _isVanished = false;
             OnReturn?.Invoke();
+        }
+
+        public void Dispose()
+        {
+            OnVanish = null;
+            OnReturn = null;
         }
     }
 }

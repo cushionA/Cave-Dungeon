@@ -6,7 +6,7 @@ namespace Game.Core
     /// 属性ゲートの判定ロジック（Pure Logic）。
     /// MonoBehaviourのElementalGateInteractorから呼ばれる。
     /// </summary>
-    public class ElementalGateLogic
+    public class ElementalGateLogic : IDisposable
     {
         private readonly ElementalRequirement _requiredElement;
         private readonly float _minDamage;
@@ -82,6 +82,11 @@ namespace Game.Core
         public void ResetHitCount()
         {
             _currentHitCount = 0;
+        }
+
+        public void Dispose()
+        {
+            OnGateOpened = null;
         }
     }
 }

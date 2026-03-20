@@ -39,6 +39,12 @@ namespace Game.Runtime
             }
         }
 
+
+#if UNITY_INCLUDE_TESTS
+        /// <summary>テスト専用: CharacterInfoを設定する。リフレクション回避用。</summary>
+        public void SetCharacterInfoForTest(CharacterInfo info) { _characterInfo = info; }
+#endif
+
         [Header("接地判定")]
         [SerializeField] private LayerMask _groundLayer = 1 << 6; // Layer 6 = Ground
 
