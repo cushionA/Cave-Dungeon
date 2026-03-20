@@ -1,4 +1,6 @@
 using UnityEngine;
+using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
 
 namespace Game.Core
 {
@@ -7,14 +9,34 @@ namespace Game.Core
     /// ゲームロジック（ActionBase, IAbility, HitReactionLogic等）からの
     /// パラメータ設定を受け、Animatorに伝達する。
     /// キャラ固有のC#コードは不要。差分はAnimatorOverrideControllerのクリップ差し替えで吸収する。
+    /// エフェクト・音声はAnimationEventのコールバック経由でProfileのデータに基づき再生する。
     /// </summary>
     [RequireComponent(typeof(Animator))]
     public class AnimatorBridge : MonoBehaviour
     {
         [SerializeField] private Animator _animator;
 
+        // ========== 共通リアクションエフェクト ==========
+
+        [Header("共通リアクションエフェクト")]
+        [SerializeField] private AssetReferenceGameObject _flinchVfx;
+        [SerializeField] private AssetReferenceGameObject _knockbackVfx;
+
+        [Header("共通リアクション音声")]
+        [SerializeField] private AssetReferenceT<AudioClip> _flinchSfx;
+        [SerializeField] private AssetReferenceT<AudioClip> _knockbackSfx;
+
         /// <summary>現在適用中のベースRuntimeAnimatorController（Override生成元）</summary>
         private RuntimeAnimatorController _baseController;
+
+        /// <summary>現在再生中のActionスロットインデックス（-1 = 非Action中）</summary>
+        private int _currentActionSlot = -1;
+
+        /// <summary>現在適用中の右Profile（ActionEvent解決用）</summary>
+        private ActionAnimationProfile _currentRightProfile;
+
+        /// <summary>現在適用中の左Profile（ActionEvent解決用）</summary>
+        private ActionAnimationProfile _currentLeftProfile;
 
         // ========== パラメータハッシュ（定数、全キャラ共通） ==========
 
@@ -67,6 +89,9 @@ namespace Game.Core
             ActionAnimationProfile rightProfile,
             ActionAnimationProfile leftProfile)
         {
+            _currentRightProfile = rightProfile;
+            _currentLeftProfile = leftProfile;
+
             AnimatorOverrideController overrideCtrl =
                 new AnimatorOverrideController(_baseController);
 
@@ -161,29 +186,151 @@ namespace Game.Core
             {
                 return;
             }
+            _currentActionSlot = slotIndex;
             _animator.SetInteger(s_ActionType, slotIndex);
             _animator.SetTrigger(s_ActionTrigger);
+        }
+
+        // ========== AnimationEvent コールバック ==========
+
+        /// <summary>
+        /// AnimationClipに埋め込んだAnimationEventから呼ばれる。
+        /// 現在のActionスロットのProfileからeventIdに対応するVFX/SFXを再生する。
+        /// クリップ側は OnActionEvent(int eventId) で呼び出す。
+        /// </summary>
+        public void OnActionEvent(int eventId)
+        {
+            if (_currentActionSlot < 0)
+            {
+                return;
+            }
+
+            ActionAnimationProfile.ActionEventData eventData;
+            if (TryGetEventData(_currentActionSlot, eventId, out eventData))
+            {
+                PlayVfx(eventData.vfxRef, eventData.vfxOffset);
+                PlaySfx(eventData.sfxRef, eventData.sfxVolume);
+            }
+        }
+
+        /// <summary>
+        /// 現在のProfileからスロットとeventIdに対応するActionEventDataを検索する。
+        /// 右Profile → 左Profile の順で検索。
+        /// </summary>
+        private bool TryGetEventData(
+            int slotIndex,
+            int eventId,
+            out ActionAnimationProfile.ActionEventData result)
+        {
+            // 右Profileから検索
+            if (TryFindEventInProfile(_currentRightProfile, slotIndex, eventId, out result))
+            {
+                return true;
+            }
+
+            // 左Profileから検索
+            if (_currentLeftProfile != null &&
+                TryFindEventInProfile(_currentLeftProfile, slotIndex, eventId, out result))
+            {
+                return true;
+            }
+
+            result = default;
+            return false;
+        }
+
+        private bool TryFindEventInProfile(
+            ActionAnimationProfile profile,
+            int slotIndex,
+            int eventId,
+            out ActionAnimationProfile.ActionEventData result)
+        {
+            if (profile == null || profile.actionSlots == null)
+            {
+                result = default;
+                return false;
+            }
+
+            for (int i = 0; i < profile.actionSlots.Length; i++)
+            {
+                ActionAnimationProfile.SlotEntry slot = profile.actionSlots[i];
+                if (slot.slotIndex != slotIndex || slot.events == null)
+                {
+                    continue;
+                }
+
+                for (int j = 0; j < slot.events.Length; j++)
+                {
+                    if (slot.events[j].eventId == eventId)
+                    {
+                        result = slot.events[j];
+                        return true;
+                    }
+                }
+            }
+
+            result = default;
+            return false;
+        }
+
+        // ========== VFX/SFX 再生 ==========
+
+        private void PlayVfx(AssetReferenceGameObject vfxRef, Vector2 offset)
+        {
+            if (vfxRef == null || !vfxRef.RuntimeKeyIsValid())
+            {
+                return;
+            }
+
+            Vector3 spawnPos = transform.position + (Vector3)offset;
+            AsyncOperationHandle<GameObject> handle =
+                Addressables.InstantiateAsync(vfxRef, spawnPos, Quaternion.identity);
+        }
+
+        private void PlaySfx(AssetReferenceT<AudioClip> sfxRef, float volume)
+        {
+            if (sfxRef == null || !sfxRef.RuntimeKeyIsValid())
+            {
+                return;
+            }
+
+            AsyncOperationHandle<AudioClip> handle = Addressables.LoadAssetAsync<AudioClip>(sfxRef);
+            handle.Completed += op =>
+            {
+                if (op.Status == AsyncOperationStatus.Succeeded)
+                {
+                    AudioSource.PlayClipAtPoint(op.Result, transform.position, volume);
+                }
+            };
         }
 
         // ========== 共通リアクション（AnyStateから割り込み） ==========
 
         public void TriggerFlinch()
         {
+            _currentActionSlot = -1;
             _animator.SetTrigger(s_FlinchTrigger);
+            PlayVfx(_flinchVfx, Vector2.zero);
+            PlaySfx(_flinchSfx, 1f);
         }
 
         public void TriggerKnockback()
         {
+            _currentActionSlot = -1;
             _animator.SetTrigger(s_KnockbackTrigger);
+            PlayVfx(_knockbackVfx, Vector2.zero);
+            PlaySfx(_knockbackSfx, 1f);
         }
 
         public void TriggerGuardBroken()
         {
+            _currentActionSlot = -1;
             _animator.SetTrigger(s_GuardBrokenTrigger);
         }
 
         public void TriggerStunned()
         {
+            _currentActionSlot = -1;
             _animator.SetTrigger(s_StunnedTrigger);
         }
 
@@ -194,6 +341,10 @@ namespace Game.Core
 
         public void SetDead(bool dead)
         {
+            if (dead)
+            {
+                _currentActionSlot = -1;
+            }
             _animator.SetBool(s_IsDead, dead);
         }
 
