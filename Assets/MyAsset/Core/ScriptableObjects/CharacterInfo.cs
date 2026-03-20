@@ -1,4 +1,5 @@
 using System;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace Game.Core
@@ -13,59 +14,104 @@ namespace Game.Core
         // ─────────────────────────────────────────────
         //  キャラクター識別
         // ─────────────────────────────────────────────
-        [Header("キャラクター識別")]
-        public CharacterFeature feature;      // Player / Boss / NPC / Minion 等
-        public CharacterBelong belong;        // 陣営（味方・敵・中立）
-        public CharacterRank rank;            // 強さランク（AI脅威度評価に使用）
-        public bool canFly;                   // 飛行可能か
-        public int targetingLimit;            // 同時にターゲットされる上限数
+        [TitleGroup("キャラクター識別")]
+        [EnumToggleButtons]
+        public CharacterFeature feature;
+
+        [TitleGroup("キャラクター識別")]
+        [EnumToggleButtons]
+        public CharacterBelong belong;
+
+        [TitleGroup("キャラクター識別")]
+        public CharacterRank rank;
+
+        [TitleGroup("キャラクター識別")]
+        public bool canFly;
+
+        [TitleGroup("キャラクター識別")]
+        [Tooltip("同時にターゲットされる上限数")]
+        [MinValue(0)]
+        public int targetingLimit;
 
         // ─────────────────────────────────────────────
         //  基礎ステータス
         // ─────────────────────────────────────────────
-        [Header("基礎ステータス")]
+        [TitleGroup("基礎ステータス")]
+        [MinValue(1)]
         public int maxHp;
+
+        [TitleGroup("基礎ステータス")]
+        [MinValue(0)]
         public int maxMp;
+
+        [TitleGroup("基礎ステータス")]
+        [MinValue(0)]
         public float maxStamina;
-        public float staminaRecoveryRate;     // スタミナ回復速度（/秒）
-        public float staminaRecoveryDelay;    // 消費後の回復開始までの遅延（秒）
+
+        [TitleGroup("基礎ステータス")]
+        [Tooltip("スタミナ回復速度（/秒）")]
+        [MinValue(0)]
+        public float staminaRecoveryRate;
+
+        [TitleGroup("基礎ステータス")]
+        [Tooltip("消費後の回復開始までの遅延（秒）")]
+        [MinValue(0)]
+        public float staminaRecoveryDelay;
 
         // ─────────────────────────────────────────────
         //  属性攻撃力・防御力（7属性）
         // ─────────────────────────────────────────────
-        [Header("属性攻撃力")]
-        public ElementalStatus baseAttack;    // 7属性の基礎攻撃力
+        [TitleGroup("属性攻撃力")]
+        public ElementalStatus baseAttack;
 
-        [Header("属性防御力")]
-        public ElementalStatus baseDefense;   // 7属性の基礎防御力
+        [TitleGroup("属性防御力")]
+        public ElementalStatus baseDefense;
 
         // ─────────────────────────────────────────────
         //  弱点・攻撃属性
         // ─────────────────────────────────────────────
-        [Header("弱点属性")]
-        public Element weakPoint;             // 弱点属性
-        public Element attackElement;         // メイン攻撃属性
+        [TitleGroup("弱点・属性")]
+        [EnumToggleButtons]
+        public Element weakPoint;
+
+        [TitleGroup("弱点・属性")]
+        [EnumToggleButtons]
+        public Element attackElement;
 
         // ─────────────────────────────────────────────
         //  アクション設定
         // ─────────────────────────────────────────────
-        [Header("アクション設定")]
+        [TitleGroup("アクション設定")]
+        [MinValue(0)]
         public float moveSpeed;
+
+        [TitleGroup("アクション設定")]
+        [MinValue(0)]
         public float walkSpeed;
+
+        [TitleGroup("アクション設定")]
+        [MinValue(0)]
         public float dashSpeed;
+
+        [TitleGroup("アクション設定")]
+        [MinValue(0)]
         public float jumpHeight;
 
         // ─────────────────────────────────────────────
         //  耐性
         // ─────────────────────────────────────────────
-        [Header("耐性")]
-        public float statusResistance;            // 基礎状態異常耐性（蓄積閾値のグローバル倍率）
-        public PhysicalResistance physicalResistance; // 物理タイプ別耐性（斬撃/打撃/刺突）
+        [TitleGroup("耐性")]
+        [Tooltip("基礎状態異常耐性（蓄積閾値のグローバル倍率）")]
+        [Range(0f, 1f)]
+        public float statusResistance;
+
+        [TitleGroup("耐性")]
+        public PhysicalResistance physicalResistance;
 
         // ─────────────────────────────────────────────
         //  初期状態
         // ─────────────────────────────────────────────
-        [Header("初期状態")]
-        public ActState initialActState;      // スポーン時の初期行動状態
+        [TitleGroup("初期状態")]
+        public ActState initialActState;
     }
 }
