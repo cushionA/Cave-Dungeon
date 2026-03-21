@@ -111,9 +111,10 @@ namespace Game.Runtime
 
             if (input.attackInput.HasValue && _attackCooldownTimer <= 0f && _damageDealer != null)
             {
+                float chargeMultiplier = input.chargeMultiplier > 0f ? input.chargeMultiplier : 1f;
                 AttackMotionData motion = new AttackMotionData
                 {
-                    motionValue = 1.0f,
+                    motionValue = 1.0f * chargeMultiplier,
                     attackElement = Element.Slash,
                     feature = AttackFeature.Light,
                     knockbackForce = new Vector2(_isFacingRight ? 3f : -3f, 1f),
