@@ -143,6 +143,7 @@ namespace Game.Core
         public bool gripSwitchPressed;
         public bool menuPressed;
         public bool mapPressed;
+        public float chargeMultiplier;
     }
 
     /// <summary>
