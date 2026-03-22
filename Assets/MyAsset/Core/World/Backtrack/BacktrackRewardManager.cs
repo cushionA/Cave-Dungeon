@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 
 namespace Game.Core
 {
@@ -23,7 +24,7 @@ namespace Game.Core
     /// 全バックトラック報酬の状態管理。
     /// エリアごとの報酬登録、回収状態追跡、能力獲得時の再評価を担う。
     /// </summary>
-    public class BacktrackRewardManager
+    public class BacktrackRewardManager : ISaveable
     {
         private readonly Dictionary<string, BacktrackRewardData[]> _areaRewards;
         private readonly HashSet<string> _collectedRewards;
@@ -176,6 +177,31 @@ namespace Game.Core
                 for (int i = 0; i < ids.Length; i++)
                 {
                     _collectedRewards.Add(ids[i]);
+                }
+            }
+        }
+
+        // ===== ISaveable =====
+
+        public string SaveId => "BacktrackRewardManager";
+
+        object ISaveable.Serialize()
+        {
+            return GetCollectedIds();
+        }
+
+        void ISaveable.Deserialize(object data)
+        {
+            if (data is string[] ids)
+            {
+                LoadCollectedIds(ids);
+            }
+            else if (data is JArray jArray)
+            {
+                string[] converted = jArray.ToObject<string[]>();
+                if (converted != null)
+                {
+                    LoadCollectedIds(converted);
                 }
             }
         }
