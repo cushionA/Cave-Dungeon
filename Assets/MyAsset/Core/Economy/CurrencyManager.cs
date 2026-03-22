@@ -6,7 +6,7 @@ namespace Game.Core
     /// 通貨の獲得・消費・残高管理を担当。
     /// デスペナルティ（残高の20%ロスト）にも対応。
     /// </summary>
-    public class CurrencyManager
+    public class CurrencyManager : ISaveable
     {
         public const float k_DeathPenaltyRate = 0.2f;
 
@@ -57,15 +57,30 @@ namespace Game.Core
         }
 
         /// <summary>永続化用: 残高をシリアライズ。</summary>
-        public int Serialize()
+        public int SerializeBalance()
         {
             return _balance;
         }
 
         /// <summary>永続化用: 残高をデシリアライズ。負数は0にクランプ。</summary>
-        public void Deserialize(int balance)
+        public void DeserializeBalance(int balance)
         {
             _balance = Math.Max(0, balance);
+        }
+
+        // ===== ISaveable =====
+
+        public string SaveId => "CurrencyManager";
+
+        object ISaveable.Serialize()
+        {
+            return SerializeBalance();
+        }
+
+        void ISaveable.Deserialize(object data)
+        {
+            int balance = Convert.ToInt32(data);
+            DeserializeBalance(balance);
         }
     }
 }

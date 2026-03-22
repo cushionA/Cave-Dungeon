@@ -1,11 +1,43 @@
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 
 namespace Game.Core
 {
-    public class InventoryManager
+    public class InventoryManager : ISaveable
     {
         private readonly List<ItemEntry> _items;
+
+        // ===== ISaveable =====
+        public string SaveId => "InventoryManager";
+
+        object ISaveable.Serialize()
+        {
+            return new List<ItemEntry>(_items);
+        }
+
+        void ISaveable.Deserialize(object data)
+        {
+            _items.Clear();
+            if (data is List<ItemEntry> items)
+            {
+                for (int i = 0; i < items.Count; i++)
+                {
+                    _items.Add(items[i]);
+                }
+            }
+            else if (data is JArray jArray)
+            {
+                List<ItemEntry> converted = jArray.ToObject<List<ItemEntry>>();
+                if (converted != null)
+                {
+                    for (int i = 0; i < converted.Count; i++)
+                    {
+                        _items.Add(converted[i]);
+                    }
+                }
+            }
+        }
 
         public int ItemCount => _items.Count;
 

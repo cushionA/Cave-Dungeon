@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 
 namespace Game.Core
 {
@@ -6,7 +7,7 @@ namespace Game.Core
     /// Tracks open/closed state of all gates in the current map.
     /// Supports serialization for save/load.
     /// </summary>
-    public class GateRegistry
+    public class GateRegistry : ISaveable
     {
         private Dictionary<string, bool> _gateStates;
 
@@ -58,6 +59,31 @@ namespace Game.Core
             foreach (KeyValuePair<string, bool> kvp in data)
             {
                 _gateStates[kvp.Key] = kvp.Value;
+            }
+        }
+
+        // ===== ISaveable =====
+
+        public string SaveId => "GateRegistry";
+
+        object ISaveable.Serialize()
+        {
+            return SerializeAll();
+        }
+
+        void ISaveable.Deserialize(object data)
+        {
+            if (data is Dictionary<string, bool> gateData)
+            {
+                DeserializeAll(gateData);
+            }
+            else if (data is JObject jObj)
+            {
+                Dictionary<string, bool> converted = jObj.ToObject<Dictionary<string, bool>>();
+                if (converted != null)
+                {
+                    DeserializeAll(converted);
+                }
             }
         }
     }

@@ -41,10 +41,10 @@ namespace Game.Tests.EditMode
         public void CurrencyManager_SerializeDeserialize_RestoresBalance()
         {
             CurrencyManager manager = new CurrencyManager(500);
-            int serialized = manager.Serialize();
+            int serialized = manager.SerializeBalance();
 
             CurrencyManager restored = new CurrencyManager();
-            restored.Deserialize(serialized);
+            restored.DeserializeBalance(serialized);
 
             Assert.AreEqual(500, restored.Balance);
         }

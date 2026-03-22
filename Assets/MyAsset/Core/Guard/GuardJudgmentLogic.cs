@@ -142,6 +142,17 @@ namespace Game.Core
         }
 
         /// <summary>
+        /// ガードが成功したかどうかを判定する（Guarded / JustGuard / EnhancedGuard）。
+        /// NoGuard と GuardBreak は false を返す。
+        /// </summary>
+        public static bool IsGuardSucceeded(GuardResult result)
+        {
+            return result == GuardResult.Guarded
+                || result == GuardResult.JustGuard
+                || result == GuardResult.EnhancedGuard;
+        }
+
+        /// <summary>
         /// ジャストガード成功時のスタミナ・アーマー回復を適用する。
         /// </summary>
         public static void ApplyJustGuardRecovery(

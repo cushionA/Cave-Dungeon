@@ -80,8 +80,10 @@ namespace Game.Runtime
                 motionValue = _currentMotion.motionValue,
                 knockbackForce = _currentMotion.knockbackForce,
                 attackElement = _currentMotion.attackElement,
+                statusEffectInfo = _currentMotion.statusEffect,
                 feature = _currentMotion.feature,
                 armorBreakValue = _currentMotion.armorBreakValue,
+                justGuardResistance = _currentMotion.justGuardResistance,
                 isProjectile = false
             };
 
