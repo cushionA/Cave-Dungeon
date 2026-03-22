@@ -12,6 +12,9 @@ namespace Game.Runtime
         private BaseCharacter _character;
         private Rigidbody2D _rb;
 
+        // 状態異常管理
+        private StatusEffectManager _statusEffectManager;
+
         // ガード状態（外部から設定される）
         private bool _isGuarding;
         private float _guardTimeSinceStart;
@@ -86,6 +89,14 @@ namespace Game.Runtime
             _bonusConfig = config;
         }
 
+        /// <summary>
+        /// StatusEffectManagerを設定する。初期化時にCharacterSetupから呼ばれる。
+        /// </summary>
+        public void SetStatusEffectManager(StatusEffectManager manager)
+        {
+            _statusEffectManager = manager;
+        }
+
         private void Update()
         {
             float dt = Time.deltaTime;
@@ -143,15 +154,15 @@ namespace Game.Runtime
             ActionEffectProcessor.EffectState effectState =
                 ActionEffectProcessor.Evaluate(_currentActionEffects, _actionElapsedTime);
 
-            // Step 1: 無敵チェック
-            if (effectState.isInvincible)
+            // Step 1: 無敵チェック（ActionEffect無敵 or 起き上がり無敵）
+            ActState currentActState = GameManager.Data.GetFlags(hash).ActState;
+            if (effectState.isInvincible || WakeUpLogic.IsWakeUpState(currentActState))
             {
                 return CreateInvincibleResult();
             }
 
             ref CharacterVitals vitals = ref GameManager.Data.GetVitals(hash);
             ref CombatStats combat = ref GameManager.Data.GetCombatStats(hash);
-            ActState currentActState = GameManager.Data.GetFlags(hash).ActState;
 
             // Step 2: ガード判定
             bool isAttackFromFront = IsAttackFromFront(data);
@@ -181,10 +192,14 @@ namespace Game.Runtime
                 guardResult,
                 currentActState);
 
+            // Step 6.5: 状態異常蓄積
+            StatusEffectId appliedEffect = ApplyStatusEffect(
+                data.statusEffectInfo, guardResult, combat.guardStats.statusCut, hash);
+
             // Step 7: 結果構築 + イベント + ノックバック
             DamageResult result = BuildResult(
                 actualDamage, guardResult, hitReaction, situationalBonus,
-                isKill, armorBefore - vitals.currentArmor);
+                isKill, armorBefore - vitals.currentArmor, appliedEffect);
 
             FireEvents(result, hash, data);
             ApplyKnockback(data, hitReaction, hasKnockbackForce);
@@ -306,7 +321,8 @@ namespace Game.Runtime
 
         private static DamageResult BuildResult(
             int actualDamage, GuardResult guardResult, HitReaction hitReaction,
-            SituationalBonus situationalBonus, bool isKill, float armorDamage)
+            SituationalBonus situationalBonus, bool isKill,
+            float armorDamage, StatusEffectId appliedEffect)
         {
             return new DamageResult
             {
@@ -317,8 +333,43 @@ namespace Game.Runtime
                 isCritical = false,
                 isKill = isKill,
                 armorDamage = armorDamage,
-                appliedEffect = StatusEffectId.None
+                appliedEffect = appliedEffect
             };
+        }
+
+        /// <summary>
+        /// 状態異常蓄積を適用する。ガード成功時はstatusEffectを無効化する。
+        /// </summary>
+        private StatusEffectId ApplyStatusEffect(
+            StatusEffectInfo info, GuardResult guardResult, float statusCut, int targetHash)
+        {
+            if (_statusEffectManager == null)
+            {
+                return StatusEffectId.None;
+            }
+
+            if (info.effect == StatusEffectId.None)
+            {
+                return StatusEffectId.None;
+            }
+
+            // ガード成功時は状態異常蓄積しない
+            if (GuardJudgmentLogic.IsGuardSucceeded(guardResult))
+            {
+                return StatusEffectId.None;
+            }
+
+            bool triggered = _statusEffectManager.Accumulate(info, statusCut);
+            if (triggered)
+            {
+                if (GameManager.Events != null)
+                {
+                    GameManager.Events.FireStatusEffectApplied(targetHash, info.effect);
+                }
+                return info.effect;
+            }
+
+            return StatusEffectId.None;
         }
 
         private static void FireEvents(DamageResult result, int hash, DamageData data)
