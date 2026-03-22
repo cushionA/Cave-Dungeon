@@ -82,7 +82,12 @@ namespace Game.Core
         public Observable<int> OnCompanionReturn => _onCompanionReturn;
         public Observable<int> OnCompanionStanceChanged => _onCompanionStanceChanged;
 
-        // ===== C# Standard Events (for Assembly-CSharp integration layer) =====
+        // ===== C# Standard Events (Integration層専用) =====
+        // 使い分けルール:
+        //   - Game.Core asmdef 内: R3 Observable を使用（OnDamageDealt, OnCharacterDeath等）
+        //   - Integration層 (LoveHateBridge, MasterAudioBridge等): C# event を使用
+        //     理由: Integration層はGame.Coreのasmdefに含まれず、R3依存を避けるため
+        // 新規購読時は上記ルールに従うこと。
         public event Action<DamageResult, int, int> OnDamageDealtEvent;
         public event Action<int, int> OnCharacterDeathEvent;
 

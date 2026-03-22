@@ -21,6 +21,7 @@ namespace Game.Runtime
 
         // hash → GameObject キャッシュ（FindObjectsByType毎回呼び出し回避）
         private static Dictionary<int, CharacterHashHolder> _holderCache = new Dictionary<int, CharacterHashHolder>();
+        private static Dictionary<int, DeedReporter> _reporterCache = new Dictionary<int, DeedReporter>();
         private static bool _sceneCallbackRegistered;
 
         private void Awake()
@@ -78,6 +79,7 @@ namespace Game.Runtime
         public static void ClearCache()
         {
             _holderCache.Clear();
+            _reporterCache.Clear();
         }
 
         private void OnSceneUnloaded(Scene scene)
@@ -112,11 +114,19 @@ namespace Game.Runtime
 
             if (actorGo != null && target != null)
             {
-                DeedReporter reporter = actorGo.GetComponent<DeedReporter>();
-                if (reporter != null)
-                {
-                    reporter.ReportDeed(deedTag, target);
-                }
+                // DeedReporterもholderCacheと同様にキャッシュ
+                    if (!_reporterCache.TryGetValue(actorHash, out DeedReporter reporter))
+                    {
+                        reporter = actorGo.GetComponent<DeedReporter>();
+                        if (reporter != null)
+                        {
+                            _reporterCache[actorHash] = reporter;
+                        }
+                    }
+                    if (reporter != null)
+                    {
+                        reporter.ReportDeed(deedTag, target);
+                    }
             }
         }
 

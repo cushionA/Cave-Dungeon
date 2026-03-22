@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Game.Core
@@ -12,9 +13,10 @@ namespace Game.Core
         /// Evaluates a single AICondition against the data container.
         /// </summary>
         public static bool Evaluate(AICondition condition, int ownerHash, int targetHash,
-            SoACharaDataDic data, float currentTime, DamageScoreTracker scoreTracker = null)
+            SoACharaDataDic data, float currentTime, DamageScoreTracker scoreTracker = null,
+            List<int> allHashes = null, List<int> allyHashes = null)
         {
-            float value = GetConditionValue(condition, ownerHash, targetHash, data, currentTime, scoreTracker);
+            float value = GetConditionValue(condition, ownerHash, targetHash, data, currentTime, scoreTracker, allHashes, allyHashes);
             return Compare(value, condition.compareOp, condition.operandA, condition.operandB);
         }
 
@@ -23,7 +25,8 @@ namespace Game.Core
         /// Null or empty array returns true (no conditions = always valid).
         /// </summary>
         public static bool EvaluateAll(AICondition[] conditions, int ownerHash, int targetHash,
-            SoACharaDataDic data, float currentTime, DamageScoreTracker scoreTracker = null)
+            SoACharaDataDic data, float currentTime, DamageScoreTracker scoreTracker = null,
+            List<int> allHashes = null, List<int> allyHashes = null)
         {
             if (conditions == null || conditions.Length == 0)
             {
@@ -32,7 +35,7 @@ namespace Game.Core
 
             for (int i = 0; i < conditions.Length; i++)
             {
-                if (!Evaluate(conditions[i], ownerHash, targetHash, data, currentTime, scoreTracker))
+                if (!Evaluate(conditions[i], ownerHash, targetHash, data, currentTime, scoreTracker, allHashes, allyHashes))
                 {
                     return false;
                 }
@@ -44,9 +47,11 @@ namespace Game.Core
         /// <summary>
         /// Extracts the numeric value for a condition from the data container.
         /// TargetFilter in the condition determines which characters to evaluate.
+        /// allHashes/allyHashes: CharacterRegistryから渡されるキャラクターリスト（Count/NearbyFaction用）。
         /// </summary>
         public static float GetConditionValue(AICondition condition, int ownerHash, int targetHash,
-            SoACharaDataDic data, float currentTime, DamageScoreTracker scoreTracker = null)
+            SoACharaDataDic data, float currentTime, DamageScoreTracker scoreTracker = null,
+            List<int> allHashes = null, List<int> allyHashes = null)
         {
             switch (condition.conditionType)
             {
@@ -118,9 +123,94 @@ namespace Game.Core
 
                 case AIConditionType.Count:
                 {
-                    // Count of characters matching the filter
-                    // Requires runtime candidate list - return operandA as placeholder
-                    return condition.operandA;
+                    // フィルタのbelong条件に一致するキャラクター数を返す
+                    if (allHashes == null)
+                    {
+                        return 0f;
+                    }
+                    int count = 0;
+                    for (int i = 0; i < allHashes.Count; i++)
+                    {
+                        int h = allHashes[i];
+                        if (h == ownerHash && !condition.filter.includeSelf)
+                        {
+                            continue;
+                        }
+                        if (!data.TryGetValue(h, out int _))
+                        {
+                            continue;
+                        }
+                        ref CharacterFlags f = ref data.GetFlags(h);
+                        if (condition.filter.belong != 0 && (f.Belong & condition.filter.belong) == 0)
+                        {
+                            continue;
+                        }
+                        count++;
+                    }
+                    return count;
+                }
+
+                case AIConditionType.NearbyFaction:
+                {
+                    // 指定距離内の同陣営キャラ数を返す（operandAを距離閾値として使用）
+                    if (allHashes == null)
+                    {
+                        return 0f;
+                    }
+                    if (!data.TryGetValue(ownerHash, out int _))
+                    {
+                        return 0f;
+                    }
+                    ref CharacterVitals ownerV = ref data.GetVitals(ownerHash);
+                    float threshold = condition.operandA > 0 ? condition.operandA : 10f;
+                    float thresholdSq = threshold * threshold;
+                    int factionCount = 0;
+                    List<int> allies = allyHashes ?? allHashes;
+                    for (int i = 0; i < allies.Count; i++)
+                    {
+                        int h = allies[i];
+                        if (h == ownerHash)
+                        {
+                            continue;
+                        }
+                        if (!data.TryGetValue(h, out int _))
+                        {
+                            continue;
+                        }
+                        ref CharacterVitals v = ref data.GetVitals(h);
+                        float dx = ownerV.position.x - v.position.x;
+                        float dy = ownerV.position.y - v.position.y;
+                        if (dx * dx + dy * dy <= thresholdSq)
+                        {
+                            factionCount++;
+                        }
+                    }
+                    return factionCount;
+                }
+
+                case AIConditionType.ProjectileNear:
+                {
+                    // 弾丸検出はランタイム物理システム依存のため、SoAからは取得不可
+                    // operandAを閾値距離として、将来的にProjectileManager連携予定
+                    return 0f;
+                }
+
+                case AIConditionType.ObjectNearby:
+                {
+                    // オブジェクト検出はランタイム物理システム依存
+                    // 将来的にインタラクタブルオブジェクトレジストリ連携予定
+                    return 0f;
+                }
+
+                case AIConditionType.EventFired:
+                {
+                    // イベントフラグ判定: BrainEventFlagsからoperandAのビットが立っているか
+                    if (!data.TryGetValue(ownerHash, out int _))
+                    {
+                        return 0f;
+                    }
+                    ref CharacterFlags flags = ref data.GetFlags(ownerHash);
+                    return (flags.BrainEventFlags & (byte)condition.operandA) != 0 ? 1f : 0f;
                 }
 
                 case AIConditionType.SelfActState:
@@ -133,8 +223,6 @@ namespace Game.Core
                     return (float)(int)flags.ActState;
                 }
 
-                // NearbyFaction, ProjectileNear, ObjectNearby, EventFired
-                // require runtime systems not yet fully implemented.
                 default:
                     return 0f;
             }

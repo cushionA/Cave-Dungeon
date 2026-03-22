@@ -31,7 +31,7 @@ namespace Game.Core
     /// Tracks which action types the companion has unlocked.
     /// Initializes with a set of default actions and allows unlocking new ones.
     /// </summary>
-    public class ActionTypeRegistry
+    public class ActionTypeRegistry : IDisposable
     {
         private HashSet<ActionUnlockKey> _unlockedActions;
 
@@ -81,6 +81,11 @@ namespace Game.Core
         public List<ActionUnlockKey> GetAllUnlocked()
         {
             return new List<ActionUnlockKey>(_unlockedActions);
+        }
+
+        public void Dispose()
+        {
+            OnActionUnlocked = null;
         }
     }
 }

@@ -24,7 +24,7 @@ namespace Game.Core
     /// 全バックトラック報酬の状態管理。
     /// エリアごとの報酬登録、回収状態追跡、能力獲得時の再評価を担う。
     /// </summary>
-    public class BacktrackRewardManager : ISaveable
+    public class BacktrackRewardManager : ISaveable, IDisposable
     {
         private readonly Dictionary<string, BacktrackRewardData[]> _areaRewards;
         private readonly HashSet<string> _collectedRewards;
@@ -204,6 +204,14 @@ namespace Game.Core
                     LoadCollectedIds(converted);
                 }
             }
+        }
+
+        // ===== IDisposable =====
+
+        public void Dispose()
+        {
+            OnRewardAvailable = null;
+            OnRewardCollected = null;
         }
     }
 }
