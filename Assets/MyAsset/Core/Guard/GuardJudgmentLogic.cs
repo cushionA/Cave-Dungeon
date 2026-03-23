@@ -31,9 +31,9 @@ namespace Game.Core
         ///   1. isGuarding=false => NoGuard
         ///   2. Unparriable => NoGuard
         ///   3. ガード方向不一致 => NoGuard
-        ///   4. GuardAttack効果中 => ガードブレイクをGuardedに昇格
+        ///   4. guardTimeSinceStart &lt;= EnhancedGuardWindow &amp;&amp; !JustGuardImmune => EnhancedGuard
         ///   5. guardTimeSinceStart &lt;= JustGuardWindow &amp;&amp; !JustGuardImmune => JustGuard
-        ///   6. guardTimeSinceStart &lt;= EnhancedGuardWindow => EnhancedGuard
+        ///   6. GuardAttack効果中 => ガードブレイクをGuardedに昇格
         ///   7. attackPower > guardStrength => GuardBreak（GuardAttack中はGuarded）
         ///   8. else => Guarded
         /// </summary>
@@ -65,14 +65,15 @@ namespace Game.Core
 
             bool isJustGuardImmune = (attackFeature & AttackFeature.JustGuardImmune) != 0;
 
+            // EnhancedGuard (0~0.05s) を先に判定。JustGuard (0~0.1s) より狭い窓なので先にチェックする。
+            if (guardTimeSinceStart <= k_EnhancedGuardWindow && !isJustGuardImmune)
+            {
+                return GuardResult.EnhancedGuard;
+            }
+
             if (guardTimeSinceStart <= k_JustGuardWindow && !isJustGuardImmune)
             {
                 return GuardResult.JustGuard;
-            }
-
-            if (guardTimeSinceStart <= k_EnhancedGuardWindow)
-            {
-                return GuardResult.EnhancedGuard;
             }
 
             if (attackPower > guardStrength)

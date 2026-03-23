@@ -127,7 +127,7 @@ namespace Game.Runtime
             }
 
             int hash = _character.ObjectHash;
-            if (GameManager.Data == null || !GameManager.Data.TryGetValue(hash, out int _))
+            if (!GameManager.IsCharacterValid(hash))
             {
                 return;
             }
@@ -139,13 +139,13 @@ namespace Game.Runtime
 
         public DamageResult ReceiveDamage(DamageData data)
         {
-            if (_character == null || GameManager.Data == null)
+            if (_character == null)
             {
                 return default;
             }
 
             int hash = _character.ObjectHash;
-            if (!GameManager.Data.TryGetValue(hash, out int _))
+            if (!GameManager.IsCharacterValid(hash))
             {
                 return default;
             }
@@ -202,7 +202,7 @@ namespace Game.Runtime
                 isKill, armorBefore - vitals.currentArmor, appliedEffect);
 
             FireEvents(result, hash, data);
-            ApplyKnockback(data, hitReaction, hasKnockbackForce);
+            ApplyKnockback(data, hitReaction, hasKnockbackForce, hash);
 
             return result;
         }
@@ -385,12 +385,14 @@ namespace Game.Runtime
             }
         }
 
-        private void ApplyKnockback(DamageData data, HitReaction hitReaction, bool hasKnockbackForce)
+        private void ApplyKnockback(DamageData data, HitReaction hitReaction, bool hasKnockbackForce, int hash)
         {
             if (_rb != null && hasKnockbackForce && hitReaction == HitReaction.Knockback)
             {
+                // TODO: CombatStatsにknockbackResistanceフィールド追加後、ここで参照する
+                float knockbackResistance = 0f;
                 Vector2 knockback = HpArmorLogic.CalculateKnockback(
-                    data.knockbackForce, 0f);
+                    data.knockbackForce, knockbackResistance);
                 _rb.AddForce(knockback, ForceMode2D.Impulse);
             }
         }

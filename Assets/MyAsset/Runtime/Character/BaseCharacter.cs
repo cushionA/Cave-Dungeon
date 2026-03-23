@@ -31,11 +31,12 @@ namespace Game.Runtime
         {
             get
             {
-                if (GameManager.Data == null || !GameManager.Data.TryGetValue(_objectHash, out int _))
+                if (!GameManager.IsCharacterValid(_objectHash))
                 {
                     return false;
                 }
-                return GameManager.Data.GetVitals(_objectHash).currentHp > 0;
+                ref CharacterVitals vitals = ref GameManager.Data.GetVitals(_objectHash);
+                return vitals.currentHp > 0;
             }
         }
 
@@ -55,7 +56,7 @@ namespace Game.Runtime
             _objectHash = gameObject.GetInstanceID();
 
             // 物理設定
-            _rb.gravityScale = 3.0f;
+            _rb.gravityScale = GameConstants.k_GravityScale;
             _rb.constraints = RigidbodyConstraints2D.FreezeRotation;
             _rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         }
@@ -118,11 +119,28 @@ namespace Game.Runtime
         }
 
         /// <summary>
+        /// キャラクターの向きを設定する。localScale.xの符号で方向を表現。
+        /// </summary>
+        protected bool _isFacingRight = true;
+
+        protected void SetFacing(bool facingRight)
+        {
+            if (facingRight == _isFacingRight)
+            {
+                return;
+            }
+            _isFacingRight = facingRight;
+            Vector3 scale = transform.localScale;
+            scale.x = _isFacingRight ? Mathf.Abs(scale.x) : -Mathf.Abs(scale.x);
+            transform.localScale = scale;
+        }
+
+        /// <summary>
         /// SoAコンテナの位置情報を同期する。
         /// </summary>
         protected void SyncPositionToData()
         {
-            if (GameManager.Data == null || !GameManager.Data.TryGetValue(_objectHash, out int _))
+            if (!GameManager.IsCharacterValid(_objectHash))
             {
                 return;
             }

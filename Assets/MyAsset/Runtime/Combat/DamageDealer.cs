@@ -72,31 +72,11 @@ namespace Game.Runtime
             }
 
             // DamageData生成
-            DamageData data = new DamageData
-            {
-                attackerHash = _ownerHash,
-                defenderHash = receiver.ObjectHash,
-                damage = GetOwnerAttack(),
-                motionValue = _currentMotion.motionValue,
-                knockbackForce = _currentMotion.knockbackForce,
-                attackElement = _currentMotion.attackElement,
-                statusEffectInfo = _currentMotion.statusEffect,
-                feature = _currentMotion.feature,
-                armorBreakValue = _currentMotion.armorBreakValue,
-                justGuardResistance = _currentMotion.justGuardResistance,
-                isProjectile = false
-            };
+            ElementalStatus attackStats = CombatDataHelper.GetAttackStats(GameManager.Data, _ownerHash);
+            DamageData data = CombatDataHelper.BuildDamageData(
+                _ownerHash, receiver.ObjectHash, _currentMotion, attackStats);
 
             receiver.ReceiveDamage(data);
-        }
-
-        private ElementalStatus GetOwnerAttack()
-        {
-            if (GameManager.Data == null || !GameManager.Data.TryGetValue(_ownerHash, out int _))
-            {
-                return default;
-            }
-            return GameManager.Data.GetCombatStats(_ownerHash).attack;
         }
     }
 }

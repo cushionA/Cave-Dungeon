@@ -17,6 +17,15 @@ namespace Game.Runtime
         public static SoACharaDataDic Data => Instance != null ? Instance._core.Data : null;
         public static GameEvents Events => Instance != null ? Instance._core.Events : null;
 
+        /// <summary>
+        /// SoAコンテナにキャラクターが存在するか検証する共通ヘルパー。
+        /// "Data == null || !Data.TryGetValue" パターンの一元化。
+        /// </summary>
+        public static bool IsCharacterValid(int hash)
+        {
+            return Data != null && Data.TryGetValue(hash, out int _);
+        }
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -37,7 +46,7 @@ namespace Game.Runtime
         /// </summary>
         public int RegisterCharacter(int hash, CharacterInfo info)
         {
-            float gravity = Physics2D.gravity.magnitude * 3.0f; // gravityScale=3.0
+            float gravity = Physics2D.gravity.magnitude * GameConstants.k_GravityScale;
             float jumpForce = Mathf.Sqrt(2f * info.jumpHeight * gravity);
 
             CharacterVitals vitals = new CharacterVitals
@@ -59,8 +68,8 @@ namespace Game.Runtime
             {
                 attack = info.baseAttack,
                 defense = info.baseDefense,
-                criticalRate = 0.05f,
-                criticalMultiplier = 1.5f
+                criticalRate = GameConstants.k_DefaultCriticalRate,
+                criticalMultiplier = GameConstants.k_DefaultCriticalMultiplier
             };
 
             CharacterFlags flags = CharacterFlags.Pack(
@@ -71,8 +80,8 @@ namespace Game.Runtime
                 moveSpeed = info.moveSpeed,
                 jumpForce = jumpForce,
                 dashSpeed = info.dashSpeed,
-                dashDuration = 0.25f,
-                gravityScale = 3.0f,
+                dashDuration = GameConstants.k_DefaultDashDuration,
+                gravityScale = GameConstants.k_GravityScale,
                 weightRatio = 0f
             };
 

@@ -12,7 +12,6 @@ namespace Game.Runtime
         private GroundMovementLogic _movementLogic;
         private PlayerInputHandler _inputHandler;
         private DamageDealer _damageDealer;
-        private bool _isFacingRight = true;
 
         // 攻撃タイミング
         private float _attackTimer;
@@ -75,13 +74,13 @@ namespace Game.Runtime
             _rb.linearVelocity = velocity;
 
             // 向き更新
-            if (input.moveDirection.x > 0.1f && !_isFacingRight)
+            if (input.moveDirection.x > 0.1f)
             {
-                Flip();
+                SetFacing(true);
             }
-            else if (input.moveDirection.x < -0.1f && _isFacingRight)
+            else if (input.moveDirection.x < -0.1f)
             {
-                Flip();
+                SetFacing(false);
             }
 
             // スタミナ回復
@@ -118,21 +117,14 @@ namespace Game.Runtime
                     attackElement = Element.Slash,
                     feature = AttackFeature.Light,
                     knockbackForce = new Vector2(_isFacingRight ? 3f : -3f, 1f),
-                    armorBreakValue = 10f
+                    armorBreakValue = 10f,
+                    maxHitCount = 1
                 };
 
                 _damageDealer.Activate(motion, ObjectHash);
                 _attackTimer = k_AttackDuration;
                 _attackCooldownTimer = k_AttackCooldown;
             }
-        }
-
-        private void Flip()
-        {
-            _isFacingRight = !_isFacingRight;
-            Vector3 scale = transform.localScale;
-            scale.x = _isFacingRight ? Mathf.Abs(scale.x) : -Mathf.Abs(scale.x);
-            transform.localScale = scale;
         }
 
         protected override void OnDestroy()

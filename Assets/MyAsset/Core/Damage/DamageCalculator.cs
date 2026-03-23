@@ -23,7 +23,12 @@ namespace Game.Core
 
             int atk = attack;
             int def = defense > 0 ? defense : 0;
-            int raw = (int)((float)(atk * atk) * motionValue / (atk + def));
+            int denominator = atk + def;
+            if (denominator <= 0)
+            {
+                return k_MinDamage;
+            }
+            int raw = (int)((float)(atk * atk) * motionValue / denominator);
             return raw < k_MinDamage ? k_MinDamage : raw;
         }
 

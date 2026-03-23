@@ -132,13 +132,13 @@ namespace Game.Runtime
         private void UpdatePlayerStatus()
         {
             int playerHash = CharacterRegistry.PlayerHash;
-            if (playerHash == 0 || !GameManager.Data.TryGetValue(playerHash, out int _))
+            if (playerHash == 0 || !GameManager.IsCharacterValid(playerHash))
             {
                 return;
             }
 
             ref CharacterVitals vitals = ref GameManager.Data.GetVitals(playerHash);
-            (float hpRatio, float mpRatio, float staminaRatio) = HudDataProvider.GetVitalsRatios(vitals);
+            HudDataProvider.GetVitalsRatios(vitals, out float hpRatio, out float mpRatio, out float staminaRatio);
 
             // HPダメージバー（遅延で追従する赤バー）-- HPバーより先に判定する
             if (_hpBarDamage != null && _prevHpRatio >= 0f && hpRatio < _prevHpRatio)
@@ -184,7 +184,7 @@ namespace Game.Runtime
                 }
             }
 
-            if (companionHash == 0 || !GameManager.Data.TryGetValue(companionHash, out int _))
+            if (companionHash == 0 || !GameManager.IsCharacterValid(companionHash))
             {
                 _companionPanel.style.display = DisplayStyle.None;
                 return;
@@ -192,7 +192,7 @@ namespace Game.Runtime
 
             _companionPanel.style.display = DisplayStyle.Flex;
             ref CharacterVitals vitals = ref GameManager.Data.GetVitals(companionHash);
-            (float hpRatio, float mpRatio, float _) = HudDataProvider.GetVitalsRatios(vitals);
+            HudDataProvider.GetVitalsRatios(vitals, out float hpRatio, out float mpRatio, out float _);
 
             TweenBar(_companionHpBarFill, ref _companionHpHandle, ref _prevCompanionHpRatio, hpRatio, _barTweenDuration);
             TweenBar(_companionMpBarFill, ref _companionMpHandle, ref _prevCompanionMpRatio, mpRatio, _barTweenDuration);
@@ -212,7 +212,7 @@ namespace Game.Runtime
                 return;
             }
 
-            if (!_showBoss || _bossHash == 0 || !GameManager.Data.TryGetValue(_bossHash, out int _))
+            if (!_showBoss || _bossHash == 0 || !GameManager.IsCharacterValid(_bossHash))
             {
                 _bossPanel.style.display = DisplayStyle.None;
                 return;
