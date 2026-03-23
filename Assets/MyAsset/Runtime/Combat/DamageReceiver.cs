@@ -127,7 +127,7 @@ namespace Game.Runtime
             }
 
             int hash = _character.ObjectHash;
-            if (GameManager.Data == null || !GameManager.Data.TryGetValue(hash, out int _))
+            if (!GameManager.IsCharacterValid(hash))
             {
                 return;
             }
@@ -139,13 +139,13 @@ namespace Game.Runtime
 
         public DamageResult ReceiveDamage(DamageData data)
         {
-            if (_character == null || GameManager.Data == null)
+            if (_character == null)
             {
                 return default;
             }
 
             int hash = _character.ObjectHash;
-            if (!GameManager.Data.TryGetValue(hash, out int _))
+            if (!GameManager.IsCharacterValid(hash))
             {
                 return default;
             }

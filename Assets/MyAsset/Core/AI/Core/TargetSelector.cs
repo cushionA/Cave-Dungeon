@@ -108,13 +108,15 @@ namespace Game.Core
                 {
                     ref CombatStats combat = ref data.GetCombatStats(hash);
                     bool hasWeakness = false;
-                    if ((filter.weakPoint & Element.Slash) != 0 && combat.defense.slash <= 0) { hasWeakness = true; }
-                    if ((filter.weakPoint & Element.Strike) != 0 && combat.defense.strike <= 0) { hasWeakness = true; }
-                    if ((filter.weakPoint & Element.Pierce) != 0 && combat.defense.pierce <= 0) { hasWeakness = true; }
-                    if ((filter.weakPoint & Element.Fire) != 0 && combat.defense.fire <= 0) { hasWeakness = true; }
-                    if ((filter.weakPoint & Element.Thunder) != 0 && combat.defense.thunder <= 0) { hasWeakness = true; }
-                    if ((filter.weakPoint & Element.Light) != 0 && combat.defense.light <= 0) { hasWeakness = true; }
-                    if ((filter.weakPoint & Element.Dark) != 0 && combat.defense.dark <= 0) { hasWeakness = true; }
+                    for (int e = 0; e < 7; e++)
+                    {
+                        Element elem = (Element)(1 << e);
+                        if ((filter.weakPoint & elem) != 0 && combat.defense.Get(elem) <= 0)
+                        {
+                            hasWeakness = true;
+                            break;
+                        }
+                    }
                     if (!hasWeakness)
                     {
                         continue;

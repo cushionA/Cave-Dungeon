@@ -29,14 +29,13 @@ namespace Game.Core
             return ratio;
         }
 
-        /// <summary>HP/MP/スタミナのバー率をまとめて返す。</summary>
-        public static (float hpRatio, float mpRatio, float staminaRatio) GetVitalsRatios(CharacterVitals vitals)
+        /// <summary>HP/MP/スタミナのバー率をまとめて返す（アロケーション回避版）。</summary>
+        public static void GetVitalsRatios(in CharacterVitals vitals,
+            out float hpRatio, out float mpRatio, out float staminaRatio)
         {
-            float hpRatio = CalculateBarRatio(vitals.currentHp, vitals.maxHp);
-            float mpRatio = CalculateBarRatio(vitals.currentMp, vitals.maxMp);
-            float staminaRatio = CalculateBarRatio(vitals.currentStamina, vitals.maxStamina);
-
-            return (hpRatio, mpRatio, staminaRatio);
+            hpRatio = CalculateBarRatio(vitals.currentHp, vitals.maxHp);
+            mpRatio = CalculateBarRatio(vitals.currentMp, vitals.maxMp);
+            staminaRatio = CalculateBarRatio(vitals.currentStamina, vitals.maxStamina);
         }
     }
 }

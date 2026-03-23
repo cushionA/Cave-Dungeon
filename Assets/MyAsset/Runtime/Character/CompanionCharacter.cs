@@ -15,7 +15,6 @@ namespace Game.Runtime
         [SerializeField] private Transform _playerTransform;
 
         private FollowBehavior _followBehavior;
-        private bool _isFacingRight = true;
 
         protected override void Awake()
         {
@@ -67,14 +66,7 @@ namespace Game.Runtime
                     _rb.linearVelocity = new Vector2(dir * moveParams.moveSpeed * 0.8f, _rb.linearVelocity.y);
 
                     // 向き更新
-                    bool shouldFaceRight = dir > 0f;
-                    if (shouldFaceRight != _isFacingRight)
-                    {
-                        _isFacingRight = shouldFaceRight;
-                        Vector3 scale = transform.localScale;
-                        scale.x = _isFacingRight ? Mathf.Abs(scale.x) : -Mathf.Abs(scale.x);
-                        transform.localScale = scale;
-                    }
+                    SetFacing(dir > 0f);
                     break;
 
                 case FollowState.Teleporting:

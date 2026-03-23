@@ -25,6 +25,8 @@ namespace Game.Core
         /// <param name="armorBreakValue">Amount of armor to destroy.</param>
         /// <param name="actionArmor">Current action armor (modified in place). 0 if no action armor active.</param>
         /// <returns>(actualDamage, isKill, armorBroken)</returns>
+        // TODO: ref引数が5個あり引数順序ミスのリスクがある。
+        // DamageApplication構造体にまとめることを検討（破壊的変更のため次回リファクタリングで対応）。
         public static (int actualDamage, bool isKill, bool armorBroken) ApplyDamage(
             ref int currentHp, ref float currentArmor, int rawDamage, float armorBreakValue,
             ref float actionArmor)
