@@ -35,7 +35,8 @@ namespace Game.Runtime
                 {
                     return false;
                 }
-                return GameManager.Data.GetVitals(_objectHash).currentHp > 0;
+                ref CharacterVitals vitals = ref GameManager.Data.GetVitals(_objectHash);
+                return vitals.currentHp > 0;
             }
         }
 

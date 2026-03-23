@@ -1,5 +1,3 @@
-using UnityEngine;
-
 namespace Game.Core
 {
     public interface IAbility
@@ -8,7 +6,11 @@ namespace Game.Core
         AbilityExclusiveGroup ExclusiveGroup { get; }
         bool CanExecute();
         bool IsExecuting { get; }
-        void Initialize(MonoBehaviour owner);
+        /// <summary>
+        /// ownerHashでSoAコンテナ経由のデータアクセスを初期化する。
+        /// MonoBehaviour参照はRuntime層で別途キャッシュすること。
+        /// </summary>
+        void Initialize(int ownerHash);
         void Execute(MovementInfo info);
         void Cancel();
         void Tick(float deltaTime);

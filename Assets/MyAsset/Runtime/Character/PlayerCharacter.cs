@@ -118,7 +118,8 @@ namespace Game.Runtime
                     attackElement = Element.Slash,
                     feature = AttackFeature.Light,
                     knockbackForce = new Vector2(_isFacingRight ? 3f : -3f, 1f),
-                    armorBreakValue = 10f
+                    armorBreakValue = 10f,
+                    maxHitCount = 1
                 };
 
                 _damageDealer.Activate(motion, ObjectHash);
