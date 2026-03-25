@@ -26,6 +26,7 @@ namespace Game.Tests.EditMode
         public void TearDown()
         {
             _connector.Dispose();
+            _tracker.Dispose();
             _events.Dispose();
         }
 

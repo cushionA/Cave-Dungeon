@@ -1,21 +1,29 @@
-using System.Collections.Generic;
+using System;
+using ODC.Runtime;
 
 namespace Game.Core
 {
     /// <summary>
     /// Tracks cumulative damage dealt by attackers with exponential time decay.
     /// Used by AI to determine threat/aggro priority.
-    /// Decay formula: score * e^(-k_DecayRate * elapsed)
+    /// Backed by DecayingScoreContainer for fixed-capacity, GC-free operation.
     /// </summary>
-    public class DamageScoreTracker
+    public class DamageScoreTracker : IDisposable
     {
         private const float k_DecayRate = 0.1f;
+        private const int k_DefaultMaxAttackers = 16;
+        private const int k_InternalOwnerHash = 1;
 
-        private Dictionary<int, DamageScoreEntry> _scores;
+        private DecayingScoreContainer _container;
 
-        public DamageScoreTracker()
+        public DamageScoreTracker() : this(k_DefaultMaxAttackers)
         {
-            _scores = new Dictionary<int, DamageScoreEntry>();
+        }
+
+        public DamageScoreTracker(int maxAttackers)
+        {
+            _container = new DecayingScoreContainer(1, maxAttackers, k_DecayRate);
+            _container.AddOwner(k_InternalOwnerHash);
         }
 
         /// <summary>
@@ -23,22 +31,7 @@ namespace Game.Core
         /// </summary>
         public void AddDamage(int attackerHash, float damage, float currentTime)
         {
-            if (_scores.TryGetValue(attackerHash, out DamageScoreEntry entry))
-            {
-                float decayed = DecayScore(entry.score, entry.lastUpdateTime, currentTime);
-                entry.score = decayed + damage;
-                entry.lastUpdateTime = currentTime;
-                _scores[attackerHash] = entry;
-            }
-            else
-            {
-                _scores[attackerHash] = new DamageScoreEntry
-                {
-                    attackerHash = attackerHash,
-                    score = damage,
-                    lastUpdateTime = currentTime
-                };
-            }
+            _container.AddScore(k_InternalOwnerHash, attackerHash, damage, currentTime);
         }
 
         /// <summary>
@@ -47,12 +40,7 @@ namespace Game.Core
         /// </summary>
         public float GetScore(int attackerHash, float currentTime)
         {
-            if (!_scores.TryGetValue(attackerHash, out DamageScoreEntry entry))
-            {
-                return 0f;
-            }
-
-            return DecayScore(entry.score, entry.lastUpdateTime, currentTime);
+            return _container.GetScore(k_InternalOwnerHash, attackerHash, currentTime);
         }
 
         /// <summary>
@@ -61,20 +49,7 @@ namespace Game.Core
         /// </summary>
         public int GetHighestScoreAttacker(float currentTime)
         {
-            int bestHash = 0;
-            float bestScore = 0f;
-
-            foreach (KeyValuePair<int, DamageScoreEntry> kvp in _scores)
-            {
-                float score = DecayScore(kvp.Value.score, kvp.Value.lastUpdateTime, currentTime);
-                if (score > bestScore)
-                {
-                    bestScore = score;
-                    bestHash = kvp.Key;
-                }
-            }
-
-            return bestHash;
+            return _container.GetHighest(k_InternalOwnerHash, currentTime);
         }
 
         /// <summary>
@@ -82,7 +57,7 @@ namespace Game.Core
         /// </summary>
         public void RemoveAttacker(int attackerHash)
         {
-            _scores.Remove(attackerHash);
+            _container.RemoveTarget(k_InternalOwnerHash, attackerHash);
         }
 
         /// <summary>
@@ -90,18 +65,13 @@ namespace Game.Core
         /// </summary>
         public void Clear()
         {
-            _scores.Clear();
+            _container.Clear();
+            _container.AddOwner(k_InternalOwnerHash);
         }
 
-        private float DecayScore(float score, float lastTime, float currentTime)
+        public void Dispose()
         {
-            float elapsed = currentTime - lastTime;
-            if (elapsed <= 0f)
-            {
-                return score;
-            }
-
-            return score * UnityEngine.Mathf.Exp(-k_DecayRate * elapsed);
+            _container.Dispose();
         }
     }
 }

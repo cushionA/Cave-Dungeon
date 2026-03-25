@@ -442,6 +442,17 @@
       },
       "url": "https://packages.unity.com"
     },
+    "com.zabuton.container-pack": {
+      "version": "https://github.com/cushionA/ObjectDataContainer.git#package",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "com.unity.collections": "2.4.3",
+        "com.unity.burst": "1.8.23",
+        "com.unity.mathematics": "1.3.2"
+      },
+      "hash": "2991db197cfdfbbe8eb2d4f20ee55a30cc18c7fd"
+    },
     "com.unity.modules.accessibility": {
       "version": "1.0.0",
       "depth": 0,

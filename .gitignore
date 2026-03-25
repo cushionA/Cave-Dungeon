@@ -52,6 +52,9 @@ config/audio-index.json
 designs/asset-gen-request.json
 notebooks/asset_gen/
 
+# Story (private)
+Story/
+
 # Environment
 .env
 

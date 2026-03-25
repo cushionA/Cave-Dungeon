@@ -1,6 +1,5 @@
 {
   "dependencies": {
-    "com.zabuton.container-pack": "file:com.zabuton.container-pack",
     "com.annulusgames.lit-motion": "https://github.com/AnnulusGames/LitMotion.git?path=src/LitMotion/Assets/LitMotion",
     "com.coplaydev.unity-mcp": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#main",
     "com.cysharp.r3": "https://github.com/Cysharp/R3.git?path=src/R3.Unity/Assets/R3.Unity",
@@ -32,6 +31,7 @@
     "com.unity.ugui": "2.0.0",
     "com.unity.vectorgraphics": "3.0.0-preview.7",
     "com.unity.visualscripting": "1.9.9",
+    "com.zabuton.container-pack": "https://github.com/cushionA/ObjectDataContainer.git#package",
     "com.unity.modules.accessibility": "1.0.0",
     "com.unity.modules.adaptiveperformance": "1.0.0",
     "com.unity.modules.ai": "1.0.0",

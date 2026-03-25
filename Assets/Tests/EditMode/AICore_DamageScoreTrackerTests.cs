@@ -5,26 +5,37 @@ namespace Game.Tests.EditMode
 {
     public class AICore_DamageScoreTrackerTests
     {
+        private DamageScoreTracker _tracker;
+
+        [SetUp]
+        public void SetUp()
+        {
+            _tracker = new DamageScoreTracker();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            _tracker.Dispose();
+        }
+
         [Test]
         public void DamageScoreTracker_AddDamage_AccumulatesScore()
         {
-            DamageScoreTracker tracker = new DamageScoreTracker();
+            _tracker.AddDamage(10, 50f, 0f);
+            _tracker.AddDamage(10, 30f, 0f);
 
-            tracker.AddDamage(10, 50f, 0f);
-            tracker.AddDamage(10, 30f, 0f);
-
-            float score = tracker.GetScore(10, 0f);
+            float score = _tracker.GetScore(10, 0f);
             Assert.AreEqual(80f, score, 0.01f);
         }
 
         [Test]
         public void DamageScoreTracker_Decay_ReducesOverTime()
         {
-            DamageScoreTracker tracker = new DamageScoreTracker();
-            tracker.AddDamage(10, 100f, 0f);
+            _tracker.AddDamage(10, 100f, 0f);
 
-            float scoreAt0 = tracker.GetScore(10, 0f);
-            float scoreAt5 = tracker.GetScore(10, 5f);
+            float scoreAt0 = _tracker.GetScore(10, 0f);
+            float scoreAt5 = _tracker.GetScore(10, 5f);
 
             Assert.AreEqual(100f, scoreAt0, 0.01f);
             Assert.Less(scoreAt5, scoreAt0);
@@ -34,11 +45,10 @@ namespace Game.Tests.EditMode
         [Test]
         public void DamageScoreTracker_GetHighest_ReturnsTopAttacker()
         {
-            DamageScoreTracker tracker = new DamageScoreTracker();
-            tracker.AddDamage(10, 50f, 0f);
-            tracker.AddDamage(20, 100f, 0f);
+            _tracker.AddDamage(10, 50f, 0f);
+            _tracker.AddDamage(20, 100f, 0f);
 
-            int highest = tracker.GetHighestScoreAttacker(0f);
+            int highest = _tracker.GetHighestScoreAttacker(0f);
 
             Assert.AreEqual(20, highest);
         }
@@ -46,12 +56,11 @@ namespace Game.Tests.EditMode
         [Test]
         public void DamageScoreTracker_RemoveAttacker_ClearsEntry()
         {
-            DamageScoreTracker tracker = new DamageScoreTracker();
-            tracker.AddDamage(10, 50f, 0f);
+            _tracker.AddDamage(10, 50f, 0f);
 
-            tracker.RemoveAttacker(10);
+            _tracker.RemoveAttacker(10);
 
-            Assert.AreEqual(0f, tracker.GetScore(10, 0f));
+            Assert.AreEqual(0f, _tracker.GetScore(10, 0f));
         }
     }
 }
