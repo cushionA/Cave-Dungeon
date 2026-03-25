@@ -412,3 +412,340 @@ public struct DropEntry
 | R | ParticleEffectPool | エフェクト | ★★★☆☆ | エフェクト数制限 |
 | S | DamageNumberPool | UI | ★★★☆☆ | ダメージ表示制限 |
 | T | CameraShakeBuffer | 演出 | ★★☆☆☆ | カメラ揺れ合成 |
+
+---
+
+## 3. ODCパッケージへの改修要望
+
+各コンテナの活用検討で判明した、パッケージ側に要望したい改修点。
+**方針**: パッケージの汎用性を損なう改変は要望しない（プロジェクト固有の処理はゲーム側で吸収する）。
+
+---
+
+### 3-1. SpatialHashContainer2D — XY平面モード対応【重要度: 高】
+
+**問題**:
+現行の `SpatialHashContainer2D` はXZ平面（3D想定）での座標操作ベースと見られる。
+本ゲームは2Dサイドスクロールで、座標はXY平面を使用する。
+このままでは近傍クエリの軸が噛み合わず、正しく機能しない恐れがある。
+
+**要望**:
+- コンストラクタ引数でXY/XZの平面モードを切り替えられるようにする
+- または `SpatialHashContainer2D` の2D版として純粋なXY平面専用クラスを提供する
+
+```csharp
+// 案1: 引数で軸指定
+new SpatialHashContainer2D<T>(cellSize, plane: Plane.XY);
+
+// 案2: 専用クラス（XY決め打ち）
+new SpatialHashContainerXY<T>(cellSize);
+```
+
+**汎用性評価**: 設定可能な構成であり、汎用性を損なわない ✓
+
+---
+
+### 3-2. TimedDataContainer — OnExpiredコールバックへのデータ受け渡し【重要度: 高】
+
+**問題**:
+`TimedDataContainer<T>` の期限切れコールバックに「何が期限切れになったか」のデータが渡らない場合、
+バフ解除時にUIへの通知や「消滅したデバフに応じたSE再生」ができない。
+
+**要望**:
+期限切れコールバックをデータ付きの `Action<T>` 形式で受け取れるようにする。
+既存の `Action`（引数なし）との両方をサポートするオーバーロードが望ましい。
+
+```csharp
+// 現状（想定）
+new TimedDataContainer<BuffData>(onExpired: () => { ... });
+
+// 要望
+new TimedDataContainer<BuffData>(onExpired: (data) => { ApplyBuffRemoval(data); });
+```
+
+**汎用性評価**: 汎用的な改善。期限切れデータの受け渡しは一般的なユースケース ✓
+
+---
+
+### 3-3. CooldownContainer — 進行率(Normalized)取得メソッド【重要度: 中】
+
+**問題**:
+スキルクールダウンUIの表示に「残り時間 / 最大時間」の正規化値(0.0〜1.0)が必要だが、
+現状は残り時間と初期値を別途管理して手動計算が必要。
+
+**要望**:
+`GetNormalized(key)` メソッドで正規化された進行率(完了に向かって0→1)を直接取得できるようにする。
+
+```csharp
+float fillAmount = cooldowns.GetNormalized("skill_fireball"); // 0.0=完了, 1.0=リセット直後
+```
+
+**汎用性評価**: UIとの連携に汎用的に使える便利メソッド ✓
+
+---
+
+### 3-4. RingBufferContainer — ReadOnlySpan一括取得【重要度: 中】
+
+**問題**:
+コマンド入力判定（例: ↓↓攻撃 = 特殊技）のために直近N件の入力履歴を一括で参照したい。
+個別インデックスアクセスを繰り返すよりも `ReadOnlySpan<T>` での一括取得が安全かつ高速。
+
+**要望**:
+バッファの現在の全内容を時系列順に `ReadOnlySpan<T>` で返すメソッドを追加。
+
+```csharp
+ReadOnlySpan<InputRecord> history = inputBuffer.AsSpan(); // 古い順に並んだスパン
+// → LINQ不要でコマンドパターンマッチング可能
+```
+
+**汎用性評価**: NativeCollections的な安全アクセスパターンで汎用的 ✓
+
+---
+
+### 3-5. StateMapContainer — OnEnter/OnExitコールバック【重要度: 中】
+
+**問題**:
+AIモード遷移時（Idle→Chase等）にアニメーション切り替え・SE再生・内部状態リセットなどの
+副作用処理が必要。現状は外部で `currentState` の変化を毎フレームポーリングするしかない。
+
+**要望**:
+状態ごとに `OnEnter` / `OnExit` コールバックを登録できるオプショナルなフック機構。
+
+```csharp
+stateMap.RegisterCallbacks(AiMode.Chase,
+    onEnter: () => animator.SetTrigger("StartChase"),
+    onExit:  () => animator.SetTrigger("StopChase")
+);
+```
+
+**汎用性評価**: FSMの標準的な機能。オプショナル登録であれば複雑さは増さない ✓
+ただし過度な機能追加になるようであれば、プロジェクト側でラッパーを作り吸収する。
+
+---
+
+### 3-6. GroupContainer — グループ移動コールバック【重要度: 低〜中】
+
+**問題**:
+混乱魔法・寝返りで `MoveToGroup()` を呼んだ後、AI状態のリセットやターゲット再選択などの
+後処理が必要。移動完了のコールバックがないと毎フレームのポーリングが必要になる。
+
+**要望**:
+`MoveToGroup()` 実行時に `OnGroupChanged` コールバックを発火するオプション。
+
+```csharp
+groupContainer.OnGroupChanged += (item, fromGroup, toGroup) => {
+    ResetAiState(item);
+};
+```
+
+**汎用性評価**: グループ移動の通知は汎用的なユースケース ✓
+
+---
+
+### 3-7. 見送り（汎用性を損なうため対象外）
+
+以下の改変はプロジェクト固有の要件であり、パッケージへの要望としない。
+ゲーム側でラッパークラス / 拡張メソッドを実装して吸収する。
+
+| 見送り要望 | 理由 |
+|-----------|------|
+| SoACharaDataDicとの直接統合 | プロジェクト固有すぎる |
+| Unity `Time.time` / `Physics2D` との直接結合 | 特定エンジン依存になる |
+| SourceGeneratorとのコード生成連携 | ODCパッケージの責務を超える |
+| キャラ特化のヘイト計算ロジック組み込み | ゲームルール依存 |
+
+---
+
+## 4. 機能提案（統合版）
+
+コンテナ活用・改修要望・プロジェクト全体の未着手課題を統合した実装優先度付き機能提案。
+
+---
+
+### フェーズ1: コアシステムへのコンテナ統合（最優先）
+
+#### 機能提案 F-01: クールダウン一元管理システム
+**使用コンテナ**: `CooldownContainer`
+**現状の問題**: CD管理が6箇所以上に分散（CoopCooldownTracker / ComboManager / JudgmentLoop / DamageReceiver等）
+**実装内容**:
+- `AbilityHolder` 内に `CooldownContainer` を1つ配置
+- 全アビリティCD・無敵時間・アーマー回復ディレイをここで一元管理
+- `GetNormalized()` でUI（スキルアイコン）の充填率を直接取得（改修要望 3-3 が実現すれば）
+
+**改変範囲**: `CoopCooldownTracker` 削除、`JudgmentLoop` のタイマー変数削除、`DamageReceiver._armorRecoveryTimer` 削除
+
+---
+
+#### 機能提案 F-02: AIモードFSM統合
+**使用コンテナ**: `StateMapContainer<AiMode>`
+**現状の問題**: `ModeController` が独自FSMを自前実装（_currentModeIndex, SetModes, SwitchMode）
+**実装内容**:
+- `ModeController` を `StateMapContainer<AiMode>` ベースに置き換え
+- OnEnter/OnExitで状態遷移副作用を記述（改修要望 3-5 が実現すれば）
+- 「Chaseモードに入って何秒経過」を `ElapsedTime` で直接取得 → 時間依存行動が簡潔に
+
+---
+
+#### 機能提案 F-03: 陣営管理システム刷新
+**使用コンテナ**: `GroupContainer<int>` (objectHash単位)
+**現状の問題**: `CharacterFlags.Belong` ビットフラグで陣営管理。全陣営スキャンがO(n)
+**実装内容**:
+- `GameManager` に `GroupContainer` を配置、Ally/Enemy/Neutral/Bossグループを管理
+- `TargetSelector` / `ConditionEvaluator` のBelongフィルタをGroupContainer経由に変更
+- 混乱魔法で `MoveToGroup()` を呼ぶだけで陣営変更が完結（O(1)）
+
+---
+
+#### 機能提案 F-04: バフ/デバフ管理リプレース
+**使用コンテナ**: `TimedDataContainer<BuffEntry>` または `NotifyTimedDataContainer<BuffEntry>`
+**現状の問題**: `StatusEffectManager` が手動タイマー管理 + swap-remove
+**実装内容**:
+- バフスロットを `TimedDataContainer` に移行
+- 期限切れ時コールバックでUI通知・SE再生（改修要望 3-2 が実現すれば）
+- `CharacterStatusEffects` 構造体のSoAデータと連携
+
+---
+
+#### 機能提案 F-05: 入力システムのSoA統合（AI/Player統一入力）
+**使用コンテナ**: SoA構造体 `InputState`（追加コンテナ F）
+**現状の問題**: AIとプレイヤー入力のパスが分離。BaseCharacterが入力ソースを意識
+**実装内容**:
+- `SoACharaDataDic` に `InputState` 構造体を追加
+- `InputHandler`（プレイヤー）と `AIBrain`（AI）がともに `InputState` に書き込む
+- `BaseCharacter` は `InputState` を読むだけ → 入力ソース非依存
+
+---
+
+### フェーズ2: パフォーマンス改善系
+
+#### 機能提案 F-06: AI近傍検索の空間ハッシュ化
+**使用コンテナ**: `SpatialHashContainer2D<int>` (objectHash格納)
+**前提条件**: 改修要望 3-1（XY平面対応）の実現、またはラッパーでXY対応を吸収
+**実装内容**:
+- `SensorSystem.UpdateDetection()` の線形スキャンを空間ハッシュクエリに置換
+- `TargetSelector.FilterCandidates()` の距離計算高速化
+- キャラ移動時に `Update()` で位置を更新 → 近傍クエリO(1)〜O(k)
+
+**注意**: XY平面への対応確認が必須。未対応の場合は独自ラッパーを実装して吸収する。
+
+---
+
+#### 機能提案 F-07: 投射物システム実装
+**使用コンテナ**: SoA構造体 `ProjectileData`（追加コンテナ C）+ `TimedDataContainer`
+**現状**: 設計書に記載があるが未実装
+**実装内容**:
+- `ProjectileData` をSoAに追加し投射物を一元管理
+- 寿命管理を `TimedDataContainer` で行い、期限切れで自動プール返却
+- ホーミング・貫通・AoE爆発を `moveType` / `pierceRemaining` / `aoeRadius` で制御
+
+---
+
+#### 機能提案 F-08: コマンド入力判定（格闘ゲーム風特殊技）
+**使用コンテナ**: `RingBufferContainer<InputRecord>`（追加コンテナ J相当）
+**実装内容**:
+- `InputBuffer` を `RingBufferContainer` に拡張し直近16〜32入力を記録
+- `AsSpan()` で履歴を一括取得してパターンマッチング（↓→攻撃 = 特殊技発動等）
+- AIの行動ログにも流用（デバッグ可視化）
+
+---
+
+#### 機能提案 F-09: 敵スポーン優先度管理
+**使用コンテナ**: `PriorityPoolContainer<EnemySpawnEntry>`
+**実装内容**:
+- `EnemySpawner` の最大同時数制限を `PriorityPoolContainer` に移行
+- 容量超過時に画面外・低脅威度の敵を自動despawn
+- ボスエリア接近時にボス関連スポーンを高優先度で保護
+
+---
+
+### フェーズ3: ゲームプレイ拡張系
+
+#### 機能提案 F-10: ヒット記録の統合管理
+**使用コンテナ**: `TimedDataContainer<HitRecord>`
+**実装内容**:
+- `HitBox` の二重ヒット防止記録を `TimedDataContainer` に移行
+- 攻撃モーション終了で自動クリア（タイムアウト）
+- 複数HitBoxが同一Attackerから管理されるよう統合
+
+---
+
+#### 機能提案 F-11: インベントリシステム
+**使用コンテナ**: SoA構造体 `InventorySlot`（追加コンテナ M）
+**現状**: GDD記載済み・未実装
+**実装内容**:
+- 固定スロット数の `InventorySlot[]` をSoAで管理
+- アイテム使用・装備変更・ドロップ取得のAPIを整備
+- UI（インベントリ画面）との連携
+
+---
+
+#### 機能提案 F-12: ドロップテーブル管理
+**使用コンテナ**: SoA構造体 `DropEntry`（追加コンテナ O）+ `PriorityPoolContainer`
+**実装内容**:
+- 敵定義に `DropEntry[]` を紐付け
+- `PriorityPoolContainer` で希少アイテムの優先度管理（ボーナス条件フラグ）
+- 乱数シード固定でデバッグ再現性を確保
+
+---
+
+#### 機能提案 F-13: UIアニメーションハンドル管理
+**使用コンテナ**: `TimedDataContainer<MotionHandle>`
+**実装内容**:
+- `HudController` のLitMotionハンドルを `TimedDataContainer` で一元管理
+- 前回ハンドルの自動キャンセル（連続呼び出し時のリーク防止）
+- HPバー・スタミナバー等のTweenを統一インターフェースで管理
+
+---
+
+### フェーズ4: 演出・デバッグ系
+
+#### 機能提案 F-14: カメラ揺れ合成システム
+**使用コンテナ**: `TimedDataContainer<ShakeData>`
+**実装内容**:
+- 複数ソース（爆発・被弾・着地）の揺れを合成して最終カメラオフセットを計算
+- 各揺れソースに減衰カーブと優先度を設定
+- 期限切れで自動消去、強い揺れが弱い揺れをマスク
+
+---
+
+#### 機能提案 F-15: ダメージポップアップ管理
+**使用コンテナ**: `PriorityPoolContainer<DamagePopupData>`
+**実装内容**:
+- 同時表示数を制限（画面が数字で埋まるのを防止）
+- 小ダメージを低優先度として大ダメージ発生時に自動排出
+- クリティカル/属性等によるフォントスタイル切り替え
+
+---
+
+### 全機能提案サマリー
+
+| # | 機能名 | フェーズ | 主コンテナ | 優先度 | 備考 |
+|---|--------|---------|-----------|--------|------|
+| F-01 | クールダウン一元管理 | 1 | CooldownContainer | ★★★★★ | 6箇所の分散CD解消 |
+| F-02 | AIモードFSM統合 | 1 | StateMapContainer | ★★★★★ | ModeController置き換え |
+| F-03 | 陣営管理刷新 | 1 | GroupContainer | ★★★★☆ | O(n)→O(1)スキャン |
+| F-04 | バフ/デバフ管理 | 1 | TimedDataContainer | ★★★★☆ | StatusEffectManager置き換え |
+| F-05 | 統一入力管理 | 1 | SoA:InputState | ★★★★★ | AI/Player入力統一 |
+| F-06 | AI近傍検索高速化 | 2 | SpatialHash2D | ★★★★☆ | XY平面対応要確認 |
+| F-07 | 投射物システム | 2 | SoA:ProjectileData | ★★★★☆ | 未実装システム |
+| F-08 | コマンド入力 | 2 | RingBufferContainer | ★★★☆☆ | 特殊技・Span取得要望 |
+| F-09 | 敵スポーン優先度 | 2 | PriorityPoolContainer | ★★★☆☆ | 自動despawn |
+| F-10 | ヒット記録統合 | 3 | TimedDataContainer | ★★★☆☆ | 二重ヒット防止 |
+| F-11 | インベントリ | 3 | SoA:InventorySlot | ★★★★☆ | GDD記載済み未実装 |
+| F-12 | ドロップテーブル | 3 | SoA:DropEntry | ★★★☆☆ | 敵撃破アイテム |
+| F-13 | UIアニメ管理 | 3 | TimedDataContainer | ★★☆☆☆ | ハンドルリーク防止 |
+| F-14 | カメラ揺れ合成 | 4 | TimedDataContainer | ★★☆☆☆ | 演出品質向上 |
+| F-15 | ダメージポップアップ | 4 | PriorityPoolContainer | ★★★☆☆ | 表示数制限 |
+
+---
+
+### ODC改修要望と機能提案の対応マップ
+
+| 改修要望 | 影響する機能提案 | 未実現時の代替 |
+|---------|----------------|--------------|
+| 3-1 XY平面対応 | F-06（AI近傍検索） | ゲーム側ラッパーでXY変換を吸収 |
+| 3-2 OnExpired引数付き | F-04（バフ管理）, F-10（ヒット記録） | ゲーム側でIDを別管理してコールバックで引く |
+| 3-3 Normalizedメソッド | F-01（CD管理） | `(remaining / total)` をゲーム側で計算 |
+| 3-4 RingBuffer Span取得 | F-08（コマンド入力） | ゲーム側で配列コピーして走査 |
+| 3-5 OnEnter/OnExit | F-02（AI FSM） | ゲーム側でStateMapをラップしてポーリング |
+| 3-6 グループ移動CB | F-03（陣営管理） | MoveToGroup後に明示的なリセット関数を呼ぶ |
