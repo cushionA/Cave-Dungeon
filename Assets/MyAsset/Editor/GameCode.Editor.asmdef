@@ -3,7 +3,8 @@
     "rootNamespace": "",
     "references": [
         "GameCode",
-        "Game.Core"
+        "Game.Core",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [
         "Editor"
