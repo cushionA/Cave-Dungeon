@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
@@ -33,7 +34,7 @@ namespace Game.Tests.PlayMode
             {
                 if (obj != null)
                 {
-                    Object.DestroyImmediate(obj);
+                    UnityEngine.Object.DestroyImmediate(obj);
                 }
             }
             _spawnedObjects.Clear();
@@ -99,7 +100,7 @@ namespace Game.Tests.PlayMode
             Assert.IsTrue(GameManager.Data.TryGetValue(hash, out int _),
                 "Precondition: character should be registered");
 
-            Object.DestroyImmediate(charObj);
+            UnityEngine.Object.DestroyImmediate(charObj);
             yield return null;
 
             Assert.IsFalse(GameManager.Data.TryGetValue(hash, out int _),
@@ -122,7 +123,7 @@ namespace Game.Tests.PlayMode
             IDisposable subscription = GameManager.Events.OnCharacterRemoved
                 .Subscribe(h => removedHash = h);
 
-            Object.DestroyImmediate(charObj);
+            UnityEngine.Object.DestroyImmediate(charObj);
             yield return null;
 
             Assert.AreEqual(hash, removedHash,

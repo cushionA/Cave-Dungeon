@@ -66,7 +66,8 @@ namespace Game.Core
             bool isJustGuardImmune = (attackFeature & AttackFeature.JustGuardImmune) != 0;
 
             // EnhancedGuard (0~0.05s) を先に判定。JustGuard (0~0.1s) より狭い窓なので先にチェックする。
-            if (guardTimeSinceStart <= k_EnhancedGuardWindow && !isJustGuardImmune)
+            // JustGuardImmuneはJustGuardのみ無効化し、EnhancedGuardには影響しない。
+            if (guardTimeSinceStart < k_EnhancedGuardWindow)
             {
                 return GuardResult.EnhancedGuard;
             }

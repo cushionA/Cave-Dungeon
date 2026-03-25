@@ -34,7 +34,7 @@ namespace Game.Tests.EditMode
                 maxStamina = 200f
             };
 
-            (float hpRatio, float mpRatio, float staminaRatio) = HudDataProvider.GetVitalsRatios(vitals);
+            HudDataProvider.GetVitalsRatios(vitals, out float hpRatio, out float mpRatio, out float staminaRatio);
 
             Assert.AreEqual(0.8f, hpRatio, 0.001f);
             Assert.AreEqual(0.6f, mpRatio, 0.001f);

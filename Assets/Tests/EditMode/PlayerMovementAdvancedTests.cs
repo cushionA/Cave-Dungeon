@@ -127,10 +127,11 @@ namespace Game.Tests.EditMode
         [Test]
         public void AdvancedMovementLogic_CalculateWeightPenalty_AboveThreshold_Penalizes()
         {
-            // weightRatio 0.9 → penalty = 1 - (0.9 - 0.7) = 0.8
+            // weightRatio 0.9 → t = (0.9-0.7)/0.3 = 2/3, penalty = 1.0 - 0.5*(2/3) ≈ 0.6667
             float penalty = AdvancedMovementLogic.CalculateWeightPenalty(0.9f);
 
-            Assert.AreEqual(0.8f, penalty, 0.001f);
+            float expected = 1.0f + (0.5f - 1.0f) * ((0.9f - 0.7f) / 0.3f);
+            Assert.AreEqual(expected, penalty, 0.001f);
         }
 
         [Test]

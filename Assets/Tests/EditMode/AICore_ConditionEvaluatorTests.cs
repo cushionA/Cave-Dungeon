@@ -348,16 +348,34 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
-        public void ConditionEvaluator_Count_ReturnsTargetParam()
+        public void ConditionEvaluator_Count_ReturnsZeroWhenAllHashesIsNull()
+        {
+            AICondition condition = new AICondition
+            {
+                conditionType = AIConditionType.Count,
+                compareOp = CompareOp.Equal,
+                operandA = 0
+            };
+
+            bool result = ConditionEvaluator.Evaluate(condition, _ownerHash, _targetHash, _data, 0f);
+
+            Assert.IsTrue(result);
+        }
+
+        [Test]
+        public void ConditionEvaluator_Count_CountsMatchingHashes()
         {
             AICondition condition = new AICondition
             {
                 conditionType = AIConditionType.Count,
                 compareOp = CompareOp.GreaterEqual,
-                operandA = 5
+                operandA = 1
             };
 
-            bool result = ConditionEvaluator.Evaluate(condition, _ownerHash, _targetHash, _data, 0f);
+            System.Collections.Generic.List<int> allHashes =
+                new System.Collections.Generic.List<int> { _ownerHash, _targetHash };
+            bool result = ConditionEvaluator.Evaluate(
+                condition, _ownerHash, _targetHash, _data, 0f, null, allHashes);
 
             Assert.IsTrue(result);
         }
