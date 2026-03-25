@@ -123,14 +123,6 @@ namespace Game.Core
     }
 
     [Serializable]
-    public struct DamageScoreEntry
-    {
-        public int attackerHash;
-        public float score;
-        public float lastUpdateTime;
-    }
-
-    [Serializable]
     public struct ReactionTrigger
     {
         public AIConditionType triggerCondition;

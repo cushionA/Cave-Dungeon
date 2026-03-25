@@ -257,31 +257,11 @@ namespace Game.Core
         }
 
         /// <summary>
-        /// Gets the maximum damage score from the score entries, applying time decay.
+        /// Reserved: damage score evaluation is now handled by DamageScoreTracker + DecayingScoreContainer.
         /// </summary>
-        private static float GetMaxDamageScore(DamageScoreEntry[] scores, float currentTime)
+        private static float GetMaxDamageScore(float currentTime)
         {
-            if (scores == null || scores.Length == 0)
-            {
-                return 0f;
-            }
-
-            float maxScore = 0f;
-            for (int i = 0; i < scores.Length; i++)
-            {
-                if (scores[i].attackerHash == 0)
-                {
-                    continue;
-                }
-
-                float elapsed = currentTime - scores[i].lastUpdateTime;
-                float decayed = scores[i].score * Mathf.Pow(0.95f, elapsed);
-                if (decayed > maxScore)
-                {
-                    maxScore = decayed;
-                }
-            }
-            return maxScore;
+            return 0f;
         }
     }
 }

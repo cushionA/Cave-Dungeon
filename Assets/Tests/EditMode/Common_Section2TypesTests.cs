@@ -95,21 +95,6 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(10f, filter.distanceRange.y, 0.001f);
         }
 
-        [Test]
-        public void DamageScoreEntry_Fields_StoreCorrectly()
-        {
-            DamageScoreEntry entry = new DamageScoreEntry
-            {
-                attackerHash = 12345,
-                score = 150.5f,
-                lastUpdateTime = 10.0f
-            };
-
-            Assert.AreEqual(12345, entry.attackerHash);
-            Assert.AreEqual(150.5f, entry.score, 0.001f);
-            Assert.AreEqual(10.0f, entry.lastUpdateTime, 0.001f);
-        }
-
         // --- ComboWindowTimer ---
 
         [Test]

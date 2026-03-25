@@ -39,6 +39,7 @@ namespace Game.Core
 
         /// <summary>
         /// Registers a target at the given position.
+        /// Throws if full or if hash is already registered.
         /// </summary>
         public void Register(int hash, Vector2 position)
         {
@@ -47,11 +48,17 @@ namespace Game.Core
                 throw new InvalidOperationException("SpatialTargetRegistry is full.");
             }
 
+            if (_spatialHash.ContainsKey(hash))
+            {
+                throw new InvalidOperationException(
+                    $"Hash {hash} is already registered in SpatialTargetRegistry.");
+            }
+
             SpatialEntry entry = _entryPool[_count];
             entry.Hash = hash;
             _registeredHashes[_count] = hash;
-            _count++;
             _spatialHash.Add(hash, entry, new Vector3(position.x, position.y, 0f));
+            _count++;
         }
 
         /// <summary>

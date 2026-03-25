@@ -54,6 +54,7 @@ namespace Game.Tests.EditMode
         [TearDown]
         public void TearDown()
         {
+            _tracker.Dispose();
             _events.Dispose();
             _data.Dispose();
         }

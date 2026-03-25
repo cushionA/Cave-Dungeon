@@ -17,6 +17,8 @@ namespace Game.Core
         private float _visionRange;
         private float _visionAngle;
         private float _hearingRange;
+        private float _visionRangeSq;
+        private float _hearingRangeSq;
 
         private List<int> _detectedHashes;
 
@@ -27,6 +29,8 @@ namespace Game.Core
             _visionRange = visionRange;
             _visionAngle = visionAngle;
             _hearingRange = hearingRange;
+            _visionRangeSq = visionRange * visionRange;
+            _hearingRangeSq = hearingRange * hearingRange;
             _detectedHashes = new List<int>();
         }
 
@@ -50,29 +54,9 @@ namespace Game.Core
             for (int i = 0; i < allHashes.Count; i++)
             {
                 int hash = allHashes[i];
-                if (hash == ownerHash)
+                if (hash != ownerHash)
                 {
-                    continue;
-                }
-
-                if (!data.TryGetValue(hash, out int _))
-                {
-                    continue;
-                }
-
-                ref CharacterVitals targetVitals = ref data.GetVitals(hash);
-                Vector2 toTarget = targetVitals.position - ownerPos;
-                float distance = toTarget.magnitude;
-
-                if (IsInVision(distance, toTarget, facingDirection))
-                {
-                    _detectedHashes.Add(hash);
-                    continue;
-                }
-
-                if (IsInHearingRange(distance))
-                {
-                    _detectedHashes.Add(hash);
+                    EvaluateCandidate(hash, ownerPos, data, facingDirection);
                 }
             }
         }
@@ -98,33 +82,49 @@ namespace Game.Core
             Span<int> neighbors = stackalloc int[k_MaxNeighborResults];
             int neighborCount = registry.QueryNeighbors(ownerPos, maxRange, neighbors);
 
+#if UNITY_EDITOR
+            if (neighborCount >= k_MaxNeighborResults)
+            {
+                Debug.LogWarning(
+                    $"[SensorSystem] QueryNeighbors returned {neighborCount} results (max={k_MaxNeighborResults}). Some targets may be missed.");
+            }
+#endif
+
             for (int i = 0; i < neighborCount; i++)
             {
                 int hash = neighbors[i];
-                if (hash == ownerHash)
+                if (hash != ownerHash)
                 {
-                    continue;
+                    EvaluateCandidate(hash, ownerPos, data, facingDirection);
                 }
+            }
+        }
 
-                if (!data.TryGetValue(hash, out int _))
-                {
-                    continue;
-                }
+        /// <summary>
+        /// Evaluates a single candidate against vision and hearing ranges.
+        /// Uses sqrMagnitude to avoid sqrt where possible.
+        /// </summary>
+        private void EvaluateCandidate(int hash, Vector2 ownerPos,
+            SoACharaDataDic data, Vector2 facingDirection)
+        {
+            if (!data.TryGetValue(hash, out int _))
+            {
+                return;
+            }
 
-                ref CharacterVitals targetVitals = ref data.GetVitals(hash);
-                Vector2 toTarget = targetVitals.position - ownerPos;
-                float distance = toTarget.magnitude;
+            ref CharacterVitals targetVitals = ref data.GetVitals(hash);
+            Vector2 toTarget = targetVitals.position - ownerPos;
+            float sqrDist = toTarget.sqrMagnitude;
 
-                if (IsInVision(distance, toTarget, facingDirection))
-                {
-                    _detectedHashes.Add(hash);
-                    continue;
-                }
+            if (IsInVisionSq(sqrDist, toTarget, facingDirection))
+            {
+                _detectedHashes.Add(hash);
+                return;
+            }
 
-                if (IsInHearingRange(distance))
-                {
-                    _detectedHashes.Add(hash);
-                }
+            if (sqrDist <= _hearingRangeSq)
+            {
+                _detectedHashes.Add(hash);
             }
         }
 
@@ -133,12 +133,21 @@ namespace Game.Core
         /// </summary>
         public bool IsInVision(float distance, Vector2 toTarget, Vector2 facingDirection)
         {
-            if (distance > _visionRange)
+            return IsInVisionSq(distance * distance, toTarget, facingDirection);
+        }
+
+        /// <summary>
+        /// Returns true if a target at the given squared distance and direction is within the vision cone.
+        /// Uses sqrMagnitude to avoid sqrt.
+        /// </summary>
+        private bool IsInVisionSq(float sqrDist, Vector2 toTarget, Vector2 facingDirection)
+        {
+            if (sqrDist > _visionRangeSq)
             {
                 return false;
             }
 
-            if (distance < 0.01f)
+            if (sqrDist < 0.0001f)
             {
                 return true;
             }
