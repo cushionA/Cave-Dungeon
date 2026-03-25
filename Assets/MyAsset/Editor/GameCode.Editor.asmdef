@@ -1,0 +1,20 @@
+{
+    "name": "GameCode.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GameCode",
+        "Game.Core",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

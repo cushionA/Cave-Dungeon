@@ -1,18 +1,18 @@
 {
-    "name": "Game.Core",
-    "rootNamespace": "Game.Core",
+    "name": "ODC.ContainerPack.Runtime",
+    "rootNamespace": "ODC.Runtime",
     "references": [
         "Unity.Collections",
-        "Unity.InputSystem",
-        "UniTask",
-        "R3.Unity",
-        "ODC.ContainerPack.Runtime"
+        "Unity.Burst",
+        "Unity.Mathematics"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": true,
-    "overrideReferences": false,
-    "precompiledReferences": [],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "ToolAttribute.dll"
+    ],
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],
