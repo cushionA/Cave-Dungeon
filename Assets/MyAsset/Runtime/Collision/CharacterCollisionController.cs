@@ -16,11 +16,16 @@ namespace Game.Runtime
         private int _ownerHash;
         private AttackContactType _currentMode;
         private CarryState _carryState;
+        private Transform _carriedTransform;
 
         // 衝突を有効にした相手コライダーのリスト（アクション終了時に復元用）
         private readonly List<Collider2D> _enabledCollisions = new List<Collider2D>(4);
 
-        // 全アクティブなコントローラーの参照（衝突相手検索用）
+        // ハッシュ→コントローラーの辞書（O(1)検索）
+        private static readonly Dictionary<int, CharacterCollisionController> s_controllerMap =
+            new Dictionary<int, CharacterCollisionController>(16);
+
+        // 全コライダーリスト（衝突ペア設定用。Dictionaryのvaluesイテレーションはアロケーションが発生するため分離）
         private static readonly List<CharacterCollisionController> s_allControllers =
             new List<CharacterCollisionController>(16);
 
@@ -36,6 +41,7 @@ namespace Game.Runtime
         private void OnEnable()
         {
             _ownerHash = gameObject.GetInstanceID();
+            s_controllerMap[_ownerHash] = this;
             s_allControllers.Add(this);
         }
 
@@ -43,6 +49,7 @@ namespace Game.Runtime
         {
             RestorePassThrough();
             ReleaseCarry();
+            s_controllerMap.Remove(_ownerHash);
             s_allControllers.Remove(this);
         }
 
@@ -113,6 +120,13 @@ namespace Game.Runtime
             }
 
             _carryState = CarryState.Start(_ownerHash, targetHash);
+
+            // 運搬対象のTransformをキャッシュ（毎フレーム検索回避）
+            if (s_controllerMap.TryGetValue(targetHash, out CharacterCollisionController carried))
+            {
+                _carriedTransform = carried.transform;
+            }
+
             return true;
         }
 
@@ -127,6 +141,7 @@ namespace Game.Runtime
             }
 
             _carryState = CarryState.Release();
+            _carriedTransform = null;
         }
 
         /// <summary>
@@ -145,15 +160,20 @@ namespace Game.Runtime
                 return;
             }
 
-            // 運搬対象の位置をキャリアー位置 + オフセットに同期
-            ref CharacterVitals carriedVitals = ref GameManager.Data.GetVitals(_carryState.CarriedHash);
-            carriedVitals.position = carrierPosition + carryOffset;
+            Vector2 targetPos = carrierPosition + carryOffset;
 
-            // 運搬対象のTransformも探して同期
-            CharacterCollisionController carriedController = FindController(_carryState.CarriedHash);
-            if (carriedController != null)
+            // SoAコンテナの位置同期
+            ref CharacterVitals carriedVitals = ref GameManager.Data.GetVitals(_carryState.CarriedHash);
+            carriedVitals.position = targetPos;
+
+            // キャッシュ済みTransformで同期（検索不要）
+            if (_carriedTransform != null)
             {
-                carriedController.transform.position = (Vector3)(carrierPosition + carryOffset);
+                _carriedTransform.position = new Vector3(targetPos.x, targetPos.y, _carriedTransform.position.z);
+            }
+            else
+            {
+                ReleaseCarry();
             }
         }
 
@@ -169,7 +189,6 @@ namespace Game.Runtime
                     continue;
                 }
 
-                // 衝突を有効化（IgnoreCollision = false）
                 Physics2D.IgnoreCollision(_bodyCollider, other._bodyCollider, false);
                 _enabledCollisions.Add(other._bodyCollider);
             }
@@ -188,25 +207,11 @@ namespace Game.Runtime
             _enabledCollisions.Clear();
         }
 
-        private static CharacterCollisionController FindController(int hash)
-        {
-            for (int i = 0; i < s_allControllers.Count; i++)
-            {
-                if (s_allControllers[i].OwnerHash == hash)
-                {
-                    return s_allControllers[i];
-                }
-            }
-
-            return null;
-        }
-
         /// <summary>
         /// 新しいキャラクターが登場したとき、デフォルトですり抜け設定にする。
         /// </summary>
         private void Start()
         {
-            // 全既存キャラクターとの衝突を無効化（すり抜けがデフォルト）
             for (int i = 0; i < s_allControllers.Count; i++)
             {
                 CharacterCollisionController other = s_allControllers[i];
@@ -226,13 +231,11 @@ namespace Game.Runtime
                 return;
             }
 
-            // Carryモード中に衝突した相手を運搬開始
-            CharacterCollisionController otherController =
-                collision.gameObject.GetComponent<CharacterCollisionController>();
-
-            if (otherController != null)
+            // Collider→hashの逆引きでO(1)検索（GetComponent回避）
+            int otherInstanceId = collision.gameObject.GetInstanceID();
+            if (s_controllerMap.ContainsKey(otherInstanceId))
             {
-                TryStartCarry(otherController.OwnerHash);
+                TryStartCarry(otherInstanceId);
             }
         }
     }
