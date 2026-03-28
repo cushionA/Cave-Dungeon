@@ -20,6 +20,15 @@ namespace Game.Runtime
         private static readonly Dictionary<int, CharacterCollisionController> s_controllerMap =
             new Dictionary<int, CharacterCollisionController>(16);
 
+        /// <summary>
+        /// Enter Play Mode Settings で Domain Reload OFF 時に静的フィールドをリセットする。
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticFields()
+        {
+            s_controllerMap.Clear();
+        }
+
         public int OwnerHash => _ownerHash;
         public CarryState CarryState => _carryState;
         public AttackContactType CurrentMode => _currentMode;
