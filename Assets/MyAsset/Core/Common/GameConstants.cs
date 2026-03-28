@@ -16,5 +16,16 @@ namespace Game.Core
 
         /// <summary>クリティカル倍率の初期値。</summary>
         public const float k_DefaultCriticalMultiplier = 1.5f;
+
+        // --- 物理レイヤー（Architect/08_物理レイヤー定義.md 参照） ---
+
+        /// <summary>キャラクター通常状態（すり抜け）。</summary>
+        public const int k_LayerCharaPassThrough = 12;
+
+        /// <summary>キャラクター衝突状態（物理衝突有効）。</summary>
+        public const int k_LayerCharaCollide = 13;
+
+        /// <summary>キャラクター無敵状態（すり抜け＋ダメージ無効）。</summary>
+        public const int k_LayerCharaInvincible = 14;
     }
 }
