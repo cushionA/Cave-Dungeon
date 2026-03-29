@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace Game.Core
@@ -9,6 +10,8 @@ namespace Game.Core
     /// </summary>
     public class AnimationBridge
     {
+        /// <summary>フェーズ遷移時に発火。Runtime層がクリップ切り替えに使用。</summary>
+        public event Action<AnimationPhase> OnPhaseChanged;
         private readonly Dictionary<string, float> _floats = new Dictionary<string, float>();
         private readonly Dictionary<string, bool> _bools = new Dictionary<string, bool>();
         private readonly Dictionary<string, int> _ints = new Dictionary<string, int>();
@@ -22,6 +25,8 @@ namespace Game.Core
         private float _anticipationDuration;
         private float _activeDuration;
         private float _recoveryDuration;
+
+        private const float k_FixedDeltaTime = 0.02f; // 50fps想定のフレーム時間
 
         public AnimationStateData CurrentState => _currentState;
         public bool IsDirty => _isDirty;
@@ -108,6 +113,15 @@ namespace Game.Core
         /// 未消費のトリガー名を列挙する。
         /// </summary>
         public IReadOnlyCollection<string> PendingTriggers => _triggers;
+
+        /// <summary>
+        /// 全トリガーを消費済みとしてクリアする。
+        /// Runtime層がAnimatorにSetTriggerした後に呼ぶ。
+        /// </summary>
+        public void ConsumeAllTriggers()
+        {
+            _triggers.Clear();
+        }
 
         // ─── アクションフェーズ管理 ───
 
@@ -201,6 +215,39 @@ namespace Game.Core
                         break;
                 }
             }
+
+            // framesUntilActionable: 全残りフェーズ時間からフレーム数を算出
+            UpdateFramesUntilActionable();
+        }
+
+        private void UpdateFramesUntilActionable()
+        {
+            if (_currentState.currentPhase == AnimationPhase.Neutral)
+            {
+                _currentState.framesUntilActionable = 0;
+                return;
+            }
+
+            float remainingTime = 0f;
+            switch (_currentState.currentPhase)
+            {
+                case AnimationPhase.Anticipation:
+                    remainingTime = (_anticipationDuration - _phaseElapsed) + _activeDuration + _recoveryDuration;
+                    break;
+                case AnimationPhase.Active:
+                    remainingTime = (_activeDuration > 0f ? _activeDuration - _phaseElapsed : 0f) + _recoveryDuration;
+                    break;
+                case AnimationPhase.Recovery:
+                    remainingTime = _recoveryDuration > 0f ? _recoveryDuration - _phaseElapsed : 0f;
+                    break;
+            }
+
+            if (remainingTime < 0f)
+            {
+                remainingTime = 0f;
+            }
+
+            _currentState.framesUntilActionable = (short)(remainingTime / k_FixedDeltaTime);
         }
 
         /// <summary>
@@ -217,6 +264,7 @@ namespace Game.Core
             _currentState.isCancelable = false;
             _currentState.normalizedTime = 0f;
             _isDirty = true;
+            OnPhaseChanged?.Invoke(AnimationPhase.Active);
         }
 
         private void TransitionToRecovery()
@@ -225,6 +273,7 @@ namespace Game.Core
             _currentState.isCancelable = false;
             _currentState.normalizedTime = 0f;
             _isDirty = true;
+            OnPhaseChanged?.Invoke(AnimationPhase.Recovery);
         }
 
         private void TransitionToNeutral()
@@ -237,6 +286,7 @@ namespace Game.Core
             _currentState.framesUntilActionable = 0;
             _phaseElapsed = 0f;
             _isDirty = true;
+            OnPhaseChanged?.Invoke(AnimationPhase.Neutral);
         }
     }
 }

@@ -161,7 +161,7 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
-        public void AnimationBridge_大きなdeltaTime_フェーズをスキップせず順序通り遷移()
+        public void AnimationBridge_大きなdeltaTime_全フェーズを連鎖通過してNeutralに到達()
         {
             MotionInfo motion = new MotionInfo
             {
@@ -174,9 +174,9 @@ namespace Game.Tests.EditMode
             // 1回のTickで全フェーズを超える時間を渡す
             _bridge.TickPhase(10.0f);
 
-            // 1回のTickではAnticipation→Activeの1遷移のみ
-            // フェーズは1Tickにつき1遷移が限度
-            Assert.AreNotEqual(AnimationPhase.Anticipation, _bridge.CurrentState.currentPhase);
+            // overflowを伝搬するループにより、1回のTickで全フェーズを通過しNeutralに到達
+            Assert.AreEqual(AnimationPhase.Neutral, _bridge.CurrentState.currentPhase);
+            Assert.AreEqual(0, _bridge.CurrentState.currentMoveId);
         }
     }
 }

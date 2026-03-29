@@ -266,5 +266,73 @@ namespace Game.Tests.EditMode
 
             Assert.IsFalse(_bridge.CurrentState.isCancelable);
         }
+
+        // ─── ConsumeAllTriggers ───
+
+        [Test]
+        public void ConsumeAllTriggers_全トリガーがクリアされる()
+        {
+            _bridge.SetTrigger("Attack");
+            _bridge.SetTrigger("Jump");
+            _bridge.ConsumeAllTriggers();
+
+            Assert.IsFalse(_bridge.ConsumeTrigger("Attack"));
+            Assert.IsFalse(_bridge.ConsumeTrigger("Jump"));
+            Assert.AreEqual(0, _bridge.PendingTriggers.Count);
+        }
+
+        // ─── framesUntilActionable ───
+
+        [Test]
+        public void TickPhase_Anticipation中_framesUntilActionableが正しく計算される()
+        {
+            MotionInfo motion = new MotionInfo
+            {
+                preMotionDuration = 0.5f,
+                activeMotionDuration = 0.3f,
+                recoveryDuration = 0.2f
+            };
+
+            _bridge.StartActionPhase(motion, 1);
+            _bridge.TickPhase(0.0f); // 計算のみ実行
+
+            // 残り = 0.5 + 0.3 + 0.2 = 1.0秒 → 1.0 / 0.02 = 50フレーム
+            Assert.AreEqual(50, _bridge.CurrentState.framesUntilActionable);
+        }
+
+        [Test]
+        public void TickPhase_Neutral時_framesUntilActionableが0()
+        {
+            _bridge.TickPhase(0.1f);
+
+            Assert.AreEqual(0, _bridge.CurrentState.framesUntilActionable);
+        }
+
+        // ─── OnPhaseChanged イベント ───
+
+        [Test]
+        public void TickPhase_フェーズ遷移時_OnPhaseChangedが発火する()
+        {
+            AnimationPhase receivedPhase = AnimationPhase.Neutral;
+            int callCount = 0;
+            _bridge.OnPhaseChanged += (phase) =>
+            {
+                receivedPhase = phase;
+                callCount++;
+            };
+
+            MotionInfo motion = new MotionInfo
+            {
+                preMotionDuration = 0.1f,
+                activeMotionDuration = 0.3f,
+                recoveryDuration = 0.2f
+            };
+
+            _bridge.StartActionPhase(motion, 1);
+            _bridge.TickPhase(0.15f); // Anticipation → Active
+
+            Assert.AreEqual(AnimationPhase.Active, receivedPhase);
+            Assert.AreEqual(1, callCount);
+        }
     }
 }

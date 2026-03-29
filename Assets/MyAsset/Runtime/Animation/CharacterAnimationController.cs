@@ -11,10 +11,15 @@ namespace Game.Runtime
     [RequireComponent(typeof(Animator))]
     public class CharacterAnimationController : MonoBehaviour
     {
+        private const float k_CrossFadeDuration = 0.1f;
+
         private Animator _animator;
         private AnimationBridge _bridge;
         private int _ownerHash;
         private bool _isInitialized;
+
+        // 現在のアクションで使うクリップを保持
+        private MotionInfo _currentMotion;
 
         public AnimationBridge Bridge => _bridge;
 
@@ -22,6 +27,16 @@ namespace Game.Runtime
         {
             _animator = GetComponent<Animator>();
             _bridge = new AnimationBridge();
+        }
+
+        private void OnEnable()
+        {
+            _bridge.OnPhaseChanged += HandlePhaseChanged;
+        }
+
+        private void OnDisable()
+        {
+            _bridge.OnPhaseChanged -= HandlePhaseChanged;
         }
 
         /// <summary>
@@ -38,12 +53,18 @@ namespace Game.Runtime
         /// </summary>
         public void StartActionPhase(MotionInfo motion, byte moveId)
         {
+            _currentMotion = motion;
             _bridge.StartActionPhase(motion, moveId);
 
             // 予備動作クリップが設定されていればCrossFade
-            if (motion.preMotionClip != null)
+            if (motion.preMotionDuration > 0f && motion.preMotionClip != null)
             {
-                _animator.CrossFade(motion.preMotionClip.name, 0.1f);
+                _animator.CrossFade(motion.preMotionClip.name, k_CrossFadeDuration);
+            }
+            else if (motion.activeClip != null)
+            {
+                // preMotionDuration=0の場合はActiveクリップを直接再生
+                _animator.CrossFade(motion.activeClip.name, k_CrossFadeDuration);
             }
         }
 
@@ -97,6 +118,26 @@ namespace Game.Runtime
             foreach (string trigger in _bridge.PendingTriggers)
             {
                 _animator.SetTrigger(trigger);
+            }
+            _bridge.ConsumeAllTriggers();
+        }
+
+        private void HandlePhaseChanged(Game.Core.AnimationPhase newPhase)
+        {
+            switch (newPhase)
+            {
+                case Game.Core.AnimationPhase.Active:
+                    if (_currentMotion.activeClip != null)
+                    {
+                        _animator.CrossFade(_currentMotion.activeClip.name, k_CrossFadeDuration);
+                    }
+                    break;
+                case Game.Core.AnimationPhase.Recovery:
+                    if (_currentMotion.recoveryClip != null)
+                    {
+                        _animator.CrossFade(_currentMotion.recoveryClip.name, k_CrossFadeDuration);
+                    }
+                    break;
             }
         }
 
