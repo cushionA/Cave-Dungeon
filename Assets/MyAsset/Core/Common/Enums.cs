@@ -571,4 +571,20 @@ namespace Game.Core
         Defensive,
         Custom,
     }
+
+    /// <summary>
+    /// アニメーションフェーズ。MotionInfoの時間軸と連動。
+    /// AI判定でAction Maskingとframe advantage計算に使用。
+    /// </summary>
+    public enum AnimationPhase : byte
+    {
+        /// <summary>ニュートラル — 全行動が選択可能</summary>
+        Neutral,
+        /// <summary>予備動作 — MotionInfo.preMotionDuration に対応</summary>
+        Anticipation,
+        /// <summary>アクティブ — 攻撃判定中。MotionInfo.activeMotionDuration に対応</summary>
+        Active,
+        /// <summary>硬直 — 行動後の隙。MotionInfo.recoveryDuration に対応</summary>
+        Recovery,
+    }
 }

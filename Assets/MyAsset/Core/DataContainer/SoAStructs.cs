@@ -179,4 +179,24 @@ namespace Game.Core
         public StatusEffectId activeSlot2;
         public float remainTime2;
     }
+
+    /// <summary>
+    /// アニメーション状態。AI判定でAction Maskingとframe advantage計算に使用。
+    /// BaseCharacterのアニメーションコントローラから毎フレーム更新される。
+    /// </summary>
+    public struct AnimationStateData
+    {
+        /// <summary>現在のアニメーションフェーズ</summary>
+        public AnimationPhase currentPhase;
+        /// <summary>フェーズ内の正規化時間（0.0〜1.0）</summary>
+        public float normalizedTime;
+        /// <summary>アクション可能になるまでのフレーム数</summary>
+        public short framesUntilActionable;
+        /// <summary>攻撃モーションID（0 = 攻撃中でない）</summary>
+        public byte currentMoveId;
+        /// <summary>キャンセル可能か</summary>
+        public bool isCancelable;
+        /// <summary>キャンセル不能な攻撃フェーズか</summary>
+        public bool isCommitted;
+    }
 }

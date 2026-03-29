@@ -24,6 +24,7 @@ namespace Game.Core
         private MoveParams[] _moveParams;
         private EquipmentStatus[] _equipmentStatus;
         private CharacterStatusEffects[] _statusEffects;
+        private AnimationStateData[] _animationStates;
 
         private int _count;
         private int _capacity;
@@ -54,6 +55,7 @@ namespace Game.Core
             _moveParams = new MoveParams[_capacity];
             _equipmentStatus = new EquipmentStatus[_capacity];
             _statusEffects = new CharacterStatusEffects[_capacity];
+            _animationStates = new AnimationStateData[_capacity];
         }
 
         /// <summary>
@@ -61,7 +63,8 @@ namespace Game.Core
         /// </summary>
         public int Add(int hash, CharacterVitals vitals, CombatStats combatStats,
             CharacterFlags flags, MoveParams moveParams,
-            EquipmentStatus equipmentStatus = default, CharacterStatusEffects statusEffects = default)
+            EquipmentStatus equipmentStatus = default, CharacterStatusEffects statusEffects = default,
+            AnimationStateData animationState = default)
         {
             ThrowIfDisposed();
 
@@ -84,6 +87,7 @@ namespace Game.Core
             _moveParams[index] = moveParams;
             _equipmentStatus[index] = equipmentStatus;
             _statusEffects[index] = statusEffects;
+            _animationStates[index] = animationState;
 
             _count++;
             return index;
@@ -116,6 +120,7 @@ namespace Game.Core
                 _moveParams[removeIndex] = _moveParams[lastIndex];
                 _equipmentStatus[removeIndex] = _equipmentStatus[lastIndex];
                 _statusEffects[removeIndex] = _statusEffects[lastIndex];
+                _animationStates[removeIndex] = _animationStates[lastIndex];
 
                 // Update the moved element's hash mapping
                 _hashToIndex[lastHash] = removeIndex;
@@ -129,6 +134,7 @@ namespace Game.Core
             _moveParams[lastIndex] = default;
             _equipmentStatus[lastIndex] = default;
             _statusEffects[lastIndex] = default;
+            _animationStates[lastIndex] = default;
 
             _hashToIndex.Remove(hash);
             _count--;
@@ -195,6 +201,16 @@ namespace Game.Core
         }
 
         /// <summary>
+        /// Returns a reference to the AnimationStateData for the given hash.
+        /// </summary>
+        public ref AnimationStateData GetAnimationState(int hash)
+        {
+            ThrowIfDisposed();
+            int index = ResolveIndex(hash);
+            return ref _animationStates[index];
+        }
+
+        /// <summary>
         /// Tries to get the dense index for the given hash.
         /// Returns true if found.
         /// </summary>
@@ -220,6 +236,7 @@ namespace Game.Core
             _moveParams = null;
             _equipmentStatus = null;
             _statusEffects = null;
+            _animationStates = null;
             _count = 0;
             _capacity = 0;
             _disposed = true;
@@ -245,6 +262,7 @@ namespace Game.Core
             MoveParams[] newMoveParams = new MoveParams[newCapacity];
             EquipmentStatus[] newEquipmentStatus = new EquipmentStatus[newCapacity];
             CharacterStatusEffects[] newStatusEffects = new CharacterStatusEffects[newCapacity];
+            AnimationStateData[] newAnimationStates = new AnimationStateData[newCapacity];
 
             Array.Copy(_indexToHash, newIndexToHash, _count);
             Array.Copy(_vitals, newVitals, _count);
@@ -253,6 +271,7 @@ namespace Game.Core
             Array.Copy(_moveParams, newMoveParams, _count);
             Array.Copy(_equipmentStatus, newEquipmentStatus, _count);
             Array.Copy(_statusEffects, newStatusEffects, _count);
+            Array.Copy(_animationStates, newAnimationStates, _count);
 
             _indexToHash = newIndexToHash;
             _vitals = newVitals;
@@ -261,6 +280,7 @@ namespace Game.Core
             _moveParams = newMoveParams;
             _equipmentStatus = newEquipmentStatus;
             _statusEffects = newStatusEffects;
+            _animationStates = newAnimationStates;
             _capacity = newCapacity;
         }
 
