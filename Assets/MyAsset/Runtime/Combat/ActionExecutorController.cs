@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using Game.Core;
 
@@ -10,6 +11,8 @@ namespace Game.Runtime
     /// </summary>
     public class ActionExecutorController : MonoBehaviour
     {
+        private const int k_DefaultMaxHitCount = 1;
+
         [SerializeField] private AttackInfo[] _attackInfos;
 
         private BaseCharacter _character;
@@ -21,14 +24,12 @@ namespace Game.Runtime
         private ActionExecutor _executor;
         private ActionPhaseCoordinator _phaseCoordinator;
 
-        // Runtime ハンドラ（ForceComplete可能）
-        private RuntimeAttackHandler _attackHandler;
-        private RuntimeCastHandler _castHandler;
-        private RuntimeSustainedHandler _sustainedHandler;
-
         // 現在実行中の行動データ
         private AttackInfo _currentAttackInfo;
         private ActionSlot _currentSlot;
+
+        // Bridge参照キャッシュ（OnEnable/OnDisable間で安定させる）
+        private AnimationBridge _cachedBridge;
 
         public ActionExecutor Executor => _executor;
         public bool IsExecuting => _executor != null && _executor.IsExecuting;
@@ -56,16 +57,18 @@ namespace Game.Runtime
         {
             if (_animController != null && _animController.Bridge != null)
             {
-                _animController.Bridge.OnPhaseChanged += HandlePhaseChanged;
+                _cachedBridge = _animController.Bridge;
+                _cachedBridge.OnPhaseChanged += HandlePhaseChanged;
             }
             _executor.OnActionCompleted += HandleActionCompleted;
         }
 
         private void OnDisable()
         {
-            if (_animController != null && _animController.Bridge != null)
+            if (_cachedBridge != null)
             {
-                _animController.Bridge.OnPhaseChanged -= HandlePhaseChanged;
+                _cachedBridge.OnPhaseChanged -= HandlePhaseChanged;
+                _cachedBridge = null;
             }
             _executor.OnActionCompleted -= HandleActionCompleted;
         }
@@ -74,7 +77,6 @@ namespace Game.Runtime
         {
             _executor.Tick(Time.deltaTime);
 
-            // アニメーションフェーズがNeutralに到達したら行動を完了
             if (_phaseCoordinator.ShouldCompleteAction)
             {
                 CompleteCurrentAction();
@@ -94,7 +96,6 @@ namespace Game.Runtime
 
             int ownerHash = _character.ObjectHash;
 
-            // コスト検証（Attack / Cast の場合）
             if (slot.execType == ActionExecType.Attack || slot.execType == ActionExecType.Cast)
             {
                 AttackInfo info = ResolveAttackInfo(slot.paramId);
@@ -111,14 +112,12 @@ namespace Game.Runtime
                 _currentAttackInfo = info;
                 _currentSlot = slot;
 
-                // ActionEffect を DamageReceiver に設定
                 if (_damageReceiver != null && info.motionInfo.actionEffects != null
                     && info.motionInfo.actionEffects.Length > 0)
                 {
                     _damageReceiver.SetActionEffects(info.motionInfo.actionEffects);
                 }
 
-                // アニメーション開始
                 if (_animController != null)
                 {
                     _animController.StartActionPhase(info.motionInfo, (byte)slot.paramId);
@@ -132,7 +131,6 @@ namespace Game.Runtime
                 _currentSlot = slot;
             }
 
-            // Core ActionExecutor で行動実行
             return _executor.Execute(ownerHash, targetHash, slot);
         }
 
@@ -146,9 +144,6 @@ namespace Game.Runtime
             ClearActionState();
         }
 
-        /// <summary>
-        /// AttackInfo配列からparamIdで行動データを解決する。
-        /// </summary>
         private AttackInfo ResolveAttackInfo(int paramId)
         {
             if (_attackInfos == null || paramId < 0 || paramId >= _attackInfos.Length)
@@ -182,14 +177,10 @@ namespace Game.Runtime
 
         private void RegisterHandlers()
         {
-            _attackHandler = new RuntimeAttackHandler();
-            _castHandler = new RuntimeCastHandler();
-            _sustainedHandler = new RuntimeSustainedHandler();
-
-            _executor.Register(_attackHandler);
-            _executor.Register(_castHandler);
+            _executor.Register(new AttackActionHandler());
+            _executor.Register(new CastActionHandler());
             _executor.Register(new InstantActionHandler());
-            _executor.Register(_sustainedHandler);
+            _executor.Register(new SustainedActionHandler());
             _executor.Register(new BroadcastActionHandler());
         }
 
@@ -222,16 +213,21 @@ namespace Game.Runtime
                 actionName = _currentAttackInfo.attackName,
                 motionValue = _currentAttackInfo.damageMultiplier,
                 attackElement = _currentAttackInfo.attackElement,
+                feature = _currentAttackInfo.feature,
                 knockbackForce = _currentAttackInfo.knockbackInfo.hasKnockback
                     ? _currentAttackInfo.knockbackInfo.force
                     : Vector2.zero,
                 armorBreakValue = _currentAttackInfo.armorBreakValue,
-                maxHitCount = 1,
+                maxHitCount = k_DefaultMaxHitCount,
                 staminaCost = _currentAttackInfo.staminaCost,
                 mpCost = _currentAttackInfo.mpCost,
                 statusEffect = _currentAttackInfo.statusEffectInfo,
                 attackMoveDistance = _currentAttackInfo.attackMoveDistance,
-                attackMoveDuration = _currentAttackInfo.attackMoveDuration
+                attackMoveDuration = _currentAttackInfo.attackMoveDuration,
+                contactType = _currentAttackInfo.contactType,
+                isAutoChain = _currentAttackInfo.isAutoChain,
+                isChainEndPoint = _currentAttackInfo.isChainEndPoint,
+                inputWindow = _currentAttackInfo.inputWindow
             };
 
             if (_hitBox != null)
@@ -256,19 +252,29 @@ namespace Game.Runtime
             }
         }
 
+        /// <summary>
+        /// アニメーションフェーズ完了で呼ばれる。
+        /// HandleActionCompleted との二重呼び出しを避けるため、一時的にイベント購読を外す。
+        /// </summary>
         private void CompleteCurrentAction()
         {
-            // フェーズ完了によりCore ActionBase を完了させる
-            if (_currentSlot.execType == ActionExecType.Attack && _attackHandler.IsExecuting)
+            if (_currentAttackInfo == null)
             {
-                _attackHandler.ForceComplete();
-            }
-            else if (_currentSlot.execType == ActionExecType.Cast && _castHandler.IsExecuting)
-            {
-                _castHandler.ForceComplete();
+                return;
             }
 
+            _executor.OnActionCompleted -= HandleActionCompleted;
+
+            ActionBase current = _executor.CurrentAction;
+            if (current != null && current.IsExecuting)
+            {
+                current.ForceComplete();
+            }
+
+            DeactivateHitbox();
             ClearActionState();
+
+            _executor.OnActionCompleted += HandleActionCompleted;
         }
 
         private void HandleActionCompleted()

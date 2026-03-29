@@ -13,7 +13,7 @@ namespace Game.Tests.EditMode
         private ActionExecutor _executor;
         private AnimationBridge _bridge;
         private ActionPhaseCoordinator _coordinator;
-        private RuntimeAttackHandler _attackHandler;
+        private AttackActionHandler _attackHandler;
 
         [SetUp]
         public void SetUp()
@@ -21,10 +21,10 @@ namespace Game.Tests.EditMode
             _executor = new ActionExecutor();
             _bridge = new AnimationBridge();
             _coordinator = new ActionPhaseCoordinator();
-            _attackHandler = new RuntimeAttackHandler();
+            _attackHandler = new AttackActionHandler();
             _executor.Register(_attackHandler);
             _executor.Register(new InstantActionHandler());
-            _executor.Register(new RuntimeSustainedHandler());
+            _executor.Register(new SustainedActionHandler());
         }
 
         // ─── フェーズ連携 ───
@@ -210,7 +210,7 @@ namespace Game.Tests.EditMode
         [Test]
         public void SustainedAction_Tick完了でOnActionCompletedが発火する()
         {
-            RuntimeSustainedHandler sustained = new RuntimeSustainedHandler();
+            SustainedActionHandler sustained = new SustainedActionHandler();
             _executor.Register(sustained); // 上書き登録
 
             bool completed = false;

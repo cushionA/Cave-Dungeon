@@ -41,6 +41,18 @@ namespace Game.Core
             OnCompleted?.Invoke();
         }
 
+        /// <summary>
+        /// 外部から行動を完了させる。
+        /// ActionExecutorControllerがアニメーションフェーズ完了時に使用する。
+        /// </summary>
+        public void ForceComplete()
+        {
+            if (_isExecuting)
+            {
+                Complete();
+            }
+        }
+
         /// <summary>派生クラスで実行処理を実装する</summary>
         protected abstract void OnExecute(int ownerHash, int targetHash, ActionSlot slot);
 

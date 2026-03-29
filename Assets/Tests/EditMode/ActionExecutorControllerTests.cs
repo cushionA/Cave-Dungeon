@@ -5,17 +5,17 @@ namespace Game.Tests.EditMode
 {
     /// <summary>
     /// ActionExecutorController の純ロジック部分のテスト。
-    /// RuntimeActionHandler と ActionPhaseCoordinator を検証する。
+    /// ActionBase.ForceComplete と ActionPhaseCoordinator を検証する。
     /// </summary>
     [TestFixture]
     public class ActionExecutorControllerTests
     {
-        // ─── RuntimeAttackHandler ───
+        // ─── ActionBase.ForceComplete ───
 
         [Test]
-        public void RuntimeAttackHandler_ForceComplete_行動が完了しOnCompletedが発火する()
+        public void ActionBase_ForceComplete_行動が完了しOnCompletedが発火する()
         {
-            RuntimeAttackHandler handler = new RuntimeAttackHandler();
+            AttackActionHandler handler = new AttackActionHandler();
             bool completed = false;
             handler.OnCompleted += () => completed = true;
 
@@ -28,9 +28,9 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
-        public void RuntimeCastHandler_ForceComplete_行動が完了する()
+        public void ActionBase_ForceComplete_CastHandler_行動が完了する()
         {
-            RuntimeCastHandler handler = new RuntimeCastHandler();
+            CastActionHandler handler = new CastActionHandler();
             bool completed = false;
             handler.OnCompleted += () => completed = true;
 
@@ -42,9 +42,9 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
-        public void RuntimeSustainedHandler_ForceComplete_行動が完了する()
+        public void ActionBase_ForceComplete_SustainedHandler_行動が完了する()
         {
-            RuntimeSustainedHandler handler = new RuntimeSustainedHandler();
+            SustainedActionHandler handler = new SustainedActionHandler();
             bool completed = false;
             handler.OnCompleted += () => completed = true;
 
@@ -52,7 +52,7 @@ namespace Game.Tests.EditMode
             {
                 execType = ActionExecType.Sustained,
                 paramId = 0,
-                paramValue = 0f // 無期限
+                paramValue = 0f
             });
             handler.ForceComplete();
 
@@ -60,13 +60,25 @@ namespace Game.Tests.EditMode
             Assert.IsTrue(completed);
         }
 
-        // ─── ActionExecutor + RuntimeHandler 統合 ───
+        [Test]
+        public void ActionBase_ForceComplete_実行中でない場合_何もしない()
+        {
+            AttackActionHandler handler = new AttackActionHandler();
+            bool completed = false;
+            handler.OnCompleted += () => completed = true;
+
+            handler.ForceComplete();
+
+            Assert.IsFalse(completed);
+        }
+
+        // ─── ActionExecutor + ForceComplete 統合 ───
 
         [Test]
-        public void ActionExecutor_RuntimeAttackHandler_ForceCompleteでOnActionCompletedが発火()
+        public void ActionExecutor_ForceCompleteでOnActionCompletedが発火()
         {
             ActionExecutor executor = new ActionExecutor();
-            RuntimeAttackHandler handler = new RuntimeAttackHandler();
+            AttackActionHandler handler = new AttackActionHandler();
             executor.Register(handler);
 
             bool completed = false;
