@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace Game.Core
 {
     /// <summary>
@@ -6,6 +8,37 @@ namespace Game.Core
     /// </summary>
     public static class CombatDataHelper
     {
+        private const int k_DefaultMaxHitCount = 1;
+
+        /// <summary>
+        /// AttackInfoからAttackMotionDataを構築する。
+        /// ActionExecutorController等、AttackInfoベースで攻撃を駆動する箇所で使用。
+        /// </summary>
+        public static AttackMotionData BuildMotionData(AttackInfo info, int maxHitCount = k_DefaultMaxHitCount)
+        {
+            return new AttackMotionData
+            {
+                actionName = info.attackName,
+                motionValue = info.damageMultiplier,
+                attackElement = info.attackElement,
+                feature = info.feature,
+                knockbackForce = info.knockbackInfo.hasKnockback
+                    ? info.knockbackInfo.force
+                    : Vector2.zero,
+                armorBreakValue = info.armorBreakValue,
+                maxHitCount = maxHitCount,
+                staminaCost = info.staminaCost,
+                mpCost = info.mpCost,
+                statusEffect = info.statusEffectInfo,
+                attackMoveDistance = info.attackMoveDistance,
+                attackMoveDuration = info.attackMoveDuration,
+                contactType = info.contactType,
+                isAutoChain = info.isAutoChain,
+                isChainEndPoint = info.isChainEndPoint,
+                inputWindow = info.inputWindow
+            };
+        }
+
         /// <summary>
         /// 指定ハッシュのキャラクターの攻撃ステータスを取得する。
         /// キャラクターが存在しない場合はdefaultを返す。

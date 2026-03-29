@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 using Game.Core;
 
@@ -11,8 +10,6 @@ namespace Game.Runtime
     /// </summary>
     public class ActionExecutorController : MonoBehaviour
     {
-        private const int k_DefaultMaxHitCount = 1;
-
         [SerializeField] private AttackInfo[] _attackInfos;
 
         private BaseCharacter _character;
@@ -26,7 +23,6 @@ namespace Game.Runtime
 
         // 現在実行中の行動データ
         private AttackInfo _currentAttackInfo;
-        private ActionSlot _currentSlot;
 
         // Bridge参照キャッシュ（OnEnable/OnDisable間で安定させる）
         private AnimationBridge _cachedBridge;
@@ -110,7 +106,6 @@ namespace Game.Runtime
                 }
 
                 _currentAttackInfo = info;
-                _currentSlot = slot;
 
                 if (_damageReceiver != null && info.motionInfo.actionEffects != null
                     && info.motionInfo.actionEffects.Length > 0)
@@ -128,7 +123,6 @@ namespace Game.Runtime
             else
             {
                 _currentAttackInfo = null;
-                _currentSlot = slot;
             }
 
             return _executor.Execute(ownerHash, targetHash, slot);
@@ -208,27 +202,7 @@ namespace Game.Runtime
 
             int ownerHash = _character.ObjectHash;
 
-            AttackMotionData motionData = new AttackMotionData
-            {
-                actionName = _currentAttackInfo.attackName,
-                motionValue = _currentAttackInfo.damageMultiplier,
-                attackElement = _currentAttackInfo.attackElement,
-                feature = _currentAttackInfo.feature,
-                knockbackForce = _currentAttackInfo.knockbackInfo.hasKnockback
-                    ? _currentAttackInfo.knockbackInfo.force
-                    : Vector2.zero,
-                armorBreakValue = _currentAttackInfo.armorBreakValue,
-                maxHitCount = k_DefaultMaxHitCount,
-                staminaCost = _currentAttackInfo.staminaCost,
-                mpCost = _currentAttackInfo.mpCost,
-                statusEffect = _currentAttackInfo.statusEffectInfo,
-                attackMoveDistance = _currentAttackInfo.attackMoveDistance,
-                attackMoveDuration = _currentAttackInfo.attackMoveDuration,
-                contactType = _currentAttackInfo.contactType,
-                isAutoChain = _currentAttackInfo.isAutoChain,
-                isChainEndPoint = _currentAttackInfo.isChainEndPoint,
-                inputWindow = _currentAttackInfo.inputWindow
-            };
+            AttackMotionData motionData = CombatDataHelper.BuildMotionData(_currentAttackInfo);
 
             if (_hitBox != null)
             {
@@ -265,16 +239,21 @@ namespace Game.Runtime
 
             _executor.OnActionCompleted -= HandleActionCompleted;
 
-            ActionBase current = _executor.CurrentAction;
-            if (current != null && current.IsExecuting)
+            try
             {
-                current.ForceComplete();
+                ActionBase current = _executor.CurrentAction;
+                if (current != null && current.IsExecuting)
+                {
+                    current.ForceComplete();
+                }
+
+                DeactivateHitbox();
+                ClearActionState();
             }
-
-            DeactivateHitbox();
-            ClearActionState();
-
-            _executor.OnActionCompleted += HandleActionCompleted;
+            finally
+            {
+                _executor.OnActionCompleted += HandleActionCompleted;
+            }
         }
 
         private void HandleActionCompleted()
