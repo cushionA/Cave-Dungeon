@@ -1,0 +1,203 @@
+using NUnit.Framework;
+using Game.Core;
+
+namespace Game.Tests.EditMode
+{
+    /// <summary>
+    /// ActionExecutorController の純ロジック部分のテスト。
+    /// RuntimeActionHandler と ActionPhaseCoordinator を検証する。
+    /// </summary>
+    [TestFixture]
+    public class ActionExecutorControllerTests
+    {
+        // ─── RuntimeAttackHandler ───
+
+        [Test]
+        public void RuntimeAttackHandler_ForceComplete_行動が完了しOnCompletedが発火する()
+        {
+            RuntimeAttackHandler handler = new RuntimeAttackHandler();
+            bool completed = false;
+            handler.OnCompleted += () => completed = true;
+
+            handler.Execute(1, 2, new ActionSlot { execType = ActionExecType.Attack, paramId = 0 });
+            Assert.IsTrue(handler.IsExecuting);
+
+            handler.ForceComplete();
+            Assert.IsFalse(handler.IsExecuting);
+            Assert.IsTrue(completed);
+        }
+
+        [Test]
+        public void RuntimeCastHandler_ForceComplete_行動が完了する()
+        {
+            RuntimeCastHandler handler = new RuntimeCastHandler();
+            bool completed = false;
+            handler.OnCompleted += () => completed = true;
+
+            handler.Execute(1, 2, new ActionSlot { execType = ActionExecType.Cast, paramId = 0 });
+            handler.ForceComplete();
+
+            Assert.IsFalse(handler.IsExecuting);
+            Assert.IsTrue(completed);
+        }
+
+        [Test]
+        public void RuntimeSustainedHandler_ForceComplete_行動が完了する()
+        {
+            RuntimeSustainedHandler handler = new RuntimeSustainedHandler();
+            bool completed = false;
+            handler.OnCompleted += () => completed = true;
+
+            handler.Execute(1, 2, new ActionSlot
+            {
+                execType = ActionExecType.Sustained,
+                paramId = 0,
+                paramValue = 0f // 無期限
+            });
+            handler.ForceComplete();
+
+            Assert.IsFalse(handler.IsExecuting);
+            Assert.IsTrue(completed);
+        }
+
+        // ─── ActionExecutor + RuntimeHandler 統合 ───
+
+        [Test]
+        public void ActionExecutor_RuntimeAttackHandler_ForceCompleteでOnActionCompletedが発火()
+        {
+            ActionExecutor executor = new ActionExecutor();
+            RuntimeAttackHandler handler = new RuntimeAttackHandler();
+            executor.Register(handler);
+
+            bool completed = false;
+            executor.OnActionCompleted += () => completed = true;
+
+            executor.Execute(1, 2, new ActionSlot { execType = ActionExecType.Attack, paramId = 0 });
+            Assert.IsTrue(executor.IsExecuting);
+
+            handler.ForceComplete();
+            Assert.IsFalse(executor.IsExecuting);
+            Assert.IsTrue(completed);
+        }
+
+        // ─── ActionPhaseCoordinator ───
+
+        [Test]
+        public void ActionPhaseCoordinator_Activeフェーズ_ActivateHitboxを返す()
+        {
+            ActionPhaseCoordinator coordinator = new ActionPhaseCoordinator();
+            coordinator.BeginAction();
+
+            ActionPhaseCoordinator.HitboxCommand cmd = coordinator.OnPhaseChanged(AnimationPhase.Active);
+            Assert.AreEqual(ActionPhaseCoordinator.HitboxCommand.Activate, cmd);
+        }
+
+        [Test]
+        public void ActionPhaseCoordinator_Recoveryフェーズ_DeactivateHitboxを返す()
+        {
+            ActionPhaseCoordinator coordinator = new ActionPhaseCoordinator();
+            coordinator.BeginAction();
+
+            ActionPhaseCoordinator.HitboxCommand cmd = coordinator.OnPhaseChanged(AnimationPhase.Recovery);
+            Assert.AreEqual(ActionPhaseCoordinator.HitboxCommand.Deactivate, cmd);
+        }
+
+        [Test]
+        public void ActionPhaseCoordinator_Neutralフェーズ_DeactivateHitboxを返す()
+        {
+            ActionPhaseCoordinator coordinator = new ActionPhaseCoordinator();
+            coordinator.BeginAction();
+
+            ActionPhaseCoordinator.HitboxCommand cmd = coordinator.OnPhaseChanged(AnimationPhase.Neutral);
+            Assert.AreEqual(ActionPhaseCoordinator.HitboxCommand.Deactivate, cmd);
+        }
+
+        [Test]
+        public void ActionPhaseCoordinator_行動中でない場合_Noneを返す()
+        {
+            ActionPhaseCoordinator coordinator = new ActionPhaseCoordinator();
+
+            ActionPhaseCoordinator.HitboxCommand cmd = coordinator.OnPhaseChanged(AnimationPhase.Active);
+            Assert.AreEqual(ActionPhaseCoordinator.HitboxCommand.None, cmd);
+        }
+
+        [Test]
+        public void ActionPhaseCoordinator_NeutralでShouldCompleteActionがtrueになる()
+        {
+            ActionPhaseCoordinator coordinator = new ActionPhaseCoordinator();
+            coordinator.BeginAction();
+
+            ActionPhaseCoordinator.HitboxCommand cmd = coordinator.OnPhaseChanged(AnimationPhase.Neutral);
+            Assert.IsTrue(coordinator.ShouldCompleteAction);
+        }
+
+        [Test]
+        public void ActionPhaseCoordinator_EndAction後_行動中でなくなる()
+        {
+            ActionPhaseCoordinator coordinator = new ActionPhaseCoordinator();
+            coordinator.BeginAction();
+            coordinator.EndAction();
+
+            Assert.IsFalse(coordinator.IsActionInProgress);
+        }
+
+        [Test]
+        public void ActionPhaseCoordinator_Anticipationフェーズ_Noneを返す()
+        {
+            ActionPhaseCoordinator coordinator = new ActionPhaseCoordinator();
+            coordinator.BeginAction();
+
+            ActionPhaseCoordinator.HitboxCommand cmd = coordinator.OnPhaseChanged(AnimationPhase.Anticipation);
+            Assert.AreEqual(ActionPhaseCoordinator.HitboxCommand.None, cmd);
+        }
+
+        // ─── コスト検証 ───
+
+        [Test]
+        public void ActionCostValidator_スタミナ不足_実行不可()
+        {
+            bool canExecute = ActionCostValidator.CanAfford(
+                currentStamina: 5f, currentMp: 100,
+                staminaCost: 10f, mpCost: 0f);
+            Assert.IsFalse(canExecute);
+        }
+
+        [Test]
+        public void ActionCostValidator_MP不足_実行不可()
+        {
+            bool canExecute = ActionCostValidator.CanAfford(
+                currentStamina: 100f, currentMp: 5,
+                staminaCost: 0f, mpCost: 10f);
+            Assert.IsFalse(canExecute);
+        }
+
+        [Test]
+        public void ActionCostValidator_コスト十分_実行可能()
+        {
+            bool canExecute = ActionCostValidator.CanAfford(
+                currentStamina: 50f, currentMp: 50,
+                staminaCost: 10f, mpCost: 20f);
+            Assert.IsTrue(canExecute);
+        }
+
+        [Test]
+        public void ActionCostValidator_コストゼロ_常に実行可能()
+        {
+            bool canExecute = ActionCostValidator.CanAfford(
+                currentStamina: 0f, currentMp: 0,
+                staminaCost: 0f, mpCost: 0f);
+            Assert.IsTrue(canExecute);
+        }
+
+        [Test]
+        public void ActionCostValidator_DeductCost_スタミナとMPを消費する()
+        {
+            float stamina = 50f;
+            int mp = 30;
+            ActionCostValidator.DeductCost(ref stamina, ref mp, 10f, 5f);
+
+            Assert.AreEqual(40f, stamina, 0.001f);
+            Assert.AreEqual(25, mp);
+        }
+    }
+}
