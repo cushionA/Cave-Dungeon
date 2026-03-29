@@ -74,6 +74,10 @@ namespace Game.Core
         [MinValue(0)]
         public float armorBreakValue;
 
+        [TitleGroup("攻撃特性")]
+        [EnumToggleButtons]
+        public AttackFeature feature;
+
         [TitleGroup("属性")]
         [EnumToggleButtons]
         public Element attackElement;
