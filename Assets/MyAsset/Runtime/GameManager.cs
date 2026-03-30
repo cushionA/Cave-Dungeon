@@ -15,12 +15,14 @@ namespace Game.Runtime
 
         private ProjectileManager _projectileManager;
         private EnemySpawnerManager _enemySpawnerManager;
+        private LevelStreamingController _levelStreamingController;
 
         public static GameManager Instance { get; private set; }
         public static SoACharaDataDic Data => Instance != null ? Instance._core.Data : null;
         public static GameEvents Events => Instance != null ? Instance._core.Events : null;
         public static ProjectileManager Projectiles => Instance != null ? Instance._projectileManager : null;
         public static EnemySpawnerManager EnemySpawner => Instance != null ? Instance._enemySpawnerManager : null;
+        public static LevelStreamingController LevelStreaming => Instance != null ? Instance._levelStreamingController : null;
 
         /// <summary>
         /// SoAコンテナにキャラクターが存在するか検証する共通ヘルパー。
@@ -55,6 +57,12 @@ namespace Game.Runtime
             if (_enemySpawnerManager != null)
             {
                 _enemySpawnerManager.Initialize();
+            }
+
+            _levelStreamingController = GetComponentInChildren<LevelStreamingController>();
+            if (_levelStreamingController != null)
+            {
+                _levelStreamingController.Initialize();
             }
         }
 
