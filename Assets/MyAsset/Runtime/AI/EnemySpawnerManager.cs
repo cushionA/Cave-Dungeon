@@ -11,6 +11,7 @@ namespace Game.Runtime
     internal struct ActiveEnemyData
     {
         public GameObject gameObject;
+        public BaseCharacter character; // GetComponent回避用キャッシュ
         public SpawnPointData spawnPoint;
         public int characterHash; // GameObject.GetInstanceID
     }
@@ -52,6 +53,9 @@ namespace Game.Runtime
 
         public EnemySpawner CoreSpawner => _coreSpawner;
         public int ActiveCount => _activeEnemies != null ? _activeEnemies.Count : 0;
+
+#if UNITY_INCLUDE_TESTS
+        /// <summary>テスト専用: 全プールの合計オブジェクト数。Dictionary foreachを含むためテスト限定。</summary>
         public int PoolCount
         {
             get
@@ -68,6 +72,7 @@ namespace Game.Runtime
                 return count;
             }
         }
+#endif
 
         /// <summary>
         /// マネージャーを初期化する。GameManagerから呼ばれる。
@@ -133,26 +138,19 @@ namespace Game.Runtime
 
         private void Update()
         {
-            if (_coreSpawner == null)
+            if (_coreSpawner == null || !TryGetPlayerPosition(out Vector2 playerPos))
             {
                 return;
             }
 
-            int playerHash = CharacterRegistry.PlayerHash;
-            if (playerHash == 0 || !GameManager.IsCharacterValid(playerHash))
-            {
-                return;
-            }
-
-            ref CharacterVitals vitals = ref GameManager.Data.GetVitals(playerHash);
-            _coreSpawner.EvaluateSpawnPoints(vitals.position, Time.time);
+            _coreSpawner.EvaluateSpawnPoints(playerPos, Time.time);
 
             // 範囲外の敵をデスポーン（フレームスロットリング）
             _despawnCheckCounter++;
             if (_despawnCheckCounter >= k_DespawnCheckInterval)
             {
                 _despawnCheckCounter = 0;
-                EvaluateDespawnRange(vitals.position);
+                EvaluateDespawnRange(playerPos);
             }
         }
 
@@ -161,19 +159,12 @@ namespace Game.Runtime
         /// </summary>
         public void EvaluateNow()
         {
-            if (_coreSpawner == null)
+            if (_coreSpawner == null || !TryGetPlayerPosition(out Vector2 playerPos))
             {
                 return;
             }
 
-            int playerHash = CharacterRegistry.PlayerHash;
-            if (playerHash == 0 || !GameManager.IsCharacterValid(playerHash))
-            {
-                return;
-            }
-
-            ref CharacterVitals vitals = ref GameManager.Data.GetVitals(playerHash);
-            _coreSpawner.EvaluateSpawnPoints(vitals.position, Time.time);
+            _coreSpawner.EvaluateSpawnPoints(playerPos, Time.time);
         }
 
         /// <summary>
@@ -216,19 +207,29 @@ namespace Game.Runtime
         /// </summary>
         public void EvaluateDespawnNow()
         {
-            if (_coreSpawner == null)
+            if (_coreSpawner == null || !TryGetPlayerPosition(out Vector2 playerPos))
             {
                 return;
             }
 
+            EvaluateDespawnRange(playerPos);
+        }
+
+        /// <summary>
+        /// プレイヤー位置を取得する共通ヘルパー。プレイヤー未登録時はfalseを返す。
+        /// </summary>
+        private bool TryGetPlayerPosition(out Vector2 position)
+        {
             int playerHash = CharacterRegistry.PlayerHash;
             if (playerHash == 0 || !GameManager.IsCharacterValid(playerHash))
             {
-                return;
+                position = default;
+                return false;
             }
 
             ref CharacterVitals vitals = ref GameManager.Data.GetVitals(playerHash);
-            EvaluateDespawnRange(vitals.position);
+            position = vitals.position;
+            return true;
         }
 
         /// <summary>
@@ -274,7 +275,7 @@ namespace Game.Runtime
             enemyGo.transform.position = new Vector3(point.position.x, point.position.y, 0f);
             enemyGo.SetActive(true);
 
-            // プール再利用時のSoAコンテナ再登録
+            // BaseCharacterキャッシュ取得 + SoAコンテナ再登録
             BaseCharacter character = enemyGo.GetComponent<BaseCharacter>();
             if (character != null)
             {
@@ -285,6 +286,7 @@ namespace Game.Runtime
             ActiveEnemyData data = new ActiveEnemyData
             {
                 gameObject = enemyGo,
+                character = character,
                 spawnPoint = point,
                 characterHash = characterHash
             };
@@ -302,7 +304,7 @@ namespace Game.Runtime
 
             _characterToSpawnerHash.Remove(data.characterHash);
             _activeEnemies.Remove(spawnerHash);
-            ReturnToPool(data.gameObject, data.spawnPoint.enemyTypeId);
+            ReturnToPool(data.gameObject, data.character, data.spawnPoint.enemyTypeId);
         }
 
         /// <summary>
@@ -336,15 +338,14 @@ namespace Game.Runtime
             return CreatePooledEnemy(prefab);
         }
 
-        private void ReturnToPool(GameObject enemyGo, int enemyTypeId)
+        private void ReturnToPool(GameObject enemyGo, BaseCharacter character, int enemyTypeId)
         {
             if (enemyGo == null)
             {
                 return;
             }
 
-            // プール返却前にSoAコンテナから登録解除
-            BaseCharacter character = enemyGo.GetComponent<BaseCharacter>();
+            // プール返却前にSoAコンテナから登録解除（キャッシュ済み参照を使用）
             if (character != null)
             {
                 character.OnPoolReturn();
@@ -411,9 +412,10 @@ namespace Game.Runtime
                 return;
             }
 
+            // ReturnToPoolはDictionaryを変更しないため、foreach中の呼び出しは安全
             foreach (KeyValuePair<int, ActiveEnemyData> kvp in _activeEnemies)
             {
-                ReturnToPool(kvp.Value.gameObject, kvp.Value.spawnPoint.enemyTypeId);
+                ReturnToPool(kvp.Value.gameObject, kvp.Value.character, kvp.Value.spawnPoint.enemyTypeId);
             }
             _activeEnemies.Clear();
             _characterToSpawnerHash.Clear();
