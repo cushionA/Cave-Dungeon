@@ -10,6 +10,7 @@ namespace Game.Core
         public float ElapsedTime { get; private set; }
         public bool IsAlive { get; private set; }
         public int TargetHash { get; set; }
+        public float LastEmitTime { get; set; }
         public Vector2 Position { get; set; }
         public Vector2 Velocity { get; set; }
         public Vector2 TargetPosition { get; set; }
@@ -68,6 +69,7 @@ namespace Game.Core
             IsAlive = false;
             CasterHash = 0;
             TargetHash = 0;
+            LastEmitTime = 0f;
             RemainingHits = 0;
             ElapsedTime = 0f;
             Position = Vector2.zero;

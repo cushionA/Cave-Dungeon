@@ -22,6 +22,7 @@ namespace Game.Core
         public Element attackElement;
         public StatusEffectInfo statusEffect;
         public int healAmount;
+        public ChildBulletConfig childBullet;
     }
 
     /// <summary>

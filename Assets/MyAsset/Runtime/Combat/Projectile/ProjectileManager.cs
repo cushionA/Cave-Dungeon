@@ -69,6 +69,13 @@ namespace Game.Runtime
             controller.Activate(core, magic, this);
             _activeControllers.Add(controller);
 
+            // OnActivateトリガー: 生成直後に子弾を生成
+            if (ChildBulletHelper.HasChildBullet(magic)
+                && magic.childBullet.trigger == ChildBulletTrigger.OnActivate)
+            {
+                SpawnChildProjectiles(core, magic);
+            }
+
             return controller;
         }
 
@@ -112,13 +119,26 @@ namespace Game.Runtime
             // Core一括移動更新
             ProjectileMovement.UpdateAll(_corePool, Time.deltaTime, Vector2.zero);
 
-            // 特殊効果処理（重力等）
+            // 特殊効果処理（重力等）+ OnTimerチェック
             for (int i = 0; i < _activeControllers.Count; i++)
             {
                 Projectile core = _activeControllers[i].CoreProjectile;
-                if (core != null && core.IsAlive)
+                if (core == null || !core.IsAlive)
                 {
-                    BulletFeatureProcessor.ProcessFeatures(core, Time.deltaTime);
+                    continue;
+                }
+
+                BulletFeatureProcessor.ProcessFeatures(core, Time.deltaTime);
+
+                // OnTimerトリガー: emitInterval経過で子弾を生成
+                MagicDefinition magic = _activeControllers[i].Magic;
+                if (ChildBulletHelper.HasChildBullet(magic)
+                    && magic.childBullet.trigger == ChildBulletTrigger.OnTimer
+                    && ChildBulletHelper.ShouldEmitOnTimer(
+                        core.ElapsedTime, core.LastEmitTime, core.Profile.emitInterval))
+                {
+                    core.LastEmitTime = core.ElapsedTime;
+                    SpawnChildProjectiles(core, magic);
                 }
             }
 
@@ -128,6 +148,17 @@ namespace Game.Runtime
                 ProjectileController controller = _activeControllers[i];
                 if (controller.CoreProjectile == null || !controller.CoreProjectile.IsAlive)
                 {
+                    // OnDestroyトリガー: 消滅時に子弾を生成
+                    if (controller.CoreProjectile != null)
+                    {
+                        MagicDefinition magic = controller.Magic;
+                        if (ChildBulletHelper.HasChildBullet(magic)
+                            && magic.childBullet.trigger == ChildBulletTrigger.OnDestroy)
+                        {
+                            SpawnChildProjectiles(controller.CoreProjectile, magic);
+                        }
+                    }
+
                     ReturnControllerInternal(controller, i);
                     continue;
                 }
@@ -388,6 +419,37 @@ namespace Game.Runtime
 
             go.SetActive(false);
             return controller;
+        }
+
+        /// <summary>
+        /// 親弾の位置・方向から子弾を生成する。
+        /// 子弾は親のCasterHash・TargetHashを継承し、childBulletは強制nullで無限再帰を防止する。
+        /// </summary>
+        public void SpawnChildProjectiles(Projectile parent, MagicDefinition parentMagic)
+        {
+            ChildBulletConfig config = parentMagic.childBullet;
+            if (config == null || config.count <= 0)
+            {
+                return;
+            }
+
+            MagicDefinition childMagic = ChildBulletHelper.CreateChildMagic(parentMagic, config);
+
+            Vector2 direction = parent.Velocity.sqrMagnitude > 0.001f
+                ? parent.Velocity.normalized
+                : Vector2.right;
+
+            if (config.count <= 1 || config.spreadAngle <= 0f)
+            {
+                SpawnProjectile(parent.CasterHash, childMagic,
+                    parent.Position, direction, parent.TargetHash);
+            }
+            else
+            {
+                SpawnSpread(parent.CasterHash, childMagic,
+                    parent.Position, direction, config.count, config.spreadAngle,
+                    parent.TargetHash);
+            }
         }
 
         private void OnDestroy()
