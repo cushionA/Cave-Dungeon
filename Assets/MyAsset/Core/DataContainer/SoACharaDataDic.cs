@@ -211,6 +211,19 @@ namespace Game.Core
         }
 
         /// <summary>
+        /// 登録中の全ハッシュを引数のリストに追加する。リストはクリアしない。
+        /// アロケーション回避のため呼び出し側がリストを用意する。
+        /// </summary>
+        public void GetAllHashes(List<int> output)
+        {
+            ThrowIfDisposed();
+            for (int i = 0; i < _count; i++)
+            {
+                output.Add(_indexToHash[i]);
+            }
+        }
+
+        /// <summary>
         /// Tries to get the dense index for the given hash.
         /// Returns true if found.
         /// </summary>

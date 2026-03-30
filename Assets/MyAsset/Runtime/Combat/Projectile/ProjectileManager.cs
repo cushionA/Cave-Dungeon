@@ -22,6 +22,9 @@ namespace Game.Runtime
         // 返却予約リスト（OnTriggerEnter2D中のリスト改変を防ぐ）
         private List<ProjectileController> _pendingReturns;
 
+        // 爆発処理用の再利用バッファ
+        private List<int> _allHashesBuffer;
+
         public int ActiveCount => _activeControllers != null ? _activeControllers.Count : 0;
 
         /// <summary>
@@ -33,6 +36,7 @@ namespace Game.Runtime
             _goPool = new Queue<ProjectileController>();
             _activeControllers = new List<ProjectileController>();
             _pendingReturns = new List<ProjectileController>();
+            _allHashesBuffer = new List<int>(64);
 
             // プール用の非表示親オブジェクト
             GameObject poolObj = new GameObject("[ProjectilePool]");
@@ -52,13 +56,14 @@ namespace Game.Runtime
         }
 
         /// <summary>
-        /// 飛翔体を1発生成する。
+        /// 飛翔体を1発生成する。targetHashでホーミング対象を指定可能（0で自動検索）。
         /// </summary>
         public ProjectileController SpawnProjectile(int casterHash, MagicDefinition magic,
-            Vector2 position, Vector2 direction)
+            Vector2 position, Vector2 direction, int targetHash = 0)
         {
             Projectile core = _corePool.Get();
             core.Initialize(casterHash, magic.bulletProfile, position, direction);
+            core.TargetHash = targetHash;
 
             ProjectileController controller = GetOrCreateController();
             controller.Activate(core, magic, this);
@@ -68,14 +73,15 @@ namespace Game.Runtime
         }
 
         /// <summary>
-        /// 複数弾を角度分散で生成する。
+        /// 複数弾を角度分散で生成する。targetHashでホーミング対象を指定可能（0で自動検索）。
         /// </summary>
         public void SpawnSpread(int casterHash, MagicDefinition magic,
-            Vector2 position, Vector2 baseDirection, int count, float spreadAngle)
+            Vector2 position, Vector2 baseDirection, int count, float spreadAngle,
+            int targetHash = 0)
         {
             if (count <= 1)
             {
-                SpawnProjectile(casterHash, magic, position, baseDirection);
+                SpawnProjectile(casterHash, magic, position, baseDirection, targetHash);
                 return;
             }
 
@@ -89,7 +95,7 @@ namespace Game.Runtime
                 float rad = angle * Mathf.Deg2Rad;
                 Vector2 dir = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
 
-                SpawnProjectile(casterHash, magic, position, dir);
+                SpawnProjectile(casterHash, magic, position, dir, targetHash);
             }
         }
 
@@ -100,9 +106,11 @@ namespace Game.Runtime
                 return;
             }
 
+            // ホーミング弾のターゲット位置を更新
+            UpdateHomingTargets();
+
             // Core一括移動更新
-            Vector2 defaultTarget = Vector2.zero;
-            ProjectileMovement.UpdateAll(_corePool, Time.deltaTime, defaultTarget);
+            ProjectileMovement.UpdateAll(_corePool, Time.deltaTime, Vector2.zero);
 
             // 特殊効果処理（重力等）
             for (int i = 0; i < _activeControllers.Count; i++)
@@ -162,9 +170,24 @@ namespace Game.Runtime
                 return;
             }
 
-            // TODO: SoACharaDataDicにGetAllHashes実装後、
-            // BulletFeatureProcessor.GetExplosionTargetsで範囲内ターゲットを取得し
-            // ProjectileHitProcessor.ProcessHitで各ターゲットにダメージを適用する
+            _allHashesBuffer.Clear();
+            GameManager.Data.GetAllHashes(_allHashesBuffer);
+
+            List<int> targets = BulletFeatureProcessor.GetExplosionTargets(
+                projectile.Position, radius, _allHashesBuffer, GameManager.Data);
+
+            for (int i = 0; i < targets.Count; i++)
+            {
+                int targetHash = targets[i];
+                // キャスター自身は爆発ダメージ対象外
+                if (targetHash == projectile.CasterHash)
+                {
+                    continue;
+                }
+
+                ProjectileHitProcessor.ProcessHit(
+                    projectile, targetHash, GameManager.Data, magic, GameManager.Events);
+            }
         }
 
         /// <summary>
@@ -184,6 +207,120 @@ namespace Game.Runtime
 
             _pendingReturns.Clear();
             _corePool.Clear();
+        }
+
+        /// <summary>
+        /// ホーミング弾のターゲット位置を毎フレーム更新する。
+        /// TargetHash指定時はそのキャラのSoA位置を使用、0なら陣営ベースで最寄り敵を検索。
+        /// </summary>
+        private void UpdateHomingTargets()
+        {
+            if (GameManager.Data == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _activeControllers.Count; i++)
+            {
+                Projectile core = _activeControllers[i].CoreProjectile;
+                if (core == null || !core.IsAlive)
+                {
+                    continue;
+                }
+
+                if (core.Profile.moveType != BulletMoveType.Homing)
+                {
+                    continue;
+                }
+
+                // TargetHashが指定されている場合はそのキャラの位置を直接参照
+                if (core.TargetHash != 0 && GameManager.IsCharacterValid(core.TargetHash))
+                {
+                    ref CharacterVitals targetVitals = ref GameManager.Data.GetVitals(core.TargetHash);
+                    core.TargetPosition = targetVitals.position;
+                }
+                else
+                {
+                    // TargetHash未指定 or ターゲット死亡→陣営ベースで最寄り敵を検索
+                    core.TargetPosition = FindNearestEnemyPosition(core);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 射撃軌道に最も近い敵対陣営キャラクターの位置をSoAコンテナから返す。
+        /// 弾丸の進行方向と敵への方向のドット積（cos角度）で最小角度の敵を選択する。
+        /// 敵が見つからない場合は弾丸の現在位置を返す（直進継続）。
+        /// </summary>
+        private Vector2 FindNearestEnemyPosition(Projectile projectile)
+        {
+            SoACharaDataDic data = GameManager.Data;
+            if (!data.TryGetValue(projectile.CasterHash, out int _))
+            {
+                return projectile.Position;
+            }
+
+            CharacterBelong casterBelong = data.GetFlags(projectile.CasterHash).Belong;
+            Vector2 flyDir = projectile.Velocity.normalized;
+
+            // 速度がほぼゼロの場合は距離ベースにフォールバック
+            bool useAngle = flyDir.sqrMagnitude > 0.5f;
+
+            _allHashesBuffer.Clear();
+            data.GetAllHashes(_allHashesBuffer);
+
+            float bestScore = -2f; // ドット積の最大値は1.0
+            float closestSqrDist = float.MaxValue;
+            Vector2 bestPos = projectile.Position;
+
+            for (int i = 0; i < _allHashesBuffer.Count; i++)
+            {
+                int hash = _allHashesBuffer[i];
+                if (hash == projectile.CasterHash)
+                {
+                    continue;
+                }
+
+                CharacterBelong targetBelong = data.GetFlags(hash).Belong;
+
+                // 同陣営はスキップ
+                if (targetBelong == casterBelong)
+                {
+                    continue;
+                }
+
+                ref CharacterVitals vitals = ref data.GetVitals(hash);
+                Vector2 toTarget = vitals.position - projectile.Position;
+                float sqrDist = toTarget.sqrMagnitude;
+
+                if (sqrDist < 0.001f)
+                {
+                    continue;
+                }
+
+                if (useAngle)
+                {
+                    // 射撃方向との角度スコア（ドット積: 1.0=完全一致, -1.0=真逆）
+                    float dot = Vector2.Dot(flyDir, toTarget.normalized);
+                    if (dot > bestScore || (Mathf.Approximately(dot, bestScore) && sqrDist < closestSqrDist))
+                    {
+                        bestScore = dot;
+                        closestSqrDist = sqrDist;
+                        bestPos = vitals.position;
+                    }
+                }
+                else
+                {
+                    // 速度ゼロ時は距離ベース
+                    if (sqrDist < closestSqrDist)
+                    {
+                        closestSqrDist = sqrDist;
+                        bestPos = vitals.position;
+                    }
+                }
+            }
+
+            return bestPos;
         }
 
         private void ProcessPendingReturns()
