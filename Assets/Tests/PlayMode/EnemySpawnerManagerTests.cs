@@ -36,7 +36,10 @@ namespace Game.Tests.PlayMode
             yield return null;
         }
 
-        private EnemySpawnerManager CreateManager(SpawnPointData[] spawnPoints = null)
+        private EnemySpawnerManager CreateManager(
+            SpawnPointData[] spawnPoints = null,
+            EnemyTypeEntry[] enemyTypes = null,
+            float despawnRangeMultiplier = 2.0f)
         {
             GameObject go = new GameObject("TestEnemySpawnerManager");
             _spawnedObjects.Add(go);
@@ -44,16 +47,16 @@ namespace Game.Tests.PlayMode
             EnemySpawnerManager manager = go.AddComponent<EnemySpawnerManager>();
 
             // デフォルト敵プレハブを作成
-            GameObject prefab = CreateEnemyPrefab();
+            GameObject prefab = CreateEnemyPrefab("Default");
 
-            manager.SetupForTest(prefab, spawnPoints, 20, 0);
+            manager.SetupForTest(prefab, spawnPoints, 20, 0, enemyTypes, despawnRangeMultiplier);
             manager.Initialize();
             return manager;
         }
 
-        private GameObject CreateEnemyPrefab()
+        private GameObject CreateEnemyPrefab(string name = "Default")
         {
-            GameObject prefab = new GameObject("[PLACEHOLDER]EnemyPrefab");
+            GameObject prefab = new GameObject($"[PLACEHOLDER]EnemyPrefab_{name}");
             _spawnedObjects.Add(prefab);
 
             Rigidbody2D rb = prefab.AddComponent<Rigidbody2D>();
@@ -101,7 +104,7 @@ namespace Game.Tests.PlayMode
         }
 
         // ─────────────────────────────────────────────
-        //  テストケース
+        //  基本テスト
         // ─────────────────────────────────────────────
 
         [UnityTest]
@@ -132,13 +135,11 @@ namespace Game.Tests.PlayMode
             EnemySpawnerManager manager = CreateManager(points);
             yield return null;
 
-            // Core経由で直接スポーン
             int hash = manager.CoreSpawner.SpawnEnemy(0);
 
             Assert.AreNotEqual(0, hash);
             Assert.AreEqual(1, manager.ActiveCount);
 
-            // 生成された敵のGameObjectが正しい位置にいるか
             GameObject enemyGo = manager.GetActiveEnemyObject(hash);
             Assert.IsNotNull(enemyGo);
             Assert.IsTrue(enemyGo.activeSelf);
@@ -165,11 +166,9 @@ namespace Game.Tests.PlayMode
             int spawnerHash = manager.CoreSpawner.SpawnEnemy(0);
             Assert.AreEqual(1, manager.ActiveCount);
 
-            // デスポーン
             manager.CoreSpawner.DespawnEnemy(spawnerHash);
 
             Assert.AreEqual(0, manager.ActiveCount);
-            // プールに返却されているか
             Assert.AreEqual(1, manager.PoolCount);
         }
 
@@ -189,11 +188,9 @@ namespace Game.Tests.PlayMode
 
             EnemySpawnerManager manager = CreateManager(points);
             GameObject player = CreatePlayer(Vector3.zero);
-            yield return null; // Awake + Start
-            yield return null; // GameManager登録完了
+            yield return null;
+            yield return null;
 
-            // プレイヤーがスポーンポイントの範囲内 → Update内でEvaluate → スポーン
-            // 手動でEvaluateを呼ぶ（Updateの代替）
             manager.EvaluateNow();
 
             Assert.AreEqual(1, manager.ActiveCount);
@@ -215,11 +212,207 @@ namespace Game.Tests.PlayMode
             manager.CoreSpawner.SpawnEnemy(1);
             Assert.AreEqual(2, manager.ActiveCount);
 
-            // RefreshAll
             manager.RefreshAll();
 
             Assert.AreEqual(0, manager.ActiveCount);
             Assert.AreEqual(2, manager.PoolCount);
+        }
+
+        // ─────────────────────────────────────────────
+        //  拡張1: enemyTypeId → プレハブマッピング
+        // ─────────────────────────────────────────────
+
+        [UnityTest]
+        public IEnumerator EnemySpawnerManager_EnemyTypeMapping_UsesCorrectPrefab()
+        {
+            GameObject slimePrefab = CreateEnemyPrefab("Slime");
+            slimePrefab.name = "[PLACEHOLDER]Slime";
+
+            EnemyTypeEntry[] types = new EnemyTypeEntry[]
+            {
+                new EnemyTypeEntry { enemyTypeId = 1, prefab = slimePrefab }
+            };
+
+            SpawnPointData[] points = new SpawnPointData[]
+            {
+                new SpawnPointData
+                {
+                    position = Vector2.zero,
+                    enemyTypeId = 1,
+                    activateRange = 20f,
+                    respawnDelay = 60f
+                }
+            };
+
+            EnemySpawnerManager manager = CreateManager(points, types);
+            yield return null;
+
+            int hash = manager.CoreSpawner.SpawnEnemy(0);
+            GameObject enemyGo = manager.GetActiveEnemyObject(hash);
+
+            Assert.IsNotNull(enemyGo);
+            // Instantiateで生成されるのでプレハブ名 + "(Clone)"
+            Assert.IsTrue(enemyGo.name.Contains("Slime"),
+                $"タイプ別プレハブが使用されるべき。実際の名前: {enemyGo.name}");
+        }
+
+        [UnityTest]
+        public IEnumerator EnemySpawnerManager_UnknownTypeId_FallsBackToDefault()
+        {
+            SpawnPointData[] points = new SpawnPointData[]
+            {
+                new SpawnPointData
+                {
+                    position = Vector2.zero,
+                    enemyTypeId = 999, // 未登録のタイプ
+                    activateRange = 20f,
+                    respawnDelay = 60f
+                }
+            };
+
+            EnemySpawnerManager manager = CreateManager(points);
+            yield return null;
+
+            int hash = manager.CoreSpawner.SpawnEnemy(0);
+            GameObject enemyGo = manager.GetActiveEnemyObject(hash);
+
+            Assert.IsNotNull(enemyGo, "未登録タイプでもデフォルトプレハブでスポーンする");
+        }
+
+        // ─────────────────────────────────────────────
+        //  拡張2: 敵死亡時の自動デスポーン
+        // ─────────────────────────────────────────────
+
+        [UnityTest]
+        public IEnumerator EnemySpawnerManager_CharacterDeath_AutoDespawns()
+        {
+            SpawnPointData[] points = new SpawnPointData[]
+            {
+                new SpawnPointData
+                {
+                    position = Vector2.zero,
+                    activateRange = 20f,
+                    respawnDelay = 60f
+                }
+            };
+
+            EnemySpawnerManager manager = CreateManager(points);
+            yield return null;
+
+            int spawnerHash = manager.CoreSpawner.SpawnEnemy(0);
+            GameObject enemyGo = manager.GetActiveEnemyObject(spawnerHash);
+            int characterHash = enemyGo.GetInstanceID();
+
+            Assert.AreEqual(1, manager.ActiveCount);
+
+            // 死亡イベント発火
+            GameManager.Events.FireCharacterDeath(characterHash, 0);
+
+            Assert.AreEqual(0, manager.ActiveCount, "死亡イベントで自動デスポーンされる");
+            Assert.AreEqual(1, manager.PoolCount, "デスポーン後はプールに返却される");
+        }
+
+        [UnityTest]
+        public IEnumerator EnemySpawnerManager_UnrelatedDeath_DoesNotAffectSpawner()
+        {
+            SpawnPointData[] points = new SpawnPointData[]
+            {
+                new SpawnPointData
+                {
+                    position = Vector2.zero,
+                    activateRange = 20f,
+                    respawnDelay = 60f
+                }
+            };
+
+            EnemySpawnerManager manager = CreateManager(points);
+            yield return null;
+
+            manager.CoreSpawner.SpawnEnemy(0);
+            Assert.AreEqual(1, manager.ActiveCount);
+
+            // 無関係なハッシュの死亡イベント
+            GameManager.Events.FireCharacterDeath(99999, 0);
+
+            Assert.AreEqual(1, manager.ActiveCount, "無関係な死亡イベントでデスポーンしない");
+        }
+
+        // ─────────────────────────────────────────────
+        //  拡張3: activateRange外の自動デスポーン
+        // ─────────────────────────────────────────────
+
+        [UnityTest]
+        public IEnumerator EnemySpawnerManager_EnemyOutOfRange_AutoDespawns()
+        {
+            // activateRange=10, despawnMultiplier=2.0 → despawnRange=20
+            SpawnPointData[] points = new SpawnPointData[]
+            {
+                new SpawnPointData
+                {
+                    position = new Vector2(5f, 0f),
+                    activateRange = 10f,
+                    respawnDelay = 60f
+                }
+            };
+
+            // despawnRangeMultiplier = 2.0
+            EnemySpawnerManager manager = CreateManager(points, despawnRangeMultiplier: 2.0f);
+            GameObject player = CreatePlayer(Vector3.zero);
+            yield return null;
+            yield return null;
+
+            // プレイヤー近接でスポーン
+            manager.EvaluateNow();
+            Assert.AreEqual(1, manager.ActiveCount);
+
+            // 敵を遠くに移動（despawnRange=20を超える位置）
+            int spawnerHash = 0;
+            foreach (KeyValuePair<int, int> unused in new Dictionary<int, int>())
+            {
+                // ダミー
+            }
+            // GetActiveEnemyObjectで取得して移動
+            // spawnerHashを取得するためCoreSpawnerのSpawnedEnemyHashesを使う
+            spawnerHash = manager.CoreSpawner.SpawnedEnemyHashes[0];
+            GameObject enemyGo = manager.GetActiveEnemyObject(spawnerHash);
+            enemyGo.transform.position = new Vector3(25f, 0f, 0f); // プレイヤー(0,0)から25離れる > 20
+
+            // 手動Update相当: EvaluateNowはスポーン判定のみなので、
+            // Update内のEvaluateDespawnRangeをテストするために1フレーム待つ
+            yield return null;
+
+            Assert.AreEqual(0, manager.ActiveCount, "範囲外の敵は自動デスポーンされる");
+        }
+
+        [UnityTest]
+        public IEnumerator EnemySpawnerManager_EnemyWithinRange_StaysActive()
+        {
+            SpawnPointData[] points = new SpawnPointData[]
+            {
+                new SpawnPointData
+                {
+                    position = new Vector2(5f, 0f),
+                    activateRange = 10f,
+                    respawnDelay = 60f
+                }
+            };
+
+            EnemySpawnerManager manager = CreateManager(points, despawnRangeMultiplier: 2.0f);
+            GameObject player = CreatePlayer(Vector3.zero);
+            yield return null;
+            yield return null;
+
+            manager.EvaluateNow();
+            Assert.AreEqual(1, manager.ActiveCount);
+
+            // 敵をdespawnRange内（activateRange*2=20）に配置
+            int spawnerHash = manager.CoreSpawner.SpawnedEnemyHashes[0];
+            GameObject enemyGo = manager.GetActiveEnemyObject(spawnerHash);
+            enemyGo.transform.position = new Vector3(15f, 0f, 0f); // 15 < 20 → 範囲内
+
+            yield return null;
+
+            Assert.AreEqual(1, manager.ActiveCount, "範囲内の敵はデスポーンされない");
         }
     }
 }
