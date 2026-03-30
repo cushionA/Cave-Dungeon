@@ -69,6 +69,13 @@ namespace Game.Runtime
             controller.Activate(core, magic, this);
             _activeControllers.Add(controller);
 
+            // OnActivateトリガー: 生成直後に子弾を生成
+            if (ChildBulletHelper.HasChildBullet(magic)
+                && magic.childBullet.trigger == ChildBulletTrigger.OnActivate)
+            {
+                SpawnChildProjectiles(core, magic);
+            }
+
             return controller;
         }
 
@@ -112,22 +119,49 @@ namespace Game.Runtime
             // Core一括移動更新
             ProjectileMovement.UpdateAll(_corePool, Time.deltaTime, Vector2.zero);
 
-            // 特殊効果処理（重力等）
+            // 特殊効果処理（重力等）+ OnTimerチェック
+            // NOTE: SpawnChildProjectilesで_activeControllers末尾にAddされるが、
+            // 子弾のchildBulletはnull強制のため同一フレーム内で再処理されても無害
             for (int i = 0; i < _activeControllers.Count; i++)
             {
                 Projectile core = _activeControllers[i].CoreProjectile;
-                if (core != null && core.IsAlive)
+                if (core == null || !core.IsAlive)
                 {
-                    BulletFeatureProcessor.ProcessFeatures(core, Time.deltaTime);
+                    continue;
+                }
+
+                BulletFeatureProcessor.ProcessFeatures(core, Time.deltaTime);
+
+                // OnTimerトリガー: emitInterval経過で子弾を生成
+                MagicDefinition magic = _activeControllers[i].Magic;
+                if (ChildBulletHelper.HasChildBullet(magic)
+                    && magic.childBullet.trigger == ChildBulletTrigger.OnTimer
+                    && ChildBulletHelper.ShouldEmitOnTimer(
+                        core.ElapsedTime, core.LastEmitTime, core.Profile.emitInterval))
+                {
+                    core.LastEmitTime = core.ElapsedTime;
+                    SpawnChildProjectiles(core, magic);
                 }
             }
 
             // Transform同期 + 死亡チェック（逆順でリスト改変安全）
+            // NOTE: OnDestroyで子弾が末尾にAddされるが、iは減少方向のため追加分は走査されない
             for (int i = _activeControllers.Count - 1; i >= 0; i--)
             {
                 ProjectileController controller = _activeControllers[i];
                 if (controller.CoreProjectile == null || !controller.CoreProjectile.IsAlive)
                 {
+                    // OnDestroyトリガー: 消滅時に子弾を生成
+                    if (controller.CoreProjectile != null)
+                    {
+                        MagicDefinition magic = controller.Magic;
+                        if (ChildBulletHelper.HasChildBullet(magic)
+                            && magic.childBullet.trigger == ChildBulletTrigger.OnDestroy)
+                        {
+                            SpawnChildProjectiles(controller.CoreProjectile, magic);
+                        }
+                    }
+
                     ReturnControllerInternal(controller, i);
                     continue;
                 }
@@ -388,6 +422,40 @@ namespace Game.Runtime
 
             go.SetActive(false);
             return controller;
+        }
+
+        /// <summary>
+        /// 親弾の位置・方向から子弾を生成する。
+        /// 子弾は親のCasterHash・TargetHashを継承し、childBulletは強制nullで無限再帰を防止する。
+        /// </summary>
+        internal void SpawnChildProjectiles(Projectile parent, MagicDefinition parentMagic)
+        {
+            ChildBulletConfig config = parentMagic.childBullet;
+            if (config == null || config.count <= 0)
+            {
+                return;
+            }
+
+            MagicDefinition childMagic = ChildBulletHelper.CreateChildMagic(parentMagic, config);
+
+            // 現在の速度方向を優先。静止弾(Set等)は初期方向にフォールバック
+            Vector2 direction = parent.Velocity.sqrMagnitude > 0.001f
+                ? parent.Velocity.normalized
+                : (parent.InitialDirection.sqrMagnitude > 0.001f
+                    ? parent.InitialDirection
+                    : Vector2.right);
+
+            if (config.count <= 1 || config.spreadAngle <= 0f)
+            {
+                SpawnProjectile(parent.CasterHash, childMagic,
+                    parent.Position, direction, parent.TargetHash);
+            }
+            else
+            {
+                SpawnSpread(parent.CasterHash, childMagic,
+                    parent.Position, direction, config.count, config.spreadAngle,
+                    parent.TargetHash);
+            }
         }
 
         private void OnDestroy()

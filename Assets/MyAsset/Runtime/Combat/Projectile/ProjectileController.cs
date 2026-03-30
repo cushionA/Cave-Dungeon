@@ -23,6 +23,7 @@ namespace Game.Runtime
         private ProjectileManager _manager;
 
         public Projectile CoreProjectile => _coreProjectile;
+        public MagicDefinition Magic => _magic;
         public bool IsActive => _isActive;
 
         private void Awake()
@@ -123,6 +124,13 @@ namespace Game.Runtime
             if (BulletFeatureProcessor.ShouldExplode(_coreProjectile.Profile.features))
             {
                 _manager.ProcessExplosion(_coreProjectile, _magic);
+            }
+
+            // OnHitトリガー: ヒット時に子弾を生成
+            if (ChildBulletHelper.HasChildBullet(_magic)
+                && _magic.childBullet.trigger == ChildBulletTrigger.OnHit)
+            {
+                _manager.SpawnChildProjectiles(_coreProjectile, _magic);
             }
 
             // 死亡チェック — Managerに返却を通知
