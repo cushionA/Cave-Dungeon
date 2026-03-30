@@ -68,7 +68,10 @@ namespace Game.Core
                     continue;
                 }
 
-                Vector2 newVelocity = CalculateVelocity(p, deltaTime, defaultTarget);
+                Vector2 target = p.TargetPosition.sqrMagnitude > 0.001f
+                    ? p.TargetPosition
+                    : defaultTarget;
+                Vector2 newVelocity = CalculateVelocity(p, deltaTime, target);
                 p.Velocity = newVelocity;
                 p.Position += newVelocity * deltaTime;
                 p.Tick(deltaTime);
