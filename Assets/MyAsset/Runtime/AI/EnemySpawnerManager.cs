@@ -6,16 +6,6 @@ using Game.Core;
 namespace Game.Runtime
 {
     /// <summary>
-    /// 敵タイプIDとプレハブのマッピング。
-    /// </summary>
-    [Serializable]
-    public struct EnemyTypeEntry
-    {
-        public int enemyTypeId;
-        public GameObject prefab;
-    }
-
-    /// <summary>
     /// アクティブ敵の追跡データ。
     /// </summary>
     internal struct ActiveEnemyData
@@ -32,6 +22,8 @@ namespace Game.Runtime
     /// </summary>
     public class EnemySpawnerManager : MonoBehaviour
     {
+        private const int k_DespawnCheckInterval = 30;
+
         [Header("Prefab")]
         [SerializeField] private GameObject _defaultEnemyPrefab;
         [SerializeField] private EnemyTypeEntry[] _enemyTypes;
@@ -56,6 +48,7 @@ namespace Game.Runtime
 
         // デスポーン処理用の再利用バッファ（Update内アロケーション回避）
         private List<int> _despawnBuffer;
+        private int _despawnCheckCounter;
 
         public EnemySpawner CoreSpawner => _coreSpawner;
         public int ActiveCount => _activeEnemies != null ? _activeEnemies.Count : 0;
@@ -154,8 +147,13 @@ namespace Game.Runtime
             ref CharacterVitals vitals = ref GameManager.Data.GetVitals(playerHash);
             _coreSpawner.EvaluateSpawnPoints(vitals.position, Time.time);
 
-            // 範囲外の敵をデスポーン
-            EvaluateDespawnRange(vitals.position);
+            // 範囲外の敵をデスポーン（フレームスロットリング）
+            _despawnCheckCounter++;
+            if (_despawnCheckCounter >= k_DespawnCheckInterval)
+            {
+                _despawnCheckCounter = 0;
+                EvaluateDespawnRange(vitals.position);
+            }
         }
 
         /// <summary>
@@ -214,6 +212,26 @@ namespace Game.Runtime
         }
 
         /// <summary>
+        /// 範囲外デスポーン評価を即時実行する。テストやイベントから使用。
+        /// </summary>
+        public void EvaluateDespawnNow()
+        {
+            if (_coreSpawner == null)
+            {
+                return;
+            }
+
+            int playerHash = CharacterRegistry.PlayerHash;
+            if (playerHash == 0 || !GameManager.IsCharacterValid(playerHash))
+            {
+                return;
+            }
+
+            ref CharacterVitals vitals = ref GameManager.Data.GetVitals(playerHash);
+            EvaluateDespawnRange(vitals.position);
+        }
+
+        /// <summary>
         /// activateRange × _despawnRangeMultiplier を超えた敵をデスポーンする。
         /// </summary>
         private void EvaluateDespawnRange(Vector2 playerPosition)
@@ -251,8 +269,17 @@ namespace Game.Runtime
         private void HandleEnemySpawned(int spawnerHash, SpawnPointData point)
         {
             GameObject enemyGo = GetOrCreateEnemy(point.enemyTypeId);
+            // プール親から外してからアクティブ化（Awake()が確実に呼ばれるようにする）
+            enemyGo.transform.SetParent(null);
             enemyGo.transform.position = new Vector3(point.position.x, point.position.y, 0f);
             enemyGo.SetActive(true);
+
+            // プール再利用時のSoAコンテナ再登録
+            BaseCharacter character = enemyGo.GetComponent<BaseCharacter>();
+            if (character != null)
+            {
+                character.OnPoolAcquire();
+            }
 
             int characterHash = enemyGo.GetInstanceID();
             ActiveEnemyData data = new ActiveEnemyData
@@ -314,6 +341,13 @@ namespace Game.Runtime
             if (enemyGo == null)
             {
                 return;
+            }
+
+            // プール返却前にSoAコンテナから登録解除
+            BaseCharacter character = enemyGo.GetComponent<BaseCharacter>();
+            if (character != null)
+            {
+                character.OnPoolReturn();
             }
 
             enemyGo.SetActive(false);

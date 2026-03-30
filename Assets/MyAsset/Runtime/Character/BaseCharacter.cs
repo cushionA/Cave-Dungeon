@@ -63,6 +63,11 @@ namespace Game.Runtime
 
         protected virtual void Start()
         {
+            if (_isRegistered)
+            {
+                return; // OnPoolAcquireで先行登録済み
+            }
+
             if (GameManager.Instance == null)
             {
                 Debug.LogError($"[BaseCharacter] GameManager.Instance is null. Cannot register {gameObject.name}");
@@ -97,6 +102,45 @@ namespace Game.Runtime
             if (_isRegistered && GameManager.Instance != null)
             {
                 GameManager.Instance.UnregisterCharacter(_objectHash);
+            }
+        }
+
+        /// <summary>
+        /// プールに返却される前に呼ぶ。SoAコンテナから登録解除する。
+        /// SetActive(false)ではOnDestroyが呼ばれないため、明示的に解除が必要。
+        /// </summary>
+        public virtual void OnPoolReturn()
+        {
+            if (_isRegistered && GameManager.Instance != null)
+            {
+                GameManager.Instance.UnregisterCharacter(_objectHash);
+                _isRegistered = false;
+            }
+        }
+
+        /// <summary>
+        /// プールから取得した後に呼ぶ。SoAコンテナに再登録し、ステータスをリセットする。
+        /// SetActive(true)ではStart()が再実行されないため、明示的に登録が必要。
+        /// </summary>
+        public virtual void OnPoolAcquire()
+        {
+            if (_isRegistered || _characterInfo == null || GameManager.Instance == null)
+            {
+                return;
+            }
+
+            GameManager.Instance.RegisterCharacter(_objectHash, _characterInfo);
+            _isRegistered = true;
+
+            CharacterRegistry.RegisterName(_characterInfo.name, _objectHash);
+
+            DamageReceiver receiver = GetComponent<DamageReceiver>();
+            if (receiver != null)
+            {
+                receiver.SetArmorRecoveryParams(
+                    _characterInfo.maxArmor,
+                    _characterInfo.armorRecoveryRate,
+                    _characterInfo.armorRecoveryDelay);
             }
         }
 

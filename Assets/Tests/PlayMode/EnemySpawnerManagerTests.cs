@@ -366,20 +366,12 @@ namespace Game.Tests.PlayMode
             Assert.AreEqual(1, manager.ActiveCount);
 
             // 敵を遠くに移動（despawnRange=20を超える位置）
-            int spawnerHash = 0;
-            foreach (KeyValuePair<int, int> unused in new Dictionary<int, int>())
-            {
-                // ダミー
-            }
-            // GetActiveEnemyObjectで取得して移動
-            // spawnerHashを取得するためCoreSpawnerのSpawnedEnemyHashesを使う
-            spawnerHash = manager.CoreSpawner.SpawnedEnemyHashes[0];
+            int spawnerHash = manager.CoreSpawner.SpawnedEnemyHashes[0];
             GameObject enemyGo = manager.GetActiveEnemyObject(spawnerHash);
             enemyGo.transform.position = new Vector3(25f, 0f, 0f); // プレイヤー(0,0)から25離れる > 20
 
-            // 手動Update相当: EvaluateNowはスポーン判定のみなので、
-            // Update内のEvaluateDespawnRangeをテストするために1フレーム待つ
-            yield return null;
+            // 範囲外デスポーン評価を即時実行
+            manager.EvaluateDespawnNow();
 
             Assert.AreEqual(0, manager.ActiveCount, "範囲外の敵は自動デスポーンされる");
         }
@@ -410,7 +402,8 @@ namespace Game.Tests.PlayMode
             GameObject enemyGo = manager.GetActiveEnemyObject(spawnerHash);
             enemyGo.transform.position = new Vector3(15f, 0f, 0f); // 15 < 20 → 範囲内
 
-            yield return null;
+            // 範囲外デスポーン評価を即時実行
+            manager.EvaluateDespawnNow();
 
             Assert.AreEqual(1, manager.ActiveCount, "範囲内の敵はデスポーンされない");
         }
