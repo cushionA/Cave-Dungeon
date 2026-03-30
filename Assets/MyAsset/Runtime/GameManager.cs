@@ -14,11 +14,13 @@ namespace Game.Runtime
         private GameManagerCore _core;
 
         private ProjectileManager _projectileManager;
+        private EnemySpawnerManager _enemySpawnerManager;
 
         public static GameManager Instance { get; private set; }
         public static SoACharaDataDic Data => Instance != null ? Instance._core.Data : null;
         public static GameEvents Events => Instance != null ? Instance._core.Events : null;
         public static ProjectileManager Projectiles => Instance != null ? Instance._projectileManager : null;
+        public static EnemySpawnerManager EnemySpawner => Instance != null ? Instance._enemySpawnerManager : null;
 
         /// <summary>
         /// SoAコンテナにキャラクターが存在するか検証する共通ヘルパー。
@@ -47,6 +49,12 @@ namespace Game.Runtime
             if (_projectileManager != null)
             {
                 _projectileManager.Initialize();
+            }
+
+            _enemySpawnerManager = GetComponentInChildren<EnemySpawnerManager>();
+            if (_enemySpawnerManager != null)
+            {
+                _enemySpawnerManager.Initialize();
             }
         }
 

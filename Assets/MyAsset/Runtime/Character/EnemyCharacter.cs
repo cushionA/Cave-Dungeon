@@ -42,5 +42,17 @@ namespace Game.Runtime
             CharacterRegistry.Unregister(ObjectHash);
             base.OnDestroy();
         }
+
+        public override void OnPoolReturn()
+        {
+            CharacterRegistry.Unregister(ObjectHash);
+            base.OnPoolReturn();
+        }
+
+        public override void OnPoolAcquire()
+        {
+            base.OnPoolAcquire();
+            CharacterRegistry.RegisterEnemy(ObjectHash);
+        }
     }
 }
