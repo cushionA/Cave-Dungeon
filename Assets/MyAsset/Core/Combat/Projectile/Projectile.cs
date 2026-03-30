@@ -11,6 +11,7 @@ namespace Game.Core
         public bool IsAlive { get; private set; }
         public int TargetHash { get; set; }
         public float LastEmitTime { get; set; }
+        public Vector2 InitialDirection { get; private set; }
         public Vector2 Position { get; set; }
         public Vector2 Velocity { get; set; }
         public Vector2 TargetPosition { get; set; }
@@ -23,7 +24,8 @@ namespace Game.Core
             ElapsedTime = 0f;
             IsAlive = true;
             Position = position;
-            Velocity = direction.normalized * profile.speed;
+            InitialDirection = direction.normalized;
+            Velocity = InitialDirection * profile.speed;
         }
 
         public void Tick(float deltaTime)
@@ -73,6 +75,7 @@ namespace Game.Core
             RemainingHits = 0;
             ElapsedTime = 0f;
             Position = Vector2.zero;
+            InitialDirection = Vector2.zero;
             Velocity = Vector2.zero;
             TargetPosition = Vector2.zero;
         }
