@@ -117,20 +117,32 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
-        public void Orchestrator_UnloadDuringLoading_BlockedByState()
+        public void Orchestrator_UnloadDuringLoading_NonActiveSceneStillUnloadable()
         {
-            // Loading中にアンロード要求が拒否されるか
+            // Loading中でも、アクティブでないロード済みシーンはアンロード可能
+            int unloadCount = 0;
             LevelStreamingOrchestrator orchestrator = new LevelStreamingOrchestrator(
-                "Persistent", _events, s => { }, s => { }
+                "Persistent", _events, s => { }, s => unloadCount++
             );
 
+            // AreaA → AreaB の順でロード完了（active=AreaB）
             orchestrator.RequestAreaLoad("AreaA");
             orchestrator.ProcessQueue();
-            // Loading状態（NotifyLoadComplete前）
+            orchestrator.NotifyLoadComplete("AreaA");
 
-            // Persistentは初期ロード済みだがアクティブなので拒否される
-            bool result = orchestrator.RequestAreaUnload("Persistent");
-            Assert.IsFalse(result);
+            orchestrator.RequestAreaLoad("AreaB");
+            orchestrator.ProcessQueue();
+            orchestrator.NotifyLoadComplete("AreaB");
+
+            // AreaCのロードを開始（Loading状態、active=AreaB）
+            orchestrator.RequestAreaLoad("AreaC");
+            orchestrator.ProcessQueue();
+            Assert.AreEqual(StreamingState.Loading, orchestrator.State);
+
+            // Loading中でもAreaA（非アクティブ）のアンロードは可能
+            bool result = orchestrator.RequestAreaUnload("AreaA");
+            Assert.IsTrue(result);
+            Assert.AreEqual(1, unloadCount);
         }
 
         [Test]

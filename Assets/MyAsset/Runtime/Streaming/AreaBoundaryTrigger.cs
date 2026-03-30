@@ -25,13 +25,6 @@ namespace Game.Runtime
         public string SceneToLoad => sceneToLoad;
         public string SceneToUnload => sceneToUnload;
 
-        private LevelStreamingController _controller;
-
-        private void Start()
-        {
-            _controller = FindStreamingController();
-        }
-
         private void OnTriggerEnter2D(Collider2D other)
         {
             if (!other.CompareTag(playerTag))
@@ -39,34 +32,21 @@ namespace Game.Runtime
                 return;
             }
 
-            if (_controller == null)
+            LevelStreamingController controller = GameManager.LevelStreaming;
+            if (controller == null)
             {
-                _controller = FindStreamingController();
-                if (_controller == null)
-                {
-                    return;
-                }
+                return;
             }
 
             if (!string.IsNullOrEmpty(sceneToLoad))
             {
-                _controller.RequestAreaLoad(sceneToLoad);
+                controller.RequestAreaLoad(sceneToLoad);
             }
 
             if (!string.IsNullOrEmpty(sceneToUnload))
             {
-                _controller.RequestAreaUnload(sceneToUnload);
+                controller.RequestAreaUnload(sceneToUnload);
             }
-        }
-
-        private LevelStreamingController FindStreamingController()
-        {
-            if (GameManager.Instance != null)
-            {
-                return GameManager.Instance.GetComponentInChildren<LevelStreamingController>();
-            }
-
-            return null;
         }
     }
 }

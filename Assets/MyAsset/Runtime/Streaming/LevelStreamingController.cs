@@ -17,9 +17,10 @@ namespace Game.Runtime
         private string persistentSceneName = "GameScene";
 
         private LevelStreamingOrchestrator _orchestrator;
-        private AsyncOperation _currentOperation;
-        private string _currentOperationScene;
-        private bool _isUnloading;
+        private AsyncOperation _loadOperation;
+        private string _loadOperationScene;
+        private AsyncOperation _unloadOperation;
+        private string _unloadOperationScene;
 
         public LevelStreamingOrchestrator Orchestrator => _orchestrator;
 
@@ -46,20 +47,18 @@ namespace Game.Runtime
                 return;
             }
 
-            if (_currentOperation != null && _currentOperation.isDone)
+            if (_loadOperation != null && _loadOperation.isDone)
             {
-                if (_isUnloading)
-                {
-                    _orchestrator.NotifyUnloadComplete(_currentOperationScene);
-                }
-                else
-                {
-                    _orchestrator.NotifyLoadComplete(_currentOperationScene);
-                }
+                _orchestrator.NotifyLoadComplete(_loadOperationScene);
+                _loadOperation = null;
+                _loadOperationScene = null;
+            }
 
-                _currentOperation = null;
-                _currentOperationScene = null;
-                _isUnloading = false;
+            if (_unloadOperation != null && _unloadOperation.isDone)
+            {
+                _orchestrator.NotifyUnloadComplete(_unloadOperationScene);
+                _unloadOperation = null;
+                _unloadOperationScene = null;
             }
 
             _orchestrator.ProcessQueue();
@@ -89,16 +88,14 @@ namespace Game.Runtime
 
         private void OnLoadSceneRequested(string sceneName)
         {
-            _currentOperation = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
-            _currentOperationScene = sceneName;
-            _isUnloading = false;
+            _loadOperation = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
+            _loadOperationScene = sceneName;
         }
 
         private void OnUnloadSceneRequested(string sceneName)
         {
-            _currentOperation = SceneManager.UnloadSceneAsync(sceneName);
-            _currentOperationScene = sceneName;
-            _isUnloading = true;
+            _unloadOperation = SceneManager.UnloadSceneAsync(sceneName);
+            _unloadOperationScene = sceneName;
         }
     }
 }
