@@ -9,7 +9,30 @@ argument-hint: <FeatureName> [description]
 
 TDDワークフローで新しいゲーム機能を作成する。
 
-## ステップ0: 事前チェック（重複検出）
+## ステップ0: ブランチ作成 + 事前チェック
+
+### ブランチ作成（標準動作）
+
+**mainブランチから新しいfeatureブランチを切る。**
+
+```bash
+git checkout main
+git pull
+git checkout -b feature/<機能名>
+```
+
+- 機能名は引数から推定（日本語OK）
+- 既にfeatureブランチにいる場合はユーザーに確認: 「現在 `feature/XXX` にいます。新しいブランチを切りますか？」
+- ユーザーが明示的にブランチ不要と言った場合のみスキップ
+
+### 将来タスクからの開始
+
+引数が `docs/FUTURE_TASKS.md` の項目を指している場合:
+1. `docs/FUTURE_TASKS.md` を読み、該当タスクの詳細（説明、対象ファイル、依存関係）を取得
+2. タスクの情報を仕様整理のインプットとして活用
+3. 実装完了後にステップ7でタスクにチェックを入れる
+
+### 重複検出
 
 **実装を始める前に、既存機能との重複を確認する。**
 
@@ -103,11 +126,17 @@ python tools/feature-db.py update "$0" --status complete --test-passed N --test-
 python tools/feature-db.py update "既存機能名" --status complete --test-passed N --test-failed 0
 ```
 
+### FUTURE_TASKS.md 更新
+
+将来タスクから開始した場合:
+- `docs/FUTURE_TASKS.md` の該当タスクに `[x]` チェックを入れる
+- 完了メモ（✅ で始まる1行）を追記する
+
 ## ステップ8: Gitコミット
 
 テスト全Pass・feature-db記録後にコミット+プッシュ。
 
-- ブランチ確認: feature/ブランチにいることを確認（mainなら警告）
+- ブランチ確認: ステップ0で作成したfeature/ブランチにいることを確認
 - ステージング: テストファイルと実装ファイルをgit add
 - コミット: `feat(scope): 機能名を実装` 形式で日本語コミットメッセージ
 - プッシュ: `git push origin <branch>`
