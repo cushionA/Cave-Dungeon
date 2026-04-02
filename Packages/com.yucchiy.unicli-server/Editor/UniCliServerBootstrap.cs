@@ -1,0 +1,206 @@
+#nullable enable
+using System;
+using System.Diagnostics;
+using System.IO;
+using UnityEditor;
+using UnityEngine;
+
+namespace UniCli.Server.Editor
+{
+    internal static class UniCliEditorLog
+    {
+        public static bool EnableLogs { get; set; } = UniCliSettings.ReadEditorLoggingEnabled();
+
+        public static void Log(string message)
+        {
+            if (EnableLogs)
+                UnityEngine.Debug.Log(message);
+        }
+
+        public static void LogWarning(string message)
+        {
+            if (EnableLogs)
+                UnityEngine.Debug.LogWarning(message);
+        }
+
+        public static void LogError(string message)
+        {
+            if (EnableLogs)
+                UnityEngine.Debug.LogError(message);
+        }
+    }
+
+    [InitializeOnLoad]
+    public static class UniCliServerBootstrap
+    {
+        private static UniCliServer? _server;
+        private static CommandDispatcher? _dispatcher;
+        private static bool _originalRunInBackground;
+
+        public static ServiceRegistry Services { get; } = new();
+        public static CommandDispatcher? Dispatcher => _dispatcher;
+        public static bool IsRunning => _server != null;
+        public static string? CurrentCommandName => _server?.CurrentCommandName;
+        public static DateTime? CurrentCommandStartTime => _server?.CurrentCommandStartTime;
+        public static string[] QueuedCommandNames => _server?.QueuedCommandNames ?? Array.Empty<string>();
+
+        static UniCliServerBootstrap()
+        {
+            EnsurePidFile();
+
+            EditorApplication.update -= Initialize;
+            EditorApplication.update += Initialize;
+        }
+
+        private static void Initialize()
+        {
+            EditorApplication.update -= Initialize;
+
+            RunServiceInstallers(Services);
+
+            AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
+            AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
+            AssemblyReloadEvents.afterAssemblyReload -= OnAfterAssemblyReload;
+            AssemblyReloadEvents.afterAssemblyReload += OnAfterAssemblyReload;
+            EditorApplication.quitting -= OnEditorQuitting;
+            EditorApplication.quitting += OnEditorQuitting;
+
+            EditorApplication.update -= OnEditorUpdate;
+            EditorApplication.update += OnEditorUpdate;
+
+            EditorApplication.update -= StartServer;
+            EditorApplication.update += StartServer;
+        }
+
+        public static void StartServer()
+        {
+            EditorApplication.update -= StartServer;
+
+            if (_server != null)
+                return;
+
+            _originalRunInBackground = Application.runInBackground;
+            Application.runInBackground = true;
+
+            var pipeName = ProjectIdentifier.GetPipeName();
+            _dispatcher = new CommandDispatcher(Services);
+            _server = new UniCliServer(
+                pipeName,
+                _dispatcher,
+                logger: UniCliEditorLog.Log,
+                errorLogger: UniCliEditorLog.LogError
+            );
+        }
+
+        public static void ReloadDispatcher()
+        {
+            if (_server == null)
+                return;
+
+            _dispatcher = new CommandDispatcher(Services);
+            _server.ReplaceDispatcher(_dispatcher);
+            UniCliEditorLog.Log("[UniCli] Dispatcher reloaded");
+        }
+
+        public static void StopServer()
+        {
+            if (_server == null)
+                return;
+
+            Application.runInBackground = _originalRunInBackground;
+            _server.Dispose();
+            _server = null;
+            _dispatcher = null;
+        }
+
+        private static string GetPidFilePath()
+        {
+            return Path.Combine(Application.dataPath, "..", "Library", "UniCli", "server.pid");
+        }
+
+        private static void EnsurePidFile()
+        {
+            try
+            {
+                var path = GetPidFilePath();
+                var pid = Process.GetCurrentProcess().Id.ToString();
+
+                if (File.Exists(path) && File.ReadAllText(path).Trim() == pid)
+                    return;
+
+                var dir = Path.GetDirectoryName(path);
+                if (dir != null && !Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+
+                File.WriteAllText(path, pid);
+            }
+            catch (Exception ex)
+            {
+                UniCliEditorLog.LogWarning($"[UniCli] Failed to write PID file: {ex.Message}");
+            }
+        }
+
+        private static void DeletePidFile()
+        {
+            try
+            {
+                var path = GetPidFilePath();
+                if (File.Exists(path))
+                    File.Delete(path);
+            }
+            catch
+            {
+                // Best-effort deletion
+            }
+        }
+
+        private static void RunServiceInstallers(ServiceRegistry services)
+        {
+            var installerTypes = TypeCache.GetTypesDerivedFrom<IServiceInstaller>();
+
+            foreach (var type in installerTypes)
+            {
+                if (type.IsAbstract || type.IsInterface)
+                    continue;
+
+                try
+                {
+                    var installer = (IServiceInstaller)Activator.CreateInstance(type);
+                    installer.Install(services);
+                }
+                catch (Exception ex)
+                {
+                    UniCliEditorLog.LogError($"[UniCli] Failed to run service installer {type.FullName}: {ex.Message}");
+                }
+            }
+        }
+
+        private static void OnBeforeAssemblyReload()
+        {
+            EditorApplication.update -= OnEditorUpdate;
+            AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
+
+            StopServer();
+        }
+
+        private static void OnAfterAssemblyReload()
+        {
+            AssemblyReloadEvents.afterAssemblyReload -= OnAfterAssemblyReload;
+            EditorApplication.update += OnEditorUpdate;
+
+            EditorApplication.update -= StartServer;
+            EditorApplication.update += StartServer;
+        }
+
+        private static void OnEditorQuitting()
+        {
+            StopServer();
+            DeletePidFile();
+        }
+
+        private static void OnEditorUpdate()
+        {
+            _server?.ProcessCommands();
+        }
+    }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "com.yucchiy.unicli-server",
+  "version": "1.2.2",
+  "displayName": "UniCli Server",
+  "description": "Unity Editor plugin - Server for controlling Unity via CLI",
+  "unity": "2022.3",
+  "author": {
+    "name": "Yuichiro Mukai",
+    "url": "https://github.com/yucchiy"
+  },
+  "_fingerprint": "4d90a096134611dbf1bbbe9250d3853d9a8f308f"
+}

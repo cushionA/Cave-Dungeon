@@ -442,6 +442,12 @@
       },
       "url": "https://packages.unity.com"
     },
+    "com.yucchiy.unicli-server": {
+      "version": "file:com.yucchiy.unicli-server",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
     "com.zabuton.container-pack": {
       "version": "https://github.com/cushionA/ObjectDataContainer.git#package",
       "depth": 0,

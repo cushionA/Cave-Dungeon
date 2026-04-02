@@ -1,0 +1,107 @@
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using UniCli.Protocol;
+using UniCli.Server.Editor.Internal;
+using UnityEngine;
+
+namespace UniCli.Server.Editor.Handlers
+{
+    public interface ICommandHandler
+    {
+        string CommandName { get; }
+        string Description { get; }
+        CommandInfo GetCommandInfo();
+        ValueTask<object> ExecuteAsync(object request, CancellationToken cancellationToken);
+    }
+
+    public interface IResponseFormatter
+    {
+        bool TryWriteFormatted(object response, bool success, IFormatWriter writer);
+    }
+
+    public interface IRawJsonResponse
+    {
+        string ToJson();
+    }
+
+    public abstract class CommandHandler<TRequest, TResponse> : ICommandHandler, IResponseFormatter
+    {
+        public abstract string CommandName { get; }
+        public abstract string Description { get; }
+
+        protected string ClientWorkingDirectory { get; private set; }
+
+        public CommandInfo GetCommandInfo()
+        {
+            var handlerType = GetType();
+            var assemblyName = handlerType.Assembly.GetName().Name;
+            var requestMetadata = CommandFieldInfoExtractor.Extract(typeof(TRequest));
+            var responseMetadata = CommandFieldInfoExtractor.Extract(typeof(TResponse));
+            return new CommandInfo
+            {
+                name = CommandName,
+                description = Description,
+                builtIn = assemblyName.StartsWith("UniCli.Server.Editor"),
+                module = ModuleRegistry.ResolveModuleName(handlerType),
+                requestFields = requestMetadata.Fields,
+                responseFields = responseMetadata.Fields,
+                requestTypeDetails = requestMetadata.TypeDetails,
+                responseTypeDetails = responseMetadata.TypeDetails
+            };
+        }
+
+        public async ValueTask<object> ExecuteAsync(object request, CancellationToken cancellationToken)
+        {
+            if (request is not CommandRequest commandRequest)
+            {
+                throw new System.ArgumentException($"Invalid request type. Expected CommandRequest, got {request?.GetType().Name ?? "null"}");
+            }
+
+            ClientWorkingDirectory = commandRequest.cwd ?? "";
+
+            TRequest typedRequest;
+            if (typeof(TRequest) == typeof(Unit))
+            {
+                typedRequest = (TRequest)(object)Unit.Value;
+            }
+            else if (string.IsNullOrEmpty(commandRequest.data))
+            {
+                typedRequest = JsonUtility.FromJson<TRequest>("{}");
+            }
+            else
+            {
+                typedRequest = JsonUtility.FromJson<TRequest>(commandRequest.data);
+                if (typedRequest == null)
+                {
+                    throw new System.ArgumentException($"Failed to deserialize request data to {typeof(TRequest).Name}");
+                }
+            }
+
+            return await ExecuteAsync(typedRequest, cancellationToken);
+        }
+
+        protected string ResolvePath(string path)
+        {
+            if (string.IsNullOrEmpty(path) || Path.IsPathRooted(path))
+                return path;
+            if (string.IsNullOrEmpty(ClientWorkingDirectory))
+                return path;
+            return Path.Combine(ClientWorkingDirectory, path);
+        }
+
+        public bool TryWriteFormatted(object response, bool success, IFormatWriter writer)
+        {
+            if (response is TResponse typed)
+                return TryWriteFormatted(typed, success, writer);
+            return false;
+        }
+
+        protected virtual bool TryWriteFormatted(TResponse response, bool success, IFormatWriter writer)
+        {
+            return false;
+        }
+
+        protected abstract ValueTask<TResponse> ExecuteAsync(TRequest request, CancellationToken cancellationToken);
+    }
+}

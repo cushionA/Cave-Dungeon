@@ -1,0 +1,26 @@
+{
+    "name": "UniCli.Server.Editor",
+    "rootNamespace": "UniCli.Server.Editor",
+    "references": [
+        "UniCli.Remote",
+        "Unity.Recorder.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.recorder",
+            "expression": "",
+            "define": "UNICLI_RECORDER"
+        }
+    ],
+    "noEngineReferences": false
+}
