@@ -39,9 +39,9 @@ namespace Game.Editor
         }
 
         /// <summary>
-        /// ダイアログなしでテストシーンを構築する。MCP/自動化ツール向け。
+        /// ダイアログなしでテストシーンを構築する。CLI/自動化ツール向け。
         /// </summary>
-        [MenuItem("Tools/MCP Internal/Build Test Scene Silent")]
+        [MenuItem("Tools/CLIInternal/Build Test Scene")]
         public static void BuildTestSceneNoDialog()
         {
             BuildTestSceneInternal();
