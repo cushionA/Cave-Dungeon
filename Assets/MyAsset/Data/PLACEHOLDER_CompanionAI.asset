@@ -1,0 +1,106 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f732d17df7bb7354880a10fae6d9de9f, type: 3}
+  m_Name: PLACEHOLDER_CompanionAI
+  m_EditorClassIdentifier: Game.Core::Game.Core.AIInfo
+  modes:
+  - mode: 0
+    detectionRange: 12
+    combatRange: 2
+    retreatHpThreshold: 0
+    availableActIndices: 01000000
+    transitions:
+    - targetMode: 3
+      trigger: 0
+      threshold: 10
+  - mode: 3
+    detectionRange: 15
+    combatRange: 2
+    retreatHpThreshold: 0
+    availableActIndices: 0000000001000000
+    transitions:
+    - targetMode: 0
+      trigger: 1
+      threshold: 15
+  actDataList:
+  - actName: CompanionAttack
+    actType: 0
+    attackInfoIndex: 0
+    weight: 70
+    coolTime: 1.5
+    maxUseCount: 0
+    triggerJudge:
+      condition: 1
+      value: 1.5
+      comparison: 1
+    targetJudge:
+      selectionType: 0
+      maxRange: 0
+      minRange: 0
+      targetBelong: 0
+      targetFilter:
+        filterFlags: 0
+        belong: 0
+        feature: 0
+        weakPoint: 0
+        distanceRange: {x: 0, y: 0}
+        includeSelf: 0
+    actJudge:
+      requiredMp: 0
+      requiredStamina: 0
+      minHpRatio: 0
+      maxHpRatio: 0
+      requireLineOfSight: 0
+      requireGrounded: 0
+  - actName: Wait
+    actType: 6
+    attackInfoIndex: 0
+    weight: 20
+    coolTime: 0
+    maxUseCount: 0
+    triggerJudge:
+      condition: 0
+      value: 0
+      comparison: 0
+    targetJudge:
+      selectionType: 0
+      maxRange: 0
+      minRange: 0
+      targetBelong: 0
+      targetFilter:
+        filterFlags: 0
+        belong: 0
+        feature: 0
+        weakPoint: 0
+        distanceRange: {x: 0, y: 0}
+        includeSelf: 0
+    actJudge:
+      requiredMp: 0
+      requiredStamina: 0
+      minHpRatio: 0
+      maxHpRatio: 0
+      requireLineOfSight: 0
+      requireGrounded: 0
+  coolTimeData:
+    globalCoolTime: 0.3
+    attackCoolTime: 1.5
+    skillCoolTime: 0
+    guardCoolTime: 0
+    dodgeCoolTime: 0
+    healCoolTime: 0
+  companionSetting:
+    followDistance: 0
+    maxLeashDistance: 0
+    supportHpThreshold: 0
+    autoHeal: 0
+    prioritizePlayerTarget: 0
+    defaultStance: 0

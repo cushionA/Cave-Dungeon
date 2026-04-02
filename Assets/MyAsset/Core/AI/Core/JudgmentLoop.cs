@@ -32,12 +32,16 @@ namespace Game.Core
 
         /// <summary>
         /// Sets the active AI mode and resets judgment timers.
+        /// 現在実行中のアクションをキャンセルして即座に新モードの評価を可能にする。
         /// </summary>
         public void SetMode(AIMode mode)
         {
             _currentMode = mode;
             _targetJudgeTimer = mode.judgeInterval.x;
-            _actionJudgeTimer = mode.judgeInterval.y;
+            // アクション評価を即座に実行するためタイマーを0にする
+            _actionJudgeTimer = 0f;
+            // 旧モードのアクションをキャンセル（Waitが残り続ける問題を防止）
+            _executor.CancelCurrent();
         }
 
         /// <summary>

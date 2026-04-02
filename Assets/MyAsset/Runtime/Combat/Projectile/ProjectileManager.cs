@@ -239,8 +239,14 @@ namespace Game.Runtime
                 ReturnControllerInternal(_activeControllers[i], i);
             }
 
-            _pendingReturns.Clear();
-            _corePool.Clear();
+            if (_pendingReturns != null)
+            {
+                _pendingReturns.Clear();
+            }
+            if (_corePool != null)
+            {
+                _corePool.Clear();
+            }
         }
 
         /// <summary>

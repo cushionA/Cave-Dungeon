@@ -33,24 +33,23 @@ namespace Game.Core
         }
 
         /// <summary>
-        /// ボタンIDからAttackInputTypeに変換する。
+        /// AttackButtonIdからAttackInputTypeに変換する。
         /// 空中かどうかでAerial系に、チャージ中かどうかでCharge系に変換する。
-        /// buttonId: 0=Light, 1=Heavy, 2=Skill
         /// </summary>
-        public static AttackInputType? ConvertAttackInput(int buttonId, bool isAirborne, bool isCharging)
+        public static AttackInputType? ConvertAttackInput(AttackButtonId buttonId, bool isAirborne, bool isCharging)
         {
-            if (buttonId == 2)
+            if (buttonId == AttackButtonId.Skill)
             {
                 return AttackInputType.Skill;
             }
 
             if (isAirborne)
             {
-                if (buttonId == 0)
+                if (buttonId == AttackButtonId.Light)
                 {
                     return AttackInputType.AerialLight;
                 }
-                if (buttonId == 1)
+                if (buttonId == AttackButtonId.Heavy)
                 {
                     return AttackInputType.AerialHeavy;
                 }
@@ -58,22 +57,22 @@ namespace Game.Core
 
             if (isCharging)
             {
-                if (buttonId == 0)
+                if (buttonId == AttackButtonId.Light)
                 {
                     return AttackInputType.ChargeLight;
                 }
-                if (buttonId == 1)
+                if (buttonId == AttackButtonId.Heavy)
                 {
                     return AttackInputType.ChargeHeavy;
                 }
             }
 
-            if (buttonId == 0)
+            if (buttonId == AttackButtonId.Light)
             {
                 return AttackInputType.LightAttack;
             }
 
-            if (buttonId == 1)
+            if (buttonId == AttackButtonId.Heavy)
             {
                 return AttackInputType.HeavyAttack;
             }

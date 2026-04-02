@@ -17,6 +17,7 @@ namespace Game.Runtime
         private HitBox _hitBox;
         private DamageDealer _damageDealer;
         private DamageReceiver _damageReceiver;
+        private CharacterCollisionController _collisionController;
 
         private ActionExecutor _executor;
         private ActionPhaseCoordinator _phaseCoordinator;
@@ -42,6 +43,7 @@ namespace Game.Runtime
             _hitBox = GetComponentInChildren<HitBox>();
             _damageDealer = GetComponentInChildren<DamageDealer>();
             _damageReceiver = GetComponent<DamageReceiver>();
+            _collisionController = GetComponent<CharacterCollisionController>();
 
             _executor = new ActionExecutor();
             _phaseCoordinator = new ActionPhaseCoordinator();
@@ -49,14 +51,29 @@ namespace Game.Runtime
             RegisterHandlers();
         }
 
+        private void Start()
+        {
+            // Bridge購読はStart()で行う。
+            // CharacterAnimationController.Awake()でBridgeが生成されるが、
+            // ActionExecutorController.Awake()→OnEnable()時点ではまだnullの場合がある
+            // （同一GameObjectのAwake実行順序は不定）。
+            SubscribeToBridge();
+        }
+
         private void OnEnable()
         {
-            if (_animController != null && _animController.Bridge != null)
+            // Start()前のOnEnableではBridge未生成の可能性があるため、
+            // Bridge購読はStart()で行い、ここではexecutorイベントのみ購読する。
+            // OnDisable→OnEnable再有効化時はBridge再購読が必要。
+            if (_cachedBridge != null)
             {
-                _cachedBridge = _animController.Bridge;
+                // 再有効化時: OnDisableで解除済みのBridgeを再購読
                 _cachedBridge.OnPhaseChanged += HandlePhaseChanged;
             }
-            _executor.OnActionCompleted += HandleActionCompleted;
+            if (_executor != null)
+            {
+                _executor.OnActionCompleted += HandleActionCompleted;
+            }
         }
 
         private void OnDisable()
@@ -64,13 +81,29 @@ namespace Game.Runtime
             if (_cachedBridge != null)
             {
                 _cachedBridge.OnPhaseChanged -= HandlePhaseChanged;
-                _cachedBridge = null;
             }
-            _executor.OnActionCompleted -= HandleActionCompleted;
+            if (_executor != null)
+            {
+                _executor.OnActionCompleted -= HandleActionCompleted;
+            }
+        }
+
+        private void SubscribeToBridge()
+        {
+            if (_animController != null && _animController.Bridge != null)
+            {
+                _cachedBridge = _animController.Bridge;
+                _cachedBridge.OnPhaseChanged += HandlePhaseChanged;
+            }
         }
 
         private void Update()
         {
+            if (_executor == null)
+            {
+                return;
+            }
+
             _executor.Tick(Time.deltaTime);
 
             if (_phaseCoordinator.ShouldCompleteAction)
@@ -116,6 +149,12 @@ namespace Game.Runtime
                 if (_animController != null)
                 {
                     _animController.StartActionPhase(info.motionInfo, (byte)slot.paramId);
+                }
+
+                // 攻撃のcontactTypeに応じて衝突モードを切替
+                if (_collisionController != null)
+                {
+                    _collisionController.SetCollisionMode(info.contactType);
                 }
 
                 _phaseCoordinator.BeginAction();
@@ -270,6 +309,12 @@ namespace Game.Runtime
             if (_damageReceiver != null)
             {
                 _damageReceiver.ClearActionEffects();
+            }
+
+            // 衝突モードをすり抜けに戻す
+            if (_collisionController != null)
+            {
+                _collisionController.ClearCollisionMode();
             }
         }
     }

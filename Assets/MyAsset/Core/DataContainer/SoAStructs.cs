@@ -129,6 +129,9 @@ namespace Game.Core
         public float dashDuration;
         public float gravityScale;
         public float weightRatio;
+        public float jumpStaminaCost;
+        public float dodgeStaminaCost;
+        public float sprintStaminaPerSecond;
     }
 
     /// <summary>

@@ -58,6 +58,18 @@ namespace Game.Core
         GlideFloat = 1 << 5,
     }
 
+    // ===== 攻撃ボタン識別 =====
+
+    /// <summary>
+    /// 物理ボタンの識別子。PlayerInputHandler内部で使用。
+    /// </summary>
+    public enum AttackButtonId : byte
+    {
+        Light = 0,
+        Heavy = 1,
+        Skill = 2,
+    }
+
     // ===== 攻撃 =====
 
     public enum AttackInputType : byte

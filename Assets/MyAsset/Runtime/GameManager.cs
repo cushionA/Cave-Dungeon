@@ -107,7 +107,10 @@ namespace Game.Runtime
                 dashSpeed = info.dashSpeed,
                 dashDuration = GameConstants.k_DefaultDashDuration,
                 gravityScale = GameConstants.k_GravityScale,
-                weightRatio = 0f
+                weightRatio = 0f,
+                jumpStaminaCost = info.jumpStaminaCost,
+                dodgeStaminaCost = info.dodgeStaminaCost,
+                sprintStaminaPerSecond = info.sprintStaminaPerSecond
             };
 
             return _core.RegisterCharacter(hash, vitals, combat, flags, move);

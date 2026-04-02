@@ -134,7 +134,8 @@ namespace Game.Core
         public Vector2 moveDirection;
         public bool jumpPressed;
         public bool jumpHeld;
-        public bool dashPressed;
+        public bool dodgePressed;   // 単押し回避
+        public bool sprintHeld;     // 長押しスプリント
         public AttackInputType? attackInput;
         public bool guardHeld;
         public bool interactPressed;

@@ -239,6 +239,11 @@ namespace Game.Runtime
 
         private void CancelAllActive()
         {
+            if (_active == null)
+            {
+                return;
+            }
+
             for (int i = _active.Count - 1; i >= 0; i--)
             {
                 PoolEntry entry = _active[i];

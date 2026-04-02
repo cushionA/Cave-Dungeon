@@ -69,6 +69,7 @@ namespace Game.Core
                     ModeTransitionRule rule = new ModeTransitionRule
                     {
                         targetModeIndex = targetIdx,
+                        sourceModeIndex = i,
                         conditions = new AICondition[] { ConvertTriggerToCondition(tc) },
                     };
                     rules.Add(rule);
@@ -121,14 +122,15 @@ namespace Game.Core
 
             if (modeData.detectionRange > 0f || modeData.combatRange > 0f)
             {
-                // Primary target select: nearest enemy in detection range
+                // Primary target select: nearest hostile in detection range
+                // 敵AIから見た攻撃対象はAlly陣営（プレイヤー・仲間）
                 AITargetSelect nearestEnemy = new AITargetSelect
                 {
                     sortKey = TargetSortKey.Distance,
                     isDescending = false,
                     filter = new TargetFilter
                     {
-                        belong = CharacterBelong.Enemy,
+                        belong = CharacterBelong.Ally,
                         distanceRange = new Vector2(0f, modeData.detectionRange > 0f ? modeData.detectionRange : modeData.combatRange),
                         includeSelf = false,
                     },
@@ -161,11 +163,22 @@ namespace Game.Core
 
         private static ActionSlot ConvertActToSlot(ActData act)
         {
+            ActionExecType execType = MapActType(act.actType);
+
+            // Sustainedアクション（Wait/Guard/Move等）は適切な持続時間を設定する。
+            // coolTime > 0 ならその値を使用、なければデフォルト1秒。
+            // paramValue=0 は無限持続となり、AIの再評価でキャンセルされるまで終わらない。
+            float paramValue = 0f;
+            if (execType == ActionExecType.Sustained)
+            {
+                paramValue = act.coolTime > 0f ? act.coolTime : 1f;
+            }
+
             return new ActionSlot
             {
-                execType = MapActType(act.actType),
+                execType = execType,
                 paramId = act.attackInfoIndex,
-                paramValue = 0f,
+                paramValue = paramValue,
                 displayName = act.actName,
             };
         }

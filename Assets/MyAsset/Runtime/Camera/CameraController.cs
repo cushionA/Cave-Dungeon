@@ -40,7 +40,7 @@ namespace Game.Runtime
 
         private void LateUpdate()
         {
-            if (_target == null)
+            if (_target == null || _logic == null)
             {
                 return;
             }

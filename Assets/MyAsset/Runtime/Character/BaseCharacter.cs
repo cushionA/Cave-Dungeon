@@ -27,6 +27,7 @@ namespace Game.Runtime
 
         public int ObjectHash => _objectHash;
         public bool IsGrounded => _isGrounded;
+        public CharacterInfo CharacterInfoRef => _characterInfo;
         public bool IsAlive
         {
             get
@@ -95,6 +96,13 @@ namespace Game.Runtime
                     _characterInfo.armorRecoveryRate,
                     _characterInfo.armorRecoveryDelay);
             }
+
+            // CharacterAnimationControllerの初期化（ownerHashとの紐付け）
+            CharacterAnimationController animController = GetComponent<CharacterAnimationController>();
+            if (animController != null)
+            {
+                animController.Initialize(_objectHash);
+            }
         }
 
         protected virtual void OnDestroy()
@@ -160,6 +168,61 @@ namespace Game.Runtime
                 origin, size, 0f, Vector2.down, k_GroundCheckDistance, _groundLayer);
 
             _isGrounded = hit.collider != null;
+        }
+
+        /// <summary>
+        /// AI内部ExecutorのAttack/Castアクションを
+        /// ActionExecutorController（MonoBehaviour側）に橋渡しする共通ヘルパー。
+        /// 橋渡し成功後にAI側のアクションをForceCompleteして二重実行を防ぐ。
+        /// </summary>
+        protected static void BridgeAIActionToExecutor(
+            ActionExecutor aiExecutor, ActionExecutorController monoExecutor, int targetHash)
+        {
+            if (aiExecutor == null || !aiExecutor.IsExecuting)
+            {
+                return;
+            }
+
+            if (monoExecutor.IsExecuting)
+            {
+                return;
+            }
+
+            ActionBase current = aiExecutor.CurrentAction;
+            if (current == null)
+            {
+                return;
+            }
+
+            ActionSlot slot;
+            if (current is AttackActionHandler attackHandler)
+            {
+                slot = new ActionSlot
+                {
+                    execType = ActionExecType.Attack,
+                    paramId = attackHandler.LastParamId,
+                    paramValue = 1f
+                };
+            }
+            else if (current is CastActionHandler castHandler)
+            {
+                slot = new ActionSlot
+                {
+                    execType = ActionExecType.Cast,
+                    paramId = castHandler.LastParamId,
+                    paramValue = 1f
+                };
+            }
+            else
+            {
+                return;
+            }
+
+            bool result = monoExecutor.ExecuteAction(slot, targetHash);
+            if (result)
+            {
+                current.ForceComplete();
+            }
         }
 
         /// <summary>

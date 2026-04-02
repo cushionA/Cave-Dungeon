@@ -29,7 +29,7 @@ namespace Game.Tests.EditMode
 
             // Act — InputConverterで変換
             AttackInputType? result = InputConverter.ConvertAttackInput(
-                _chargeHandler.AttackButtonId, false, _chargeHandler.IsCharging);
+                (AttackButtonId)_chargeHandler.AttackButtonId, false, _chargeHandler.IsCharging);
 
             // Assert
             Assert.AreEqual(AttackInputType.LightAttack, result);
@@ -46,7 +46,7 @@ namespace Game.Tests.EditMode
 
             // Act
             AttackInputType? result = InputConverter.ConvertAttackInput(
-                _chargeHandler.AttackButtonId, false, _chargeHandler.IsCharging);
+                (AttackButtonId)_chargeHandler.AttackButtonId, false, _chargeHandler.IsCharging);
 
             // Assert
             Assert.AreEqual(AttackInputType.ChargeLight, result);
@@ -63,7 +63,7 @@ namespace Game.Tests.EditMode
 
             // Act
             AttackInputType? result = InputConverter.ConvertAttackInput(
-                _chargeHandler.AttackButtonId, false, _chargeHandler.IsCharging);
+                (AttackButtonId)_chargeHandler.AttackButtonId, false, _chargeHandler.IsCharging);
 
             // Assert
             Assert.AreEqual(AttackInputType.ChargeHeavy, result);
@@ -80,7 +80,7 @@ namespace Game.Tests.EditMode
 
             // Act — isAirborne=true
             AttackInputType? result = InputConverter.ConvertAttackInput(
-                _chargeHandler.AttackButtonId, true, _chargeHandler.IsCharging);
+                (AttackButtonId)_chargeHandler.AttackButtonId, true, _chargeHandler.IsCharging);
 
             // Assert — 空中攻撃が優先
             Assert.AreEqual(AttackInputType.AerialLight, result);
@@ -95,7 +95,7 @@ namespace Game.Tests.EditMode
 
             // Act
             AttackInputType? result = InputConverter.ConvertAttackInput(
-                _chargeHandler.AttackButtonId, false, _chargeHandler.IsCharging);
+                (AttackButtonId)_chargeHandler.AttackButtonId, false, _chargeHandler.IsCharging);
 
             // Assert — Skillはチャージ無関係
             Assert.AreEqual(AttackInputType.Skill, result);
