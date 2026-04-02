@@ -60,67 +60,73 @@ START
 ## GRAPH:BATCH_EXECUTE
 
 ```
-[Phase 1: PREFLIGHT — EditMode, 1回]
-  │ Read: references/test-types/t6-preflight.md
-  │ `/unicli`: Compile → コンパイル確認
-  │ `/unicli`: Console.GetLog → エラー確認
-  │ 全機能のシーン構成をT6チェック:
-  │   - キャラクターレイヤー
-  │   - 必須コンポーネント
-  │   - GameManager初期化
-  │   - プレハブ整合性
+[Phase 0: CONNECTION_CHECK]
+  │ unicli check → 接続確認
+  │ ├─[失敗]──→ ユーザーに `/unicli` セットアップを案内 → END
+  │ └─[成功]──→ 続行
   │
-  ├─[Fail]──→ [REPORT_PREFLIGHT] → END
-  │             ※ 修正が必要な項目を一覧報告
-  │
-  └─[Pass]──→ [Phase 2: LOGIC — EditMode, 1回]
-                │ Read: references/test-types/t1-logic.md
-                │ `/unicli`: TestRunner.RunEditMode
-                │   → group_T1_logic の全機能テストを一括実行
-                │ 結果を機能ごとに分類して記録
-                │
-                └──→ [Phase 3: PLAYMODE_SESSION — PlayMode, 1セッション]
-                       │ ※ PlayMode Enter は1回だけ
+  └──→ [Phase 1: PREFLIGHT — EditMode, 1回]
+         │ Read: references/test-types/t6-preflight.md
+         │ `/unicli`: Compile → コンパイル確認
+         │ `/unicli`: Console.GetLog → エラー確認
+         │ 全機能のシーン構成をT6チェック:
+         │   - キャラクターレイヤー
+         │   - 必須コンポーネント
+         │   - GameManager初期化
+         │   - プレハブ整合性
+         │
+         ├─[Fail]──→ [REPORT_PREFLIGHT] → END
+         │             ※ 修正が必要な項目を一覧報告
+         │
+         └─[Pass]──→ [Phase 2: LOGIC — EditMode, 1回]
+                       │ Read: references/test-types/t1-logic.md
+                       │ `/unicli`: TestRunner.RunEditMode
+                       │   → group_T1_logic の全機能テストを一括実行
+                       │ 結果を機能ごとに分類して記録
                        │
-                       │ [3a. PROFILER_START] (T5対象機能がある場合)
-                       │   Read: references/test-types/t5-performance.md
-                       │   `/unicli`: Profiler.StartRecording
-                       │
-                       │ [3b. AUTO_INPUT] (T2対象機能がある場合)
-                       │   Read: references/test-types/t2-auto-input.md
-                       │   テスト設定 → PlayMode.Enter → ポーリング → 完了待ち
-                       │   ※ GRAPH:AUTO_INPUT_EXECUTE と同じフロー
-                       │
-                       │ [3c. SNAPSHOT] (T3対象機能がある場合)
-                       │   Read: references/test-types/t3-snapshot.md
-                       │   AutoInput完了後（またはDynamic操作後）にEvalで状態取得
-                       │
-                       │ [3d. ANIMATOR] (T4対象機能がある場合)
-                       │   Read: references/test-types/t4-animator.md
-                       │   `/unicli`: Animator.Inspect で各キャラの状態確認
-                       │
-                       │ [3e. DYNAMIC] (T7対象機能がある場合)
-                       │   Read: references/test-types/t7-dynamic.md
-                       │   シーン操作 → 検証 → 状態復元
-                       │
-                       │ [3f. UI] (T8対象機能がある場合)
-                       │   Read: references/test-types/t8-ui.md
-                       │   Eval で UI要素の値・状態を検証
-                       │
-                       │ [3g. SCREENSHOT] (T9対象機能がある場合)
-                       │   Read: references/test-types/t9-screenshot.md
-                       │   `/unicli`: Screenshot.Capture
-                       │
-                       │ [3h. PROFILER_STOP] (T5対象機能がある場合)
-                       │   `/unicli`: Profiler.StopRecording
-                       │   `/unicli`: Profiler.AnalyzeFrames
-                       │   `/unicli`: Profiler.FindSpikes --frameTimeThresholdMs 33
-                       │
-                       │ [3i. EXIT]
-                       │   `/unicli`: PlayMode.Exit
-                       │
-                       └──→ [Phase 4: AGGREGATE]
-                              │ → GRAPH:BATCH_REPORT
+                       └──→ [Phase 3: PLAYMODE_SESSION — PlayMode, 1セッション]
+                              │
+                              │ [3a. CONFIGURE — EditMode]
+                              │   AutoInputTester設定（Menu.Execute）※ EditModeで実行すること
+                              │   `/unicli`: Scene.Open（テストシーン）
+                              │
+                              │ [3b. PROFILER_START] (T5対象機能がある場合)
+                              │   Read: references/test-types/t5-performance.md
+                              │   `/unicli`: Profiler.StartRecording
+                              │
+                              │ [3c. ENTER_PLAY]
+                              │   `/unicli`: PlayMode.Enter ← ★ここでのみEnterする
+                              │
+                              │ [3d. AUTO_INPUT_WAIT] (T2対象機能がある場合)
+                              │   Read: references/test-types/t2-auto-input.md
+                              │   ポーリング: 10秒間隔、最大180秒
+                              │   `/unicli`: PlayMode.Status + Console.GetLog
+                              │   完了判定: 「全」+「周完了」パターン
+                              │   ├─[unicli応答なし]→ unicli check で確認
+                              │   │   └─[応答なし]→ Unityクラッシュ報告 → END
+                              │   └─[完了/タイムアウト]→ 続行
+                              │
+                              │ [3e. IN-PLAY CHECKS] (PlayMode中)
+                              │   T3 Snapshot: Eval で状態値検証（該当時）
+                              │   T4 Animator: Animator.Inspect で状態確認（該当時）
+                              │   T7 Dynamic: シーン操作→検証→状態復元（該当時）
+                              │   T8 UI: Eval で UI要素検証（該当時）
+                              │   T9 Screenshot: Screenshot.Capture（該当時）
+                              │
+                              │ [3f. PROFILER_STOP] (T5対象機能がある場合)
+                              │   `/unicli`: Profiler.StopRecording
+                              │   `/unicli`: Profiler.AnalyzeFrames
+                              │   `/unicli`: Profiler.FindSpikes --frameTimeThresholdMs 33
+                              │
+                              │ [3g. RUN_PLAYMODE_TESTS]
+                              │   `/unicli`: TestRunner.RunPlayMode（PlayModeテストが存在する場合）
+                              │
+                              │ [3h. EXIT_PLAY]
+                              │   `/unicli`: Screenshot.Capture（最終エビデンス）
+                              │   `/unicli`: PlayMode.Exit ← ★ここでのみExitする
+                              │
+                              └──→ [Phase 4: AGGREGATE]
+                                     │ → GRAPH:BATCH_REPORT
 ```
 
 ---
@@ -153,29 +159,8 @@ START
                 │ python tools/feature-db.py update "機能名" --status <status> --test-passed N --test-failed M
                 │
                 └──→ [4. OUTPUT_REPORT]
-                       │
-                       │ === Batch Test Report ===
-                       │ Features tested: N
-                       │ Total: Pass M / Fail K / Warning W
-                       │
-                       │ ### Result Matrix
-                       │ (上記マトリクス表)
-                       │
-                       │ ### Issues
-                       │ 1. [機能名][Tx] 問題詳細
-                       │    - Root cause: ...
-                       │    - Fix: applied / proposed / needs-investigation
-                       │
-                       │ ### Performance (T5, 該当時)
-                       │ - Avg frame time: N ms
-                       │ - Spikes: ...
-                       │
-                       │ ### Evidence (T9)
-                       │ - screenshot paths
-                       │
-                       │ ### Coverage Gaps
-                       │ - [機能名]: T* テストが未作成
-                       │
+                       │ SKILL.md の「レポートテンプレート（統一フォーマット）」に従い出力
+                       │ Mode: "Batch" を設定
                        └──→ END
 ```
 

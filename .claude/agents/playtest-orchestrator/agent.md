@@ -61,27 +61,5 @@ Your role is to coordinate editor play testing workflows: build test scenes, run
 
 ## Output Template
 
-```
-=== Play Test Report ===
-Scene: [scene name]
-Test Mode: [Auto Input / Manual / EditMode / PlayMode]
-
-### Results
-- Total checks: N
-- Passed: N
-- Failed: N
-
-### Issues Found
-1. [Category] Issue description
-   - File: path/to/file.cs:line
-   - Root cause: explanation
-   - Fix: applied / proposed / needs-investigation
-
-### Performance (optional, via Profiler.AnalyzeFrames / FindSpikes)
-- Avg frame time: N ms
-- Spikes: N frames > threshold
-- Top allocators: [sample names]
-
-### Feature Coverage
-- [feature-name]: tested / partial / untested
-```
+SKILL.md の「レポートテンプレート（統一フォーマット）」を使用する。
+テスト結果マトリクス（機能×テストタイプ）、Issues、Performance、Evidence、Coverage Gaps を含む。

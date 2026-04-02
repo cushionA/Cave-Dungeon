@@ -44,6 +44,21 @@ feature-dbの機能名からカテゴリを推定する:
 - 機能名に `Event`, `Dialog`, `Cutscene`, `Story` → イベント系
 - 機能名に `Level`, `Stage`, `Spawn`, `Stream`, `Load` → レベル/ステージ系
 - 複数カテゴリに該当する場合: 全該当カテゴリの◎を合算
+- **該当なしの場合（フォールバック）**:
+  1. feature-db get で実装ファイルを確認し、コード内容からカテゴリを推定
+  2. それでも判定不能なら **T1(Logic) + T6(Preflight) を必須、他は全て○推奨** として扱う
+  3. レポートに「カテゴリ未判定: 機能名」として記載し、ユーザーにカテゴリ追加を提案
+
+### キーワード補完（判定精度向上）
+よくある機能名とカテゴリの追加マッピング:
+- `Projectile`, `Bullet`, `Arrow` → 攻撃系
+- `Spawner`, `Wave`, `Generator` → レベル/ステージ系
+- `Dash` → 移動系
+- `Inventory`, `Item`, `Equip`, `Pickup` → アイテム系（→ リソース系に準ずる）
+- `Camera`, `Shake`, `Follow` → 物理/衝突系に準ずる
+- `Animation`, `Anim`, `Motion` → 移動系 or 攻撃系（実装内容で判断）
+- `Save`, `Load`, `Persist` → イベント系に準ずる
+- `Sound`, `Audio`, `BGM`, `SFX` → UI/HUD系に準ずる（再生制御の検証）
 
 ### バッチテスト時のグルーピング
 複数機能を同時テストする場合、テスト種別ごとにグルーピングして実行効率を上げる:
