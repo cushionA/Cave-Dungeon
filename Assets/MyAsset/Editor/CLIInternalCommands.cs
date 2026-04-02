@@ -99,7 +99,11 @@ namespace Game.Editor
             tester.TestComposite = all || composite;
 #endif
 
-            Debug.Log($"[CLIInternal] AutoInputTester configured. All={all}");
+            // PlayMode Enter時にSerializeField値が反映されるようシーンを保存
+            EditorSceneManager.MarkSceneDirty(tester.gameObject.scene);
+            EditorSceneManager.SaveOpenScenes();
+
+            Debug.Log($"[CLIInternal] AutoInputTester configured and scene saved. All={all}");
         }
     }
 }

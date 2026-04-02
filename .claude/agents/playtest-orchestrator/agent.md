@@ -10,46 +10,34 @@ Your role is to coordinate editor play testing workflows: build test scenes, run
 
 ## Architecture Knowledge
 
-### SoA + GameManager Central Hub
-- All character data lives in `GameManager.Data` (SoA container), accessed by hash (GameObject.GetInstanceID())
-- `CharacterRegistry` tracks Player/Ally/Enemy hashes for faction queries
-- `CharacterVitals` holds position, HP, MP, stamina, armor per character
-- `CharacterFlags` holds faction (`CharacterBelong`: Ally/Enemy/Neutral)
+詳細は playtest スキルの references/ ディレクトリを参照:
+- `references/test-scene-architecture.md` — TestSceneBuilder のエリア構成、キャラ構成、物理レイヤー設定
+- `references/known-issues.md` — 過去セッションで発見した問題と解決策、調査チェックリスト
+- `references/auto-input-patterns.md` — AutoInputTester のテストパターン設計、MovementInfo定義
 
-### Physics Layer Architecture
-- Layer 12 (`CharaPassThrough`): Characters in normal state (pass through each other)
-- Layer 13 (`CharaCollide`): Characters with collision enabled
-- Layer 14 (`CharaInvincible`): Characters in invincible state
-- Layer 10 (`PlayerHitbox`): Player/ally attack hitboxes
-- Layer 11 (`EnemyHitbox`): Enemy attack hitboxes
-- Layer 6 (`Ground`): Terrain
-- `CollisionMatrixSetup.SetupCollisionMatrix()` configures all layer interactions
-- Hitboxes must NOT collide with Ground (layers 10/11 ignore layer 6)
-- Same-faction hitboxes ignore each other (layer 10 ignores 11)
-
-### Action System Flow
-```
-Input → PlayerInputHandler → MovementInfo → PlayerCharacter.FixedUpdate
-  → ActionExecutorController.ExecuteAction(ActionSlot)
-  → AnimationBridge → ActionPhaseCoordinator → HitBox activation
-```
-
-### AI Flow (Enemy/Companion)
-```
-EnemyController/CompanionController.Tick()
-  → JudgmentLoop → ActionExecutor → ActionBase.Execute()
-  → BridgeAIAction() in EnemyCharacter/CompanionCharacter
-  → ActionExecutorController.ExecuteAction(ActionSlot)
-```
-
-### Key Known Issues (from past sessions)
-1. **Layer mismatch**: Characters must be on layer 12, not default. TestSceneBuilder handles this.
-2. **Heavy attack double fire**: Fixed by release-based confirmation (press=hold start, release=determine type)
-3. **Dead characters absorbing hits**: HitBox checks `receiver.IsAlive` before processing
-4. **Movement during attacks**: PlayerCharacter blocks movement when `IsActionExecutorBusy()`
-5. **Static candidate list corruption**: Enemy/Companion use per-instance `_candidates` list, not static
+### 要点（必要に応じて上記を Read で参照）
+- SoAコンテナ: `GameManager.Data` にハッシュ(GetInstanceID)でO(1)アクセス
+- 物理レイヤー: キャラ=12/13/14、PlayerHitbox=10、EnemyHitbox=11、Ground=6
+- アクション: Input → PlayerInputHandler → ActionExecutorController → HitBox
+- AI: AIBrain.Evaluate() → ConditionEvaluator → ActionExecutor → ActionBase
 
 ## UniCli Commands (use instead of MCP)
+
+### 前提条件
+ワークフロー開始時に `unicli check` で接続を確認する。失敗した場合:
+1. ユーザーに通知: 「unicliが利用できません。セットアップは `/unicli` スキルを参照してください」
+2. フォールバック: unity-mcp の MCP ツール群を使用する（下記対応表）
+
+### MCP フォールバック対応表
+| unicli コマンド | MCP フォールバック |
+|----------------|-------------------|
+| `unicli exec Compile` | `manage_editor` action="refresh" |
+| `unicli exec TestRunner.RunEditMode` | `run_tests` testMode="EditMode" |
+| `unicli exec Console.GetLog` | `read_console` |
+| `unicli exec PlayMode.Enter` | `manage_editor` action="play" |
+| `unicli exec PlayMode.Exit` | `manage_editor` action="stop" |
+| `unicli exec Scene.Open --path X` | `manage_scene` action="open" path=X |
+| `unicli exec Menu.Execute --menuPath X` | `execute_menu_item` menuPath=X |
 
 ```bash
 # Compile
@@ -118,6 +106,8 @@ unicli exec Eval --code "Debug.Log(GameManager.Data != null);"
 - Use feature-db to track which features are being tested
 - Prefer EditMode tests for logic verification, PlayMode only when physics/timing matters
 - Report findings in structured format (see output template below)
+- Fix試行が3回失敗したらユーザーにエスカレーションする（無限ループ禁止）
+- 根本原因が複数システムにまたがる複雑なバグの場合、修正を試みずに分析結果のみ報告してユーザー判断を仰ぐ
 
 ## Output Template
 

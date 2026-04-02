@@ -99,3 +99,4 @@ TestSceneBuilderがシーンに配置するGameManager:
 | Tools/CLIInternal/Run Auto Input All | 全テスト有効でAutoInput設定 |
 | Tools/CLIInternal/Run Auto Input Combat | 戦闘系のみ有効 |
 | Tools/CLIInternal/Run Auto Input Movement | 移動系のみ有効 |
+| Tools/CLIInternal/Run Auto Input Composite | 複合入力系のみ有効 |
