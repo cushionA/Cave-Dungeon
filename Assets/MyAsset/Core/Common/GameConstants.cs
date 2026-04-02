@@ -17,6 +17,12 @@ namespace Game.Core
         /// <summary>クリティカル倍率の初期値。</summary>
         public const float k_DefaultCriticalMultiplier = 1.5f;
 
+        /// <summary>AI追尾時のデフォルト攻撃範囲（この距離以内で停止）。</summary>
+        public const float k_DefaultAttackRange = 1.5f;
+
+        /// <summary>AI移動時のフォールバック速度。</summary>
+        public const float k_FallbackMoveSpeed = 3f;
+
         // --- 物理レイヤー（Architect/08_物理レイヤー定義.md 参照） ---
 
         /// <summary>キャラクター通常状態（すり抜け）。</summary>

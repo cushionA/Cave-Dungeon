@@ -18,6 +18,10 @@ namespace Game.Runtime
     [RequireComponent(typeof(PlayerInput))]
     public class PlayerInputHandler : MonoBehaviour
     {
+        private const string k_AttackActionName = "Attack";
+        private const string k_HeavyAttackActionName = "HeavyAttack";
+        private const string k_SprintActionName = "Sprint";
+
         private PlayerInput _playerInput;
         private BaseCharacter _character;
         private MovementInfo _currentInput;
@@ -121,9 +125,9 @@ namespace Game.Runtime
             // InputActionを直接取得してポーリング用に保持
             if (_playerInput != null && _playerInput.actions != null)
             {
-                _attackAction = _playerInput.actions["Attack"];
-                _heavyAttackAction = _playerInput.actions["HeavyAttack"];
-                _sprintAction = _playerInput.actions["Sprint"];
+                _attackAction = _playerInput.actions[k_AttackActionName];
+                _heavyAttackAction = _playerInput.actions[k_HeavyAttackActionName];
+                _sprintAction = _playerInput.actions[k_SprintActionName];
             }
         }
 

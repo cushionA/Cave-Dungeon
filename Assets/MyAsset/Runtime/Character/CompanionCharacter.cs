@@ -25,12 +25,13 @@ namespace Game.Runtime
         [SerializeField] private Transform _playerTransform;
 
         private ActionExecutorController _actionExecutorController;
+        private SpriteRenderer _spriteRenderer;
 
         // AI（ピュアロジック）
         private CompanionController _aiController;
 
-        // 候補リスト再利用（GC回避）
-        private static readonly List<int> s_Candidates = new List<int>(8);
+        // 候補リスト再利用（GC回避、インスタンスごとに保持）
+        private readonly List<int> _candidates = new List<int>(8);
 
         public CompanionController AIController => _aiController;
 
@@ -44,6 +45,7 @@ namespace Game.Runtime
         {
             base.Awake();
             _actionExecutorController = GetComponent<ActionExecutorController>();
+            _spriteRenderer = GetComponent<SpriteRenderer>();
         }
 
         protected override void Start()
@@ -117,18 +119,18 @@ namespace Game.Runtime
             if (_aiController != null)
             {
                 // 候補リスト構築（敵ハッシュ）
-                s_Candidates.Clear();
+                _candidates.Clear();
                 List<int> enemies = CharacterRegistry.EnemyHashes;
                 if (enemies != null)
                 {
                     for (int i = 0; i < enemies.Count; i++)
                     {
-                        s_Candidates.Add(enemies[i]);
+                        _candidates.Add(enemies[i]);
                     }
                 }
 
                 // AI Tick（MP回復 → 追従判定 → モード遷移 → 行動判定）
-                _aiController.Tick(Time.fixedDeltaTime, s_Candidates, Time.time);
+                _aiController.Tick(Time.fixedDeltaTime, _candidates, Time.time);
 
                 // AI が選択したアクションを ActionExecutorController に橋渡し
                 BridgeAIAction();
@@ -145,10 +147,6 @@ namespace Game.Runtime
             SyncPositionToData();
         }
 
-        /// <summary>
-        /// CompanionController内部のActionExecutorがAttack/Castを実行した場合、
-        /// ActionExecutorController（MonoBehaviour側）に橋渡しする。
-        /// </summary>
         private void BridgeAIAction()
         {
             if (_actionExecutorController == null || _aiController == null)
@@ -157,53 +155,8 @@ namespace Game.Runtime
             }
 
             ActionExecutor aiExecutor = _aiController.JudgmentLoop?.Executor;
-            if (aiExecutor == null || !aiExecutor.IsExecuting)
-            {
-                return;
-            }
-
-            // MonoBehaviour側が既に実行中なら橋渡ししない
-            if (_actionExecutorController.IsExecuting)
-            {
-                return;
-            }
-
-            ActionBase current = aiExecutor.CurrentAction;
-            if (current == null)
-            {
-                return;
-            }
-
-            if (current is AttackActionHandler attackHandler)
-            {
-                ActionSlot slot = new ActionSlot
-                {
-                    execType = ActionExecType.Attack,
-                    paramId = attackHandler.LastParamId,
-                    paramValue = 1f
-                };
-                int targetHash = _aiController.JudgmentLoop.CurrentTargetHash;
-                bool result = _actionExecutorController.ExecuteAction(slot, targetHash);
-                if (result)
-                {
-                    current.ForceComplete();
-                }
-            }
-            else if (current is CastActionHandler castHandler)
-            {
-                ActionSlot slot = new ActionSlot
-                {
-                    execType = ActionExecType.Cast,
-                    paramId = castHandler.LastParamId,
-                    paramValue = 1f
-                };
-                int targetHash = _aiController.JudgmentLoop.CurrentTargetHash;
-                bool result = _actionExecutorController.ExecuteAction(slot, targetHash);
-                if (result)
-                {
-                    current.ForceComplete();
-                }
-            }
+            int targetHash = _aiController.JudgmentLoop?.CurrentTargetHash ?? 0;
+            BridgeAIActionToExecutor(aiExecutor, _actionExecutorController, targetHash);
         }
 
         /// <summary>
@@ -270,12 +223,10 @@ namespace Game.Runtime
 
             float diff = targetVitals.position.x - myVitals.position.x;
             float absDist = Mathf.Abs(diff);
-            float attackRange = 1.5f;
-
-            if (absDist > attackRange)
+            if (absDist > GameConstants.k_DefaultAttackRange)
             {
                 float dir = diff > 0f ? 1f : -1f;
-                float speed = moveParams.moveSpeed > 0f ? moveParams.moveSpeed : 3f;
+                float speed = moveParams.moveSpeed > 0f ? moveParams.moveSpeed : GameConstants.k_FallbackMoveSpeed;
                 _rb.linearVelocity = new Vector2(dir * speed, _rb.linearVelocity.y);
                 SetFacing(dir > 0f);
             }
@@ -313,17 +264,16 @@ namespace Game.Runtime
         {
             Vector2 myPos = (Vector2)transform.position;
             Vector2 playerPos = (Vector2)_playerTransform.position;
-            float dist = Vector2.Distance(myPos, playerPos);
+            float sqrDist = (myPos - playerPos).sqrMagnitude;
 
-            if (dist > _maxLeashDistance)
+            if (sqrDist > _maxLeashDistance * _maxLeashDistance)
             {
-                // テレポート
                 Vector2 teleportPos = playerPos + new Vector2(
                     _isFacingRight ? -_followDistance : _followDistance, 0f);
                 transform.position = (Vector3)teleportPos;
                 _rb.linearVelocity = Vector2.zero;
             }
-            else if (dist > _followDistance)
+            else if (sqrDist > _followDistance * _followDistance)
             {
                 // 追従
                 ref MoveParams moveParams = ref GameManager.Data.GetMoveParams(ObjectHash);
@@ -340,7 +290,7 @@ namespace Game.Runtime
         private void OnCompanionVanish()
         {
             // MP=0消滅: 半透明化
-            SpriteRenderer sr = GetComponent<SpriteRenderer>();
+            SpriteRenderer sr = _spriteRenderer;
             if (sr != null)
             {
                 Color c = sr.color;
@@ -352,7 +302,7 @@ namespace Game.Runtime
         private void OnCompanionReturn()
         {
             // 復帰: 不透明に戻す
-            SpriteRenderer sr = GetComponent<SpriteRenderer>();
+            SpriteRenderer sr = _spriteRenderer;
             if (sr != null)
             {
                 Color c = sr.color;

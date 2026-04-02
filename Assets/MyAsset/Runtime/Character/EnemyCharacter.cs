@@ -24,13 +24,8 @@ namespace Game.Runtime
         // AI（ピュアロジック）
         private EnemyController _enemyController;
 
-        // 候補リスト再利用（GC回避）
-        private static readonly List<int> s_Candidates = new List<int>(8);
-
-        // AI → ActionExecutorController 橋渡し用
-        private int _lastAIParamId = -1;
-        private ActionExecType _lastAIExecType;
-        private bool _aiActionPending;
+        // 候補リスト再利用（GC回避、インスタンスごとに保持）
+        private readonly List<int> _candidates = new List<int>(8);
 
         public DamageDealer DamageDealer => _damageDealer;
 
@@ -81,22 +76,22 @@ namespace Game.Runtime
             if (_enemyController != null)
             {
                 // 候補リスト構築（プレイヤー + 味方）
-                s_Candidates.Clear();
+                _candidates.Clear();
                 int playerHash = CharacterRegistry.PlayerHash;
                 if (playerHash != 0)
                 {
-                    s_Candidates.Add(playerHash);
+                    _candidates.Add(playerHash);
                 }
                 List<int> allies = CharacterRegistry.AllyHashes;
                 if (allies != null)
                 {
                     for (int i = 0; i < allies.Count; i++)
                     {
-                        s_Candidates.Add(allies[i]);
+                        _candidates.Add(allies[i]);
                     }
                 }
 
-                _enemyController.Tick(Time.fixedDeltaTime, s_Candidates, Time.time);
+                _enemyController.Tick(Time.fixedDeltaTime, _candidates, Time.time);
 
                 // AI が選択したアクションを ActionExecutorController に橋渡し
                 BridgeAIAction();
@@ -111,12 +106,6 @@ namespace Game.Runtime
             SyncPositionToData();
         }
 
-        /// <summary>
-        /// EnemyController内部のActionExecutorがAttack/Castを実行した場合、
-        /// ActionExecutorController（MonoBehaviour側）に橋渡しする。
-        /// 橋渡し成功後にAI側のアクションをForceCompleteして、
-        /// AI再評価との二重実行を防ぐ。
-        /// </summary>
         private void BridgeAIAction()
         {
             if (_actionExecutorController == null || _enemyController == null)
@@ -125,56 +114,8 @@ namespace Game.Runtime
             }
 
             ActionExecutor aiExecutor = _enemyController.JudgmentLoop?.Executor;
-            if (aiExecutor == null || !aiExecutor.IsExecuting)
-            {
-                return;
-            }
-
-            // MonoBehaviour側が既に実行中なら橋渡ししない
-            if (_actionExecutorController.IsExecuting)
-            {
-                return;
-            }
-
-            ActionBase current = aiExecutor.CurrentAction;
-            if (current == null)
-            {
-                return;
-            }
-
-            // AttackActionHandler の場合、LastParamId で ActionSlot を再構築
-            if (current is AttackActionHandler attackHandler)
-            {
-                ActionSlot slot = new ActionSlot
-                {
-                    execType = ActionExecType.Attack,
-                    paramId = attackHandler.LastParamId,
-                    paramValue = 1f
-                };
-                int targetHash = _enemyController.JudgmentLoop.CurrentTargetHash;
-                bool result = _actionExecutorController.ExecuteAction(slot, targetHash);
-                if (result)
-                {
-                    // AI側のアクションを完了としてマーク
-                    // これにより次のAI評価で新しいアクションを選択可能になる
-                    current.ForceComplete();
-                }
-            }
-            else if (current is CastActionHandler castHandler)
-            {
-                ActionSlot slot = new ActionSlot
-                {
-                    execType = ActionExecType.Cast,
-                    paramId = castHandler.LastParamId,
-                    paramValue = 1f
-                };
-                int targetHash = _enemyController.JudgmentLoop.CurrentTargetHash;
-                bool result = _actionExecutorController.ExecuteAction(slot, targetHash);
-                if (result)
-                {
-                    current.ForceComplete();
-                }
-            }
+            int targetHash = _enemyController.JudgmentLoop?.CurrentTargetHash ?? 0;
+            BridgeAIActionToExecutor(aiExecutor, _actionExecutorController, targetHash);
         }
 
         /// <summary>
@@ -237,12 +178,10 @@ namespace Game.Runtime
 
             // 攻撃範囲の外ならターゲットへ移動
             // AIInfoの検出範囲内かつ攻撃範囲外の場合に追尾
-            float attackRange = 1.5f; // デフォルト攻撃範囲
-
-            if (absDist > attackRange)
+            if (absDist > GameConstants.k_DefaultAttackRange)
             {
                 float dir = diff > 0f ? 1f : -1f;
-                float speed = moveParams.moveSpeed > 0f ? moveParams.moveSpeed : 3f;
+                float speed = moveParams.moveSpeed > 0f ? moveParams.moveSpeed : GameConstants.k_FallbackMoveSpeed;
                 _rb.linearVelocity = new Vector2(dir * speed, _rb.linearVelocity.y);
             }
             else
