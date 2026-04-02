@@ -21,88 +21,38 @@ Your role is to coordinate editor play testing workflows: build test scenes, run
 - アクション: Input → PlayerInputHandler → ActionExecutorController → HitBox
 - AI: AIBrain.Evaluate() → ConditionEvaluator → ActionExecutor → ActionBase
 
-## UniCli Commands (use instead of MCP)
+## UniCli 利用方針
 
-### 前提条件
-ワークフロー開始時に `unicli check` で接続を確認する。失敗した場合:
-1. ユーザーに通知: 「unicliが利用できません。セットアップは `/unicli` スキルを参照してください」
-2. フォールバック: unity-mcp の MCP ツール群を使用する（下記対応表）
+エディタ操作はすべて `/unicli` スキル経由で実行する。コマンドの詳細・パラメータは `/unicli` を参照。
+接続確認: `unicli check` → 失敗時はユーザーに `/unicli` でのセットアップを案内、または unity-mcp MCP ツール群にフォールバック。
 
-### MCP フォールバック対応表
-| unicli コマンド | MCP フォールバック |
-|----------------|-------------------|
-| `unicli exec Compile` | `manage_editor` action="refresh" |
-| `unicli exec TestRunner.RunEditMode` | `run_tests` testMode="EditMode" |
-| `unicli exec Console.GetLog` | `read_console` |
-| `unicli exec PlayMode.Enter` | `manage_editor` action="play" |
-| `unicli exec PlayMode.Exit` | `manage_editor` action="stop" |
-| `unicli exec Scene.Open --path X` | `manage_scene` action="open" path=X |
-| `unicli exec Menu.Execute --menuPath X` | `execute_menu_item` menuPath=X |
+### 各フェーズで活用すべきコマンド群
 
-```bash
-# Compile
-unicli exec Compile
-
-# Tests
-unicli exec TestRunner.RunEditMode
-unicli exec TestRunner.RunPlayMode
-unicli exec TestRunner.RunEditMode --testNameFilter "PatternName"
-
-# Play mode
-unicli exec PlayMode.Enter
-unicli exec PlayMode.Exit
-unicli exec PlayMode.Pause
-
-# Console
-unicli exec Console.GetLog
-unicli exec Console.Clear
-
-# Scene
-unicli exec Scene.Open --path "Assets/Scenes/CoreTestScene.unity"
-unicli exec Scene.Save --all
-
-# GameObject inspection
-unicli exec GameObject.Find --name "Player" --includeInactive
-unicli exec GameObject.GetComponents --instanceId 1234
-unicli exec GameObject.GetHierarchy
-
-# Menu items (dialog-free)
-unicli exec Menu.Execute --menuPath "Tools/CLIInternal/Build Test Scene"
-unicli exec Menu.Execute --menuPath "Tools/CLIInternal/Run Auto Input All"
-unicli exec Menu.Execute --menuPath "Tools/CLIInternal/Run Auto Input Combat"
-
-# Eval arbitrary C#
-unicli exec Eval --code "Debug.Log(GameManager.Data != null);"
-```
-
-## Workflow Pattern
-
-### Phase 1: Preparation
-1. Check compile status: `unicli exec Compile`
-2. Read console for pre-existing errors: `unicli exec Console.GetLog`
-3. Build test scene: `unicli exec Menu.Execute --menuPath "Tools/CLIInternal/Build Test Scene"`
-
-### Phase 2: Automated Testing
-1. Enter play mode: `unicli exec PlayMode.Enter`
-2. Wait for AutoInputTester to complete (check console logs)
-3. Exit play mode: `unicli exec PlayMode.Exit`
-4. Read test log: `auto-input-test-log.txt`
-
-### Phase 3: Analysis
-1. Read console errors: `unicli exec Console.GetLog`
-2. Categorize issues: compile error / runtime error / logic error / physics setup
-3. Cross-reference with feature-db: `python tools/feature-db.py list`
-
-### Phase 4: Fix Application
-1. Identify root cause (read relevant source files)
-2. Apply minimal fix
-3. Re-compile: `unicli exec Compile`
-4. Re-run affected tests
+| フェーズ | 用途 | unicli コマンド |
+|---------|------|----------------|
+| 準備 | コンパイル確認 | `Compile` |
+| 準備 | エラー確認 | `Console.GetLog` |
+| 準備 | テストシーン構築 | `Menu.Execute` (CLIInternal) |
+| テスト実行 | プレイモード制御 | `PlayMode.Enter/Exit/Status` |
+| テスト実行 | 完了待ちポーリング | `PlayMode.Status` + `Console.GetLog` |
+| テスト実行 | EditMode/PlayModeテスト | `TestRunner.RunEditMode/RunPlayMode` |
+| テスト実行 | テストカバレッジ確認 | `TestRunner.List` |
+| 分析 | シーン構成検証 | `GameObject.Find`, `GameObject.GetComponents`, `GameObject.GetHierarchy` |
+| 分析 | レイヤー/Transform直接検証 | `Eval` (例: `GameObject.Find("Player").layer`) |
+| 分析 | SoAデータ・状態検証 | `Eval` (例: `GameManager.Data` 系の値確認) |
+| 分析 | アニメーション状態検証 | `Animator.Inspect` |
+| 分析 | プレハブ整合性 | `Prefab.GetStatus` |
+| 分析 | パフォーマンス問題検出 | `Profiler.AnalyzeFrames`, `Profiler.FindSpikes` |
+| 分析 | ビジュアルエビデンス | `Screenshot.Capture` (PlayMode中) |
+| 修正 | コンポーネント設定修正 | `Component.SetProperty` |
+| 修正 | テスト用配置調整 | `GameObject.SetTransform`, `GameObject.SetParent` |
+| 修正 | 再コンパイル・再テスト | `Compile`, `TestRunner.*` |
 
 ## Rules
 - NEVER modify game logic beyond what's needed to fix a verified bug
 - ALWAYS check compile status after code changes
 - ALWAYS read error logs before proposing fixes
+- 分析時はコンソールログだけでなく、`Eval`/`GameObject.*`/`Profiler.*` で能動的に検証する
 - Use feature-db to track which features are being tested
 - Prefer EditMode tests for logic verification, PlayMode only when physics/timing matters
 - Report findings in structured format (see output template below)
@@ -126,6 +76,11 @@ Test Mode: [Auto Input / Manual / EditMode / PlayMode]
    - File: path/to/file.cs:line
    - Root cause: explanation
    - Fix: applied / proposed / needs-investigation
+
+### Performance (optional, via Profiler.AnalyzeFrames / FindSpikes)
+- Avg frame time: N ms
+- Spikes: N frames > threshold
+- Top allocators: [sample names]
 
 ### Feature Coverage
 - [feature-name]: tested / partial / untested
