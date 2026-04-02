@@ -4,12 +4,18 @@ namespace Game.Core
 {
     /// <summary>
     /// Rule for transitioning between AI modes based on conditions.
+    /// sourceModeIndex が -1 の場合は全モードから評価される（後方互換）。
     /// </summary>
     [Serializable]
     public struct ModeTransitionRule
     {
         public AICondition[] conditions;
         public int targetModeIndex;
+        /// <summary>
+        /// この遷移ルールが有効なソースモードのインデックス。
+        /// -1 の場合はどのモードからでも評価される。
+        /// </summary>
+        public int sourceModeIndex;
     }
 
     /// <summary>
@@ -61,6 +67,13 @@ namespace Game.Core
             for (int i = 0; i < _transitionRules.Length; i++)
             {
                 ModeTransitionRule rule = _transitionRules[i];
+
+                // sourceModeIndex が設定されている場合、現在のモードと一致しなければスキップ
+                if (rule.sourceModeIndex >= 0 && rule.sourceModeIndex != _currentModeIndex)
+                {
+                    continue;
+                }
+
                 if (ConditionEvaluator.EvaluateAll(rule.conditions, ownerHash, targetHash, data, currentTime))
                 {
                     if (rule.targetModeIndex != _currentModeIndex)

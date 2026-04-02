@@ -31,12 +31,18 @@ namespace Game.Runtime
 
         private void OnEnable()
         {
-            _bridge.OnPhaseChanged += HandlePhaseChanged;
+            if (_bridge != null)
+            {
+                _bridge.OnPhaseChanged += HandlePhaseChanged;
+            }
         }
 
         private void OnDisable()
         {
-            _bridge.OnPhaseChanged -= HandlePhaseChanged;
+            if (_bridge != null)
+            {
+                _bridge.OnPhaseChanged -= HandlePhaseChanged;
+            }
         }
 
         /// <summary>
@@ -78,7 +84,7 @@ namespace Game.Runtime
 
         private void Update()
         {
-            if (!_isInitialized)
+            if (!_isInitialized || _bridge == null)
             {
                 return;
             }

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using Game.Core;
 
@@ -5,21 +6,44 @@ namespace Game.Runtime
 {
     /// <summary>
     /// 仲間キャラクターMonoBehaviour。
-    /// FollowBehavior純ロジックでプレイヤーを追従する。
+    /// CompanionController（ピュアロジック）を保持してフルAIを駆動する。
+    /// FollowBehavior + JudgmentLoop + ModeController + StanceManager + CompanionMpManager を統合。
+    ///
+    /// AI判定フロー:
+    ///   CompanionController.Tick() → MP回復 → FollowBehavior → ModeController → JudgmentLoop
+    ///   → 内部ActionExecutor.Execute() → BridgeAIAction() で ActionExecutorController に橋渡し
     /// </summary>
     public class CompanionCharacter : BaseCharacter
     {
+        [Header("AI設定")]
+        [SerializeField] private AIInfo _aiInfo;
+        [SerializeField] private CompanionMpSettings _mpSettings;
+
         [Header("追従設定")]
         [SerializeField] private float _followDistance = 2.0f;
         [SerializeField] private float _maxLeashDistance = 15.0f;
         [SerializeField] private Transform _playerTransform;
 
-        private FollowBehavior _followBehavior;
+        private ActionExecutorController _actionExecutorController;
+
+        // AI（ピュアロジック）
+        private CompanionController _aiController;
+
+        // 候補リスト再利用（GC回避）
+        private static readonly List<int> s_Candidates = new List<int>(8);
+
+        public CompanionController AIController => _aiController;
+
+        /// <summary>テスト/エディタ用: AIInfoを設定する。</summary>
+        public void SetAIInfo(AIInfo aiInfo) { _aiInfo = aiInfo; }
+
+        /// <summary>テスト/エディタ用: CompanionMpSettingsを設定する。</summary>
+        public void SetMpSettings(CompanionMpSettings settings) { _mpSettings = settings; }
 
         protected override void Awake()
         {
             base.Awake();
-            _followBehavior = new FollowBehavior(_followDistance, _maxLeashDistance);
+            _actionExecutorController = GetComponent<ActionExecutorController>();
         }
 
         protected override void Start()
@@ -36,6 +60,49 @@ namespace Game.Runtime
                     _playerTransform = player.transform;
                 }
             }
+
+            InitializeAI();
+        }
+
+        private void InitializeAI()
+        {
+            if (_playerTransform == null || GameManager.Data == null)
+            {
+                return;
+            }
+
+            BaseCharacter playerBase = _playerTransform.GetComponent<BaseCharacter>();
+            int playerHash = playerBase != null ? playerBase.ObjectHash : 0;
+            if (playerHash == 0)
+            {
+                return;
+            }
+
+            // CharacterInfo から maxMp 取得
+            float maxMp = CharacterInfoRef != null ? CharacterInfoRef.maxMp : 50f;
+            int initialReserveMp = _mpSettings.maxReserveMp > 0 ? _mpSettings.maxReserveMp : 100;
+
+            _aiController = new CompanionController(
+                ObjectHash, playerHash, GameManager.Data,
+                maxMp, initialReserveMp, _mpSettings);
+
+            // AIモード設定
+            if (_aiInfo != null)
+            {
+                AIMode[] modes = AIInfoConverter.ConvertModes(_aiInfo);
+                ModeTransitionRule[] transitions = AIInfoConverter.ConvertTransitions(_aiInfo);
+
+                // AIInfoConverterは敵AI用（belong=Ally）なので、
+                // 仲間AI用にターゲットフィルタをEnemy陣営に反転する
+                FlipTargetBelongToEnemy(modes);
+
+                _aiController.SetAIModes(modes, transitions);
+                _aiController.FollowBehavior.SetDistances(_followDistance, _maxLeashDistance);
+            }
+
+            // イベント購読
+            _aiController.MpManager.OnVanish += OnCompanionVanish;
+            _aiController.MpManager.OnReturn += OnCompanionReturn;
         }
 
         private void FixedUpdate()
@@ -47,42 +114,281 @@ namespace Game.Runtime
 
             UpdateGroundCheck();
 
-            Vector2 myPos = (Vector2)transform.position;
-            Vector2 playerPos = (Vector2)_playerTransform.position;
-
-            FollowState state = _followBehavior.Evaluate(myPos, playerPos);
-
-            switch (state)
+            if (_aiController != null)
             {
-                case FollowState.Waiting:
-                    _rb.linearVelocity = new Vector2(0f, _rb.linearVelocity.y);
-                    break;
+                // 候補リスト構築（敵ハッシュ）
+                s_Candidates.Clear();
+                List<int> enemies = CharacterRegistry.EnemyHashes;
+                if (enemies != null)
+                {
+                    for (int i = 0; i < enemies.Count; i++)
+                    {
+                        s_Candidates.Add(enemies[i]);
+                    }
+                }
 
-                case FollowState.Following:
-                    Vector2 target = _followBehavior.GetFollowTarget(myPos, playerPos);
-                    ref MoveParams moveParams = ref GameManager.Data.GetMoveParams(ObjectHash);
+                // AI Tick（MP回復 → 追従判定 → モード遷移 → 行動判定）
+                _aiController.Tick(Time.fixedDeltaTime, s_Candidates, Time.time);
 
-                    float dir = target.x > myPos.x ? 1f : -1f;
-                    _rb.linearVelocity = new Vector2(dir * moveParams.moveSpeed * 0.8f, _rb.linearVelocity.y);
+                // AI が選択したアクションを ActionExecutorController に橋渡し
+                BridgeAIAction();
 
-                    // 向き更新
-                    SetFacing(dir > 0f);
-                    break;
-
-                case FollowState.Teleporting:
-                    Vector2 teleportPos = playerPos + new Vector2(_isFacingRight ? -_followDistance : _followDistance, 0f);
-                    transform.position = (Vector3)teleportPos;
-                    _rb.linearVelocity = Vector2.zero;
-                    break;
+                // 追従移動
+                ApplyFollowMovement();
+            }
+            else
+            {
+                // AI未初期化時はシンプル追従のみ
+                ApplySimpleFollow();
             }
 
             SyncPositionToData();
         }
 
+        /// <summary>
+        /// CompanionController内部のActionExecutorがAttack/Castを実行した場合、
+        /// ActionExecutorController（MonoBehaviour側）に橋渡しする。
+        /// </summary>
+        private void BridgeAIAction()
+        {
+            if (_actionExecutorController == null || _aiController == null)
+            {
+                return;
+            }
+
+            ActionExecutor aiExecutor = _aiController.JudgmentLoop?.Executor;
+            if (aiExecutor == null || !aiExecutor.IsExecuting)
+            {
+                return;
+            }
+
+            // MonoBehaviour側が既に実行中なら橋渡ししない
+            if (_actionExecutorController.IsExecuting)
+            {
+                return;
+            }
+
+            ActionBase current = aiExecutor.CurrentAction;
+            if (current == null)
+            {
+                return;
+            }
+
+            if (current is AttackActionHandler attackHandler)
+            {
+                ActionSlot slot = new ActionSlot
+                {
+                    execType = ActionExecType.Attack,
+                    paramId = attackHandler.LastParamId,
+                    paramValue = 1f
+                };
+                int targetHash = _aiController.JudgmentLoop.CurrentTargetHash;
+                bool result = _actionExecutorController.ExecuteAction(slot, targetHash);
+                if (result)
+                {
+                    current.ForceComplete();
+                }
+            }
+            else if (current is CastActionHandler castHandler)
+            {
+                ActionSlot slot = new ActionSlot
+                {
+                    execType = ActionExecType.Cast,
+                    paramId = castHandler.LastParamId,
+                    paramValue = 1f
+                };
+                int targetHash = _aiController.JudgmentLoop.CurrentTargetHash;
+                bool result = _actionExecutorController.ExecuteAction(slot, targetHash);
+                if (result)
+                {
+                    current.ForceComplete();
+                }
+            }
+        }
+
+        /// <summary>
+        /// FollowBehaviorの状態に基づいてRigidbody移動を適用する。
+        /// ActionExecutorControllerが攻撃中は移動しない。
+        /// </summary>
+        private void ApplyFollowMovement()
+        {
+            // 攻撃中は移動しない
+            if (_actionExecutorController != null && _actionExecutorController.IsExecuting)
+            {
+                _rb.linearVelocity = new Vector2(0f, _rb.linearVelocity.y);
+                return;
+            }
+
+            FollowState followState = _aiController.FollowBehavior.CurrentState;
+            Vector2 myPos = (Vector2)transform.position;
+            Vector2 playerPos = (Vector2)_playerTransform.position;
+
+            switch (followState)
+            {
+                case FollowState.Waiting:
+                    // ターゲットがいる場合はターゲットに向かって移動
+                    int targetHash = _aiController.JudgmentLoop?.CurrentTargetHash ?? 0;
+                    if (targetHash != 0 && GameManager.IsCharacterValid(targetHash))
+                    {
+                        MoveTowardTarget(targetHash);
+                    }
+                    else
+                    {
+                        _rb.linearVelocity = new Vector2(0f, _rb.linearVelocity.y);
+                    }
+                    break;
+
+                case FollowState.Following:
+                {
+                    Vector2 target = _aiController.FollowBehavior.GetFollowTarget(myPos, playerPos);
+                    ref MoveParams moveParams = ref GameManager.Data.GetMoveParams(ObjectHash);
+                    float dir = target.x > myPos.x ? 1f : -1f;
+                    _rb.linearVelocity = new Vector2(dir * moveParams.moveSpeed * 0.8f, _rb.linearVelocity.y);
+                    SetFacing(dir > 0f);
+                    break;
+                }
+
+                case FollowState.Teleporting:
+                {
+                    Vector2 teleportPos = playerPos + new Vector2(
+                        _isFacingRight ? -_followDistance : _followDistance, 0f);
+                    transform.position = (Vector3)teleportPos;
+                    _rb.linearVelocity = Vector2.zero;
+                    break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// ターゲットに向かって移動する（戦闘時）。
+        /// </summary>
+        private void MoveTowardTarget(int targetHash)
+        {
+            ref CharacterVitals targetVitals = ref GameManager.Data.GetVitals(targetHash);
+            ref CharacterVitals myVitals = ref GameManager.Data.GetVitals(ObjectHash);
+            ref MoveParams moveParams = ref GameManager.Data.GetMoveParams(ObjectHash);
+
+            float diff = targetVitals.position.x - myVitals.position.x;
+            float absDist = Mathf.Abs(diff);
+            float attackRange = 1.5f;
+
+            if (absDist > attackRange)
+            {
+                float dir = diff > 0f ? 1f : -1f;
+                float speed = moveParams.moveSpeed > 0f ? moveParams.moveSpeed : 3f;
+                _rb.linearVelocity = new Vector2(dir * speed, _rb.linearVelocity.y);
+                SetFacing(dir > 0f);
+            }
+            else
+            {
+                _rb.linearVelocity = new Vector2(0f, _rb.linearVelocity.y);
+                // 向きをターゲットに合わせる
+                SetFacing(diff > 0f);
+            }
+        }
+
+        /// <summary>
+        /// AIInfoConverterが生成したモードのターゲットフィルタを
+        /// Enemy陣営に差し替える（仲間AIは敵をターゲットにする）。
+        /// </summary>
+        private static void FlipTargetBelongToEnemy(AIMode[] modes)
+        {
+            for (int i = 0; i < modes.Length; i++)
+            {
+                if (modes[i].targetSelects == null)
+                {
+                    continue;
+                }
+                for (int j = 0; j < modes[i].targetSelects.Length; j++)
+                {
+                    modes[i].targetSelects[j].filter.belong = CharacterBelong.Enemy;
+                }
+            }
+        }
+
+        /// <summary>
+        /// AI未初期化時のシンプル追従（フォールバック）。
+        /// </summary>
+        private void ApplySimpleFollow()
+        {
+            Vector2 myPos = (Vector2)transform.position;
+            Vector2 playerPos = (Vector2)_playerTransform.position;
+            float dist = Vector2.Distance(myPos, playerPos);
+
+            if (dist > _maxLeashDistance)
+            {
+                // テレポート
+                Vector2 teleportPos = playerPos + new Vector2(
+                    _isFacingRight ? -_followDistance : _followDistance, 0f);
+                transform.position = (Vector3)teleportPos;
+                _rb.linearVelocity = Vector2.zero;
+            }
+            else if (dist > _followDistance)
+            {
+                // 追従
+                ref MoveParams moveParams = ref GameManager.Data.GetMoveParams(ObjectHash);
+                float dir = playerPos.x > myPos.x ? 1f : -1f;
+                _rb.linearVelocity = new Vector2(dir * moveParams.moveSpeed * 0.8f, _rb.linearVelocity.y);
+                SetFacing(dir > 0f);
+            }
+            else
+            {
+                _rb.linearVelocity = new Vector2(0f, _rb.linearVelocity.y);
+            }
+        }
+
+        private void OnCompanionVanish()
+        {
+            // MP=0消滅: 半透明化
+            SpriteRenderer sr = GetComponent<SpriteRenderer>();
+            if (sr != null)
+            {
+                Color c = sr.color;
+                c.a = 0.3f;
+                sr.color = c;
+            }
+        }
+
+        private void OnCompanionReturn()
+        {
+            // 復帰: 不透明に戻す
+            SpriteRenderer sr = GetComponent<SpriteRenderer>();
+            if (sr != null)
+            {
+                Color c = sr.color;
+                c.a = 1f;
+                sr.color = c;
+            }
+        }
+
         protected override void OnDestroy()
         {
+            if (_aiController?.MpManager != null)
+            {
+                _aiController.MpManager.OnVanish -= OnCompanionVanish;
+                _aiController.MpManager.OnReturn -= OnCompanionReturn;
+                _aiController.MpManager.Dispose();
+            }
+
+            if (_aiController?.StanceManager != null)
+            {
+                _aiController.StanceManager.Dispose();
+            }
+
             CharacterRegistry.Unregister(ObjectHash);
             base.OnDestroy();
+        }
+
+        public override void OnPoolReturn()
+        {
+            CharacterRegistry.Unregister(ObjectHash);
+            base.OnPoolReturn();
+        }
+
+        public override void OnPoolAcquire()
+        {
+            base.OnPoolAcquire();
+            CharacterRegistry.RegisterAlly(ObjectHash);
         }
     }
 }

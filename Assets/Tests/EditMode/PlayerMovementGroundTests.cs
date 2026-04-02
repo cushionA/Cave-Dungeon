@@ -126,7 +126,7 @@ namespace Game.Tests.EditMode
 
             Assert.IsTrue(started);
             Assert.IsTrue(_logic.IsDashing);
-            Assert.AreEqual(100f - GroundMovementLogic.k_DashStaminaCost, stamina, 0.001f);
+            Assert.AreEqual(100f - GroundMovementLogic.k_DodgeStaminaCost, stamina, 0.001f);
         }
 
         [Test]

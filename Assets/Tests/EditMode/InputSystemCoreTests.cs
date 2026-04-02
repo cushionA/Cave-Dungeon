@@ -41,10 +41,10 @@ namespace Game.Tests.EditMode
         [Test]
         public void InputConverter_ConvertAttackInput_WhenAirborne_ReturnsAerialType()
         {
-            // Act: 空中でLightAttack (buttonId=0)
-            AttackInputType? aerialLight = InputConverter.ConvertAttackInput(0, isAirborne: true, isCharging: false);
-            // Act: 空中でHeavyAttack (buttonId=1)
-            AttackInputType? aerialHeavy = InputConverter.ConvertAttackInput(1, isAirborne: true, isCharging: false);
+            // Act: 空中でLightAttack
+            AttackInputType? aerialLight = InputConverter.ConvertAttackInput(AttackButtonId.Light, isAirborne: true, isCharging: false);
+            // Act: 空中でHeavyAttack
+            AttackInputType? aerialHeavy = InputConverter.ConvertAttackInput(AttackButtonId.Heavy, isAirborne: true, isCharging: false);
 
             // Assert
             Assert.AreEqual(AttackInputType.AerialLight, aerialLight);

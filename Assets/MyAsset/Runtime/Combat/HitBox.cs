@@ -89,6 +89,23 @@ namespace Game.Runtime
                 return;
             }
 
+            // 死亡キャラにはダメージを与えない
+            if (!receiver.IsAlive)
+            {
+                return;
+            }
+
+            // 味方同士はダメージを与えない（陣営チェック）
+            if (GameManager.IsCharacterValid(_ownerHash) && GameManager.IsCharacterValid(receiver.ObjectHash))
+            {
+                CharacterBelong ownerBelong = GameManager.Data.GetFlags(_ownerHash).Belong;
+                CharacterBelong targetBelong = GameManager.Data.GetFlags(receiver.ObjectHash).Belong;
+                if (ownerBelong == targetBelong)
+                {
+                    return;
+                }
+            }
+
             // HitboxLogicでヒット登録（重複防止+上限管理）
             if (!_logic.TryRegisterHit(receiver.ObjectHash))
             {

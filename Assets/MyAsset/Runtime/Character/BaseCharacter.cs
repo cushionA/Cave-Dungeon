@@ -27,6 +27,7 @@ namespace Game.Runtime
 
         public int ObjectHash => _objectHash;
         public bool IsGrounded => _isGrounded;
+        public CharacterInfo CharacterInfoRef => _characterInfo;
         public bool IsAlive
         {
             get
@@ -94,6 +95,13 @@ namespace Game.Runtime
                     _characterInfo.maxArmor,
                     _characterInfo.armorRecoveryRate,
                     _characterInfo.armorRecoveryDelay);
+            }
+
+            // CharacterAnimationControllerの初期化（ownerHashとの紐付け）
+            CharacterAnimationController animController = GetComponent<CharacterAnimationController>();
+            if (animController != null)
+            {
+                animController.Initialize(_objectHash);
             }
         }
 

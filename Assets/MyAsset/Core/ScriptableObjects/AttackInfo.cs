@@ -67,6 +67,40 @@ namespace Game.Core
         [TitleGroup("攻撃移動")]
         public AttackContactType contactType;
 
+        [TitleGroup("攻撃移動")]
+        [Tooltip("空中攻撃時の移動方向（正規化済み）。yを正にすると上昇")]
+        public Vector2 aerialMoveDirection;
+
+        [TitleGroup("空中攻撃")]
+        [Tooltip("空中攻撃中の浮遊時間（秒）")]
+        [MinValue(0)]
+        public float airHangDuration = 0.3f;
+
+        [TitleGroup("空中攻撃")]
+        [Tooltip("空中攻撃中の重力スケール（通常に対する倍率）")]
+        [MinValue(0)]
+        public float airHangGravityScale = 0.1f;
+
+        [TitleGroup("空中攻撃")]
+        [Tooltip("空中移動速度のデフォルト値（attackMoveDistance未設定時）")]
+        [MinValue(0)]
+        public float aerialMoveSpeedDefault = 3f;
+
+        [TitleGroup("落下攻撃")]
+        [Tooltip("落下攻撃として使用する場合の重力倍率")]
+        [MinValue(1)]
+        public float divingGravityMultiplier = 3f;
+
+        [TitleGroup("落下攻撃")]
+        [Tooltip("落下攻撃中の前方移動速度")]
+        [MinValue(0)]
+        public float divingForwardSpeed = 1f;
+
+        [TitleGroup("落下攻撃")]
+        [Tooltip("落下攻撃の着地後リカバリー時間（秒）。0なら即完了")]
+        [MinValue(0)]
+        public float divingLandingRecoveryDuration = 0.3f;
+
         [TitleGroup("パリィ・ガード")]
         public bool isParriable;
 
@@ -148,6 +182,9 @@ namespace Game.Core
         public AudioClip chargeSound;
         [FoldoutGroup("サウンド")]
         public AudioClip chargeCompleteSound;
+        [FoldoutGroup("サウンド")]
+        [Tooltip("落下攻撃着地時のSE")]
+        public AudioClip landingSound;
     }
 
     [Serializable]

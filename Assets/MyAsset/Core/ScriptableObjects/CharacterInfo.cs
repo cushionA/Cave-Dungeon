@@ -98,6 +98,24 @@ namespace Game.Core
         public float jumpHeight;
 
         // ─────────────────────────────────────────────
+        //  行動スタミナコスト
+        // ─────────────────────────────────────────────
+        [TitleGroup("行動スタミナコスト")]
+        [Tooltip("ジャンプ時のスタミナ消費")]
+        [MinValue(0)]
+        public float jumpStaminaCost;
+
+        [TitleGroup("行動スタミナコスト")]
+        [Tooltip("回避（単押し）時のスタミナ消費")]
+        [MinValue(0)]
+        public float dodgeStaminaCost = 15f;
+
+        [TitleGroup("行動スタミナコスト")]
+        [Tooltip("スプリント時のスタミナ消費（/秒）")]
+        [MinValue(0)]
+        public float sprintStaminaPerSecond = 10f;
+
+        // ─────────────────────────────────────────────
         //  アーマー
         // ─────────────────────────────────────────────
         [TitleGroup("アーマー")]
@@ -125,6 +143,55 @@ namespace Game.Core
 
         [TitleGroup("耐性")]
         public PhysicalResistance physicalResistance;
+
+        // ─────────────────────────────────────────────
+        //  スタミナ詳細
+        // ─────────────────────────────────────────────
+        [TitleGroup("スタミナ詳細")]
+        [Tooltip("スタミナ0時の追加回復遅延（秒）")]
+        [MinValue(0)]
+        public float staminaExhaustionPenalty = 2f;
+
+        [TitleGroup("スタミナ詳細")]
+        [Tooltip("スタミナ枯渇解除閾値（最大スタミナに対する割合 0-1）")]
+        [Range(0f, 1f)]
+        public float staminaExhaustionRecoveryRatio = 0.3f;
+
+        // ─────────────────────────────────────────────
+        //  ジャンプ詳細
+        // ─────────────────────────────────────────────
+        [TitleGroup("ジャンプ詳細")]
+        [Tooltip("ジャンプ入力バッファ時間（秒）")]
+        [MinValue(0)]
+        public float jumpBufferTime = 0.1f;
+
+        [TitleGroup("ジャンプ詳細")]
+        [Tooltip("ジャンプ早期リリース時のY速度減衰率（0-1）")]
+        [Range(0f, 1f)]
+        public float jumpReleaseVelocityDamping = 0.5f;
+
+        // ─────────────────────────────────────────────
+        //  入力設定
+        // ─────────────────────────────────────────────
+        [TitleGroup("入力設定")]
+        [Tooltip("移動入力デッドゾーン")]
+        [Range(0f, 0.5f)]
+        public float moveInputDeadzone = 0.1f;
+
+        [TitleGroup("入力設定")]
+        [Tooltip("入力バッファ持続時間（秒）")]
+        [MinValue(0)]
+        public float inputBufferDuration = 0.15f;
+
+        [TitleGroup("入力設定")]
+        [Tooltip("ため攻撃判定のホールド閾値（秒）")]
+        [MinValue(0)]
+        public float chargeThreshold = 0.3f;
+
+        [TitleGroup("入力設定")]
+        [Tooltip("スプリント/回避を分離するホールド閾値（秒）")]
+        [MinValue(0)]
+        public float sprintHoldThreshold = 0.25f;
 
         // ─────────────────────────────────────────────
         //  初期状態
