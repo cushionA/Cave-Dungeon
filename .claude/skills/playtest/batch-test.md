@@ -28,7 +28,14 @@ START
   │   各機能名からカテゴリを判定（matrix.md のカテゴリ判定方法）
   │   カテゴリ別に◎必須/○推奨/△任意テストを列挙
   │
-  └──→ [2. GROUP_BY_TYPE]
+  └──→ [1.5. GATHER_FEATURE_CONTEXT]
+         │ 各機能の実装詳細を収集（テスト設計の根拠とする）:
+         │   python tools/feature-db.py get "機能名" → 実装ファイル・テストファイルパス取得
+         │   Read: 実装ファイル → public API、状態変数、依存コンポーネントを把握
+         │   Read: 既存テストファイル → カバー済みケースを把握
+         │   Read: Architect/ の関連設計文書（必要時のみ）
+         │
+         └──→ [2. GROUP_BY_TYPE]
          │ テスト種別ごとに対象機能をグルーピング:
          │
          │ group_T6_preflight = [全機能]  ← 常に全機能対象
