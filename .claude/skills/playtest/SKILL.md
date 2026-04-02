@@ -16,6 +16,7 @@ feature-dbに登録された機能をエディタ実行で検証するSkill Grap
 START
   │
   ├─[arg == "full" or no arg]──→ GRAPH:FULL_WORKFLOW
+  │   └─[複数機能指定時]────────→ batch-test.md の GRAPH:BATCH_ORCHESTRATE
   ├─[arg == "scene"]───────────→ GRAPH:SCENE_DESIGN
   ├─[arg == "auto-input"]──────→ GRAPH:AUTO_INPUT_DESIGN
   ├─[arg == "analyze"]─────────→ GRAPH:ANALYZE_ERRORS
@@ -36,10 +37,17 @@ START
   ├─[compile error]──→ [REPORT_COMPILE_ERROR] → END
   │
   └─[success]──→ [2. SCENE_BUILD]
-                   │ unicli exec Menu.Execute --menuPath "Tools/CLIInternal/Build Test Scene"
-                   │ unicli exec Compile  # 再コンパイル待ち
+                   │ `/unicli`: Menu.Execute "Tools/CLIInternal/Build Test Scene"
+                   │ `/unicli`: Compile  # 再コンパイル待ち
                    │
-                   └──→ [3. RUN_EDIT_TESTS]
+                   └──→ [2.5. PREFLIGHT (T6)]
+                          │ `/unicli`: GameObject.Find --tag "Player" → レイヤー確認
+                          │ `/unicli`: GameObject.Find --tag "Enemy" → レイヤー・コンポーネント確認
+                          │ `/unicli`: Eval → GameManager/CharacterRegistry初期化確認
+                          │ `/unicli`: Prefab.GetStatus → プレハブ整合性
+                          │ Fail時 → [REPORT_PREFLIGHT_FAILURE] → END
+                          │
+                          └──→ [3. RUN_EDIT_TESTS]
                           │ unicli exec TestRunner.RunEditMode
                           │
                           ├─[test failures]──→ [REPORT_TEST_FAILURE]
@@ -53,9 +61,11 @@ START
                                            └──→ [5. ANALYZE]
                                                   │ → GRAPH:ANALYZE_ERRORS
                                                   │
-                                                  └──→ [5.5. PERF_CHECK] (任意)
-                                                         │ `/unicli`: Profiler.AnalyzeFrames でフレーム統計取得
-                                                         │ `/unicli`: Profiler.FindSpikes でスパイク検出
+                                                  └──→ [5.5. PERF_CHECK (T5)] (任意)
+                                                         │ ※ Profiler録画はAutoInput実行前に開始済みの場合のみ分析
+                                                         │ `/unicli`: Profiler.StopRecording (録画中の場合)
+                                                         │ `/unicli`: Profiler.AnalyzeFrames → フレーム統計
+                                                         │ `/unicli`: Profiler.FindSpikes --frameTimeThresholdMs 33 → 30fps割れ検出
                                                          │ 問題あればレポートに追記
                                                          │
                                                          └──→ [6. REPORT]
@@ -68,7 +78,7 @@ START
 
 ## GRAPH:SCENE_DESIGN
 
-feature-dbの機能をテストするためのシーン設計を検討する。
+feature-dbの機能をテストするためのシーン設計とテスト計画を策定する。
 
 ```
 [1. LOAD_FEATURES]
@@ -78,22 +88,23 @@ feature-dbの機能をテストするためのシーン設計を検討する。
   └──→ [1.5. INSPECT_CURRENT_SCENE] (シーンが開いている場合)
          │ `/unicli`: GameObject.GetHierarchy → 現在のシーン構成を取得
          │ `/unicli`: TestRunner.List → 既存テスト一覧を取得
+         │ `/unicli`: GameObject.Find --tag "Enemy" → 敵配置確認
+         │ `/unicli`: GameObject.Find --requiredComponents "AutoInputTester" → テスター確認
          │
-         └──→ [2. ANALYZE_COVERAGE]
-                │ 各機能に必要なテスト環境を分析:
-                │   - 必要なキャラクター構成（Player/Enemy/Companion）
-                │   - 必要な地形（平地/段差/壁/ギャップ）
-                │   - 必要な入力シーケンス
-                │   - 必要なAI設定（AIInfo）
-         │
-         └──→ [3. DESIGN_PROPOSAL]
-                │ 提案内容:
-                │   - TestSceneBuilderへの変更案
-                │   - AutoInputTesterへのテストケース追加案
-                │   - 新規AIInfoアセットの必要性
+         └──→ [2. MAP_TO_MATRIX]
+                │ Read: references/feature-test-matrix.md
+                │ 各機能をマトリクスに照合:
+                │   - 機能カテゴリを特定
+                │   - ◎必須/○推奨/△任意テストを列挙
+                │   - 既存テスト（TestRunner.List）でカバー済みのものを除外
                 │
-                ├─[--feature指定あり]──→ 特定機能のテスト環境のみ設計
-                └─[指定なし]──────────→ 全機能のカバレッジギャップを報告
+                └──→ [3. DESIGN_PROPOSAL]
+                       │ 各テスト種別の該当 t*.md を Read して設計:
+                       │   - 不足テストケース（T1-T9ごと）
+                       │   - シーン環境の変更案（エリア/キャラ/地形/UI要素追加）
+                       │
+                       ├─[--feature指定あり]──→ 特定機能のテスト計画のみ出力
+                       └─[指定なし]──────────→ 全機能のカバレッジギャップを報告
 ```
 
 **制約**: シーン設計はテスト補助目的のみ。テスト以外の機能追加は禁止。
@@ -102,40 +113,31 @@ feature-dbの機能をテストするためのシーン設計を検討する。
 
 ## GRAPH:AUTO_INPUT_DESIGN
 
-AutoInputTesterのテストシーケンスを設計・設定する。
+テストシーケンスを設計する。AutoInputTester（T2）だけでなく、全テスト種別を組み合わせて設計する。
 
 ```
-[1. READ_CURRENT_TESTS]
-  │ Read: Assets/MyAsset/Runtime/Debug/AutoInputTester.cs
-  │ 現在のテストカテゴリ12種を確認:
-  │   Move, Jump, LightAttack, HeavyAttack, Skill, Dodge,
-  │   Sprint, Guard, Buttons, Stamina, AerialAttack, Composite
+[1. READ_CURRENT_STATE]
+  │ Read: Assets/MyAsset/Runtime/Debug/AutoInputTester.cs （現在の12カテゴリ確認）
+  │ `/unicli`: TestRunner.List → 既存EditModeテスト一覧
+  │ python tools/feature-db.py list → 機能一覧
   │
-  └──→ [2. IDENTIFY_GAPS]
-         │ feature-dbの機能一覧と照合
-         │ テストされていない入力パターンを特定:
-         │   - チャージ攻撃（長押し→リリース）
-         │   - ガード中の被弾
-         │   - 連携ボタン
-         │   - 武器切り替え中の攻撃
+  └──→ [2. MAP_FEATURES_TO_TESTS]
+         │ Read: references/feature-test-matrix.md
+         │   - 各機能の◎必須テスト種別を列挙
+         │   - 既存テストでカバー済みのものを除外
+         │   - 未カバーのテスト種別を Gap として報告
          │
-         ├─[--combat-only]──→ 戦闘系テストのみ設計
-         ├─[--movement-only]─→ 移動系テストのみ設計
+         ├─[--combat-only]──→ 攻撃系/防御系カテゴリのみ
+         ├─[--movement-only]─→ 移動系カテゴリのみ
          │
-         └──→ [3. GENERATE_SEQUENCE]
-                │ テストステップをMovementInfo構造体の値として設計
-                │
-                │ 設計テンプレート:
-                │   TestStep {
-                │     name: "テスト名",
-                │     duration: 秒数,
-                │     input: MovementInfo { moveDirection, jumpPressed, ... },
-                │     validation: "検証内容の説明"
-                │   }
+         └──→ [3. DESIGN_PER_TYPE]
+                │ 必要なテスト種別の t*.md を Read して設計:
+                │   - T1: EditModeテストコード案
+                │   - T2: AutoInputTester追加コード案（TestStep定義）
+                │   - T3-T9: FULL_WORKFLOW / ANALYZE に組み込む検証手順
                 │
                 └──→ [4. OUTPUT]
-                       │ AutoInputTester.csへの追加コード案を出力
-                       │ OR CLIInternal経由での設定変更手順を出力
+                       │ テスト種別ごとの設計結果を出力
                        └──→ END
 ```
 
@@ -271,26 +273,41 @@ AutoInputTestを実行する。
 
 ---
 
-## テスト有効性の判断基準
+## テスト種別と機能マッピング
 
-feature-dbの機能に対して、以下の観点でテストの有効性を評価する:
+9種のテストタイプ（T1-T9）と、機能カテゴリごとの適用マトリクスで構成される。
 
-### 必須テスト（EditMode）
-- **データ変換テスト**: InputConverter, AIInfoConverter, CombatDataHelper
-- **ダメージ計算テスト**: HpArmorLogic, GuardJudgmentLogic, HitReactionLogic
-- **AI判定テスト**: ConditionEvaluator, TargetSelector, JudgmentLoop
-- **状態管理テスト**: ActionExecutor, ChargeAttackLogic, GroundMovementLogic
+### テスト種別一覧（詳細は各 references/test-types/t*.md を参照）
 
-### 推奨テスト（PlayMode / AutoInput）
-- **物理連携テスト**: 接地判定、レイヤー衝突、ヒットボックス到達
-- **タイミングテスト**: コンボウィンドウ、チャージ閾値、入力バッファ
-- **統合テスト**: 攻撃→ヒット→ダメージ→リアクション の一連フロー
-- **AI行動テスト**: モード遷移、ターゲット選択、攻撃実行
+| ID | テスト種別 | 実行モード | 詳細 |
+|----|-----------|-----------|------|
+| T1 | EditModeロジック | EditMode | `references/test-types/t1-logic.md` |
+| T2 | AutoInput動作 | PlayMode | `references/test-types/t2-auto-input.md` |
+| T3 | シーン状態スナップショット | PlayMode | `references/test-types/t3-snapshot.md` |
+| T4 | Animator状態 | PlayMode | `references/test-types/t4-animator.md` |
+| T5 | パフォーマンス回帰 | PlayMode | `references/test-types/t5-performance.md` |
+| T6 | プリフライト（門番） | EditMode | `references/test-types/t6-preflight.md` |
+| T7 | 動的シーン操作 | PlayMode | `references/test-types/t7-dynamic.md` |
+| T8 | UI検証 | PlayMode | `references/test-types/t8-ui.md` |
+| T9 | スクリーンショット | PlayMode | `references/test-types/t9-screenshot.md` |
 
-### テスト不要（検証コスト > 価値）
-- UIレイアウトの正確性（目視確認で十分）
-- アニメーション遷移の滑らかさ（主観的）
-- BGM/SE の再生タイミング（人間が確認）
+### 機能-テスト組み合わせマトリクス
+
+詳細: `references/feature-test-matrix.md`
+
+機能カテゴリ（移動系/攻撃系/UI系 等）ごとに◎必須/○推奨/△任意のテストタイプを定義。
+SCENE_DESIGN / AUTO_INPUT_DESIGN / batch-test はこのマトリクスを参照してテスト計画を立てる。
+
+### 適用ルール
+1. **◎が1つでもFail → feature-db: in_progress**
+2. **○のみFail → complete可能、レポートに警告**
+3. **△ → 時間が許す場合のみ**
+4. **T6 Fail → 他テスト中断**
+
+### バッチテスト（複数機能一括）
+
+複数機能を同時テストする場合は `batch-test.md` のワークフローを使用。
+テスト種別ごとにグルーピングし、PlayMode Enter/Exit を最小化する。
 
 ## feature-db 更新ルール
 
