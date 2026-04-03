@@ -132,6 +132,26 @@ Enum values are passed as strings. Invalid values return an error with valid opt
 
 This gives Claude Code the ability to compile, test, inspect, and manage Unity projects as part of its coding workflow.
 
+## PlayMode対応（サーバー自動再起動）
+
+UniCliサーバーは `playModeStateChanged` イベントでドメインリロード後に自動再起動する。
+PlayMode遷移時に2-4秒の接続不可期間があるが、CLI側がリトライすれば自動復帰する。
+
+| 操作 | コマンド | 備考 |
+|---|---|---|
+| PlayMode開始 | `unicli exec PlayMode.Enter` | 遷移後数秒でサーバー復帰 |
+| PlayMode停止 | `unicli exec PlayMode.Exit` | |
+| PlayMode中のステータス | `unicli exec PlayMode.Status` | |
+| PlayMode中のコンソール | `unicli exec Console.GetLog` | |
+| PlayMode中のポーズ | `unicli exec PlayMode.Pause` | |
+
+### 制限事項
+
+| 項目 | 詳細 |
+|---|---|
+| **PlayModeテスト** | `TestRunner.RunPlayMode` はCLI側が長時間接続を維持できないため非推奨。**PlayModeテストはユーザーがUnity Test Runnerから手動実行する。** |
+| **リトライ必要** | PlayMode遷移直後はサーバー再起動中のため、接続失敗する場合がある。`tools/unicli-retry.sh` ラッパーまたは手動リトライで対応。 |
+
 ## Troubleshooting
 
 | Problem | Solution |
@@ -141,14 +161,4 @@ This gives Claude Code the ability to compile, test, inspect, and manage Unity p
 | Command not found | Run `unicli commands` to list available commands |
 | Unity throttles in background | Edit → Preferences → General → Interaction Mode → "No Throttling" |
 | Package not installed | Run `unicli install` in the project directory |
-
-## Key Differences from Unity MCP
-
-| | UniCli | Unity MCP |
-|---|---|---|
-| Transport | Named Pipe (local) | WebSocket/HTTP |
-| Dependencies | Single binary | Node.js + npm |
-| Latency | ~ms | ~10-50ms |
-| Remote support | No (local only) | Yes |
-| LLM auto-discovery | Via plugin/skill | Built into MCP protocol |
-| Custom commands | C# handlers | Tool registration |
+| Server not responding after PlayMode | ドメインリロード中。2-4秒待ってリトライ |

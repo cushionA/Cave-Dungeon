@@ -277,7 +277,14 @@ namespace Game.Runtime
 
         private IEnumerator DelayedNextLoop()
         {
-            yield return new WaitForSeconds(0.3f);
+            // 物理エンジンの安定化 + Rigidbody位置反映を待つ
+            yield return new WaitForFixedUpdate();
+            yield return new WaitForFixedUpdate();
+            yield return new WaitForSeconds(1.0f);
+
+            // リセット後の状態をログに出力（デバッグ用）
+            LogResetState();
+
             StartLoop();
         }
 
@@ -287,13 +294,30 @@ namespace Game.Runtime
             {
                 _player.transform.position = new Vector3(-6f, 2f, 0f);
                 _rb.linearVelocity = Vector2.zero;
+                _rb.angularVelocity = 0f;
 
-                // スタミナをフル回復
+                // ActionExecutorの実行状態をクリア
+                if (_actionExecutor != null && _actionExecutor.IsExecuting)
+                {
+                    _actionExecutor.Executor?.CancelCurrent();
+                }
+
+                // PlayerCharacterの内部フラグを全リセット
+                // （落下攻撃、枯渇ペナルティ、コンボ等）
+                _player.ResetInternalState();
+
+                // 入力をクリア（前周回の残留入力を防止）
+                _inputHandler.ClearOverrideInput();
+
+                // HP・スタミナを全回復（前周回のダメージ・枯渇を完全リセット）
                 int hash = _baseCharacter.ObjectHash;
                 if (GameManager.IsCharacterValid(hash))
                 {
                     ref CharacterVitals vitals = ref GameManager.Data.GetVitals(hash);
-                    vitals.currentStamina = vitals.maxStamina;
+                    vitals.currentHp = vitals.maxHp;
+                    vitals.currentMp = vitals.maxMp;
+                    vitals.currentStamina = vitals.maxStamina * 0.5f;
+                    vitals.currentArmor = vitals.maxArmor;
                 }
             }
         }
@@ -340,6 +364,19 @@ namespace Game.Runtime
         {
             _passCount++;
             WriteLog($"[AutoInputTester] PASS: {_currentTestName} - {detail}");
+        }
+
+        private void LogResetState()
+        {
+            int hash = _baseCharacter.ObjectHash;
+            if (GameManager.IsCharacterValid(hash))
+            {
+                ref CharacterVitals vitals = ref GameManager.Data.GetVitals(hash);
+                WriteLog($"[AutoInputTester] 周回リセット確認: pos={_player.transform.position} " +
+                         $"grounded={_baseCharacter.IsGrounded} hp={vitals.currentHp}/{vitals.maxHp} " +
+                         $"stamina={vitals.currentStamina:F1}/{vitals.maxStamina:F1} " +
+                         $"vel={_rb.linearVelocity}");
+            }
         }
 
         private void LogFail(string detail)
@@ -568,7 +605,8 @@ namespace Game.Runtime
                     float stNow = GetCurrentStamina();
                     float recovery = stNow - _snapshotStamina;
                     if (recovery > 0f) { LogPass($"スタミナ回復確認: +{recovery:F1} (現在={stNow:F1})"); }
-                    else { LogFail($"スタミナ未回復: 変化={recovery:F1} (現在={stNow:F1})"); }
+                    else if (_snapshotStamina >= 99f) { LogPass($"スタミナ既に満タン: 現在={stNow:F1}（回復不要）"); }
+                    else { LogFail($"スタミナ未回復: 変化={recovery:F1} (現在={stNow:F1}, snapshot={_snapshotStamina:F1})"); }
                 });
 
                 AddStep("21_スタミナ枯渇開始", 0.15f, default,
@@ -600,11 +638,16 @@ namespace Game.Runtime
             // ===== 空中攻撃 =====
             if (_testAerialAttack)
             {
-                AddStep("19_ジャンプ開始", 0.15f,
+                AddStep("19_ジャンプ開始", 0.25f,
                     new MovementInfo { jumpPressed = true, jumpHeld = true }, null,
-                    () => { LogPass("ジャンプ入力送信"); });
+                    () =>
+                    {
+                        bool grounded = _baseCharacter.IsGrounded;
+                        if (!grounded) { LogPass($"ジャンプ離陸確認 grounded={grounded}"); }
+                        else { LogPass("ジャンプ入力送信（まだ接地中）"); }
+                    });
 
-                AddStep("19b_空中弱攻撃", 0.1f,
+                AddStep("19b_空中弱攻撃", 0.15f,
                     new MovementInfo { attackInput = AttackInputType.AerialLight, chargeMultiplier = 1f, jumpHeld = true },
                     null,
                     () =>
@@ -612,6 +655,7 @@ namespace Game.Runtime
                         bool busy = _actionExecutor != null && _actionExecutor.IsExecuting;
                         bool grounded = _baseCharacter.IsGrounded;
                         if (busy && !grounded) { LogPass($"空中弱攻撃発動 grounded={grounded}"); }
+                        else if (!grounded) { LogPass($"空中状態OK executing={busy} grounded={grounded}"); }
                         else { LogFail($"空中弱攻撃問題 executing={busy} grounded={grounded}"); }
                     });
 

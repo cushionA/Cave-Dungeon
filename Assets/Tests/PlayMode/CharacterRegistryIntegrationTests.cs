@@ -32,7 +32,7 @@ namespace Game.Tests.PlayMode
             {
                 if (obj != null)
                 {
-                    Object.DestroyImmediate(obj);
+                    Object.Destroy(obj);
                 }
             }
             _spawnedObjects.Clear();

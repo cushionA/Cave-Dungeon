@@ -143,7 +143,15 @@ namespace Game.Tests.EditMode
             loop.SetMode(mode);
             List<int> candidates = new List<int>();
 
-            loop.Tick(0.5f, candidates, 0f);
+            // SetMode直後の初回Tickはアクション即実行される（_actionJudgeTimer=0f仕様）
+            loop.Tick(0.01f, candidates, 0f);
+            Assert.IsTrue(_executor.IsExecuting);
+
+            // 実行完了後、2回目のTickはインターバル未到達なので再実行されない
+            _executor.CancelCurrent();
+            Assert.IsFalse(_executor.IsExecuting);
+
+            loop.Tick(0.5f, candidates, 0.5f);
             Assert.IsFalse(_executor.IsExecuting);
         }
 

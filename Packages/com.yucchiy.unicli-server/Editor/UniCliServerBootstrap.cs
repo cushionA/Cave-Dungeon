@@ -64,6 +64,8 @@ namespace UniCli.Server.Editor
             AssemblyReloadEvents.afterAssemblyReload += OnAfterAssemblyReload;
             EditorApplication.quitting -= OnEditorQuitting;
             EditorApplication.quitting += OnEditorQuitting;
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
 
             EditorApplication.update -= OnEditorUpdate;
             EditorApplication.update += OnEditorUpdate;
@@ -192,8 +194,28 @@ namespace UniCli.Server.Editor
             EditorApplication.update += StartServer;
         }
 
+        private static void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+            switch (state)
+            {
+                case PlayModeStateChange.EnteredPlayMode:
+                case PlayModeStateChange.EnteredEditMode:
+                    // ドメインリロード後にサーバーが復帰していない場合に再起動する。
+                    // ドメインリロードが有効なプロジェクトでは OnAfterAssemblyReload で
+                    // 起動されるが、ドメインリロード無効時はここで補完する。
+                    if (_server == null)
+                    {
+                        UniCliEditorLog.Log($"[UniCli] Restarting server after PlayMode transition ({state})");
+                        RunServiceInstallers(Services);
+                        StartServer();
+                    }
+                    break;
+            }
+        }
+
         private static void OnEditorQuitting()
         {
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             StopServer();
             DeletePidFile();
         }

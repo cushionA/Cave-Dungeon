@@ -18,7 +18,7 @@ namespace Game.Tests.PlayMode
             // 既存のGameManagerがあれば破棄
             if (GameManager.Instance != null)
             {
-                Object.DestroyImmediate(GameManager.Instance.gameObject);
+                Object.Destroy(GameManager.Instance.gameObject);
             }
 
             GameObject go = new GameObject("TestGameManager");
@@ -118,7 +118,7 @@ namespace Game.Tests.PlayMode
 
             if (GameManager.Instance != null)
             {
-                Object.DestroyImmediate(GameManager.Instance.gameObject);
+                Object.Destroy(GameManager.Instance.gameObject);
             }
         }
     }

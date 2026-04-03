@@ -1,7 +1,30 @@
-# T2: AutoInput動作テスト
+# T2: AutoInput動作テスト — 入力→動作フローの専門家
 
-## 概要
-AutoInputTesterコンポーネントがMovementInfoを送信し、PlayModeで入力→動作の統合フローを検証する。
+## 役割
+機能の入力仕様を読み、PlayModeで入力→動作の統合フローを検証するAutoInputテストステップを設計する。
+
+## テスト設計プロセス
+
+### 入力（Step 1 PLANから受け取る情報）
+- 機能が受け付ける入力（MovementInfoのどのフィールドを使うか）
+- 入力に対する期待動作（移動、攻撃発生、状態遷移等）
+- タイミング依存の仕様（コンボ受付時間、チャージ閾値等）
+
+### 設計手順
+1. **入力フィールドを特定**: 実装コードからMovementInfoの参照フィールドを抽出
+2. **単一入力テスト**: 各フィールド単体での動作を1ステップずつ設計
+3. **複合入力テスト**: 同時入力（移動+攻撃、ジャンプ+攻撃等）を設計
+4. **タイミングテスト**: 連続入力の間隔を変えたパターンを設計
+   - コンボ: 受付時間内/外の入力
+   - チャージ: 閾値未満/以上のホールド時間
+5. **キャンセルテスト**: 動作中に別入力で割り込むパターン
+6. **無効入力テスト**: actionBusy中の入力、死亡中の入力等
+
+### 設計品質基準
+- 機能が使う全MovementInfoフィールドに最低1テストステップ
+- 正常系（期待通り動く）+ 無効系（動かないべき時に動かない）の両方
+- タイミング依存の仕様がある場合は境界値テスト（閾値±1フレーム）
+- 連続操作で状態がリセットされるか（攻撃→攻撃→待機）
 
 ## 実行手段
 - テスト設定: `/unicli` Menu.Execute で CLIInternal コマンド実行（EditorModeで）
@@ -11,17 +34,7 @@ AutoInputTesterコンポーネントがMovementInfoを送信し、PlayModeで入
 - PlayMode: `/unicli` PlayMode.Enter → ポーリング → PlayMode.Exit
 - ログ確認: `/unicli` Console.GetLog + `auto-input-test-log.txt`
 
-## 対象
-- 移動（歩行、ダッシュ、方向転換）
-- ジャンプ（通常、二段、壁ジャンプ）
-- 攻撃（弱、強、空中）
-- コンボ（連続入力タイミング）
-- ガード（構え、解除）
-- 回避（ドッジ）
-- チャージ攻撃（長押し→リリース）
-- 武器切替
-
-## テストステップ設計
+## TestStep構造（参照: references/auto-input-patterns.md）
 ```
 TestStep {
   name: string         // テスト名
@@ -30,14 +43,6 @@ TestStep {
   validation: string   // 検証コールバック名
 }
 ```
-
-### MovementInfo フィールド（参照: references/auto-input-patterns.md）
-- moveAmount: Vector2（移動方向）
-- jumpPressed / jumpReleased: bool
-- actionPressed / actionReleased: bool
-- guardPressed: bool
-- dodgePressed: bool
-- etc.
 
 ## 完了検出
 AutoInputTesterは全周回終了時に以下のログを出力:
