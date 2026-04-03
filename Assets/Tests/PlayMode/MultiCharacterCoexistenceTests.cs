@@ -34,7 +34,7 @@ namespace Game.Tests.PlayMode
             {
                 if (obj != null)
                 {
-                    UnityEngine.Object.DestroyImmediate(obj);
+                    UnityEngine.Object.Destroy(obj);
                 }
             }
             _spawnedObjects.Clear();
@@ -114,7 +114,7 @@ namespace Game.Tests.PlayMode
             int hash3 = bc3.ObjectHash;
 
             // 中間のキャラクターを破棄
-            UnityEngine.Object.DestroyImmediate(char2);
+            UnityEngine.Object.Destroy(char2);
             _spawnedObjects.Remove(char2);
             yield return null;
 
@@ -145,8 +145,8 @@ namespace Game.Tests.PlayMode
             int hash1 = bc1.ObjectHash;
             int hash2 = bc2.ObjectHash;
 
-            UnityEngine.Object.DestroyImmediate(char1);
-            UnityEngine.Object.DestroyImmediate(char2);
+            UnityEngine.Object.Destroy(char1);
+            UnityEngine.Object.Destroy(char2);
             _spawnedObjects.Clear();
             yield return null;
 
@@ -229,7 +229,7 @@ namespace Game.Tests.PlayMode
             BaseCharacter bc1 = char1.GetComponent<BaseCharacter>();
             int hash1 = bc1.ObjectHash;
 
-            UnityEngine.Object.DestroyImmediate(char1);
+            UnityEngine.Object.Destroy(char1);
             _spawnedObjects.Remove(char1);
             yield return null;
 

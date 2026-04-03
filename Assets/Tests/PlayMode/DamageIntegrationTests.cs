@@ -56,7 +56,7 @@ namespace Game.Tests.PlayMode
             int currentHp = GameManager.Data.GetVitals(targetHash).currentHp;
             Assert.Less(currentHp, 100, "HP should be reduced");
 
-            Object.DestroyImmediate(targetObj);
+            Object.Destroy(targetObj);
         }
 
         [UnityTest]
@@ -85,7 +85,7 @@ namespace Game.Tests.PlayMode
             Assert.IsTrue(result.isKill, "Should be a killing blow");
             Assert.IsTrue(deathFired, "Death event should fire");
 
-            Object.DestroyImmediate(targetObj);
+            Object.Destroy(targetObj);
         }
     }
 }

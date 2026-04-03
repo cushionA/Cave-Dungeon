@@ -91,6 +91,53 @@ namespace Game.Runtime
         public void SetLightAttacksForTest(AttackInfo[] attacks) { _lightAttacks = attacks; }
 #endif
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        /// <summary>
+        /// AutoInputTester等から呼ばれる状態リセット。
+        /// 落下攻撃・枯渇ペナルティ・コンボ等の内部フラグを初期状態に戻す。
+        /// リリースビルドでは除去される。
+        /// </summary>
+        public void ResetInternalState()
+        {
+            // 落下攻撃
+            _isDivingAttack = false;
+            _isDivingLanding = false;
+            _divingLandingTimer = 0f;
+            _divingAttackInfo = null;
+
+            // 空中攻撃
+            _isAirAttacking = false;
+            _aerialComboUsed = false;
+
+            // コンボ
+            _comboStep = 0;
+            _comboQueued = false;
+            _comboWindowTimer = 0f;
+            _attackConsumed = false;
+
+            // スタミナ枯渇
+            _isExhausted = false;
+            _staminaRecoveryDelayTimer = 0f;
+
+            // チャージ・回避
+            _isCharging = false;
+            _wasDodging = false;
+            if (_collisionController != null)
+            {
+                _collisionController.SetInvincible(false);
+            }
+
+            // MovementLogicの状態リセット（ジャンプ・回避・スプリント）
+            _movementLogic?.Reset();
+
+            // 重力リセット
+            if (_rb != null)
+            {
+                _rb.gravityScale = GameConstants.k_GravityScale;
+            }
+        }
+#endif
+
         protected override void Awake()
         {
             base.Awake();

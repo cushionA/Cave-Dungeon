@@ -1,7 +1,26 @@
-# T6: コンポーネント整合性テスト（プリフライト）
+# T6: コンポーネント整合性テスト（プリフライト） — 実行前整合性チェックの専門家
 
-## 概要
-テスト実行前にシーン構成の正しさを検証する。ここでFailしたら他テストを中断する門番。
+## 役割
+テスト対象機能の依存コンポーネント・レイヤー・シーン構成を読み、テスト実行前に必要な整合性チェック項目を設計する。
+
+## テスト設計プロセス
+
+### 入力（Step 1 PLANから受け取る情報）
+- 機能が依存するコンポーネント（RequireComponent、GetComponent呼び出し）
+- 機能が前提とするレイヤー設定（Physics2D衝突マトリクス）
+- 機能が前提とするシーン構成（GameManager、特定タグのオブジェクト等）
+
+### 設計手順
+1. **必須コンポーネント列挙**: 実装の[RequireComponent]属性とGetComponent呼び出しから抽出
+2. **レイヤー依存列挙**: Physics2D.OverlapXxx、OnTriggerEnter2D等からレイヤー要件を特定
+3. **シングルトン依存列挙**: GameManager.Instance等の参照を特定
+4. **ScriptableObject依存列挙**: SerializeFieldで参照されるSO（AIInfo, AttackInfo等）
+5. **チェック項目化**: 各依存を「存在するか」「値が正しいか」のEval文に変換
+
+### 設計品質基準
+- 機能のGetComponent/FindがNullReferenceを起こさない保証
+- 物理衝突が期待通りに動くレイヤー設定の保証
+- テストシーンに必要な全オブジェクトが存在する保証
 
 ## 実行手段
 - `/unicli`: GameObject.Find --tag / --name / --requiredComponents
@@ -10,7 +29,7 @@
 - `/unicli`: Prefab.GetStatus
 
 ## 実行タイミング
-- **FULL_WORKFLOW の Step 2.5**（シーンビルド直後、テスト実行前）
+- **FULL_WORKFLOW の Step 0d**（シーンビルド直後、テスト実行前）
 - **batch-test のグループ実行前**（全機能共通で1回）
 
 ## チェック項目

@@ -774,6 +774,7 @@ namespace Game.Editor
             AttackInfo[] attacks, AIInfo aiInfo)
         {
             GameObject companion = new GameObject("[PLACEHOLDER]Companion");
+            companion.tag = "Companion";
             companion.layer = GameConstants.k_LayerCharaPassThrough;
             companion.transform.position = new Vector3(-8f, 2f, 0f);
 
@@ -846,6 +847,7 @@ namespace Game.Editor
             AnimatorController animController, AttackInfo[] attacks, AIInfo aiInfo)
         {
             GameObject enemy = new GameObject($"[PLACEHOLDER]{name}");
+            enemy.tag = "Enemy";
             enemy.layer = GameConstants.k_LayerCharaPassThrough;
             enemy.transform.position = position;
 
@@ -898,6 +900,7 @@ namespace Game.Editor
             AnimatorController animController, AttackInfo[] attacks, AIInfo aiInfo)
         {
             GameObject boss = new GameObject($"[PLACEHOLDER]{name}");
+            boss.tag = "Enemy";
             boss.layer = GameConstants.k_LayerCharaPassThrough;
             boss.transform.position = position;
 

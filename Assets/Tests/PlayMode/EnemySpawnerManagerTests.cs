@@ -28,7 +28,7 @@ namespace Game.Tests.PlayMode
             {
                 if (_spawnedObjects[i] != null)
                 {
-                    Object.DestroyImmediate(_spawnedObjects[i]);
+                    Object.Destroy(_spawnedObjects[i]);
                 }
             }
             _spawnedObjects.Clear();

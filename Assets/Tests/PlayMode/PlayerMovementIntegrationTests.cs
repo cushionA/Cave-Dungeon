@@ -27,7 +27,7 @@ namespace Game.Tests.PlayMode
             TestSceneHelper.Cleanup();
             if (_groundObject != null)
             {
-                Object.DestroyImmediate(_groundObject);
+                Object.Destroy(_groundObject);
             }
             yield return null;
         }
@@ -45,25 +45,28 @@ namespace Game.Tests.PlayMode
             int currentHp = GameManager.Data.GetVitals(bc.ObjectHash).currentHp;
             Assert.AreEqual(150, currentHp);
 
-            Object.DestroyImmediate(charObj);
+            Object.Destroy(charObj);
         }
 
         [UnityTest]
         public IEnumerator BaseCharacter_GroundCheck_DetectsGround()
         {
             CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo();
-            GameObject charObj = TestSceneHelper.CreateBaseCharacterObject(info, new Vector3(0, 5, 0));
+            // 地面(y=-1, height=2 → top=0)に近い高さから落とす
+            GameObject charObj = TestSceneHelper.CreateBaseCharacterObject(info, new Vector3(0, 2, 0));
 
             // 物理演算で落下させる
             yield return null; // Start
-            yield return new WaitForSeconds(1.0f); // 落下して接地
+            yield return new WaitForFixedUpdate();
+            yield return new WaitForSeconds(1.5f); // 十分な落下時間を確保
+            yield return new WaitForFixedUpdate();
 
             BaseCharacter bc = charObj.GetComponent<BaseCharacter>();
             bc.UpdateGroundCheck();
 
             Assert.IsTrue(bc.IsGrounded, "Character should be grounded after falling");
 
-            Object.DestroyImmediate(charObj);
+            Object.Destroy(charObj);
         }
 
         [UnityTest]
@@ -76,7 +79,7 @@ namespace Game.Tests.PlayMode
             BaseCharacter bc = charObj.GetComponent<BaseCharacter>();
             int hash = bc.ObjectHash;
 
-            Object.DestroyImmediate(charObj);
+            Object.Destroy(charObj);
             yield return null;
 
             Assert.IsFalse(GameManager.Data.TryGetValue(hash, out int _));
