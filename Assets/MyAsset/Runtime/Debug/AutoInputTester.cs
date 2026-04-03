@@ -310,13 +310,15 @@ namespace Game.Runtime
                 _inputHandler.ClearOverrideInput();
 
                 // HP・スタミナを全回復（前周回のダメージ・枯渇を完全リセット）
+                // スタミナは50%で開始（枯渇テスト21-23の回復検証を正しく機能させるため）
                 int hash = _baseCharacter.ObjectHash;
                 if (GameManager.IsCharacterValid(hash))
                 {
+                    const float k_ResetStaminaRatio = 0.5f;
                     ref CharacterVitals vitals = ref GameManager.Data.GetVitals(hash);
                     vitals.currentHp = vitals.maxHp;
                     vitals.currentMp = vitals.maxMp;
-                    vitals.currentStamina = vitals.maxStamina * 0.5f;
+                    vitals.currentStamina = vitals.maxStamina * k_ResetStaminaRatio;
                     vitals.currentArmor = vitals.maxArmor;
                 }
             }

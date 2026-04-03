@@ -29,7 +29,8 @@ namespace Game.Core
         public bool IsSprinting => _isSprinting;
         public bool IsDashing => _isDodging || _isSprinting;
 
-        /// <summary>全内部状態をリセットする。テストハーネスの周回リセット用。</summary>
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        /// <summary>全内部状態をリセットする。テストハーネスの周回リセット用。リリースビルドでは除去。</summary>
         public void Reset()
         {
             _isJumping = false;
@@ -38,6 +39,7 @@ namespace Game.Core
             _dodgeTimer = 0f;
             _isSprinting = false;
         }
+#endif
 
         /// <summary>水平移動速度を計算する。facingDir は回避時の方向（1=右, -1=左）。</summary>
         public float CalculateHorizontalSpeed(float inputX, MoveParams moveParams, float facingDir = 1f)

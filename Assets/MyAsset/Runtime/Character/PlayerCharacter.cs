@@ -91,9 +91,11 @@ namespace Game.Runtime
         public void SetLightAttacksForTest(AttackInfo[] attacks) { _lightAttacks = attacks; }
 #endif
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         /// <summary>
         /// AutoInputTester等から呼ばれる状態リセット。
         /// 落下攻撃・枯渇ペナルティ・コンボ等の内部フラグを初期状態に戻す。
+        /// リリースビルドでは除去される。
         /// </summary>
         public void ResetInternalState()
         {
@@ -134,6 +136,7 @@ namespace Game.Runtime
                 _rb.gravityScale = GameConstants.k_GravityScale;
             }
         }
+#endif
 
         protected override void Awake()
         {
