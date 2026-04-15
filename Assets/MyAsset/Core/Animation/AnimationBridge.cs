@@ -25,6 +25,7 @@ namespace Game.Core
         private float _anticipationDuration;
         private float _activeDuration;
         private float _recoveryDuration;
+        private float _cancelPoint; // -1=キャンセル不可, 0~1=Recovery中のキャンセル可能正規化時間
 
         private const float k_FixedDeltaTime = 0.02f; // 50fps想定のフレーム時間
 
@@ -128,21 +129,29 @@ namespace Game.Core
         /// <summary>
         /// 攻撃・スキルのアクションフェーズを開始する。
         /// MotionInfoのタイミング情報に基づいてAnticipation→Active→Recoveryを管理。
+        /// cancelPointは行動データ側（AttackInfo.cancelPoint等）から供給する。
         /// </summary>
-        public void StartActionPhase(MotionInfo motion, byte moveId)
+        /// <param name="motion">モーションタイミング情報</param>
+        /// <param name="moveId">実行中のモーション識別子</param>
+        /// <param name="cancelPoint">Recovery中のキャンセル可能正規化時間（-1でキャンセル不可）</param>
+        public void StartActionPhase(MotionInfo motion, byte moveId, float cancelPoint = -1f)
         {
             _anticipationDuration = motion.preMotionDuration;
             _activeDuration = motion.activeMotionDuration;
             _recoveryDuration = motion.recoveryDuration;
+            _cancelPoint = cancelPoint;
             _phaseElapsed = 0f;
 
             _currentState.currentMoveId = moveId;
             _currentState.isCommitted = true;
 
+            // isCancelable は「ExecuteActionで新行動に上書き可能」を意味する。
+            // アニメ再生開始から Recovery 中の cancelPoint 到達まで false を維持し、
+            // 行動の中断を防ぐ（cancelPoint 到達時のみ true に昇格）。
             if (_anticipationDuration > 0f)
             {
                 _currentState.currentPhase = AnimationPhase.Anticipation;
-                _currentState.isCancelable = true;
+                _currentState.isCancelable = false;
                 _currentState.normalizedTime = 0f;
             }
             else
@@ -211,6 +220,14 @@ namespace Game.Core
                         else
                         {
                             _currentState.normalizedTime = _phaseElapsed / _recoveryDuration;
+                            // キャンセルポイント到達でキャンセル可能にする
+                            if (!_currentState.isCancelable
+                                && _cancelPoint >= 0f
+                                && _currentState.normalizedTime >= _cancelPoint)
+                            {
+                                _currentState.isCancelable = true;
+                                _isDirty = true;
+                            }
                         }
                         break;
                 }

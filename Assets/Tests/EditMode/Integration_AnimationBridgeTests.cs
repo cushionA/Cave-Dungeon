@@ -178,5 +178,79 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(AnimationPhase.Neutral, _bridge.CurrentState.currentPhase);
             Assert.AreEqual(0, _bridge.CurrentState.currentMoveId);
         }
+
+        // ─── 上書きロックアウトパターン（ActionExecutorController.ExecuteActionの契約） ───
+
+        [Test]
+        public void 上書きロックアウト_アニメ再生中_isCancelableは常にfalse_cancelPoint到達でtrue()
+        {
+            // ActionExecutorController.ExecuteAction は isCancelable を見て新行動の上書きを許可するため、
+            // アニメ再生開始～Recovery中のcancelPoint到達まで isCancelable=false を維持しなければならない。
+            MotionInfo motion = new MotionInfo
+            {
+                preMotionDuration = 0.1f,
+                activeMotionDuration = 0.1f,
+                recoveryDuration = 1.0f
+            };
+            const float cancelPoint = 0.5f;
+
+            // 開始直後（Anticipation 0%）
+            _bridge.StartActionPhase(motion, 1, cancelPoint);
+            Assert.AreEqual(AnimationPhase.Anticipation, _bridge.CurrentState.currentPhase);
+            Assert.IsFalse(_bridge.CurrentState.isCancelable, "Anticipation開始直後は上書き不可");
+
+            // Anticipation 終了直前
+            _bridge.TickPhase(0.05f);
+            Assert.AreEqual(AnimationPhase.Anticipation, _bridge.CurrentState.currentPhase);
+            Assert.IsFalse(_bridge.CurrentState.isCancelable, "Anticipation途中も上書き不可");
+
+            // Active 突入
+            _bridge.TickPhase(0.05f);
+            Assert.AreEqual(AnimationPhase.Active, _bridge.CurrentState.currentPhase);
+            Assert.IsFalse(_bridge.CurrentState.isCancelable, "Active中は上書き不可");
+
+            // Recovery 突入（cancelPoint未到達 = 0%）
+            _bridge.TickPhase(0.1f);
+            Assert.AreEqual(AnimationPhase.Recovery, _bridge.CurrentState.currentPhase);
+            Assert.IsFalse(_bridge.CurrentState.isCancelable, "Recovery開始直後はcancelPoint未到達で上書き不可");
+
+            // Recovery cancelPoint直前（normalizedTime = 0.4）
+            _bridge.TickPhase(0.4f);
+            Assert.AreEqual(AnimationPhase.Recovery, _bridge.CurrentState.currentPhase);
+            Assert.IsFalse(_bridge.CurrentState.isCancelable, "Recovery cancelPoint未到達は上書き不可");
+
+            // Recovery cancelPoint到達（normalizedTime = 0.6 > 0.5）
+            _bridge.TickPhase(0.2f);
+            Assert.AreEqual(AnimationPhase.Recovery, _bridge.CurrentState.currentPhase);
+            Assert.IsTrue(_bridge.CurrentState.isCancelable, "cancelPoint超過で上書き許可");
+        }
+
+        [Test]
+        public void 上書きロックアウト_cancelPoint負値_Recovery完全終了まで上書き不可()
+        {
+            // cancelPoint = -1 → Recovery完了まで上書き不可、Neutral到達でIsExecuting=falseになり受け入れ可能。
+            MotionInfo motion = new MotionInfo
+            {
+                preMotionDuration = 0.1f,
+                activeMotionDuration = 0.1f,
+                recoveryDuration = 0.5f
+            };
+
+            _bridge.StartActionPhase(motion, 1); // cancelPoint = -1f (default)
+
+            _bridge.TickPhase(0.1f); // → Active
+            Assert.IsFalse(_bridge.CurrentState.isCancelable);
+
+            _bridge.TickPhase(0.1f); // → Recovery
+            Assert.IsFalse(_bridge.CurrentState.isCancelable);
+
+            _bridge.TickPhase(0.4f); // Recovery 80% (まだ未完了)
+            Assert.AreEqual(AnimationPhase.Recovery, _bridge.CurrentState.currentPhase);
+            Assert.IsFalse(_bridge.CurrentState.isCancelable, "cancelPoint=-1ならRecovery中は常に上書き不可");
+
+            _bridge.TickPhase(0.15f); // → Neutral
+            Assert.AreEqual(AnimationPhase.Neutral, _bridge.CurrentState.currentPhase);
+            // Neutral では isCancelable=false だが、ExecuteAction側の IsExecuting=false で受け入れられる
+        }
     }
 }

@@ -123,6 +123,12 @@ namespace Game.Runtime
                 return false;
             }
 
+            // フェーズロックアウト: 現在のアクションがキャンセル不可フェーズなら新アクション拒否
+            if (IsExecuting && _cachedBridge != null && !_cachedBridge.CurrentState.isCancelable)
+            {
+                return false;
+            }
+
             int ownerHash = _character.ObjectHash;
 
             if (slot.execType == ActionExecType.Attack || slot.execType == ActionExecType.Cast)
@@ -148,7 +154,7 @@ namespace Game.Runtime
 
                 if (_animController != null)
                 {
-                    _animController.StartActionPhase(info.motionInfo, (byte)slot.paramId);
+                    _animController.StartActionPhase(info.motionInfo, (byte)slot.paramId, info.cancelPoint);
                 }
 
                 // 攻撃のcontactTypeに応じて衝突モードを切替

@@ -237,8 +237,10 @@ namespace Game.Tests.EditMode
         // ─── isCancelable ───
 
         [Test]
-        public void StartActionPhase_Anticipation中はisCancelableがtrue()
+        public void StartActionPhase_Anticipation中はisCancelableがfalse()
         {
+            // isCancelable は「ExecuteActionで新行動に上書き可能」を意味するため、
+            // Anticipation中は false（アニメ再生開始から上書きロックアウト）。
             MotionInfo motion = new MotionInfo
             {
                 preMotionDuration = 0.5f,
@@ -248,7 +250,7 @@ namespace Game.Tests.EditMode
 
             _bridge.StartActionPhase(motion, 1);
 
-            Assert.IsTrue(_bridge.CurrentState.isCancelable);
+            Assert.IsFalse(_bridge.CurrentState.isCancelable);
         }
 
         [Test]
@@ -265,6 +267,72 @@ namespace Game.Tests.EditMode
             _bridge.TickPhase(0.15f);
 
             Assert.IsFalse(_bridge.CurrentState.isCancelable);
+        }
+
+        // ─── cancelPoint（Recovery中のキャンセル受付） ───
+
+        [Test]
+        public void TickPhase_RecoveryでcancelPoint到達_isCancelableがtrueに昇格する()
+        {
+            MotionInfo motion = new MotionInfo
+            {
+                preMotionDuration = 0.1f,
+                activeMotionDuration = 0.1f,
+                recoveryDuration = 1.0f
+            };
+
+            // cancelPoint = 0.5 : Recovery 50%時点からキャンセル可能
+            // tick値をフェーズ境界ピッタリに揃えてoverflow伝播を防ぐ
+            _bridge.StartActionPhase(motion, 1, 0.5f);
+            _bridge.TickPhase(0.1f); // Anticipation完了 → Active（overflow=0）
+            _bridge.TickPhase(0.1f); // Active完了 → Recovery（overflow=0）
+            _bridge.TickPhase(0.3f); // Recovery normalizedTime = 0.3（未到達）
+
+            Assert.AreEqual(AnimationPhase.Recovery, _bridge.CurrentState.currentPhase);
+            Assert.IsFalse(_bridge.CurrentState.isCancelable);
+
+            _bridge.TickPhase(0.3f); // Recovery normalizedTime = 0.6（cancelPoint 0.5 超過）
+
+            Assert.IsTrue(_bridge.CurrentState.isCancelable);
+        }
+
+        [Test]
+        public void StartActionPhase_cancelPoint負値_Recovery中も昇格しない()
+        {
+            MotionInfo motion = new MotionInfo
+            {
+                preMotionDuration = 0.1f,
+                activeMotionDuration = 0.1f,
+                recoveryDuration = 1.0f
+            };
+
+            // デフォルト（-1f = キャンセル不可）
+            _bridge.StartActionPhase(motion, 1);
+            _bridge.TickPhase(0.1f); // Anticipation完了 → Active
+            _bridge.TickPhase(0.1f); // Active完了 → Recovery
+            _bridge.TickPhase(0.9f); // Recovery normalizedTime = 0.9（未完了）
+
+            Assert.AreEqual(AnimationPhase.Recovery, _bridge.CurrentState.currentPhase);
+            Assert.IsFalse(_bridge.CurrentState.isCancelable);
+        }
+
+        [Test]
+        public void TickPhase_cancelPointゼロ_Recovery開始直後から昇格する()
+        {
+            MotionInfo motion = new MotionInfo
+            {
+                preMotionDuration = 0.1f,
+                activeMotionDuration = 0.1f,
+                recoveryDuration = 0.5f
+            };
+
+            // cancelPoint = 0f : Recovery開始と同時にキャンセル受付
+            _bridge.StartActionPhase(motion, 1, 0f);
+            _bridge.TickPhase(0.15f); // → Active
+            _bridge.TickPhase(0.15f); // → Recovery（normalizedTime >= 0）
+
+            Assert.AreEqual(AnimationPhase.Recovery, _bridge.CurrentState.currentPhase);
+            Assert.IsTrue(_bridge.CurrentState.isCancelable);
         }
 
         // ─── ConsumeAllTriggers ───

@@ -56,11 +56,12 @@ namespace Game.Runtime
 
         /// <summary>
         /// アクションフェーズを開始する。ActionExecutor Runtimeから呼ぶ。
+        /// cancelPointは行動データ側（AttackInfo.cancelPoint等）から供給する。
         /// </summary>
-        public void StartActionPhase(MotionInfo motion, byte moveId)
+        public void StartActionPhase(MotionInfo motion, byte moveId, float cancelPoint = -1f)
         {
             _currentMotion = motion;
-            _bridge.StartActionPhase(motion, moveId);
+            _bridge.StartActionPhase(motion, moveId, cancelPoint);
 
             // 予備動作クリップが設定されていればCrossFade
             if (motion.preMotionDuration > 0f && motion.preMotionClip != null)

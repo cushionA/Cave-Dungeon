@@ -21,6 +21,11 @@ namespace Game.Core
         [InlineProperty]
         public MotionInfo motionInfo;
 
+        [TitleGroup("モーション")]
+        [Tooltip("Recovery中のキャンセル可能ポイント（0=Recovery開始直後、1=Recovery終了時、-1=キャンセル不可）。行動データ側に持たせることで全行動タイプで統一管理する。")]
+        [Range(-1f, 1f)]
+        public float cancelPoint = -1f;
+
         [TitleGroup("ダメージ")]
         public ElementalStatus baseDamage;
 
