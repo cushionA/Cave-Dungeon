@@ -337,5 +337,155 @@ namespace Game.Tests.EditMode
             _logic.SwitchEditingTarget(tacticId, force: true);
             Assert.AreEqual("Updated", _logic.EditingBuffer.modes[0].modeName);
         }
+
+        // =====================================================================
+        // DuplicatePreset / ResolveDuplicateName
+        // =====================================================================
+
+        [Test]
+        public void ResolveDuplicateName_NoCollision_AppendsFukusei()
+        {
+            string result = CompanionAISettingsLogic.ResolveDuplicateName("戦術A", new string[] { "戦術A" });
+            Assert.AreEqual("戦術A (複製)", result);
+        }
+
+        [Test]
+        public void ResolveDuplicateName_FirstCollision_AppendsIndexTwo()
+        {
+            string result = CompanionAISettingsLogic.ResolveDuplicateName(
+                "戦術A",
+                new string[] { "戦術A", "戦術A (複製)" });
+            Assert.AreEqual("戦術A (複製 2)", result);
+        }
+
+        [Test]
+        public void ResolveDuplicateName_MultipleCollisions_FindsNextFreeIndex()
+        {
+            string result = CompanionAISettingsLogic.ResolveDuplicateName(
+                "戦術A",
+                new string[] { "戦術A", "戦術A (複製)", "戦術A (複製 2)", "戦術A (複製 3)" });
+            Assert.AreEqual("戦術A (複製 4)", result);
+        }
+
+        [Test]
+        public void ResolveDuplicateName_FromFukuseiName_StripsSuffixBeforeNumbering()
+        {
+            // "戦術A (複製)" を複製する → ベース名は "戦術A" とみなして "(複製 2)" を返す
+            string result = CompanionAISettingsLogic.ResolveDuplicateName(
+                "戦術A (複製)",
+                new string[] { "戦術A", "戦術A (複製)" });
+            Assert.AreEqual("戦術A (複製 2)", result);
+        }
+
+        [Test]
+        public void ResolveDuplicateName_FromNumberedFukuseiName_StripsBeforeNumbering()
+        {
+            // "戦術A (複製 5)" を複製する → ベース名は "戦術A" → 最初の空き番号
+            string result = CompanionAISettingsLogic.ResolveDuplicateName(
+                "戦術A (複製 5)",
+                new string[] { "戦術A", "戦術A (複製 5)" });
+            Assert.AreEqual("戦術A (複製)", result);
+        }
+
+        [Test]
+        public void ResolveDuplicateName_EmptyName_FallsBackToUnnamed()
+        {
+            string result = CompanionAISettingsLogic.ResolveDuplicateName("", new string[0]);
+            Assert.AreEqual("(無名) (複製)", result);
+        }
+
+        [Test]
+        public void ResolveDuplicateName_NullName_FallsBackToUnnamed()
+        {
+            string result = CompanionAISettingsLogic.ResolveDuplicateName(null, new string[0]);
+            Assert.AreEqual("(無名) (複製)", result);
+        }
+
+        [Test]
+        public void ResolveDuplicateName_EmptyExisting_ReturnsFirstCandidate()
+        {
+            string result = CompanionAISettingsLogic.ResolveDuplicateName("戦術A", null);
+            Assert.AreEqual("戦術A (複製)", result);
+        }
+
+        [Test]
+        public void DuplicatePreset_NewName_AvoidsCollision()
+        {
+            string sourceId = _tacticalRegistry.Save("戦術A", new CompanionAIConfig { configName = "戦術A" });
+
+            string dupId1 = _logic.DuplicatePreset(sourceId);
+            string dupId2 = _logic.DuplicatePreset(sourceId);
+            string dupId3 = _logic.DuplicatePreset(sourceId);
+
+            Assert.IsNotNull(dupId1);
+            Assert.IsNotNull(dupId2);
+            Assert.IsNotNull(dupId3);
+            Assert.AreNotEqual(sourceId, dupId1);
+            Assert.AreNotEqual(dupId1, dupId2);
+            Assert.AreNotEqual(dupId2, dupId3);
+
+            Assert.AreEqual("戦術A (複製)", _tacticalRegistry.GetById(dupId1).Value.configName);
+            Assert.AreEqual("戦術A (複製 2)", _tacticalRegistry.GetById(dupId2).Value.configName);
+            Assert.AreEqual("戦術A (複製 3)", _tacticalRegistry.GetById(dupId3).Value.configName);
+        }
+
+        [Test]
+        public void DuplicatePreset_DeepCopiesModesArray()
+        {
+            // 複製後にどちらかの modes 配列を書き換えても、もう片方に影響しないこと
+            AIMode mode = new AIMode { modeName = "Original" };
+            string sourceId = _tacticalRegistry.Save(
+                "戦術A",
+                new CompanionAIConfig { configName = "戦術A", modes = new AIMode[] { mode } });
+
+            string dupId = _logic.DuplicatePreset(sourceId);
+            Assert.IsNotNull(dupId);
+
+            CompanionAIConfig sourceConfig = _tacticalRegistry.GetById(sourceId).Value;
+            CompanionAIConfig dupConfig = _tacticalRegistry.GetById(dupId).Value;
+
+            // 配列インスタンスが別物であること
+            Assert.AreNotSame(sourceConfig.modes, dupConfig.modes);
+
+            // 複製側のモード名を書き換えても元側は変わらないこと
+            dupConfig.modes[0] = new AIMode { modeName = "Modified" };
+            CompanionAIConfig sourceAfter = _tacticalRegistry.GetById(sourceId).Value;
+            Assert.AreEqual("Original", sourceAfter.modes[0].modeName);
+        }
+
+        [Test]
+        public void DuplicatePreset_UnknownId_ReturnsNull()
+        {
+            string result = _logic.DuplicatePreset("nonexistent");
+            Assert.IsNull(result);
+        }
+
+        [Test]
+        public void DuplicatePreset_FromAlreadyDuplicatedName_StripsSuffixAndAvoidsCollision()
+        {
+            // ユーザーが「戦術A (複製)」を選んで複製すると、末尾の (複製) を剥がして "戦術A (複製 2)" を生成する
+            _tacticalRegistry.Save("戦術A", new CompanionAIConfig { configName = "戦術A" });
+            string dup1Id = _tacticalRegistry.Save("戦術A (複製)", new CompanionAIConfig { configName = "戦術A (複製)" });
+
+            string dup2Id = _logic.DuplicatePreset(dup1Id);
+
+            Assert.IsNotNull(dup2Id);
+            Assert.AreEqual("戦術A (複製 2)", _tacticalRegistry.GetById(dup2Id).Value.configName);
+        }
+
+        [Test]
+        public void DuplicatePreset_WhenRegistryFull_ReturnsNull()
+        {
+            // 上限まで埋める
+            string lastId = null;
+            for (int i = 0; i < 20; i++)
+            {
+                lastId = _tacticalRegistry.Save("戦術" + i, new CompanionAIConfig { configName = "戦術" + i });
+            }
+
+            string result = _logic.DuplicatePreset(lastId);
+
+            Assert.IsNull(result);
+        }
     }
 }

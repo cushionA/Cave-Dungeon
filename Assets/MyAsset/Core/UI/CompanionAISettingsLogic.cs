@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace Game.Core
 {
@@ -284,6 +285,100 @@ namespace Game.Core
                 _isDirty = false;
             }
             return newId;
+        }
+
+        /// <summary>
+        /// 既存の戦術プリセットを複製して新しいプリセットを作成する。
+        /// 名前は既存プリセットとの衝突を避けて「元名 (複製)」→「元名 (複製 2)」... のように解決する。
+        /// 元名末尾の " (複製)" / " (複製 N)" サフィックスは剥がしてから採番するため、
+        /// 多重複製しても末尾が膨張しない。上限超過時は null を返す。
+        /// </summary>
+        public string DuplicatePreset(string sourceConfigId)
+        {
+            CompanionAIConfig? source = _tacticalRegistry.GetById(sourceConfigId);
+            if (!source.HasValue)
+            {
+                return null;
+            }
+
+            CompanionAIConfig[] allPresets = _tacticalRegistry.GetAll();
+            List<string> existingNames = new List<string>(allPresets.Length);
+            for (int i = 0; i < allPresets.Length; i++)
+            {
+                existingNames.Add(allPresets[i].configName);
+            }
+
+            string newName = ResolveDuplicateName(source.Value.configName, existingNames);
+
+            // 浅いコピーだと modes 配列を共有してしまうので CloneConfig で深いコピーにする
+            CompanionAIConfig duplicate = CloneConfig(source.Value);
+            duplicate.configId = null; // Save 側で新GUIDを発行する
+            duplicate.configName = newName;
+
+            return _tacticalRegistry.Save(newName, duplicate);
+        }
+
+        /// <summary>
+        /// 既存名と衝突しない「複製」系の新名を生成する。
+        /// 最初の候補は「元名 (複製)」、衝突する場合は「元名 (複製 2)」「元名 (複製 3)」...と採番する。
+        /// 入力名末尾の " (複製)" / " (複製 N)" サフィックスは事前に剥がすため、多重複製でも末尾が伸びない。
+        /// 空名や null は "(無名)" として扱う。純関数のためテスト可能。
+        /// </summary>
+        public static string ResolveDuplicateName(string originalName, IEnumerable<string> existingNames)
+        {
+            string baseName = StripDuplicateSuffix(originalName);
+            if (string.IsNullOrEmpty(baseName))
+            {
+                baseName = "(無名)";
+            }
+
+            HashSet<string> existing = new HashSet<string>();
+            if (existingNames != null)
+            {
+                foreach (string n in existingNames)
+                {
+                    if (!string.IsNullOrEmpty(n))
+                    {
+                        existing.Add(n);
+                    }
+                }
+            }
+
+            string candidate = baseName + " (複製)";
+            if (!existing.Contains(candidate))
+            {
+                return candidate;
+            }
+
+            // 既存名に (複製 N) が連続していない場合でも、最大 existing.Count + 2 回以内に空きが必ず見つかる
+            int maxAttempt = existing.Count + 2;
+            for (int n = 2; n <= maxAttempt; n++)
+            {
+                candidate = baseName + " (複製 " + n + ")";
+                if (!existing.Contains(candidate))
+                {
+                    return candidate;
+                }
+            }
+
+            // 実運用では到達しないが保険。maxAttempt + 1 なら必ず空き
+            return baseName + " (複製 " + (maxAttempt + 1) + ")";
+        }
+
+        private static readonly Regex s_DuplicateSuffixRegex =
+            new Regex(@"\s*\(複製(\s+\d+)?\)\s*$", RegexOptions.Compiled);
+
+        /// <summary>
+        /// 名前末尾の " (複製)" / " (複製 N)" サフィックスを1つだけ剥がす。
+        /// ResolveDuplicateName 内部で使う純関数。
+        /// </summary>
+        private static string StripDuplicateSuffix(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+            {
+                return name;
+            }
+            return s_DuplicateSuffixRegex.Replace(name, "").TrimEnd();
         }
 
         /// <summary>

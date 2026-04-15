@@ -716,10 +716,7 @@ namespace Game.Runtime
             }));
             buttons.Add(BuildDialogButton("複製", "secondary-button", () =>
             {
-                CompanionAIConfig duplicate = preset.Value;
-                duplicate.configId = null;
-                string newName = preset.Value.configName + " (複製)";
-                string newId = _tacticalRegistry.Save(newName, duplicate);
+                string newId = _logic.DuplicatePreset(configId);
                 if (newId == null)
                 {
                     ShowInfoDialog("戦術プリセットが上限（20個）に達しています。");
