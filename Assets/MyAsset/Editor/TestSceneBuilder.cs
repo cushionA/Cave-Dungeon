@@ -24,6 +24,12 @@ namespace Game.Editor
         private const int k_SquareSize = 128;
         private const float k_Ppu = 128f;
 
+        // ダミーアニメーション用フェーズカラー
+        private static readonly Color k_AnticipationColor = new Color(1f, 0.85f, 0f);   // 黄: 予備動作
+        private static readonly Color k_ActiveColor = new Color(1f, 0.15f, 0f);          // 赤: アクティブ
+        private static readonly Color k_RecoveryColor = new Color(0.2f, 0.5f, 1f);      // 青: 硬直
+        private static readonly Color k_IdleColor = new Color(1f, 1f, 1f);              // 白: 待機
+
         [MenuItem("Tools/Build Test Scene")]
         public static void BuildTestScene()
         {
@@ -59,12 +65,12 @@ namespace Game.Editor
             CharacterInfo enemyInfo = LoadOrWarnCharacterInfo("Assets/MyAsset/Data/BasicEnemyInfo.asset");
             CharacterInfo companionInfo = LoadOrWarnCharacterInfo("Assets/MyAsset/Data/CompanionInfo.asset");
 
-            // アセット自動生成
-            AttackInfo[] playerAttacks = CreatePlayerAttackInfos();
-            AttackInfo[] enemyAttacks = CreateEnemyAttackInfos();
-            AttackInfo[] bossAttacks = CreateBossAttackInfos();
-            AnimatorController placeholderAnimController = CreateOrLoadPlaceholderAnimatorController();
-            AttackInfo[] companionAttacks = CreateCompanionAttackInfos();
+            // アセット自動生成（AnimatorControllerを先に作成 → ダミークリップを各AttackInfoに配線）
+            AnimatorController placeholderAnimController = CreatePlaceholderAnimatorController();
+            AttackInfo[] playerAttacks = CreatePlayerAttackInfos(placeholderAnimController);
+            AttackInfo[] enemyAttacks = CreateEnemyAttackInfos(placeholderAnimController);
+            AttackInfo[] bossAttacks = CreateBossAttackInfos(placeholderAnimController);
+            AttackInfo[] companionAttacks = CreateCompanionAttackInfos(placeholderAnimController);
             AIInfo basicEnemyAI = CreateBasicEnemyAIInfo();
             AIInfo bossAI = CreateBossAIInfo();
             AIInfo companionAI = CreateCompanionAIInfo();
@@ -173,21 +179,18 @@ namespace Game.Editor
 
         // ===== アセット自動生成 =====
 
-        private static AttackInfo[] CreatePlayerAttackInfos()
+        private static AttackInfo[] CreatePlayerAttackInfos(AnimatorController controller)
         {
             // 3段コンボ: 弱1 → 弱2 → 弱3（フィニッシュ）
+            MotionInfo combo1Motion = CreateMotionInfoWithClips(controller, "PH_LightCombo1", 0.05f, 0.2f, 0.1f);
             AttackInfo combo1 = CreateOrLoadAttackInfo(
                 "Assets/MyAsset/Data/PLACEHOLDER_PlayerCombo1.asset",
                 info =>
                 {
                     info.attackName = "Light_Combo1";
                     info.category = AttackCategory.Melee;
-                    info.motionInfo = new MotionInfo
-                    {
-                        preMotionDuration = 0.05f,
-                        activeMotionDuration = 0.2f,
-                        recoveryDuration = 0.1f
-                    };
+                    info.motionInfo = combo1Motion;
+                    info.cancelPoint = 0.5f;
                     info.baseDamage = new ElementalStatus { slash = 10 };
                     info.damageMultiplier = 1.0f;
                     info.attackElement = Element.Slash;
@@ -207,18 +210,15 @@ namespace Game.Editor
                     };
                 });
 
+            MotionInfo combo2Motion = CreateMotionInfoWithClips(controller, "PH_LightCombo2", 0.05f, 0.2f, 0.12f);
             AttackInfo combo2 = CreateOrLoadAttackInfo(
                 "Assets/MyAsset/Data/PLACEHOLDER_PlayerCombo2.asset",
                 info =>
                 {
                     info.attackName = "Light_Combo2";
                     info.category = AttackCategory.Melee;
-                    info.motionInfo = new MotionInfo
-                    {
-                        preMotionDuration = 0.05f,
-                        activeMotionDuration = 0.2f,
-                        recoveryDuration = 0.12f
-                    };
+                    info.motionInfo = combo2Motion;
+                    info.cancelPoint = 0.5f;
                     info.baseDamage = new ElementalStatus { slash = 12 };
                     info.damageMultiplier = 1.2f;
                     info.attackElement = Element.Slash;
@@ -238,18 +238,15 @@ namespace Game.Editor
                     };
                 });
 
+            MotionInfo combo3Motion = CreateMotionInfoWithClips(controller, "PH_LightCombo3", 0.08f, 0.25f, 0.2f);
             AttackInfo combo3 = CreateOrLoadAttackInfo(
                 "Assets/MyAsset/Data/PLACEHOLDER_PlayerCombo3.asset",
                 info =>
                 {
                     info.attackName = "Light_Combo3_Finish";
                     info.category = AttackCategory.Melee;
-                    info.motionInfo = new MotionInfo
-                    {
-                        preMotionDuration = 0.08f,
-                        activeMotionDuration = 0.25f,
-                        recoveryDuration = 0.2f
-                    };
+                    info.motionInfo = combo3Motion;
+                    info.cancelPoint = 0.8f;
                     info.baseDamage = new ElementalStatus { slash = 15, strike = 5 };
                     info.damageMultiplier = 1.8f;
                     info.attackElement = Element.Slash;
@@ -274,20 +271,17 @@ namespace Game.Editor
             return new AttackInfo[] { combo1, combo2, combo3 };
         }
 
-        private static AttackInfo[] CreateEnemyAttackInfos()
+        private static AttackInfo[] CreateEnemyAttackInfos(AnimatorController controller)
         {
+            MotionInfo enemyMotion = CreateMotionInfoWithClips(controller, "PH_EnemyAttack", 0.15f, 0.2f, 0.2f);
             AttackInfo attack = CreateOrLoadAttackInfo(
                 "Assets/MyAsset/Data/PLACEHOLDER_EnemyAttack.asset",
                 info =>
                 {
                     info.attackName = "PLACEHOLDER_EnemyAttack";
                     info.category = AttackCategory.Melee;
-                    info.motionInfo = new MotionInfo
-                    {
-                        preMotionDuration = 0.15f,
-                        activeMotionDuration = 0.2f,
-                        recoveryDuration = 0.2f
-                    };
+                    info.motionInfo = enemyMotion;
+                    info.cancelPoint = 0.7f;
                     info.baseDamage = new ElementalStatus { slash = 8 };
                     info.damageMultiplier = 1.0f;
                     info.attackElement = Element.Slash;
@@ -297,20 +291,17 @@ namespace Game.Editor
             return new AttackInfo[] { attack };
         }
 
-        private static AttackInfo[] CreateBossAttackInfos()
+        private static AttackInfo[] CreateBossAttackInfos(AnimatorController controller)
         {
+            MotionInfo bossMotion = CreateMotionInfoWithClips(controller, "PH_BossSlam", 0.4f, 0.3f, 0.5f);
             AttackInfo slam = CreateOrLoadAttackInfo(
                 "Assets/MyAsset/Data/PLACEHOLDER_BossSlam.asset",
                 info =>
                 {
                     info.attackName = "PLACEHOLDER_BossSlam";
                     info.category = AttackCategory.Melee;
-                    info.motionInfo = new MotionInfo
-                    {
-                        preMotionDuration = 0.4f,
-                        activeMotionDuration = 0.3f,
-                        recoveryDuration = 0.5f
-                    };
+                    info.motionInfo = bossMotion;
+                    info.cancelPoint = 0.85f;
                     info.baseDamage = new ElementalStatus { strike = 15 };
                     info.damageMultiplier = 2.0f;
                     info.attackElement = Element.Strike;
@@ -327,20 +318,17 @@ namespace Game.Editor
             return new AttackInfo[] { slam };
         }
 
-        private static AttackInfo[] CreateCompanionAttackInfos()
+        private static AttackInfo[] CreateCompanionAttackInfos(AnimatorController controller)
         {
+            MotionInfo companionMotion = CreateMotionInfoWithClips(controller, "PH_CompanionAttack", 0.1f, 0.15f, 0.15f);
             AttackInfo attack = CreateOrLoadAttackInfo(
                 "Assets/MyAsset/Data/PLACEHOLDER_CompanionAttack.asset",
                 info =>
                 {
                     info.attackName = "PLACEHOLDER_CompanionAttack";
                     info.category = AttackCategory.Melee;
-                    info.motionInfo = new MotionInfo
-                    {
-                        preMotionDuration = 0.1f,
-                        activeMotionDuration = 0.15f,
-                        recoveryDuration = 0.15f
-                    };
+                    info.motionInfo = companionMotion;
+                    info.cancelPoint = 0.6f;
                     info.baseDamage = new ElementalStatus { slash = 6 };
                     info.damageMultiplier = 1.0f;
                     info.attackElement = Element.Slash;
@@ -603,18 +591,83 @@ namespace Game.Editor
             return ai;
         }
 
-        private static AnimatorController CreateOrLoadPlaceholderAnimatorController()
+        /// <summary>
+        /// ダミーアニメーション付きAnimatorControllerを生成する。
+        /// 各フェーズ（予備動作/アクティブ/硬直）でSpriteRenderer.m_Colorを変化させる。
+        /// </summary>
+        private static AnimatorController CreatePlaceholderAnimatorController()
         {
             string path = "Assets/MyAsset/Data/PLACEHOLDER_CharacterAnimator.controller";
-            AnimatorController existing = AssetDatabase.LoadAssetAtPath<AnimatorController>(path);
-            if (existing != null)
+
+            // 常に再生成（クリップ構成の変更を反映するため）
+            if (AssetDatabase.LoadAssetAtPath<AnimatorController>(path) != null)
             {
-                return existing;
+                AssetDatabase.DeleteAsset(path);
             }
 
             EnsureDirectoryExists("Assets/MyAsset/Data");
             AnimatorController controller = AnimatorController.CreateAnimatorControllerAtPath(path);
+
+            // Idle ステート（デフォルト白）
+            AddDummyClipToController(controller, "PH_Idle", k_IdleColor, 1f);
+
             return controller;
+        }
+
+        /// <summary>
+        /// SpriteRenderer.m_Colorキーフレームを持つダミーAnimationClipを生成する。
+        /// </summary>
+        private static AnimationClip CreateDummyClip(string name, Color color, float duration)
+        {
+            float dur = Mathf.Max(duration, 0.033f);
+            AnimationClip clip = new AnimationClip { name = name };
+
+            Keyframe[] rKeys = { new Keyframe(0f, color.r), new Keyframe(dur, color.r) };
+            Keyframe[] gKeys = { new Keyframe(0f, color.g), new Keyframe(dur, color.g) };
+            Keyframe[] bKeys = { new Keyframe(0f, color.b), new Keyframe(dur, color.b) };
+            Keyframe[] aKeys = { new Keyframe(0f, color.a), new Keyframe(dur, color.a) };
+
+            clip.SetCurve("", typeof(SpriteRenderer), "m_Color.r", new AnimationCurve(rKeys));
+            clip.SetCurve("", typeof(SpriteRenderer), "m_Color.g", new AnimationCurve(gKeys));
+            clip.SetCurve("", typeof(SpriteRenderer), "m_Color.b", new AnimationCurve(bKeys));
+            clip.SetCurve("", typeof(SpriteRenderer), "m_Color.a", new AnimationCurve(aKeys));
+
+            return clip;
+        }
+
+        /// <summary>
+        /// ダミークリップを生成し、AnimatorControllerにサブアセット+ステートとして追加する。
+        /// </summary>
+        private static AnimationClip AddDummyClipToController(
+            AnimatorController controller, string name, Color color, float duration)
+        {
+            AnimationClip clip = CreateDummyClip(name, color, duration);
+            AssetDatabase.AddObjectToAsset(clip, AssetDatabase.GetAssetPath(controller));
+            controller.AddMotion(clip);
+            return clip;
+        }
+
+        /// <summary>
+        /// 3フェーズ（予備動作/アクティブ/硬直）のダミークリップを生成してMotionInfoに設定する。
+        /// cancelPointは AttackInfo.cancelPoint で個別設定する（呼び出し元で設定）。
+        /// </summary>
+        private static MotionInfo CreateMotionInfoWithClips(
+            AnimatorController controller, string prefix,
+            float preDuration, float activeDuration, float recoveryDuration)
+        {
+            return new MotionInfo
+            {
+                preMotionDuration = preDuration,
+                activeMotionDuration = activeDuration,
+                recoveryDuration = recoveryDuration,
+                preMotionClip = preDuration > 0f
+                    ? AddDummyClipToController(controller, $"{prefix}_Pre", k_AnticipationColor, preDuration)
+                    : null,
+                activeClip = AddDummyClipToController(controller, $"{prefix}_Active", k_ActiveColor, activeDuration),
+                recoveryClip = recoveryDuration > 0f
+                    ? AddDummyClipToController(controller, $"{prefix}_Recovery", k_RecoveryColor, recoveryDuration)
+                    : null,
+            };
         }
 
         // ===== 環境 =====

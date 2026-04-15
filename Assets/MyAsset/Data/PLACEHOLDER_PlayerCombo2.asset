@@ -21,10 +21,10 @@ MonoBehaviour:
     chargeTimeMin: 0
     chargeTimeMax: 0
     chargeDamageMultiplier: 0
-    preMotionClip: {fileID: 0}
-    activeClip: {fileID: 0}
+    preMotionClip: {fileID: 3080920384655787124, guid: 34dd98adbbc5db542b1bda6ba8c2d3c3, type: 2}
+    activeClip: {fileID: -4370528395423665769, guid: 34dd98adbbc5db542b1bda6ba8c2d3c3, type: 2}
     chargeLoopClip: {fileID: 0}
-    recoveryClip: {fileID: 0}
+    recoveryClip: {fileID: -3883611289441434290, guid: 34dd98adbbc5db542b1bda6ba8c2d3c3, type: 2}
     actionEffects: []
   baseDamage:
     slash: 12
