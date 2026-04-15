@@ -1,6 +1,4 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
-    <Style src="CompanionAISettings.uss" />
-
     <ui:VisualElement name="companion-ai-settings-root" class="companion-ai-settings-root">
 
         <!-- ===== ヘッダー ===== -->

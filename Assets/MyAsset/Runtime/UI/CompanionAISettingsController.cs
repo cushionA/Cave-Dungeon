@@ -14,6 +14,9 @@ namespace Game.Runtime
     [RequireComponent(typeof(UIDocument))]
     public class CompanionAISettingsController : MonoBehaviour
     {
+        [Header("Style Sheet (explicit load)")]
+        [SerializeField] private StyleSheet _styleSheet;
+
         [Header("Registries (optional injection)")]
         [SerializeField] private bool _useSharedRegistries = false;
 
@@ -80,6 +83,24 @@ namespace Game.Runtime
             if (_root == null)
             {
                 return;
+            }
+
+            // StyleSheet を明示ロード（UXML の <Style src> に依存しない）
+            if (_styleSheet != null && !_root.styleSheets.Contains(_styleSheet))
+            {
+                _root.styleSheets.Add(_styleSheet);
+            }
+
+            // UXML のルート要素が画面全体を覆うよう保険を入れる（USS が効かない場合の fallback）
+            VisualElement uxmlRoot = _root.Q<VisualElement>("companion-ai-settings-root");
+            if (uxmlRoot != null)
+            {
+                uxmlRoot.style.position = Position.Absolute;
+                uxmlRoot.style.left = 0;
+                uxmlRoot.style.top = 0;
+                uxmlRoot.style.right = 0;
+                uxmlRoot.style.bottom = 0;
+                uxmlRoot.style.flexDirection = FlexDirection.Column;
             }
 
             QueryElements();

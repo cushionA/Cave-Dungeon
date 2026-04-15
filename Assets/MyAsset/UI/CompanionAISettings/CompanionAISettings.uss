@@ -2,67 +2,38 @@
    CompanionAISettings — 仲間AI設定画面
    ============================================================================ */
 
-:root {
-    --color-bg-overlay: rgba(0, 0, 0, 0.75);
-    --color-bg-panel: rgba(20, 20, 30, 0.95);
-    --color-bg-input: rgba(40, 40, 50, 0.9);
-    --color-bg-item: rgba(35, 35, 45, 0.85);
-    --color-bg-item-hover: rgba(55, 55, 75, 0.9);
-    --color-bg-item-selected: rgba(60, 90, 120, 0.9);
-    --color-text-primary: rgb(240, 240, 245);
-    --color-text-secondary: rgb(160, 160, 175);
-    --color-text-muted: rgb(100, 100, 115);
-    --color-accent: rgb(79, 195, 247);
-    --color-danger: rgb(244, 67, 54);
-    --color-warning: rgb(255, 193, 7);
-    --color-success: rgb(76, 175, 80);
-
-    --spacing-xs: 4px;
-    --spacing-sm: 8px;
-    --spacing-md: 16px;
-    --spacing-lg: 24px;
-    --spacing-xl: 40px;
-
-    --font-size-xs: 11px;
-    --font-size-sm: 14px;
-    --font-size-md: 18px;
-    --font-size-lg: 24px;
-
-    --border-radius-sm: 3px;
-    --border-radius-md: 6px;
-    --border-radius-lg: 12px;
-}
-
 /* ===== ルート ===== */
 .companion-ai-settings-root {
     position: absolute;
-    width: 100%;
-    height: 100%;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
     flex-direction: column;
-    background-color: var(--color-bg-overlay);
+    background-color: rgba(0, 0, 0, 0.75);
 }
 
 /* ===== ヘッダー ===== */
 .companion-ai-header {
     flex-direction: row;
     align-items: center;
-    padding: var(--spacing-md);
-    background-color: var(--color-bg-panel);
+    padding: 16px;
+    background-color: rgba(20, 20, 30, 0.95);
     border-bottom-width: 1px;
     border-bottom-color: rgba(80, 80, 100, 0.4);
 }
 
 .page-title {
-    font-size: var(--font-size-lg);
-    color: var(--color-text-primary);
+    font-size: 24px;
+    color: rgb(240, 240, 245);
     -unity-font-style: bold;
-    margin-left: var(--spacing-md);
+    margin-left: 16px;
     flex-grow: 1;
 }
 
 .dirty-indicator {
-    font-size: var(--font-size-sm);
-    color: var(--color-danger);
+    font-size: 14px;
+    color: rgb(244, 67, 54);
     -unity-font-style: bold;
     display: none;
 }
@@ -75,33 +46,41 @@
 .tab-bar {
     flex-direction: row;
     background-color: rgba(15, 15, 25, 0.9);
-    padding: 0 var(--spacing-md);
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-top: 0;
+    padding-bottom: 0;
     border-bottom-width: 1px;
     border-bottom-color: rgba(80, 80, 100, 0.4);
 }
 
 .tab-button {
-    padding: var(--spacing-sm) var(--spacing-lg);
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-left: 24px;
+    padding-right: 24px;
     margin: 0;
     background-color: rgba(0, 0, 0, 0);
-    border-width: 0;
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-width: 0;
     border-bottom-width: 3px;
     border-bottom-color: rgba(0, 0, 0, 0);
-    color: var(--color-text-secondary);
-    font-size: var(--font-size-md);
+    color: rgb(160, 160, 175);
+    font-size: 18px;
     -unity-font-style: bold;
     transition-property: color, border-bottom-color, background-color;
     transition-duration: 0.15s;
 }
 
 .tab-button:hover {
-    color: var(--color-text-primary);
+    color: rgb(240, 240, 245);
     background-color: rgba(60, 60, 80, 0.3);
 }
 
 .tab-button--active {
-    color: var(--color-accent);
-    border-bottom-color: var(--color-accent);
+    color: rgb(79, 195, 247);
+    border-bottom-color: rgb(79, 195, 247);
 }
 
 .tab-button:focus {
@@ -118,7 +97,7 @@
 .tactic-tab {
     flex-grow: 1;
     flex-direction: row;
-    padding: var(--spacing-md);
+    padding: 16px;
 }
 
 .tactic-tab.tab--hidden {
@@ -130,15 +109,15 @@
     width: 320px;
     flex-shrink: 0;
     flex-direction: column;
-    background-color: var(--color-bg-panel);
-    border-radius: var(--border-radius-md);
-    padding: var(--spacing-sm);
-    margin-right: var(--spacing-md);
+    background-color: rgba(20, 20, 30, 0.95);
+    border-radius: 6px;
+    padding: 8px;
+    margin-right: 16px;
 }
 
 .tactic-section {
     flex-direction: column;
-    margin-bottom: var(--spacing-md);
+    margin-bottom: 16px;
 }
 
 .tactic-section--flex {
@@ -147,10 +126,10 @@
 }
 
 .section-label {
-    font-size: var(--font-size-sm);
-    color: var(--color-text-secondary);
-    margin-bottom: var(--spacing-xs);
-    padding-left: var(--spacing-xs);
+    font-size: 14px;
+    color: rgb(160, 160, 175);
+    margin-bottom: 4px;
+    padding-left: 4px;
     -unity-font-style: bold;
 }
 
@@ -166,84 +145,80 @@
 .tactic-list-item {
     flex-direction: row;
     align-items: center;
-    padding: var(--spacing-sm) var(--spacing-md);
-    margin: 2px 0;
-    background-color: var(--color-bg-item);
-    border-radius: var(--border-radius-sm);
-    border-width: 0;
+    padding: 8px 16px;
+    margin-top: 2px;
+    margin-bottom: 2px;
+    background-color: rgba(35, 35, 45, 0.85);
+    border-radius: 3px;
+    border-top-width: 0;
+    border-right-width: 0;
+    border-bottom-width: 0;
     border-left-width: 3px;
     border-left-color: rgba(0, 0, 0, 0);
-    color: var(--color-text-primary);
-    font-size: var(--font-size-sm);
+    color: rgb(240, 240, 245);
+    font-size: 14px;
     -unity-text-align: middle-left;
     transition-property: background-color, border-left-color;
     transition-duration: 0.15s;
 }
 
 .tactic-list-item:hover {
-    background-color: var(--color-bg-item-hover);
+    background-color: rgba(55, 55, 75, 0.9);
 }
 
 .tactic-list-item--selected {
-    background-color: var(--color-bg-item-selected);
-    border-left-color: var(--color-accent);
+    background-color: rgba(60, 90, 120, 0.9);
+    border-left-color: rgb(79, 195, 247);
 }
 
 .tactic-list-item--current {
     background-color: rgba(60, 100, 60, 0.5);
-    border-left-color: var(--color-success);
+    border-left-color: rgb(76, 175, 80);
 }
 
 .tactic-list-item:focus {
-    border-width: 2px;
-    border-color: var(--color-accent);
+    border-top-width: 2px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+    border-color: rgb(79, 195, 247);
     border-left-width: 3px;
-    border-left-color: var(--color-accent);
+    border-left-color: rgb(79, 195, 247);
 }
 
 .add-preset-button {
-    margin-top: var(--spacing-sm);
-    padding: var(--spacing-sm);
+    margin-top: 8px;
+    padding: 8px;
     background-color: rgba(0, 0, 0, 0);
     border-width: 1px;
-    border-color: var(--color-text-muted);
-    border-radius: var(--border-radius-sm);
-    color: var(--color-text-secondary);
-    font-size: var(--font-size-sm);
+    border-color: rgb(100, 100, 115);
+    border-radius: 3px;
+    color: rgb(160, 160, 175);
+    font-size: 14px;
     transition-property: border-color, color;
     transition-duration: 0.15s;
 }
 
 .add-preset-button:hover {
-    border-color: var(--color-accent);
-    color: var(--color-accent);
+    border-color: rgb(79, 195, 247);
+    color: rgb(79, 195, 247);
 }
 
 /* --- 右ペイン: エディタ --- */
 .tactic-editor {
     flex-grow: 1;
     flex-direction: column;
-    background-color: var(--color-bg-panel);
-    border-radius: var(--border-radius-md);
-    padding: var(--spacing-md);
+    background-color: rgba(20, 20, 30, 0.95);
+    border-radius: 6px;
+    padding: 16px;
 }
 
 .editor-header {
     flex-direction: column;
-    margin-bottom: var(--spacing-md);
+    margin-bottom: 16px;
 }
 
 .config-name-field {
-    margin-bottom: var(--spacing-sm);
-}
-
-.config-name-field > .unity-text-field__input {
-    background-color: var(--color-bg-input);
-    border-width: 1px;
-    border-color: rgba(80, 80, 100, 0.4);
-    border-radius: var(--border-radius-sm);
-    color: var(--color-text-primary);
-    padding: var(--spacing-xs) var(--spacing-sm);
+    margin-bottom: 8px;
 }
 
 .editor-header__buttons {
@@ -252,10 +227,10 @@
 
 .editor-section {
     flex-direction: column;
-    margin-bottom: var(--spacing-md);
-    padding: var(--spacing-sm);
+    margin-bottom: 16px;
+    padding: 8px;
     background-color: rgba(0, 0, 0, 0.2);
-    border-radius: var(--border-radius-sm);
+    border-radius: 3px;
 }
 
 /* ===== モードスロット ===== */
@@ -268,14 +243,14 @@
 .mode-slot {
     width: 140px;
     height: 80px;
-    margin: var(--spacing-xs);
-    padding: var(--spacing-sm);
-    background-color: var(--color-bg-item);
-    border-radius: var(--border-radius-sm);
+    margin: 4px;
+    padding: 8px;
+    background-color: rgba(35, 35, 45, 0.85);
+    border-radius: 3px;
     border-width: 1px;
     border-color: rgba(80, 80, 100, 0.4);
-    color: var(--color-text-primary);
-    font-size: var(--font-size-sm);
+    color: rgb(240, 240, 245);
+    font-size: 14px;
     -unity-text-align: middle-center;
     -unity-font-style: bold;
     transition-property: background-color, border-color, scale;
@@ -283,37 +258,37 @@
 }
 
 .mode-slot:hover {
-    background-color: var(--color-bg-item-hover);
-    border-color: var(--color-accent);
+    background-color: rgba(55, 55, 75, 0.9);
+    border-color: rgb(79, 195, 247);
     scale: 1.02 1.02;
 }
 
 .mode-slot:focus {
     border-width: 2px;
-    border-color: var(--color-accent);
+    border-color: rgb(79, 195, 247);
 }
 
 .mode-slot--linked {
     border-top-width: 3px;
-    border-top-color: var(--color-accent);
+    border-top-color: rgb(79, 195, 247);
 }
 
 .mode-slot--independent {
     border-top-width: 3px;
-    border-top-color: var(--color-warning);
+    border-top-color: rgb(255, 193, 7);
 }
 
 .mode-slot--add {
     background-color: rgba(0, 0, 0, 0);
     border-width: 2px;
-    border-color: var(--color-text-muted);
-    color: var(--color-text-muted);
-    font-size: var(--font-size-lg);
+    border-color: rgb(100, 100, 115);
+    color: rgb(100, 100, 115);
+    font-size: 24px;
 }
 
 .mode-slot--add:hover {
-    border-color: var(--color-accent);
-    color: var(--color-accent);
+    border-color: rgb(79, 195, 247);
+    color: rgb(79, 195, 247);
     background-color: rgba(79, 195, 247, 0.1);
 }
 
@@ -325,19 +300,20 @@
 .transition-row {
     flex-direction: row;
     align-items: center;
-    padding: var(--spacing-xs) var(--spacing-sm);
-    background-color: var(--color-bg-item);
-    border-radius: var(--border-radius-sm);
-    margin: 2px 0;
-    color: var(--color-text-primary);
-    font-size: var(--font-size-xs);
+    padding: 4px 8px;
+    background-color: rgba(35, 35, 45, 0.85);
+    border-radius: 3px;
+    margin-top: 2px;
+    margin-bottom: 2px;
+    color: rgb(240, 240, 245);
+    font-size: 11px;
 }
 
 .placeholder-text {
-    color: var(--color-text-muted);
-    font-size: var(--font-size-xs);
+    color: rgb(100, 100, 115);
+    font-size: 11px;
     -unity-font-style: italic;
-    padding: var(--spacing-sm);
+    padding: 8px;
 }
 
 /* ===== タブ2: ショートカット ===== */
@@ -345,7 +321,7 @@
     flex-grow: 1;
     flex-direction: column;
     align-items: center;
-    padding: var(--spacing-xl);
+    padding: 40px;
     display: none;
 }
 
@@ -354,9 +330,9 @@
 }
 
 .shortcut-description {
-    color: var(--color-text-secondary);
-    font-size: var(--font-size-sm);
-    margin-bottom: var(--spacing-lg);
+    color: rgb(160, 160, 175);
+    font-size: 14px;
+    margin-bottom: 24px;
 }
 
 .shortcut-grid {
@@ -368,10 +344,10 @@
 
 .shortcut-slot {
     width: 280px;
-    margin: var(--spacing-sm);
-    padding: var(--spacing-md);
-    background-color: var(--color-bg-panel);
-    border-radius: var(--border-radius-md);
+    margin: 8px;
+    padding: 16px;
+    background-color: rgba(20, 20, 30, 0.95);
+    border-radius: 6px;
     border-width: 1px;
     border-color: rgba(80, 80, 100, 0.4);
     flex-direction: column;
@@ -379,41 +355,33 @@
 }
 
 .shortcut-slot__label {
-    font-size: var(--font-size-sm);
-    color: var(--color-text-secondary);
-    margin-bottom: var(--spacing-xs);
+    font-size: 14px;
+    color: rgb(160, 160, 175);
+    margin-bottom: 4px;
     -unity-text-align: middle-left;
 }
 
 .shortcut-slot__icon {
     font-size: 36px;
-    color: var(--color-accent);
+    color: rgb(79, 195, 247);
     -unity-font-style: bold;
     -unity-text-align: middle-center;
-    margin-bottom: var(--spacing-sm);
+    margin-bottom: 8px;
 }
 
 .shortcut-dropdown {
     margin: 0;
 }
 
-.shortcut-dropdown > .unity-base-popup-field__input {
-    background-color: var(--color-bg-input);
-    border-radius: var(--border-radius-sm);
-    border-width: 1px;
-    border-color: rgba(80, 80, 100, 0.4);
-    color: var(--color-text-primary);
-}
-
 /* ===== ボタン共通 ===== */
 .primary-button {
-    margin: var(--spacing-xs);
-    padding: var(--spacing-sm) var(--spacing-md);
-    background-color: var(--color-accent);
+    margin: 4px;
+    padding: 8px 16px;
+    background-color: rgb(79, 195, 247);
     color: rgb(10, 10, 20);
     border-width: 0;
-    border-radius: var(--border-radius-sm);
-    font-size: var(--font-size-sm);
+    border-radius: 3px;
+    font-size: 14px;
     -unity-font-style: bold;
     transition-property: background-color, scale;
     transition-duration: 0.15s;
@@ -430,45 +398,45 @@
 }
 
 .secondary-button {
-    margin: var(--spacing-xs);
-    padding: var(--spacing-sm) var(--spacing-md);
+    margin: 4px;
+    padding: 8px 16px;
     background-color: rgba(60, 60, 80, 0.8);
-    color: var(--color-text-primary);
+    color: rgb(240, 240, 245);
     border-width: 1px;
     border-color: rgba(100, 100, 130, 0.6);
-    border-radius: var(--border-radius-sm);
-    font-size: var(--font-size-sm);
+    border-radius: 3px;
+    font-size: 14px;
     transition-property: background-color, border-color, scale;
     transition-duration: 0.15s;
 }
 
 .secondary-button:hover {
     background-color: rgba(80, 80, 110, 0.9);
-    border-color: var(--color-accent);
+    border-color: rgb(79, 195, 247);
     scale: 1.03 1.03;
 }
 
 .secondary-button:focus {
     border-width: 2px;
-    border-color: var(--color-accent);
+    border-color: rgb(79, 195, 247);
 }
 
 .danger-button {
-    margin: var(--spacing-xs);
-    padding: var(--spacing-sm) var(--spacing-md);
+    margin: 4px;
+    padding: 8px 16px;
     background-color: rgba(120, 40, 40, 0.9);
     color: rgb(255, 255, 255);
     border-width: 1px;
-    border-color: var(--color-danger);
-    border-radius: var(--border-radius-sm);
-    font-size: var(--font-size-sm);
+    border-color: rgb(244, 67, 54);
+    border-radius: 3px;
+    font-size: 14px;
     -unity-font-style: bold;
     transition-property: background-color, scale;
     transition-duration: 0.15s;
 }
 
 .danger-button:hover {
-    background-color: var(--color-danger);
+    background-color: rgb(244, 67, 54);
     scale: 1.03 1.03;
 }
 
@@ -483,8 +451,8 @@
     padding: 0;
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
-    color: var(--color-text-primary);
-    font-size: var(--font-size-lg);
+    color: rgb(240, 240, 245);
+    font-size: 24px;
     -unity-text-align: middle-center;
     transition-property: background-color, scale;
     transition-duration: 0.15s;
@@ -497,15 +465,17 @@
 
 .icon-button:focus {
     border-width: 2px;
-    border-color: var(--color-accent);
-    border-radius: var(--border-radius-sm);
+    border-color: rgb(79, 195, 247);
+    border-radius: 3px;
 }
 
 /* ===== ダイアログレイヤー ===== */
 .dialog-layer {
     position: absolute;
-    width: 100%;
-    height: 100%;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
     background-color: rgba(0, 0, 0, 0.7);
     align-items: center;
     justify-content: center;
@@ -519,9 +489,9 @@
 .modal-dialog {
     min-width: 360px;
     max-width: 540px;
-    padding: var(--spacing-lg);
-    background-color: var(--color-bg-panel);
-    border-radius: var(--border-radius-md);
+    padding: 24px;
+    background-color: rgba(20, 20, 30, 0.95);
+    border-radius: 6px;
     border-width: 1px;
     border-color: rgba(100, 100, 130, 0.6);
     flex-direction: column;
@@ -529,45 +499,36 @@
 }
 
 .modal-dialog__title {
-    font-size: var(--font-size-md);
-    color: var(--color-text-primary);
+    font-size: 18px;
+    color: rgb(240, 240, 245);
     -unity-font-style: bold;
-    margin-bottom: var(--spacing-sm);
+    margin-bottom: 8px;
 }
 
 .modal-dialog__body {
-    font-size: var(--font-size-sm);
-    color: var(--color-text-secondary);
-    margin-bottom: var(--spacing-md);
+    font-size: 14px;
+    color: rgb(160, 160, 175);
+    margin-bottom: 16px;
     white-space: normal;
 }
 
 .modal-dialog__input {
-    margin-bottom: var(--spacing-md);
-}
-
-.modal-dialog__input > .unity-text-field__input {
-    background-color: var(--color-bg-input);
-    border-width: 1px;
-    border-color: rgba(80, 80, 100, 0.5);
-    border-radius: var(--border-radius-sm);
-    color: var(--color-text-primary);
-    padding: var(--spacing-xs) var(--spacing-sm);
-    min-height: 28px;
+    margin-bottom: 16px;
 }
 
 .modal-dialog__reference-list {
     max-height: 140px;
-    margin-bottom: var(--spacing-md);
-    padding: var(--spacing-sm);
+    margin-bottom: 16px;
+    padding: 8px;
     background-color: rgba(0, 0, 0, 0.3);
-    border-radius: var(--border-radius-sm);
+    border-radius: 3px;
 }
 
 .modal-dialog__reference-item {
-    color: var(--color-warning);
-    font-size: var(--font-size-xs);
-    margin: 2px 0;
+    color: rgb(255, 193, 7);
+    font-size: 11px;
+    margin-top: 2px;
+    margin-bottom: 2px;
 }
 
 .modal-dialog__buttons {
@@ -580,11 +541,11 @@
 .tooltip-panel {
     position: absolute;
     max-width: 280px;
-    padding: var(--spacing-xs) var(--spacing-sm);
+    padding: 4px 8px;
     background-color: rgba(10, 10, 20, 0.95);
     border-width: 1px;
-    border-color: var(--color-accent);
-    border-radius: var(--border-radius-sm);
+    border-color: rgb(79, 195, 247);
+    border-radius: 3px;
     display: none;
 }
 
@@ -593,8 +554,8 @@
 }
 
 .tooltip-text {
-    font-size: var(--font-size-xs);
-    color: var(--color-text-primary);
+    font-size: 11px;
+    color: rgb(240, 240, 245);
     white-space: normal;
 }
 
