@@ -310,15 +310,15 @@ namespace Game.Runtime
                 _inputHandler.ClearOverrideInput();
 
                 // HP・スタミナを全回復（前周回のダメージ・枯渇を完全リセット）
-                // スタミナは50%で開始（枯渇テスト21-23の回復検証を正しく機能させるため）
+                // スタミナは100%で開始（後半テストでスタミナ不足にならないようにする）
+                // 枯渇テスト(21)は自らスタミナを0にセットするため、初期値の影響を受けない
                 int hash = _baseCharacter.ObjectHash;
                 if (GameManager.IsCharacterValid(hash))
                 {
-                    const float k_ResetStaminaRatio = 0.5f;
                     ref CharacterVitals vitals = ref GameManager.Data.GetVitals(hash);
                     vitals.currentHp = vitals.maxHp;
                     vitals.currentMp = vitals.maxMp;
-                    vitals.currentStamina = vitals.maxStamina * k_ResetStaminaRatio;
+                    vitals.currentStamina = vitals.maxStamina;
                     vitals.currentArmor = vitals.maxArmor;
                 }
             }
@@ -640,13 +640,28 @@ namespace Game.Runtime
             // ===== 空中攻撃 =====
             if (_testAerialAttack)
             {
-                AddStep("19_ジャンプ開始", 0.25f,
+                // 枯渇テスト後はスタミナが0付近のため、ジャンプに必要なスタミナを回復させる
+                AddStep("19pre_スタミナ回復待機", 2.0f, default,
+                    () =>
+                    {
+                        // onStart: スタミナを強制的に満タンに戻す（枯渇テストの残留状態をクリア）
+                        int h = _baseCharacter.ObjectHash;
+                        if (GameManager.IsCharacterValid(h))
+                        {
+                            ref CharacterVitals v = ref GameManager.Data.GetVitals(h);
+                            v.currentStamina = v.maxStamina;
+                        }
+                        _player.ResetInternalState();
+                    },
+                    () => { LogPass($"空中攻撃用スタミナ回復完了: {GetCurrentStamina():F1}"); });
+
+                AddStep("19_ジャンプ開始", 0.40f,
                     new MovementInfo { jumpPressed = true, jumpHeld = true }, null,
                     () =>
                     {
                         bool grounded = _baseCharacter.IsGrounded;
                         if (!grounded) { LogPass($"ジャンプ離陸確認 grounded={grounded}"); }
-                        else { LogPass("ジャンプ入力送信（まだ接地中）"); }
+                        else { LogFail($"ジャンプ失敗（接地中） stamina={GetCurrentStamina():F1}"); }
                     });
 
                 AddStep("19b_空中弱攻撃", 0.15f,
@@ -661,15 +676,20 @@ namespace Game.Runtime
                         else { LogFail($"空中弱攻撃問題 executing={busy} grounded={grounded}"); }
                     });
 
-                AddStep("19c_空中攻撃着地待機", 2.5f, default, null, () =>
+                AddStep("19c_空中攻撃着地待機", 4.0f, default, null, () =>
                 {
                     if (_baseCharacter.IsGrounded) { LogPass("空中攻撃後着地"); }
                     else { LogFail("空中攻撃後未着地"); }
                 });
 
-                AddStep("20_ジャンプ開始(落下攻撃)", 0.2f,
+                AddStep("20_ジャンプ開始(落下攻撃)", 0.40f,
                     new MovementInfo { jumpPressed = true, jumpHeld = true }, null,
-                    () => { LogPass("ジャンプ入力送信（落下攻撃用）"); });
+                    () =>
+                    {
+                        bool grounded = _baseCharacter.IsGrounded;
+                        if (!grounded) { LogPass("ジャンプ離陸確認（落下攻撃用）"); }
+                        else { LogFail($"ジャンプ失敗（落下攻撃用） stamina={GetCurrentStamina():F1}"); }
+                    });
 
                 AddStep("20b_空中強攻撃(落下)", 0.1f,
                     new MovementInfo { attackInput = AttackInputType.AerialHeavy, chargeMultiplier = 1f }, null,
@@ -679,7 +699,7 @@ namespace Game.Runtime
                         LogPass($"空中強攻撃送信 executing={busy}");
                     });
 
-                AddStep("20c_落下攻撃着地", 1.5f, default, null, () =>
+                AddStep("20c_落下攻撃着地", 3.0f, default, null, () =>
                 {
                     if (_baseCharacter.IsGrounded) { LogPass("落下攻撃後着地"); }
                     else { LogFail("落下攻撃後未着地（まだ空中）"); }
@@ -689,7 +709,21 @@ namespace Game.Runtime
             // ===== 複合入力テスト =====
             if (_testComposite)
             {
-                AddStep("22_移動+ジャンプ同時", 0.2f,
+                // 空中攻撃テスト後のスタミナ不足を防止
+                AddStep("22pre_複合テスト準備", 1.0f, default,
+                    () =>
+                    {
+                        int h = _baseCharacter.ObjectHash;
+                        if (GameManager.IsCharacterValid(h))
+                        {
+                            ref CharacterVitals v = ref GameManager.Data.GetVitals(h);
+                            v.currentStamina = v.maxStamina;
+                        }
+                        _player.ResetInternalState();
+                    },
+                    () => { LogPass($"複合テスト準備完了: stamina={GetCurrentStamina():F1}"); });
+
+                AddStep("22_移動+ジャンプ同時", 0.35f,
                     new MovementInfo { moveDirection = new Vector2(1f, 0f), jumpPressed = true, jumpHeld = true },
                     null,
                     () =>
