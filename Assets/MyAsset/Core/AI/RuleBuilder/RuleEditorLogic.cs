@@ -10,6 +10,16 @@ namespace Game.Core
     [Serializable]
     public struct CompanionAIConfig
     {
+        /// <summary>
+        /// 戦術プリセットの一意ID（GUID）。
+        /// TacticalPresetRegistry で管理され、上書き保存やカスケード更新の対象を特定する。
+        /// 空文字列/null の場合は「現在の戦術」など未保存の状態を表す。
+        /// </summary>
+        public string configId;
+
+        /// <summary>戦術プリセットの表示名。空文字列/null の場合は未命名。</summary>
+        public string configName;
+
         public AIMode[] modes;
         public ModeTransitionRule[] modeTransitionRules;
         public int[] shortcutModeBindings;
