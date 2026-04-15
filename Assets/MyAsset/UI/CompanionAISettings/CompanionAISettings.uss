@@ -1,0 +1,604 @@
+/* ============================================================================
+   CompanionAISettings — 仲間AI設定画面
+   ============================================================================ */
+
+:root {
+    --color-bg-overlay: rgba(0, 0, 0, 0.75);
+    --color-bg-panel: rgba(20, 20, 30, 0.95);
+    --color-bg-input: rgba(40, 40, 50, 0.9);
+    --color-bg-item: rgba(35, 35, 45, 0.85);
+    --color-bg-item-hover: rgba(55, 55, 75, 0.9);
+    --color-bg-item-selected: rgba(60, 90, 120, 0.9);
+    --color-text-primary: rgb(240, 240, 245);
+    --color-text-secondary: rgb(160, 160, 175);
+    --color-text-muted: rgb(100, 100, 115);
+    --color-accent: rgb(79, 195, 247);
+    --color-danger: rgb(244, 67, 54);
+    --color-warning: rgb(255, 193, 7);
+    --color-success: rgb(76, 175, 80);
+
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 40px;
+
+    --font-size-xs: 11px;
+    --font-size-sm: 14px;
+    --font-size-md: 18px;
+    --font-size-lg: 24px;
+
+    --border-radius-sm: 3px;
+    --border-radius-md: 6px;
+    --border-radius-lg: 12px;
+}
+
+/* ===== ルート ===== */
+.companion-ai-settings-root {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    flex-direction: column;
+    background-color: var(--color-bg-overlay);
+}
+
+/* ===== ヘッダー ===== */
+.companion-ai-header {
+    flex-direction: row;
+    align-items: center;
+    padding: var(--spacing-md);
+    background-color: var(--color-bg-panel);
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(80, 80, 100, 0.4);
+}
+
+.page-title {
+    font-size: var(--font-size-lg);
+    color: var(--color-text-primary);
+    -unity-font-style: bold;
+    margin-left: var(--spacing-md);
+    flex-grow: 1;
+}
+
+.dirty-indicator {
+    font-size: var(--font-size-sm);
+    color: var(--color-danger);
+    -unity-font-style: bold;
+    display: none;
+}
+
+.dirty-indicator--visible {
+    display: flex;
+}
+
+/* ===== タブバー ===== */
+.tab-bar {
+    flex-direction: row;
+    background-color: rgba(15, 15, 25, 0.9);
+    padding: 0 var(--spacing-md);
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(80, 80, 100, 0.4);
+}
+
+.tab-button {
+    padding: var(--spacing-sm) var(--spacing-lg);
+    margin: 0;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    border-bottom-width: 3px;
+    border-bottom-color: rgba(0, 0, 0, 0);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-md);
+    -unity-font-style: bold;
+    transition-property: color, border-bottom-color, background-color;
+    transition-duration: 0.15s;
+}
+
+.tab-button:hover {
+    color: var(--color-text-primary);
+    background-color: rgba(60, 60, 80, 0.3);
+}
+
+.tab-button--active {
+    color: var(--color-accent);
+    border-bottom-color: var(--color-accent);
+}
+
+.tab-button:focus {
+    background-color: rgba(79, 195, 247, 0.15);
+}
+
+/* ===== タブコンテンツ ===== */
+.tab-content {
+    flex-grow: 1;
+    flex-direction: column;
+}
+
+/* ===== タブ1: 戦術編集 ===== */
+.tactic-tab {
+    flex-grow: 1;
+    flex-direction: row;
+    padding: var(--spacing-md);
+}
+
+.tactic-tab.tab--hidden {
+    display: none;
+}
+
+/* --- 左ペイン: 戦術リスト --- */
+.tactic-list {
+    width: 320px;
+    flex-shrink: 0;
+    flex-direction: column;
+    background-color: var(--color-bg-panel);
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-sm);
+    margin-right: var(--spacing-md);
+}
+
+.tactic-section {
+    flex-direction: column;
+    margin-bottom: var(--spacing-md);
+}
+
+.tactic-section--flex {
+    flex-grow: 1;
+    min-height: 100px;
+}
+
+.section-label {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--spacing-xs);
+    padding-left: var(--spacing-xs);
+    -unity-font-style: bold;
+}
+
+.tactic-list-items {
+    flex-direction: column;
+}
+
+.preset-scroll {
+    flex-grow: 1;
+}
+
+/* 戦術リスト項目 */
+.tactic-list-item {
+    flex-direction: row;
+    align-items: center;
+    padding: var(--spacing-sm) var(--spacing-md);
+    margin: 2px 0;
+    background-color: var(--color-bg-item);
+    border-radius: var(--border-radius-sm);
+    border-width: 0;
+    border-left-width: 3px;
+    border-left-color: rgba(0, 0, 0, 0);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
+    -unity-text-align: middle-left;
+    transition-property: background-color, border-left-color;
+    transition-duration: 0.15s;
+}
+
+.tactic-list-item:hover {
+    background-color: var(--color-bg-item-hover);
+}
+
+.tactic-list-item--selected {
+    background-color: var(--color-bg-item-selected);
+    border-left-color: var(--color-accent);
+}
+
+.tactic-list-item--current {
+    background-color: rgba(60, 100, 60, 0.5);
+    border-left-color: var(--color-success);
+}
+
+.tactic-list-item:focus {
+    border-width: 2px;
+    border-color: var(--color-accent);
+    border-left-width: 3px;
+    border-left-color: var(--color-accent);
+}
+
+.add-preset-button {
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 1px;
+    border-color: var(--color-text-muted);
+    border-radius: var(--border-radius-sm);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    transition-property: border-color, color;
+    transition-duration: 0.15s;
+}
+
+.add-preset-button:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+}
+
+/* --- 右ペイン: エディタ --- */
+.tactic-editor {
+    flex-grow: 1;
+    flex-direction: column;
+    background-color: var(--color-bg-panel);
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-md);
+}
+
+.editor-header {
+    flex-direction: column;
+    margin-bottom: var(--spacing-md);
+}
+
+.config-name-field {
+    margin-bottom: var(--spacing-sm);
+}
+
+.config-name-field > .unity-text-field__input {
+    background-color: var(--color-bg-input);
+    border-width: 1px;
+    border-color: rgba(80, 80, 100, 0.4);
+    border-radius: var(--border-radius-sm);
+    color: var(--color-text-primary);
+    padding: var(--spacing-xs) var(--spacing-sm);
+}
+
+.editor-header__buttons {
+    flex-direction: row;
+}
+
+.editor-section {
+    flex-direction: column;
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-sm);
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: var(--border-radius-sm);
+}
+
+/* ===== モードスロット ===== */
+.mode-slots-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.mode-slot {
+    width: 140px;
+    height: 80px;
+    margin: var(--spacing-xs);
+    padding: var(--spacing-sm);
+    background-color: var(--color-bg-item);
+    border-radius: var(--border-radius-sm);
+    border-width: 1px;
+    border-color: rgba(80, 80, 100, 0.4);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
+    -unity-text-align: middle-center;
+    -unity-font-style: bold;
+    transition-property: background-color, border-color, scale;
+    transition-duration: 0.15s;
+}
+
+.mode-slot:hover {
+    background-color: var(--color-bg-item-hover);
+    border-color: var(--color-accent);
+    scale: 1.02 1.02;
+}
+
+.mode-slot:focus {
+    border-width: 2px;
+    border-color: var(--color-accent);
+}
+
+.mode-slot--linked {
+    border-top-width: 3px;
+    border-top-color: var(--color-accent);
+}
+
+.mode-slot--independent {
+    border-top-width: 3px;
+    border-top-color: var(--color-warning);
+}
+
+.mode-slot--add {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 2px;
+    border-color: var(--color-text-muted);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-lg);
+}
+
+.mode-slot--add:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+    background-color: rgba(79, 195, 247, 0.1);
+}
+
+/* ===== 遷移ルール ===== */
+.transition-list {
+    flex-direction: column;
+}
+
+.transition-row {
+    flex-direction: row;
+    align-items: center;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background-color: var(--color-bg-item);
+    border-radius: var(--border-radius-sm);
+    margin: 2px 0;
+    color: var(--color-text-primary);
+    font-size: var(--font-size-xs);
+}
+
+.placeholder-text {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-xs);
+    -unity-font-style: italic;
+    padding: var(--spacing-sm);
+}
+
+/* ===== タブ2: ショートカット ===== */
+.shortcut-tab {
+    flex-grow: 1;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--spacing-xl);
+    display: none;
+}
+
+.shortcut-tab.tab--visible {
+    display: flex;
+}
+
+.shortcut-description {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--spacing-lg);
+}
+
+.shortcut-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 640px;
+}
+
+.shortcut-slot {
+    width: 280px;
+    margin: var(--spacing-sm);
+    padding: var(--spacing-md);
+    background-color: var(--color-bg-panel);
+    border-radius: var(--border-radius-md);
+    border-width: 1px;
+    border-color: rgba(80, 80, 100, 0.4);
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.shortcut-slot__label {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--spacing-xs);
+    -unity-text-align: middle-left;
+}
+
+.shortcut-slot__icon {
+    font-size: 36px;
+    color: var(--color-accent);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    margin-bottom: var(--spacing-sm);
+}
+
+.shortcut-dropdown {
+    margin: 0;
+}
+
+.shortcut-dropdown > .unity-base-popup-field__input {
+    background-color: var(--color-bg-input);
+    border-radius: var(--border-radius-sm);
+    border-width: 1px;
+    border-color: rgba(80, 80, 100, 0.4);
+    color: var(--color-text-primary);
+}
+
+/* ===== ボタン共通 ===== */
+.primary-button {
+    margin: var(--spacing-xs);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--color-accent);
+    color: rgb(10, 10, 20);
+    border-width: 0;
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-sm);
+    -unity-font-style: bold;
+    transition-property: background-color, scale;
+    transition-duration: 0.15s;
+}
+
+.primary-button:hover {
+    background-color: rgb(120, 215, 255);
+    scale: 1.03 1.03;
+}
+
+.primary-button:focus {
+    border-width: 2px;
+    border-color: rgb(255, 255, 255);
+}
+
+.secondary-button {
+    margin: var(--spacing-xs);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: rgba(60, 60, 80, 0.8);
+    color: var(--color-text-primary);
+    border-width: 1px;
+    border-color: rgba(100, 100, 130, 0.6);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-sm);
+    transition-property: background-color, border-color, scale;
+    transition-duration: 0.15s;
+}
+
+.secondary-button:hover {
+    background-color: rgba(80, 80, 110, 0.9);
+    border-color: var(--color-accent);
+    scale: 1.03 1.03;
+}
+
+.secondary-button:focus {
+    border-width: 2px;
+    border-color: var(--color-accent);
+}
+
+.danger-button {
+    margin: var(--spacing-xs);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: rgba(120, 40, 40, 0.9);
+    color: rgb(255, 255, 255);
+    border-width: 1px;
+    border-color: var(--color-danger);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-sm);
+    -unity-font-style: bold;
+    transition-property: background-color, scale;
+    transition-duration: 0.15s;
+}
+
+.danger-button:hover {
+    background-color: var(--color-danger);
+    scale: 1.03 1.03;
+}
+
+.danger-button:focus {
+    border-width: 2px;
+    border-color: rgb(255, 255, 255);
+}
+
+.icon-button {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    color: var(--color-text-primary);
+    font-size: var(--font-size-lg);
+    -unity-text-align: middle-center;
+    transition-property: background-color, scale;
+    transition-duration: 0.15s;
+}
+
+.icon-button:hover {
+    background-color: rgba(80, 80, 110, 0.6);
+    scale: 1.1 1.1;
+}
+
+.icon-button:focus {
+    border-width: 2px;
+    border-color: var(--color-accent);
+    border-radius: var(--border-radius-sm);
+}
+
+/* ===== ダイアログレイヤー ===== */
+.dialog-layer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    align-items: center;
+    justify-content: center;
+    display: none;
+}
+
+.dialog-layer--visible {
+    display: flex;
+}
+
+.modal-dialog {
+    min-width: 360px;
+    max-width: 540px;
+    padding: var(--spacing-lg);
+    background-color: var(--color-bg-panel);
+    border-radius: var(--border-radius-md);
+    border-width: 1px;
+    border-color: rgba(100, 100, 130, 0.6);
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.modal-dialog__title {
+    font-size: var(--font-size-md);
+    color: var(--color-text-primary);
+    -unity-font-style: bold;
+    margin-bottom: var(--spacing-sm);
+}
+
+.modal-dialog__body {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--spacing-md);
+    white-space: normal;
+}
+
+.modal-dialog__input {
+    margin-bottom: var(--spacing-md);
+}
+
+.modal-dialog__input > .unity-text-field__input {
+    background-color: var(--color-bg-input);
+    border-width: 1px;
+    border-color: rgba(80, 80, 100, 0.5);
+    border-radius: var(--border-radius-sm);
+    color: var(--color-text-primary);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    min-height: 28px;
+}
+
+.modal-dialog__reference-list {
+    max-height: 140px;
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-sm);
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: var(--border-radius-sm);
+}
+
+.modal-dialog__reference-item {
+    color: var(--color-warning);
+    font-size: var(--font-size-xs);
+    margin: 2px 0;
+}
+
+.modal-dialog__buttons {
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+/* ===== ツールチップ ===== */
+.tooltip-panel {
+    position: absolute;
+    max-width: 280px;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background-color: rgba(10, 10, 20, 0.95);
+    border-width: 1px;
+    border-color: var(--color-accent);
+    border-radius: var(--border-radius-sm);
+    display: none;
+}
+
+.tooltip-panel--visible {
+    display: flex;
+}
+
+.tooltip-text {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-primary);
+    white-space: normal;
+}
+
+/* ===== ユーティリティ ===== */
+.hidden {
+    display: none;
+}

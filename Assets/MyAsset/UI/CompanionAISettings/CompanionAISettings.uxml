@@ -1,0 +1,109 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="CompanionAISettings.uss" />
+
+    <ui:VisualElement name="companion-ai-settings-root" class="companion-ai-settings-root">
+
+        <!-- ===== ヘッダー ===== -->
+        <ui:VisualElement name="header" class="companion-ai-header">
+            <ui:Button name="back-button" class="icon-button back-button" text="◀" tooltip="メニューに戻る" />
+            <ui:Label name="page-title" class="page-title" text="仲間AI設定" />
+            <ui:Label name="dirty-indicator" class="dirty-indicator" text="● 未保存" />
+        </ui:VisualElement>
+
+        <!-- ===== タブバー ===== -->
+        <ui:VisualElement name="tab-bar" class="tab-bar">
+            <ui:Button name="tactic-tab-button" class="tab-button tab-button--active" text="戦術編集" tooltip="戦術とモードを編集" />
+            <ui:Button name="shortcut-tab-button" class="tab-button" text="ショートカット" tooltip="パッドのショートカットに戦術を割当" />
+        </ui:VisualElement>
+
+        <!-- ===== タブコンテンツ ===== -->
+        <ui:VisualElement name="tab-content" class="tab-content">
+
+            <!-- === タブ1: 戦術編集 === -->
+            <ui:VisualElement name="tactic-tab" class="tactic-tab">
+
+                <!-- 左ペイン: 戦術リスト -->
+                <ui:VisualElement name="tactic-list" class="tactic-list">
+                    <ui:VisualElement class="tactic-section">
+                        <ui:Label class="section-label" text="現在の戦術" />
+                        <ui:VisualElement name="current-tactic-container" class="tactic-list-items" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="tactic-section tactic-section--flex">
+                        <ui:Label name="preset-section-label" class="section-label" text="プリセット (0/20)" />
+                        <ui:ScrollView name="preset-scroll" class="preset-scroll" vertical-scroller-visibility="Auto" />
+                    </ui:VisualElement>
+
+                    <ui:Button name="add-preset-button" class="add-preset-button" text="＋ 新規作成" tooltip="空の戦術プリセットを追加" />
+                </ui:VisualElement>
+
+                <!-- 右ペイン: エディタ -->
+                <ui:VisualElement name="tactic-editor" class="tactic-editor">
+
+                    <ui:VisualElement name="editor-header" class="editor-header">
+                        <ui:TextField name="config-name-field" class="config-name-field" label="戦術名" />
+                        <ui:VisualElement class="editor-header__buttons">
+                            <ui:Button name="save-button" class="primary-button" text="上書き保存" tooltip="現在編集中の内容でプリセットを上書き" />
+                            <ui:Button name="save-as-preset-button" class="secondary-button" text="プリセット化" tooltip="現在の戦術を新しいプリセットとして保存" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+
+                    <ui:VisualElement name="modes-section" class="editor-section">
+                        <ui:Label class="section-label" text="モードスロット" />
+                        <ui:VisualElement name="mode-slots-container" class="mode-slots-container" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement name="transition-section" class="editor-section">
+                        <ui:Label class="section-label" text="遷移ルール" />
+                        <ui:VisualElement name="transition-list" class="transition-list" />
+                        <ui:Label name="transition-placeholder" class="placeholder-text" text="※ 遷移ルールの編集は次回アップデートで対応予定" />
+                    </ui:VisualElement>
+
+                </ui:VisualElement>
+
+            </ui:VisualElement>
+
+            <!-- === タブ2: ショートカット === -->
+            <ui:VisualElement name="shortcut-tab" class="shortcut-tab">
+                <ui:Label class="shortcut-description" text="パッドの方向キーで戦術を素早く切替できます。" />
+                <ui:VisualElement name="shortcut-grid" class="shortcut-grid">
+
+                    <ui:VisualElement class="shortcut-slot">
+                        <ui:Label class="shortcut-slot__label" text="スロット 1" />
+                        <ui:Label class="shortcut-slot__icon" text="↑" />
+                        <ui:DropdownField name="shortcut-dropdown-0" class="shortcut-dropdown" tooltip="このスロットに割り当てる戦術を選択" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="shortcut-slot">
+                        <ui:Label class="shortcut-slot__label" text="スロット 2" />
+                        <ui:Label class="shortcut-slot__icon" text="→" />
+                        <ui:DropdownField name="shortcut-dropdown-1" class="shortcut-dropdown" tooltip="このスロットに割り当てる戦術を選択" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="shortcut-slot">
+                        <ui:Label class="shortcut-slot__label" text="スロット 3" />
+                        <ui:Label class="shortcut-slot__icon" text="↓" />
+                        <ui:DropdownField name="shortcut-dropdown-2" class="shortcut-dropdown" tooltip="このスロットに割り当てる戦術を選択" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="shortcut-slot">
+                        <ui:Label class="shortcut-slot__label" text="スロット 4" />
+                        <ui:Label class="shortcut-slot__icon" text="←" />
+                        <ui:DropdownField name="shortcut-dropdown-3" class="shortcut-dropdown" tooltip="このスロットに割り当てる戦術を選択" />
+                    </ui:VisualElement>
+
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+        </ui:VisualElement>
+
+        <!-- ===== ダイアログレイヤー ===== -->
+        <ui:VisualElement name="dialog-layer" class="dialog-layer" picking-mode="Ignore" />
+
+        <!-- ===== ツールチップパネル ===== -->
+        <ui:VisualElement name="tooltip-panel" class="tooltip-panel" picking-mode="Ignore">
+            <ui:Label name="tooltip-text" class="tooltip-text" />
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+</ui:UXML>
