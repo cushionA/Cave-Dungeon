@@ -596,7 +596,13 @@ namespace Game.Runtime
 
             // 陣営/特徴のチェック欄で対象を絞り込むため、"自分 / プレイヤー / 周囲" のトップレベル選択は持たない。
             // （IsSelf/IsPlayer のビットはレガシー用途なので、保存時にクリアしておく）
+            FilterBitFlag beforeClear = current.filterFlags;
             current.filterFlags &= ~(FilterBitFlag.IsSelf | FilterBitFlag.IsPlayer);
+            if (beforeClear != current.filterFlags)
+            {
+                // 実際にビットが立っていた場合のみ親へ通知（既にクリーンなデータへの不要な Dirty 化を避ける）
+                onChanged?.Invoke(current);
+            }
 
             Toggle includeSelfToggle = new Toggle("自分も対象に含める");
             includeSelfToggle.tooltip = "自分自身を対象に含めるかどうか";
@@ -875,6 +881,48 @@ namespace Game.Runtime
             }
         }
 
+        /// <summary>
+        /// CompareOp が現在の WidgetKind と整合していない場合、妥当なデフォルトへ正規化する。
+        /// 例: 旧データが Ratio → Bitmask に切り替わったが compareOp=LessEqual のまま、という不整合を UI で吸収する。
+        /// 正規化した場合は onChanged を発火して親に通知する。
+        /// </summary>
+        private static void NormalizeCompareOp(ref AICondition cond, ConditionTypeMetadata.WidgetKind kind, Action<AICondition> onChanged)
+        {
+            bool valid = false;
+            switch (kind)
+            {
+                case ConditionTypeMetadata.WidgetKind.Ratio:
+                case ConditionTypeMetadata.WidgetKind.Integer:
+                    // 数値比較: 6種 + InRange
+                    valid = cond.compareOp == CompareOp.Less
+                         || cond.compareOp == CompareOp.LessEqual
+                         || cond.compareOp == CompareOp.Equal
+                         || cond.compareOp == CompareOp.GreaterEqual
+                         || cond.compareOp == CompareOp.Greater
+                         || cond.compareOp == CompareOp.NotEqual
+                         || cond.compareOp == CompareOp.InRange;
+                    break;
+                case ConditionTypeMetadata.WidgetKind.FactionFlags:
+                case ConditionTypeMetadata.WidgetKind.IntegerBitmask:
+                    valid = cond.compareOp == CompareOp.HasFlag
+                         || cond.compareOp == CompareOp.HasAny;
+                    break;
+                case ConditionTypeMetadata.WidgetKind.EnumSelect:
+                    valid = cond.compareOp == CompareOp.Equal
+                         || cond.compareOp == CompareOp.NotEqual;
+                    break;
+                default:
+                    valid = true;
+                    break;
+            }
+
+            if (!valid)
+            {
+                cond.compareOp = ConditionTypeMetadata.GetDefaultCompareOp(cond.conditionType);
+                onChanged?.Invoke(cond);
+            }
+        }
+
         private void BuildConditionInputWidgets(VisualElement container, AICondition current, Action<AICondition> onChanged)
         {
             ConditionTypeMetadata.WidgetKind kind = ConditionTypeMetadata.GetWidgetKind(current.conditionType);
@@ -886,6 +934,10 @@ namespace Game.Runtime
                 container.Add(none);
                 return;
             }
+
+            // 種類切替や古いデータのロードで compareOp が現在の WidgetKind と整合しない可能性があるため、
+            // 描画前に正規化して UI と内部状態が乖離しないようにする。
+            NormalizeCompareOp(ref current, kind, onChanged);
 
             // 比較演算子
             DropdownField compareDropdown = null;

@@ -47,12 +47,16 @@ namespace Game.Core
                 case AIConditionType.DamageScore:
                     return WidgetKind.Integer;
 
+                case AIConditionType.ProjectileNear:
+                    // ConditionEvaluator のコメントで「operandA を閾値距離として使う」と明記されている。
+                    // ビットマスクではなく単純な距離(Integer)入力として扱う。
+                    return WidgetKind.Integer;
+
                 case AIConditionType.NearbyFaction:
                     return WidgetKind.FactionFlags;
 
                 case AIConditionType.ObjectNearby:
                 case AIConditionType.EventFired:
-                case AIConditionType.ProjectileNear:
                     return WidgetKind.IntegerBitmask;
 
                 case AIConditionType.SelfActState:
@@ -146,6 +150,9 @@ namespace Game.Core
                     return 1;
                 case AIConditionType.Distance:
                     return 5;
+                case AIConditionType.ProjectileNear:
+                    // 飛翔体検出の既定閾値距離（3m 以内に飛翔体があるか）
+                    return 3;
                 case AIConditionType.DamageScore:
                     return 100;
                 default:
@@ -196,13 +203,6 @@ namespace Game.Core
                     {
                         "イベント 1", "イベント 2", "イベント 3", "イベント 4",
                         "イベント 5", "イベント 6", "イベント 7", "イベント 8",
-                    };
-
-                case AIConditionType.ProjectileNear:
-                    return new string[]
-                    {
-                        "飛翔体 種別1", "飛翔体 種別2", "飛翔体 種別3", "飛翔体 種別4",
-                        "飛翔体 種別5", "飛翔体 種別6", "飛翔体 種別7", "飛翔体 種別8",
                     };
 
                 default:

@@ -207,8 +207,21 @@ namespace Game.Tests.EditMode
                 ConditionTypeMetadata.GetWidgetKind(AIConditionType.ObjectNearby));
             Assert.AreEqual(ConditionTypeMetadata.WidgetKind.IntegerBitmask,
                 ConditionTypeMetadata.GetWidgetKind(AIConditionType.EventFired));
-            Assert.AreEqual(ConditionTypeMetadata.WidgetKind.IntegerBitmask,
+        }
+
+        [Test]
+        public void ConditionTypeMetadata_GetWidgetKind_ProjectileNear_ReturnsInteger()
+        {
+            // ConditionEvaluator のコメント通り、operandA は閾値距離として使う（Integer）。
+            // ビットマスク扱いは実装と食い違うので Integer に矯正されている。
+            Assert.AreEqual(ConditionTypeMetadata.WidgetKind.Integer,
                 ConditionTypeMetadata.GetWidgetKind(AIConditionType.ProjectileNear));
+        }
+
+        [Test]
+        public void ConditionTypeMetadata_GetDefaultOperandA_ProjectileNear_Returns3m()
+        {
+            Assert.AreEqual(3, ConditionTypeMetadata.GetDefaultOperandA(AIConditionType.ProjectileNear));
         }
 
         [Test]
@@ -438,6 +451,36 @@ namespace Game.Tests.EditMode
             Assert.IsNotNull(_logic.EditingBuffer.modeTransitionRules);
             Assert.AreEqual(0, _logic.EditingBuffer.modeTransitionRules.Length);
             Assert.IsTrue(_logic.IsDirty);
+        }
+
+        // =========================================================================
+        // CompareOp 正規化テスト
+        // （UI 側の BuildConditionInputWidgets.NormalizeCompareOp の挙動を、
+        //   GetDefaultCompareOp の返値で間接的に検証する）
+        // =========================================================================
+
+        [Test]
+        public void ConditionTypeMetadata_GetDefaultCompareOp_Integer_ReturnsLessEqual()
+        {
+            Assert.AreEqual(CompareOp.LessEqual,
+                ConditionTypeMetadata.GetDefaultCompareOp(AIConditionType.Count));
+            Assert.AreEqual(CompareOp.LessEqual,
+                ConditionTypeMetadata.GetDefaultCompareOp(AIConditionType.DamageScore));
+        }
+
+        [Test]
+        public void ConditionTypeMetadata_GetDefaultCompareOp_FactionFlags_ReturnsHasAny()
+        {
+            Assert.AreEqual(CompareOp.HasAny,
+                ConditionTypeMetadata.GetDefaultCompareOp(AIConditionType.NearbyFaction));
+        }
+
+        [Test]
+        public void ConditionTypeMetadata_GetDefaultCompareOp_None_ReturnsEqual()
+        {
+            // None は追加入力なしだが、デフォルトは安全側の Equal
+            Assert.AreEqual(CompareOp.Equal,
+                ConditionTypeMetadata.GetDefaultCompareOp(AIConditionType.None));
         }
     }
 }

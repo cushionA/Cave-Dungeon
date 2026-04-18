@@ -89,7 +89,8 @@ namespace Game.Runtime
             }
             _logic = new CompanionAISettingsLogic(_modeRegistry, _tacticalRegistry);
 
-            if (_useActionTypeRegistry && _actionTypeRegistry == null)
+            // 外部注入済みなら尊重し、そうでない場合のみデフォルトを生成する。
+            if (_actionTypeRegistry == null && _useActionTypeRegistry)
             {
                 _actionTypeRegistry = new ActionTypeRegistry();
             }
@@ -506,6 +507,7 @@ namespace Game.Runtime
             }
 
             int[] bindings = _logic.EditingBuffer.shortcutModeBindings;
+            int presetsCount = presets.Length;
             for (int i = 0; i < k_ShortcutSlotCount; i++)
             {
                 DropdownField dropdown = _shortcutDropdowns[i];
@@ -514,9 +516,24 @@ namespace Game.Runtime
                     continue;
                 }
                 dropdown.choices = choices;
-                int boundIndex = bindings != null && i < bindings.Length ? bindings[i] : 0;
-                int clampedIndex = Mathf.Clamp(boundIndex + 1, 0, choices.Count - 1);
-                dropdown.SetValueWithoutNotify(choices[clampedIndex]);
+                int boundIndex = bindings != null && i < bindings.Length ? bindings[i] : -1;
+                // プリセット数が変動して boundIndex が範囲外になった場合は未割当(-1)へフォールバック。
+                // Clamp で画面上だけズレた要素を選ぶと「意図しないプリセットが割り当たっている」状態になるため。
+                int displayIndex;
+                if (boundIndex < 0 || boundIndex >= presetsCount)
+                {
+                    displayIndex = 0;
+                    if (bindings != null && i < bindings.Length && bindings[i] != -1)
+                    {
+                        // データも未割当に合わせて書き戻す（プリセット削除時の自動クリーンアップ）
+                        bindings[i] = -1;
+                    }
+                }
+                else
+                {
+                    displayIndex = boundIndex + 1;
+                }
+                dropdown.SetValueWithoutNotify(choices[displayIndex]);
             }
         }
 
@@ -1056,7 +1073,20 @@ namespace Game.Runtime
             _useSharedRegistries = true;
         }
 
+        /// <summary>
+        /// ActionTypeRegistry を外部から注入する。Awake() より前（AddComponent直後）か
+        /// あるいは Awake() 実行後に差し替える想定。Awake 内で自動生成されたインスタンスは破棄して置き換える。
+        /// </summary>
+        public void InjectActionTypeRegistry(ActionTypeRegistry actionTypeRegistry)
+        {
+            _actionTypeRegistry = actionTypeRegistry;
+            _useActionTypeRegistry = actionTypeRegistry != null;
+        }
+
         /// <summary>編集中のロジックインスタンス（テスト・外部参照用）。</summary>
         public CompanionAISettingsLogic Logic => _logic;
+
+        /// <summary>ActionTypeRegistry の参照（テスト・外部参照用）。</summary>
+        public ActionTypeRegistry ActionTypeRegistry => _actionTypeRegistry;
     }
 }
