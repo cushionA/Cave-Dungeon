@@ -482,5 +482,35 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(CompareOp.Equal,
                 ConditionTypeMetadata.GetDefaultCompareOp(AIConditionType.None));
         }
+
+        // =========================================================================
+        // InRange 対応の検証（Ratio + InRange は非対応、Integer のみ対応）
+        // UI 側の NormalizeCompareOp / opChoices filter と連動する
+        // =========================================================================
+
+        [Test]
+        public void ConditionTypeMetadata_Ratio_DoesNotSupportInRange_BySpec()
+        {
+            // Ratio は 0-100% のスライダーUIで 2値入力UIを持たないため InRange は非対応とする仕様。
+            // UI 側 (BuildConditionInputWidgets) は Ratio では opChoices から「範囲内」を除外し、
+            // NormalizeCompareOp も Ratio + InRange を valid にしないことで LessEqual に矯正する。
+            Assert.AreEqual(ConditionTypeMetadata.WidgetKind.Ratio,
+                ConditionTypeMetadata.GetWidgetKind(AIConditionType.HpRatio));
+            // GetDefaultCompareOp は Ratio で LessEqual (InRange ではない)
+            Assert.AreEqual(CompareOp.LessEqual,
+                ConditionTypeMetadata.GetDefaultCompareOp(AIConditionType.HpRatio));
+        }
+
+        [Test]
+        public void ConditionTypeMetadata_Integer_SupportsInRange_ViaDefaultCompareOpPath()
+        {
+            // Integer (Distance/Count/DamageScore/ProjectileNear) は下限+上限の 2 つの IntegerField が
+            // 自然に並べられるため InRange 対応。UI 側の opChoices に「範囲内」を追加する。
+            Assert.AreEqual(ConditionTypeMetadata.WidgetKind.Integer,
+                ConditionTypeMetadata.GetWidgetKind(AIConditionType.Distance));
+            // デフォルトは LessEqual だが InRange にユーザーが切り替えられる仕様
+            Assert.AreEqual(CompareOp.LessEqual,
+                ConditionTypeMetadata.GetDefaultCompareOp(AIConditionType.Distance));
+        }
     }
 }
