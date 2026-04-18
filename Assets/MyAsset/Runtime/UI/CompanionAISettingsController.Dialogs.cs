@@ -949,8 +949,18 @@ namespace Game.Runtime
             switch (kind)
             {
                 case ConditionTypeMetadata.WidgetKind.Ratio:
+                    // Ratio は 0-100% のスライダーUI。InRange は operandB の上限入力欄を
+                    // 必要とするが、2値スライダー化すると UI が煩雑になるため非対応。
+                    // (旧データで InRange が入っていた場合は既定値の LessEqual に矯正)
+                    valid = cond.compareOp == CompareOp.Less
+                         || cond.compareOp == CompareOp.LessEqual
+                         || cond.compareOp == CompareOp.Equal
+                         || cond.compareOp == CompareOp.GreaterEqual
+                         || cond.compareOp == CompareOp.Greater
+                         || cond.compareOp == CompareOp.NotEqual;
+                    break;
                 case ConditionTypeMetadata.WidgetKind.Integer:
-                    // 数値比較: 6種 + InRange
+                    // Integer は下限+上限の 2 つの IntegerField が自然に並べられるため InRange 対応
                     valid = cond.compareOp == CompareOp.Less
                          || cond.compareOp == CompareOp.LessEqual
                          || cond.compareOp == CompareOp.Equal
@@ -1010,17 +1020,25 @@ namespace Game.Runtime
             if (ConditionTypeMetadata.SupportsNumericCompare(current.conditionType))
             {
                 // インデックスは CompareOp enum 値と一致させる (Less=0 ... NotEqual=5, InRange=6)
+                // Ratio は下限+上限の2値入力 UI が無いため InRange を除外する (NormalizeCompareOp と連動)
+                bool supportsInRange = kind == ConditionTypeMetadata.WidgetKind.Integer;
                 List<string> opChoices = new List<string>
                 {
-                    "<", "<=", "==", ">=", ">", "!=", "範囲内",
+                    "<", "<=", "==", ">=", ">", "!=",
                 };
+                if (supportsInRange)
+                {
+                    opChoices.Add("範囲内");
+                }
                 int opIdx = (int)current.compareOp;
                 if (opIdx < 0 || opIdx >= opChoices.Count)
                 {
                     opIdx = 0;
                 }
                 compareDropdown = new DropdownField("比較", opChoices, opIdx);
-                compareDropdown.tooltip = "比較方法\n ・範囲内: operandA <= 値 <= operandB の範囲判定（下限+上限の2値入力）";
+                compareDropdown.tooltip = supportsInRange
+                    ? "比較方法\n ・範囲内: operandA <= 値 <= operandB の範囲判定（下限+上限の2値入力）"
+                    : "比較方法";
                 compareDropdown.AddToClassList("condition-row__op");
                 compareDropdown.RegisterValueChangedCallback(evt =>
                 {

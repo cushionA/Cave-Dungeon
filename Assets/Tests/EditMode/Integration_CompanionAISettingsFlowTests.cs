@@ -447,8 +447,55 @@ namespace Game.Tests.EditMode
         }
 
         /// <summary>
-        /// InRange CompareOp を使った条件が保存→再読込でラウンドトリップできることを確認。
-        /// (UI 側の opChoices に InRange が加わったことで、作成→保存→再編集が正しく機能するか)
+        /// Ratio + InRange は UI がスライダーベースで 2値入力できないため非対応。
+        /// Logic 層で保存可能でも、UI を通して読み戻す時には矯正される設計 (NormalizeCompareOp)。
+        /// このテストでは直接的には Logic レベルでのラウンドトリップのみ確認する
+        /// (UI-level の矯正は ConditionTypeMetadata_Ratio_DoesNotSupportInRange_BySpec 側で別途検証)。
+        /// </summary>
+        [Test]
+        public void CompanionAISettings_RatioInRange_StoredAsIsAtLogicLayer_UINormalizesLater()
+        {
+            // Logic 層は InRange を弾かない（UI 層の責務）
+            _logic.AddModeToBuffer(new AIMode
+            {
+                modeName = "Ratio+InRange検証",
+                actions = new ActionSlot[]
+                {
+                    new ActionSlot { execType = ActionExecType.Attack, paramId = 0, displayName = "攻撃" },
+                },
+                actionRules = new AIRule[]
+                {
+                    new AIRule
+                    {
+                        actionIndex = 0,
+                        probability = 100,
+                        conditions = new AICondition[]
+                        {
+                            new AICondition
+                            {
+                                conditionType = AIConditionType.HpRatio,
+                                compareOp = CompareOp.InRange,  // 通常UIでは選択不可、Logic保存のみ
+                                operandA = 20,
+                                operandB = 80,
+                            },
+                        },
+                    },
+                },
+                targetRules = new AIRule[0],
+                targetSelects = new AITargetSelect[0],
+            });
+
+            _logic.ApplyBufferToCurrentTactic();
+
+            // Logic 層では値そのまま
+            AICondition stored = _logic.EditingBuffer.modes[0].actionRules[0].conditions[0];
+            Assert.AreEqual(CompareOp.InRange, stored.compareOp,
+                "Logic 層は制限しない(UI 層の NormalizeCompareOp で描画時に矯正される)");
+        }
+
+        /// <summary>
+        /// InRange CompareOp を使った条件が保存→再読込でラウンドトリップできることを確認 (Integer の場合)。
+        /// Ratio ではなく Distance (Integer) で検証する。
         /// </summary>
         [Test]
         public void CompanionAISettings_InRangeCondition_RoundtripsCorrectly()
