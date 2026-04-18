@@ -345,5 +345,160 @@ namespace Game.Tests.EditMode
             Assert.AreEqual("A", reloaded.actions[0].displayName);
             Assert.AreEqual("C", reloaded.actions[1].displayName);
         }
+
+        // =========================================================================
+        // UI-level 削除フローの回帰テスト
+        // RebuildActionSlotList / RebuildActionRuleList が struct 値渡しで削除を
+        // 伝播できていなかったバグの回帰テスト。UI 相当の closure 方式で
+        // 削除ボタンを模倣する。
+        // =========================================================================
+
+        /// <summary>
+        /// RebuildActionSlotList で使う getter/setter closure パターンを模倣して、
+        /// 削除操作が呼び出し元の working.actions にも反映されることを確認する。
+        /// </summary>
+        [Test]
+        public void CompanionAISettings_UILike_ActionSlotRemoval_PropagatesThroughSetter()
+        {
+            AIMode working = new AIMode
+            {
+                modeName = "UI模倣",
+                actions = new ActionSlot[]
+                {
+                    new ActionSlot { execType = ActionExecType.Attack, paramId = 0, displayName = "A" },
+                    new ActionSlot { execType = ActionExecType.Attack, paramId = 1, displayName = "B" },
+                    new ActionSlot { execType = ActionExecType.Attack, paramId = 2, displayName = "C" },
+                },
+                actionRules = new AIRule[0],
+                targetRules = new AIRule[0],
+                targetSelects = new AITargetSelect[0],
+            };
+
+            // UI 側で RebuildActionSlotList が使うのと同じ getter/setter closure を再現
+            System.Func<ActionSlot[]> getActions = () => working.actions;
+            System.Action<ActionSlot[]> setActions = arr => working.actions = arr;
+
+            // インデックス 1 (B) を削除するクロージャ (削除ボタンの RegisterCallback 相当)
+            System.Action remove1 = () =>
+            {
+                ActionSlot[] arr = getActions();
+                ActionSlot[] newArr = new ActionSlot[arr.Length - 1];
+                int dst = 0;
+                for (int k = 0; k < arr.Length; k++)
+                {
+                    if (k == 1)
+                    {
+                        continue;
+                    }
+                    newArr[dst++] = arr[k];
+                }
+                setActions(newArr);
+            };
+
+            Assert.AreEqual(3, working.actions.Length, "初期状態: 3個");
+            remove1();
+            Assert.AreEqual(2, working.actions.Length, "削除後は 2個");
+            Assert.AreEqual("A", working.actions[0].displayName);
+            Assert.AreEqual("C", working.actions[1].displayName);
+        }
+
+        /// <summary>
+        /// RebuildActionRuleList の getter/setter 化の回帰テスト。
+        /// 削除が呼び出し元の actionRules へ伝播することを確認。
+        /// </summary>
+        [Test]
+        public void CompanionAISettings_UILike_ActionRuleRemoval_PropagatesThroughSetter()
+        {
+            AIMode working = new AIMode
+            {
+                modeName = "ルール削除検証",
+                actions = new ActionSlot[0],
+                actionRules = new AIRule[]
+                {
+                    new AIRule { actionIndex = 0, probability = 100 },
+                    new AIRule { actionIndex = 1, probability = 80 },
+                    new AIRule { actionIndex = 2, probability = 50 },
+                },
+                targetRules = new AIRule[0],
+                targetSelects = new AITargetSelect[0],
+            };
+
+            System.Func<AIRule[]> getRules = () => working.actionRules;
+            System.Action<AIRule[]> setRules = arr => working.actionRules = arr;
+
+            // インデックス 0 を削除
+            System.Action removeFirst = () =>
+            {
+                AIRule[] arr = getRules();
+                AIRule[] newArr = new AIRule[arr.Length - 1];
+                for (int i = 1; i < arr.Length; i++)
+                {
+                    newArr[i - 1] = arr[i];
+                }
+                setRules(newArr);
+            };
+
+            Assert.AreEqual(3, working.actionRules.Length);
+            removeFirst();
+            Assert.AreEqual(2, working.actionRules.Length);
+            Assert.AreEqual(1, working.actionRules[0].actionIndex);
+            Assert.AreEqual((byte)80, working.actionRules[0].probability);
+            Assert.AreEqual(2, working.actionRules[1].actionIndex);
+        }
+
+        /// <summary>
+        /// InRange CompareOp を使った条件が保存→再読込でラウンドトリップできることを確認。
+        /// (UI 側の opChoices に InRange が加わったことで、作成→保存→再編集が正しく機能するか)
+        /// </summary>
+        [Test]
+        public void CompanionAISettings_InRangeCondition_RoundtripsCorrectly()
+        {
+            _logic.AddModeToBuffer(new AIMode
+            {
+                modeName = "InRange検証",
+                actions = new ActionSlot[]
+                {
+                    new ActionSlot { execType = ActionExecType.Attack, paramId = 0, displayName = "攻撃" },
+                },
+                actionRules = new AIRule[]
+                {
+                    new AIRule
+                    {
+                        actionIndex = 0,
+                        probability = 100,
+                        conditions = new AICondition[]
+                        {
+                            new AICondition
+                            {
+                                conditionType = AIConditionType.Distance,
+                                compareOp = CompareOp.InRange,  // 5m <= 距離 <= 15m
+                                operandA = 5,
+                                operandB = 15,
+                                filter = new TargetFilter { includeSelf = false },
+                            },
+                        },
+                    },
+                },
+                targetRules = new AIRule[0],
+                targetSelects = new AITargetSelect[0],
+            });
+
+            // 保存 → 切替 → 戻す
+            _logic.ApplyBufferToCurrentTactic();
+            string otherId = _tacticalRegistry.Save("他", new CompanionAIConfig
+            {
+                configName = "他",
+                modes = new AIMode[0],
+                modeTransitionRules = new ModeTransitionRule[0],
+                shortcutModeBindings = new int[4],
+            });
+            _logic.SwitchEditingTarget(otherId, force: true);
+            _logic.SwitchEditingTarget(null, force: false);
+
+            AICondition reloaded = _logic.EditingBuffer.modes[0].actionRules[0].conditions[0];
+            Assert.AreEqual(CompareOp.InRange, reloaded.compareOp, "InRange が保持される");
+            Assert.AreEqual(5, reloaded.operandA, "下限");
+            Assert.AreEqual(15, reloaded.operandB, "上限");
+        }
     }
 }

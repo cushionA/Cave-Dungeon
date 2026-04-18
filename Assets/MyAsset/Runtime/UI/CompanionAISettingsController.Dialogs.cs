@@ -95,8 +95,13 @@ namespace Game.Runtime
             actionsList.AddToClassList("mode-detail-list");
             actionsSection.Add(actionsList);
 
+            // struct 値渡しによるコピー問題を避けるため getter/setter closure を渡す。
             Action rebuildActions = null;
-            rebuildActions = () => RebuildActionSlotList(actionsList, working, rebuildActions);
+            rebuildActions = () => RebuildActionSlotList(
+                actionsList,
+                () => working.actions,
+                arr => working.actions = arr,
+                rebuildActions);
             rebuildActions();
 
             Button addActionButton = new Button(() =>
@@ -130,8 +135,14 @@ namespace Game.Runtime
             rulesList.AddToClassList("mode-detail-list");
             rulesSection.Add(rulesList);
 
+            // 削除経路が struct コピーで切れる問題を避けるため getter/setter closure を渡す。
             Action rebuildRules = null;
-            rebuildRules = () => RebuildActionRuleList(rulesList, working, rebuildRules);
+            rebuildRules = () => RebuildActionRuleList(
+                rulesList,
+                () => working.actionRules,
+                arr => working.actionRules = arr,
+                () => working,
+                rebuildRules);
             rebuildRules();
 
             Button addRuleButton = new Button(() =>
@@ -177,11 +188,21 @@ namespace Game.Runtime
             AttachTooltipHandlers(dialog);
         }
 
-        private void RebuildActionSlotList(VisualElement container, AIMode working, Action rebuild)
+        /// <summary>
+        /// 行動スロットリストを描画する。
+        /// AIMode(struct) の値渡しだと削除時の代入が呼び出し元に伝播しないため、
+        /// 呼び出し側が getter/setter の closure を渡す形にする。
+        /// </summary>
+        private void RebuildActionSlotList(
+            VisualElement container,
+            Func<ActionSlot[]> getActions,
+            Action<ActionSlot[]> setActions,
+            Action rebuild)
         {
             container.Clear();
 
-            int count = working.actions != null ? working.actions.Length : 0;
+            ActionSlot[] actions = getActions();
+            int count = actions != null ? actions.Length : 0;
             if (count == 0)
             {
                 Label empty = new Label("(行動スロットが空です)");
@@ -193,7 +214,7 @@ namespace Game.Runtime
             for (int i = 0; i < count; i++)
             {
                 int idx = i;
-                ActionSlot slot = working.actions[i];
+                ActionSlot slot = actions[idx];
                 VisualElement row = new VisualElement();
                 row.AddToClassList("mode-detail-row");
 
@@ -217,7 +238,11 @@ namespace Game.Runtime
                 {
                     ShowActionPickerDialog(ResolveInitialTab(slot), picked =>
                     {
-                        working.actions[idx] = picked;
+                        ActionSlot[] arr = getActions();
+                        if (arr != null && idx < arr.Length)
+                        {
+                            arr[idx] = picked;
+                        }
                         rebuild();
                     });
                 });
@@ -229,17 +254,22 @@ namespace Game.Runtime
 
                 Button removeButton = new Button(() =>
                 {
-                    ActionSlot[] newArr = new ActionSlot[count - 1];
+                    ActionSlot[] arr = getActions();
+                    if (arr == null || arr.Length == 0)
+                    {
+                        return;
+                    }
+                    ActionSlot[] newArr = new ActionSlot[arr.Length - 1];
                     int dst = 0;
-                    for (int k = 0; k < count; k++)
+                    for (int k = 0; k < arr.Length; k++)
                     {
                         if (k == idx)
                         {
                             continue;
                         }
-                        newArr[dst++] = working.actions[k];
+                        newArr[dst++] = arr[k];
                     }
-                    working.actions = newArr;
+                    setActions(newArr);
                     rebuild();
                 });
                 removeButton.text = "×";
@@ -254,11 +284,22 @@ namespace Game.Runtime
             AttachTooltipHandlers(container);
         }
 
-        private void RebuildActionRuleList(VisualElement container, AIMode working, Action rebuild)
+        /// <summary>
+        /// 行動ルールリストを描画する。
+        /// AIMode(struct) の値渡し問題を避けるため getter/setter + getMode の closure を受ける。
+        /// getMode は FormatRuleSummary / ShowRuleEditDialog に「今の actions[] が乗った AIMode」を渡すために必要。
+        /// </summary>
+        private void RebuildActionRuleList(
+            VisualElement container,
+            Func<AIRule[]> getRules,
+            Action<AIRule[]> setRules,
+            Func<AIMode> getParentMode,
+            Action rebuild)
         {
             container.Clear();
 
-            int count = working.actionRules != null ? working.actionRules.Length : 0;
+            AIRule[] rules = getRules();
+            int count = rules != null ? rules.Length : 0;
             if (count == 0)
             {
                 Label empty = new Label("(ルールなし - デフォルト行動が実行されます)");
@@ -267,10 +308,11 @@ namespace Game.Runtime
                 return;
             }
 
+            AIMode parentMode = getParentMode();
             for (int i = 0; i < count; i++)
             {
                 int idx = i;
-                AIRule rule = working.actionRules[i];
+                AIRule rule = rules[idx];
                 VisualElement row = new VisualElement();
                 row.AddToClassList("mode-detail-row");
 
@@ -278,15 +320,19 @@ namespace Game.Runtime
                 priority.AddToClassList("mode-detail-row__index");
                 row.Add(priority);
 
-                Label summary = new Label(FormatRuleSummary(rule, working));
+                Label summary = new Label(FormatRuleSummary(rule, parentMode));
                 summary.AddToClassList("mode-detail-row__label");
                 row.Add(summary);
 
                 Button editButton = new Button(() =>
                 {
-                    ShowRuleEditDialog(rule, working, edited =>
+                    ShowRuleEditDialog(rule, getParentMode(), edited =>
                     {
-                        working.actionRules[idx] = edited;
+                        AIRule[] arr = getRules();
+                        if (arr != null && idx < arr.Length)
+                        {
+                            arr[idx] = edited;
+                        }
                         rebuild();
                     });
                 });
@@ -298,17 +344,22 @@ namespace Game.Runtime
 
                 Button removeButton = new Button(() =>
                 {
-                    AIRule[] newArr = new AIRule[count - 1];
+                    AIRule[] arr = getRules();
+                    if (arr == null || arr.Length == 0)
+                    {
+                        return;
+                    }
+                    AIRule[] newArr = new AIRule[arr.Length - 1];
                     int dst = 0;
-                    for (int k = 0; k < count; k++)
+                    for (int k = 0; k < arr.Length; k++)
                     {
                         if (k == idx)
                         {
                             continue;
                         }
-                        newArr[dst++] = working.actionRules[k];
+                        newArr[dst++] = arr[k];
                     }
-                    working.actionRules = newArr;
+                    setRules(newArr);
                     rebuild();
                 });
                 removeButton.text = "×";
@@ -540,11 +591,16 @@ namespace Game.Runtime
             rebuildInputs = () =>
             {
                 inputContainer.Clear();
-                BuildConditionInputWidgets(inputContainer, current, updated =>
-                {
-                    current = updated;
-                    onChanged?.Invoke(current);
-                });
+                BuildConditionInputWidgets(
+                    inputContainer,
+                    current,
+                    updated =>
+                    {
+                        current = updated;
+                        onChanged?.Invoke(current);
+                    },
+                    // CompareOp が InRange ⇔ 他 に切り替わった時に上限入力欄の有無が変わるので再構築
+                    rebuildInputs);
             };
             rebuildInputs();
 
@@ -924,7 +980,16 @@ namespace Game.Runtime
             }
         }
 
-        private void BuildConditionInputWidgets(VisualElement container, AICondition current, Action<AICondition> onChanged)
+        /// <summary>
+        /// 条件1行分の入力ウィジェット（比較演算子ドロップダウン + 値入力）を構築する。
+        /// rebuildAfterOp は CompareOp が InRange ⇔ 他 に切り替わった時に上限入力欄の有無を
+        /// 反映させるため呼び出し元で再構築する必要がある場合に渡す。
+        /// </summary>
+        private void BuildConditionInputWidgets(
+            VisualElement container,
+            AICondition current,
+            Action<AICondition> onChanged,
+            Action rebuildAfterOp)
         {
             ConditionTypeMetadata.WidgetKind kind = ConditionTypeMetadata.GetWidgetKind(current.conditionType);
 
@@ -944,9 +1009,10 @@ namespace Game.Runtime
             DropdownField compareDropdown = null;
             if (ConditionTypeMetadata.SupportsNumericCompare(current.conditionType))
             {
+                // インデックスは CompareOp enum 値と一致させる (Less=0 ... NotEqual=5, InRange=6)
                 List<string> opChoices = new List<string>
                 {
-                    "<", "<=", "==", ">=", ">", "!=",
+                    "<", "<=", "==", ">=", ">", "!=", "範囲内",
                 };
                 int opIdx = (int)current.compareOp;
                 if (opIdx < 0 || opIdx >= opChoices.Count)
@@ -954,11 +1020,20 @@ namespace Game.Runtime
                     opIdx = 0;
                 }
                 compareDropdown = new DropdownField("比較", opChoices, opIdx);
+                compareDropdown.tooltip = "比較方法\n ・範囲内: operandA <= 値 <= operandB の範囲判定（下限+上限の2値入力）";
                 compareDropdown.AddToClassList("condition-row__op");
                 compareDropdown.RegisterValueChangedCallback(evt =>
                 {
+                    CompareOp before = current.compareOp;
                     current.compareOp = (CompareOp)compareDropdown.index;
                     onChanged?.Invoke(current);
+                    // InRange へ切替/離脱した時に上限入力欄の有無が変わるので再構築
+                    bool wasRange = before == CompareOp.InRange;
+                    bool isRange = current.compareOp == CompareOp.InRange;
+                    if (wasRange != isRange)
+                    {
+                        rebuildAfterOp?.Invoke();
+                    }
                 });
                 container.Add(compareDropdown);
             }
