@@ -105,13 +105,13 @@ namespace Game.Core
                 case AIConditionType.Count:
                     return "フィルターに合致する対象の数と比較します";
                 case AIConditionType.HpRatio:
-                    return "対象のHP割合(0.0-1.0)と比較します";
+                    return "対象のHP割合(0-100%)と比較します";
                 case AIConditionType.MpRatio:
-                    return "対象のMP割合(0.0-1.0)と比較します";
+                    return "対象のMP割合(0-100%)と比較します";
                 case AIConditionType.StaminaRatio:
-                    return "対象のスタミナ割合(0.0-1.0)と比較します";
+                    return "対象のスタミナ割合(0-100%)と比較します";
                 case AIConditionType.ArmorRatio:
-                    return "対象のアーマー割合(0.0-1.0)と比較します";
+                    return "対象のアーマー割合(0-100%)と比較します";
                 case AIConditionType.Distance:
                     return "対象との距離[m]と比較します";
                 case AIConditionType.NearbyFaction:
@@ -143,8 +143,8 @@ namespace Game.Core
                 case AIConditionType.MpRatio:
                 case AIConditionType.StaminaRatio:
                 case AIConditionType.ArmorRatio:
-                    // UI側ではスライダーで 0.0-1.0 を扱う想定。
-                    // 内部表現は 0-100 のint（パーセント）にしておくとエッジケース(0/1)を扱いやすい。
+                    // 評価側(ConditionEvaluator) が current/max * 100f を返すので operandA も 0-100 の int(%) で扱う。
+                    // UI もスライダー(0-100)で統一。
                     return 50;
                 case AIConditionType.Count:
                     return 1;
@@ -183,26 +183,45 @@ namespace Game.Core
 
         /// <summary>
         /// IntegerBitmask 系条件のビットごとの日本語ラベル一覧。
-        /// ゲーム側で RecognizeObjectType / BrainEventFlagType が enum 定義されたら差し替える。
         /// 配列の長さ = 表示するチェックボックス数。
+        /// ラベルは Architect/05_AIシステム.md および Architect/参考コード/AIコード/BrainStatus.cs に定義された
+        /// RecognizeObjectType / BrainEventFlagType の項目に準拠する（本家 enum が Game.Core に昇格したら差し替える）。
         /// </summary>
         public static string[] GetBitLabels(AIConditionType type)
         {
             switch (type)
             {
                 case AIConditionType.ObjectNearby:
+                    // Architect/参考コード BrainStatus.cs:230-246 の RecognizeObjectType (12bit) 準拠。
+                    // ゲーム実装側で enum 定義されたら切り替える。
                     return new string[]
                     {
-                        "認識対象 1", "認識対象 2", "認識対象 3", "認識対象 4",
-                        "認識対象 5", "認識対象 6", "認識対象 7", "認識対象 8",
-                        "認識対象 9", "認識対象 10", "認識対象 11", "認識対象 12",
+                        "アイテム",         // bit0
+                        "プレイヤー陣営",   // bit1
+                        "敵陣営",           // bit2
+                        "同類キャラ",       // bit3
+                        "危険物",           // bit4
+                        "バフエリア",       // bit5
+                        "デバフエリア",     // bit6
+                        "草",               // bit7
+                        "焚火",             // bit8
+                        "ダメージエリア",   // bit9
+                        "破壊可オブジェクト", // bit10
+                        "よじ登りポイント", // bit11
                     };
 
                 case AIConditionType.EventFired:
+                    // Architect/05_AIシステム.md:803-812 の BrainEventFlagType (6 定義 + 2 予約) 準拠。
                     return new string[]
                     {
-                        "イベント 1", "イベント 2", "イベント 3", "イベント 4",
-                        "イベント 5", "イベント 6", "イベント 7", "イベント 8",
+                        "大ダメージを与えた", // bit0
+                        "大ダメージを受けた", // bit1
+                        "キャラを倒した",     // bit2
+                        "回復を使用",         // bit3
+                        "支援を使用",         // bit4
+                        "攻撃対象指示",       // bit5
+                        "(予約 bit6)",        // bit6
+                        "(予約 bit7)",        // bit7
                     };
 
                 default:

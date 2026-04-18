@@ -595,7 +595,8 @@ namespace Game.Runtime
             };
 
             // 陣営/特徴のチェック欄で対象を絞り込むため、"自分 / プレイヤー / 周囲" のトップレベル選択は持たない。
-            // （IsSelf/IsPlayer のビットはレガシー用途なので、保存時にクリアしておく）
+            // IsSelf / IsPlayer ビットは現状 TargetSelector 側で参照されていない（自己除外は includeSelf で判定）。
+            // 当 UI では扱わない方針のため、保存時にクリアする。将来セマンティクスが確定したら別 UI で公開する想定。
             FilterBitFlag beforeClear = current.filterFlags;
             current.filterFlags &= ~(FilterBitFlag.IsSelf | FilterBitFlag.IsPlayer);
             if (beforeClear != current.filterFlags)

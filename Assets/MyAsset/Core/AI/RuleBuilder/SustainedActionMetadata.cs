@@ -8,46 +8,49 @@ namespace Game.Core
     public static class SustainedActionMetadata
     {
         /// <summary>
-        /// paramValue = 0 を「無制限（モード切替まで継続）」と解釈するしきい値。
+        /// paramValue が 0 の場合「無制限（タイムアウトなし／モード切替まで継続）」として扱うための比較しきい値。
+        /// 実装側（ActionBase.cs の Sustained 継続時間判定）は `_duration > 0f` の厳密比較だが、
+        /// UI 側では FloatField の浮動小数点入力ゆらぎ（0.0001 など）を 0 扱いにするためこの閾値を用いる。
         /// </summary>
         public const float k_UnlimitedDurationThreshold = 0.01f;
 
         /// <summary>
-        /// 指定 Sustained 行動の自然終了条件の日本語説明を返す。
-        /// UI のツールチップやラベル表示用。
+        /// 指定 Sustained 行動の自然終了条件の日本語説明を返す。UI のツールチップ・ラベル用。
+        /// 注意: 現時点で Sustained 系ハンドラに「自然終了条件」の個別実装はほぼ未導入。
+        /// 実体は共通タイムアウト（paramValue 秒経過）が主で、実装済みの自然終了条件が確定したらここに反映する。
         /// </summary>
         public static string GetNaturalEndCondition(SustainedAction action)
         {
             switch (action)
             {
                 case SustainedAction.MoveToTarget:
-                    return "目的地到達で自動終了";
+                    return "指定地点へ移動（タイムアウトでキャンセル）";
                 case SustainedAction.Follow:
-                    return "ターゲットロスト/モード変更まで継続";
+                    return "ターゲットを追従（タイムアウトまで継続）";
                 case SustainedAction.Retreat:
-                    return "安全距離（3-5m程度）まで下がったら停止。戦闘態勢は保持（間合い調整向け）";
+                    return "ターゲットから距離を取る（タイムアウトまで継続）";
                 case SustainedAction.Flee:
-                    return "追跡者を振り切るまで全力で逃走。戦闘放棄（緊急退避向け）";
+                    return "ターゲットと逆方向へ逃走（タイムアウトまで継続）";
                 case SustainedAction.Patrol:
-                    return "ターゲット発見で自動終了";
+                    return "巡回移動（タイムアウトまで継続）";
                 case SustainedAction.Guard:
-                    return "モード変更/別行動開始まで継続";
+                    return "ガード姿勢を維持（タイムアウトまで継続）";
                 case SustainedAction.Flank:
-                    return "挟撃位置到達で自動終了";
+                    return "挟撃位置へ移動（タイムアウトまで継続、ハンドラ未実装）";
                 case SustainedAction.ShieldDeploy:
-                    return "怯み/MP切れで中断";
+                    return "盾を展開（タイムアウトまで継続、ハンドラ未実装）";
                 case SustainedAction.Decoy:
-                    return "ターゲットを引きつけるまで継続";
+                    return "囮行動（タイムアウトまで継続、ハンドラ未実装）";
                 case SustainedAction.Cover:
-                    return "遮蔽物到達で継続(モード変更まで)";
+                    return "遮蔽物利用（タイムアウトまで継続、ハンドラ未実装）";
                 case SustainedAction.Stealth:
-                    return "被発見/攻撃で終了";
+                    return "潜伏（タイムアウトまで継続、ハンドラ未実装）";
                 case SustainedAction.Orbit:
-                    return "モード変更まで継続";
+                    return "周回移動（タイムアウトまで継続、ハンドラ未実装）";
                 case SustainedAction.MpRecover:
-                    return "MP満タン/怯みで中断";
+                    return "MP回復専念（タイムアウトまで継続、ハンドラ未実装）";
                 default:
-                    return "モード変更まで継続";
+                    return "タイムアウトまで継続";
             }
         }
 
