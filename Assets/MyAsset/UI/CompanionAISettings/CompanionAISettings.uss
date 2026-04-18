@@ -477,13 +477,22 @@
     right: 0;
     bottom: 0;
     background-color: rgba(0, 0, 0, 0.7);
-    align-items: center;
-    justify-content: center;
     display: none;
 }
 
 .dialog-layer--visible {
     display: flex;
+}
+
+/* ネストダイアログ用フレーム: 絶対配置で画面全体を占有し、中の modal-dialog を中央寄せする */
+.dialog-frame {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
 }
 
 .modal-dialog {
@@ -496,6 +505,34 @@
     border-color: rgba(100, 100, 130, 0.6);
     flex-direction: column;
     align-items: stretch;
+}
+
+/* ===== Unity BaseField のラベル色上書き (暗背景対応) ===== */
+.companion-ai-settings-root .unity-base-field__label,
+.companion-ai-settings-root .unity-foldout__text,
+.companion-ai-settings-root .unity-toggle__label,
+.companion-ai-settings-root .unity-label {
+    color: rgb(220, 220, 230);
+}
+
+.companion-ai-settings-root .unity-base-field__input,
+.companion-ai-settings-root .unity-text-field__input,
+.companion-ai-settings-root .unity-integer-field__input,
+.companion-ai-settings-root .unity-float-field__input {
+    color: rgb(240, 240, 245);
+    background-color: rgba(10, 10, 20, 0.7);
+    border-color: rgba(100, 100, 130, 0.6);
+}
+
+/* スロットアクションダイアログは5ボタン並ぶため広めに */
+.slot-action-dialog {
+    min-width: 520px;
+    max-width: 760px;
+}
+
+.slot-action-dialog__buttons {
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .modal-dialog__title {
@@ -557,6 +594,376 @@
     font-size: 11px;
     color: rgb(240, 240, 245);
     white-space: normal;
+}
+
+/* ===== モード詳細ダイアログ ===== */
+.mode-detail-dialog {
+    min-width: 480px;
+    max-width: 720px;
+    max-height: 80%;
+}
+
+.mode-detail-scroll {
+    max-height: 520px;
+    margin-bottom: 8px;
+    flex-grow: 1;
+}
+
+.mode-detail-section {
+    flex-direction: column;
+    margin-bottom: 12px;
+    padding: 8px;
+    background-color: rgba(0, 0, 0, 0.25);
+    border-radius: 3px;
+}
+
+.mode-detail-section__title {
+    font-size: 14px;
+    color: rgb(79, 195, 247);
+    -unity-font-style: bold;
+    margin-bottom: 6px;
+    padding-left: 2px;
+}
+
+.mode-detail-field {
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.mode-detail-inline-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.mode-detail-inline-row > * {
+    flex-grow: 1;
+    margin-right: 4px;
+}
+
+.mode-detail-list {
+    flex-direction: column;
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.mode-detail-row {
+    flex-direction: row;
+    align-items: center;
+    padding: 4px 6px;
+    background-color: rgba(35, 35, 45, 0.85);
+    border-radius: 3px;
+    margin-top: 2px;
+    margin-bottom: 2px;
+    color: rgb(240, 240, 245);
+    font-size: 12px;
+    flex-wrap: wrap;
+}
+
+.mode-detail-row__index {
+    min-width: 32px;
+    color: rgb(79, 195, 247);
+    -unity-font-style: bold;
+    margin-right: 4px;
+}
+
+.mode-detail-row__label {
+    flex-grow: 1;
+    color: rgb(240, 240, 245);
+    font-size: 12px;
+    white-space: normal;
+    margin-right: 4px;
+}
+
+.mode-detail-row__duration {
+    color: rgb(255, 193, 7);
+    font-size: 11px;
+    margin-right: 8px;
+    -unity-font-style: italic;
+}
+
+.mode-detail-row__button {
+    min-width: 40px;
+    margin-left: 2px;
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+.mode-detail-empty {
+    color: rgb(100, 100, 115);
+    font-size: 11px;
+    -unity-font-style: italic;
+    padding: 8px;
+    -unity-text-align: middle-center;
+}
+
+.mode-detail-add-button {
+    margin-top: 6px;
+    padding: 6px;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 1px;
+    border-color: rgb(100, 100, 115);
+    border-radius: 3px;
+    color: rgb(160, 160, 175);
+    font-size: 12px;
+    transition-property: border-color, color;
+    transition-duration: 0.15s;
+}
+
+.mode-detail-add-button:hover {
+    border-color: rgb(79, 195, 247);
+    color: rgb(79, 195, 247);
+}
+
+.mode-detail-add-button:focus {
+    border-width: 2px;
+    border-color: rgb(79, 195, 247);
+}
+
+/* ===== 条件エディタ (Rule/Transition ダイアログ共用) ===== */
+.condition-row {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 8px;
+    background-color: rgba(20, 20, 30, 0.85);
+}
+
+.condition-row__type {
+    margin-bottom: 4px;
+}
+
+.condition-row__inputs {
+    flex-direction: column;
+    margin-top: 4px;
+    margin-left: 8px;
+}
+
+.condition-row__op {
+    margin-bottom: 4px;
+}
+
+.condition-row__slider {
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
+
+.condition-row__int {
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
+
+.condition-row__flags {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 2px;
+}
+
+.condition-row__flag-toggle {
+    margin-right: 8px;
+    margin-bottom: 4px;
+}
+
+.condition-row__none {
+    color: rgb(100, 100, 115);
+    font-size: 11px;
+    -unity-font-style: italic;
+    padding: 4px;
+}
+
+.condition-row__bitmask-header {
+    color: rgb(200, 200, 215);
+    font-size: 12px;
+    -unity-font-style: bold;
+    margin-top: 4px;
+    margin-bottom: 2px;
+}
+
+/* ===== TargetFilter Foldout ===== */
+.target-filter-foldout {
+    margin-top: 6px;
+    padding: 4px;
+    background-color: rgba(15, 15, 25, 0.6);
+    border-radius: 3px;
+    border-left-width: 3px;
+    border-left-color: rgba(79, 195, 247, 0.6);
+}
+
+.target-filter-foldout > .unity-foldout__toggle {
+    color: rgb(220, 220, 230);
+    font-size: 12px;
+    -unity-font-style: bold;
+}
+
+.target-filter-subsection {
+    flex-direction: column;
+    margin-top: 4px;
+    padding: 4px 8px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+.target-filter-subsection__label {
+    color: rgb(200, 200, 215);
+    font-size: 11px;
+    -unity-font-style: bold;
+    margin-bottom: 2px;
+}
+
+/* ===== ルール編集ダイアログ ===== */
+.rule-edit-dialog {
+    min-width: 480px;
+    max-width: 680px;
+    max-height: 80%;
+}
+
+/* ===== 遷移ルール行 (クリック可能版) ===== */
+.transition-row--clickable {
+    background-color: rgba(45, 45, 65, 0.9);
+    border-width: 1px;
+    border-color: rgba(80, 80, 100, 0.4);
+    color: rgb(240, 240, 245);
+    -unity-text-align: middle-left;
+    padding: 6px 10px;
+    transition-property: background-color, border-color;
+    transition-duration: 0.15s;
+}
+
+.transition-row--clickable:hover {
+    background-color: rgba(60, 80, 110, 0.9);
+    border-color: rgb(79, 195, 247);
+}
+
+.transition-row--clickable:focus {
+    border-width: 2px;
+    border-color: rgb(79, 195, 247);
+}
+
+.transition-row--add {
+    margin-top: 6px;
+    padding: 6px;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 1px;
+    border-color: rgb(100, 100, 115);
+    border-radius: 3px;
+    color: rgb(160, 160, 175);
+    font-size: 12px;
+    transition-property: border-color, color;
+    transition-duration: 0.15s;
+}
+
+.transition-row--add:hover {
+    border-color: rgb(79, 195, 247);
+    color: rgb(79, 195, 247);
+}
+
+.transition-row--add:focus {
+    border-width: 2px;
+    border-color: rgb(79, 195, 247);
+}
+
+/* ===== 行動ピッカーダイアログ ===== */
+.action-picker-dialog {
+    min-width: 480px;
+    max-width: 640px;
+    max-height: 80%;
+}
+
+.action-picker-tabs {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(80, 80, 100, 0.4);
+}
+
+.action-picker-tab {
+    padding: 6px 14px;
+    margin: 0;
+    background-color: rgba(0, 0, 0, 0);
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-width: 0;
+    border-bottom-width: 3px;
+    border-bottom-color: rgba(0, 0, 0, 0);
+    color: rgb(160, 160, 175);
+    font-size: 13px;
+    -unity-font-style: bold;
+    transition-property: color, border-bottom-color, background-color;
+    transition-duration: 0.15s;
+}
+
+.action-picker-tab:hover {
+    color: rgb(240, 240, 245);
+    background-color: rgba(60, 60, 80, 0.3);
+}
+
+.action-picker-tab--active {
+    color: rgb(79, 195, 247);
+    border-bottom-color: rgb(79, 195, 247);
+}
+
+.action-picker-tab:focus {
+    background-color: rgba(79, 195, 247, 0.15);
+}
+
+.action-picker-content {
+    max-height: 420px;
+    flex-direction: column;
+    padding: 4px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+    margin-bottom: 8px;
+}
+
+.action-picker-category-header {
+    font-size: 12px;
+    color: rgb(79, 195, 247);
+    -unity-font-style: bold;
+    margin-top: 6px;
+    margin-bottom: 2px;
+    padding-left: 4px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(79, 195, 247, 0.3);
+}
+
+.action-picker-item {
+    margin: 2px 0;
+    padding: 6px 10px;
+    background-color: rgba(35, 35, 45, 0.85);
+    border-width: 1px;
+    border-color: rgba(80, 80, 100, 0.4);
+    border-radius: 3px;
+    color: rgb(240, 240, 245);
+    font-size: 12px;
+    -unity-text-align: middle-left;
+    transition-property: background-color, border-color, scale;
+    transition-duration: 0.15s;
+}
+
+.action-picker-item:hover {
+    background-color: rgba(60, 80, 110, 0.9);
+    border-color: rgb(79, 195, 247);
+    scale: 1.01 1.01;
+}
+
+.action-picker-item:focus {
+    border-width: 2px;
+    border-color: rgb(79, 195, 247);
+}
+
+.action-picker-item--locked {
+    background-color: rgba(25, 25, 35, 0.5);
+    border-color: rgba(60, 60, 80, 0.3);
+    color: rgb(80, 80, 95);
+    -unity-font-style: italic;
+}
+
+.action-picker-item--locked:hover {
+    background-color: rgba(25, 25, 35, 0.5);
+    border-color: rgba(60, 60, 80, 0.3);
+    scale: 1 1;
 }
 
 /* ===== ユーティリティ ===== */

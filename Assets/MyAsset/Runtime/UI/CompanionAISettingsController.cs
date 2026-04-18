@@ -12,7 +12,7 @@ namespace Game.Runtime
     /// ToolTip はカスタム実装（パッド操作時のフォーカスにも反応する）。
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
-    public class CompanionAISettingsController : MonoBehaviour
+    public partial class CompanionAISettingsController : MonoBehaviour
     {
         [Header("Style Sheet (explicit load)")]
         [SerializeField] private StyleSheet _styleSheet;
@@ -20,10 +20,23 @@ namespace Game.Runtime
         [Header("Registries (optional injection)")]
         [SerializeField] private bool _useSharedRegistries = false;
 
+        [Header("Attack Catalog (Attack/Cast の候補元)")]
+        [Tooltip("仲間が使える AttackInfo の一覧。Attack/Cast の行動ピッカーで参照される。")]
+        [SerializeField] private AttackInfo[] _attackCatalog;
+
+        [Header("Item Catalog (アイテム使用 タブの候補元)")]
+        [Tooltip("仲間が使えるアイテムの一覧（UI用プレースホルダー）。将来 ItemInfo テーブルに差し替え。")]
+        [SerializeField] private CompanionItemEntry[] _itemCatalog;
+
+        [Header("Action Type Registry (任意注入)")]
+        [Tooltip("解放済みアクションを参照するレジストリ。null の場合はデフォルト（全 Instant/Sustained を許可）で動作")]
+        [SerializeField] private bool _useActionTypeRegistry = false;
+
         // 純ロジック
         private CompanionAISettingsLogic _logic;
         private ModePresetRegistry _modeRegistry;
         private TacticalPresetRegistry _tacticalRegistry;
+        private ActionTypeRegistry _actionTypeRegistry;
 
         // UI参照
         private UIDocument _uiDocument;
@@ -75,6 +88,11 @@ namespace Game.Runtime
                 _tacticalRegistry = new TacticalPresetRegistry(_modeRegistry);
             }
             _logic = new CompanionAISettingsLogic(_modeRegistry, _tacticalRegistry);
+
+            if (_useActionTypeRegistry && _actionTypeRegistry == null)
+            {
+                _actionTypeRegistry = new ActionTypeRegistry();
+            }
         }
 
         private void OnEnable()
@@ -430,18 +448,51 @@ namespace Game.Runtime
                 AttachTooltipHandlers(_modeSlotsContainer);
             }
 
-            // 遷移ルールは今回は表示のみ（モックアップ）
+            // 遷移ルール
             if (_transitionList != null)
             {
                 _transitionList.Clear();
                 int ruleCount = buffer.modeTransitionRules != null ? buffer.modeTransitionRules.Length : 0;
                 for (int i = 0; i < ruleCount; i++)
                 {
-                    Label row = new Label { text = $"Rule {i + 1}: (詳細編集は次版)" };
+                    int ruleIndex = i;
+                    ModeTransitionRule rule = buffer.modeTransitionRules[i];
+                    Button row = new Button(() => ShowModeTransitionDialog(ruleIndex));
+                    row.text = FormatTransitionRuleSummary(rule, buffer.modes);
+                    row.tooltip = "クリックで遷移ルールを編集";
                     row.AddToClassList("transition-row");
+                    row.AddToClassList("transition-row--clickable");
                     _transitionList.Add(row);
                 }
+
+                Button addRuleButton = new Button(() => ShowModeTransitionDialog(-1));
+                addRuleButton.text = "＋ 遷移ルールを追加";
+                addRuleButton.tooltip = "新しいモード遷移ルールを追加";
+                addRuleButton.AddToClassList("transition-row");
+                addRuleButton.AddToClassList("transition-row--add");
+                _transitionList.Add(addRuleButton);
+
+                AttachTooltipHandlers(_transitionList);
             }
+        }
+
+        /// <summary>
+        /// 遷移ルール行のサマリー表示を組み立てる。
+        /// 例: "[警戒] → [攻撃] (HP < 30% AND 距離 < 5)"
+        /// </summary>
+        private string FormatTransitionRuleSummary(ModeTransitionRule rule, AIMode[] modes)
+        {
+            string sourceName = rule.sourceModeIndex < 0
+                ? "任意"
+                : (modes != null && rule.sourceModeIndex < modes.Length
+                    ? (string.IsNullOrEmpty(modes[rule.sourceModeIndex].modeName) ? $"Mode{rule.sourceModeIndex}" : modes[rule.sourceModeIndex].modeName)
+                    : $"Mode{rule.sourceModeIndex}");
+            string targetName = modes != null && rule.targetModeIndex >= 0 && rule.targetModeIndex < modes.Length
+                ? (string.IsNullOrEmpty(modes[rule.targetModeIndex].modeName) ? $"Mode{rule.targetModeIndex}" : modes[rule.targetModeIndex].modeName)
+                : $"Mode{rule.targetModeIndex}";
+            int condCount = rule.conditions != null ? rule.conditions.Length : 0;
+            string condText = condCount > 0 ? $"{condCount}個の条件" : "常時";
+            return $"[{sourceName}] → [{targetName}] ({condText})";
         }
 
         private void RefreshShortcutDropdowns()
@@ -612,27 +663,44 @@ namespace Game.Runtime
         // Dialogs
         // =========================================================================
 
+        /// <summary>
+        /// ダイアログを表示する。ネスト対応: フレームでラップしてスタック追加するため、
+        /// モード詳細ダイアログから行動ピッカーを開いた時に親が消えない。
+        /// </summary>
         private void ShowDialog(VisualElement content)
         {
             if (_dialogLayer == null)
             {
                 return;
             }
-            _dialogLayer.Clear();
             _dialogLayer.pickingMode = PickingMode.Position;
-            _dialogLayer.Add(content);
+
+            VisualElement frame = new VisualElement();
+            frame.AddToClassList("dialog-frame");
+            frame.Add(content);
+            _dialogLayer.Add(frame);
             _dialogLayer.AddToClassList("dialog-layer--visible");
         }
 
+        /// <summary>
+        /// 直近のダイアログを閉じる。スタック上の前のダイアログが再びフォーカスされる。
+        /// </summary>
         private void CloseDialog()
         {
             if (_dialogLayer == null)
             {
                 return;
             }
-            _dialogLayer.Clear();
-            _dialogLayer.pickingMode = PickingMode.Ignore;
-            _dialogLayer.RemoveFromClassList("dialog-layer--visible");
+            int count = _dialogLayer.childCount;
+            if (count > 0)
+            {
+                _dialogLayer.RemoveAt(count - 1);
+            }
+            if (_dialogLayer.childCount == 0)
+            {
+                _dialogLayer.pickingMode = PickingMode.Ignore;
+                _dialogLayer.RemoveFromClassList("dialog-layer--visible");
+            }
         }
 
         private VisualElement BuildModalDialog(string title, string body)
@@ -800,9 +868,15 @@ namespace Game.Runtime
             VisualElement dialog = BuildModalDialog(
                 $"Mode {slotIndex + 1}: {mode.modeName}",
                 isLinked ? "プリセット参照中のモードです。" : "独立コピーのモードです。");
+            dialog.AddToClassList("slot-action-dialog");
             VisualElement buttons = BuildButtonRow();
+            buttons.AddToClassList("slot-action-dialog__buttons");
 
-            buttons.Add(BuildDialogButton("モードを変更", "primary-button", () =>
+            buttons.Add(BuildDialogButton("モード詳細を編集", "primary-button", () =>
+            {
+                ShowModeDetailDialog(slotIndex);
+            }));
+            buttons.Add(BuildDialogButton("プリセットから選択", "secondary-button", () =>
             {
                 AIMode[] available = _modeRegistry.GetAll();
                 if (available.Length == 0)

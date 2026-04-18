@@ -225,6 +225,33 @@ namespace Game.Core
         }
 
         /// <summary>
+        /// 編集バッファの指定インデックスのモードを「まるごと差し替える」。
+        /// モード詳細ダイアログからの編集結果を反映する用途で使う。
+        /// カスケード参照を切るため、呼び出し側で modeId を適切に（空 or 新ID）設定しておくこと。
+        /// インデックス範囲外の場合は false を返す。
+        /// </summary>
+        public bool UpdateModeInBuffer(int index, AIMode updated)
+        {
+            if (_editingBuffer.modes == null || index < 0 || index >= _editingBuffer.modes.Length)
+            {
+                return false;
+            }
+            _editingBuffer.modes[index] = updated;
+            _isDirty = true;
+            return true;
+        }
+
+        /// <summary>
+        /// 編集バッファのモード遷移ルール配列を丸ごと差し替える。
+        /// モード遷移ダイアログからの編集結果反映用途。null を渡した場合は空配列として扱う。
+        /// </summary>
+        public void SetTransitionRulesInBuffer(ModeTransitionRule[] rules)
+        {
+            _editingBuffer.modeTransitionRules = rules ?? new ModeTransitionRule[0];
+            _isDirty = true;
+        }
+
+        /// <summary>
         /// 編集バッファを「現在の戦術」に反映する。プリセットへの書き戻しはしない。
         /// </summary>
         public void ApplyBufferToCurrentTactic()
