@@ -118,12 +118,14 @@ namespace Game.Tests.EditMode
             GuardResult guardResult = GuardJudgmentLogic.Judge(
                 isGuarding: true,
                 guardTimeSinceStart: 0.5f,
-                guardStrength: 100f,
-                attackPower: 50f,
+                inContinuousJustGuardWindow: false,
                 attackFeature: AttackFeature.None,
                 guardDirection: GuardDirection.Front,
                 isAttackFromFront: true,
-                hasGuardAttackEffect: false);
+                hasGuardAttackEffect: false,
+                currentStamina: 100f,
+                guardStrength: 100f,
+                armorBreakValue: 50f);
 
             HitReaction reaction = HitReactionLogic.Determine(
                 hasSuperArmor: false,
@@ -141,15 +143,18 @@ namespace Game.Tests.EditMode
         [Test]
         public void GuardBreak_ThenHitReaction_ReturnsGuardBreak()
         {
+            // 新仕様: スタミナ不足でブレイク。削り=100-10=90、スタミナ5<90 → GuardBreak
             GuardResult guardResult = GuardJudgmentLogic.Judge(
                 isGuarding: true,
                 guardTimeSinceStart: 0.5f,
-                guardStrength: 30f,
-                attackPower: 50f,
+                inContinuousJustGuardWindow: false,
                 attackFeature: AttackFeature.None,
                 guardDirection: GuardDirection.Front,
                 isAttackFromFront: true,
-                hasGuardAttackEffect: false);
+                hasGuardAttackEffect: false,
+                currentStamina: 5f,
+                guardStrength: 10f,
+                armorBreakValue: 100f);
 
             HitReaction reaction = HitReactionLogic.Determine(
                 hasSuperArmor: false,
@@ -170,12 +175,14 @@ namespace Game.Tests.EditMode
             GuardResult guardResult = GuardJudgmentLogic.Judge(
                 isGuarding: true,
                 guardTimeSinceStart: 0.05f,
-                guardStrength: 30f,
-                attackPower: 50f,
+                inContinuousJustGuardWindow: false,
                 attackFeature: AttackFeature.None,
                 guardDirection: GuardDirection.Front,
                 isAttackFromFront: true,
-                hasGuardAttackEffect: false);
+                hasGuardAttackEffect: false,
+                currentStamina: 100f,
+                guardStrength: 30f,
+                armorBreakValue: 50f);
 
             // ジャストガード回復
             float stamina = 50f;
@@ -206,12 +213,14 @@ namespace Game.Tests.EditMode
             GuardResult guardResult = GuardJudgmentLogic.Judge(
                 isGuarding: true,
                 guardTimeSinceStart: 0.5f,
-                guardStrength: 100f,
-                attackPower: 50f,
+                inContinuousJustGuardWindow: false,
                 attackFeature: AttackFeature.None,
                 guardDirection: GuardDirection.Front,
                 isAttackFromFront: false,
-                hasGuardAttackEffect: false);
+                hasGuardAttackEffect: false,
+                currentStamina: 100f,
+                guardStrength: 100f,
+                armorBreakValue: 50f);
 
             HitReaction reaction = HitReactionLogic.Determine(
                 hasSuperArmor: false,
@@ -232,12 +241,14 @@ namespace Game.Tests.EditMode
             GuardResult guardResult = GuardJudgmentLogic.Judge(
                 isGuarding: true,
                 guardTimeSinceStart: 0.5f,
-                guardStrength: 100f,
-                attackPower: 50f,
+                inContinuousJustGuardWindow: false,
                 attackFeature: AttackFeature.None,
                 guardDirection: GuardDirection.Both,
                 isAttackFromFront: false,
-                hasGuardAttackEffect: false);
+                hasGuardAttackEffect: false,
+                currentStamina: 100f,
+                guardStrength: 100f,
+                armorBreakValue: 50f);
 
             HitReaction reaction = HitReactionLogic.Determine(
                 hasSuperArmor: false,
@@ -257,16 +268,19 @@ namespace Game.Tests.EditMode
         [Test]
         public void GuardAttackEffect_PreventsGuardBreak_ReturnsNone()
         {
-            // ガード攻撃中: attackPower > guardStrength でもブレイクしない
+            // 新仕様: スタミナ不足でもGuardAttack効果中はブレイクしない
+            // 削り=100-10=90、スタミナ5<90 だがGuardAttack → Guarded維持
             GuardResult guardResult = GuardJudgmentLogic.Judge(
                 isGuarding: true,
                 guardTimeSinceStart: 0.5f,
-                guardStrength: 30f,
-                attackPower: 50f,
+                inContinuousJustGuardWindow: false,
                 attackFeature: AttackFeature.None,
                 guardDirection: GuardDirection.Front,
                 isAttackFromFront: true,
-                hasGuardAttackEffect: true);
+                hasGuardAttackEffect: true,
+                currentStamina: 5f,
+                guardStrength: 10f,
+                armorBreakValue: 100f);
 
             HitReaction reaction = HitReactionLogic.Determine(
                 hasSuperArmor: false,
@@ -390,12 +404,13 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(70, hp);
         }
 
-        // ===== DamageReduction + Guard Reduction 併用 =====
+        // ===== ActionEffect.DamageReduction 単体検証 =====
 
         [Test]
-        public void FullFlow_GuardReduction_PlusActionEffectReduction()
+        public void FullFlow_ActionEffectDamageReduction_Applied()
         {
-            // ガード成功（70%軽減） + ActionEffect DamageReduction（50%軽減）
+            // 新仕様: ガード軽減基本値は廃止。ガード軽減はGuardStats属性別カットに一本化。
+            // ここではActionEffect.DamageReductionのみ単体で動作することを検証。
             ActionEffect[] effects = new ActionEffect[]
             {
                 new ActionEffect
@@ -410,27 +425,11 @@ namespace Game.Tests.EditMode
             ActionEffectProcessor.EffectState state =
                 ActionEffectProcessor.Evaluate(effects, 0.5f);
 
-            // ガード判定
-            GuardResult guardResult = GuardJudgmentLogic.Judge(
-                isGuarding: true,
-                guardTimeSinceStart: 0.5f,
-                guardStrength: 100f,
-                attackPower: 50f,
-                attackFeature: AttackFeature.None,
-                guardDirection: GuardDirection.Front,
-                isAttackFromFront: true,
-                hasGuardAttackEffect: false);
-
-            // ダメージ計算: 100 * (1-0.7) * (1-0.5) = 100 * 0.3 * 0.5 = 15
             int rawDamage = 100;
-            float guardReduction = GuardJudgmentLogic.GetDamageReduction(guardResult);
-            int afterGuard = UnityEngine.Mathf.FloorToInt(rawDamage * (1f - guardReduction));
-            int finalDamage = UnityEngine.Mathf.FloorToInt(afterGuard * (1f - state.damageReduction));
+            int finalDamage = UnityEngine.Mathf.FloorToInt(rawDamage * (1f - state.damageReduction));
 
-            Assert.AreEqual(GuardResult.Guarded, guardResult);
-            Assert.AreEqual(0.7f, guardReduction, 0.001f);
-            Assert.AreEqual(30, afterGuard, "ガード後: 100 * 0.3 = 30");
-            Assert.AreEqual(15, finalDamage, "DamageReduction後: 30 * 0.5 = 15");
+            Assert.AreEqual(0.5f, state.damageReduction, 0.001f);
+            Assert.AreEqual(50, finalDamage, "DamageReduction50%: 100 * 0.5 = 50");
         }
 
         // ===== ヒットスタン連鎖テスト =====
@@ -561,12 +560,14 @@ namespace Game.Tests.EditMode
             GuardResult guardResult = GuardJudgmentLogic.Judge(
                 isGuarding: true,
                 guardTimeSinceStart: 0.5f,
-                guardStrength: 100f,
-                attackPower: 50f,
+                inContinuousJustGuardWindow: false,
                 attackFeature: AttackFeature.None,
                 guardDirection: GuardDirection.Front,
                 isAttackFromFront: true,
-                hasGuardAttackEffect: false);
+                hasGuardAttackEffect: false,
+                currentStamina: 100f,
+                guardStrength: 100f,
+                armorBreakValue: 50f);
 
             // DamageReceiverでの条件: NoGuard or GuardBreak 時のみボーナス適用
             bool shouldApplyBonus = guardResult == GuardResult.NoGuard

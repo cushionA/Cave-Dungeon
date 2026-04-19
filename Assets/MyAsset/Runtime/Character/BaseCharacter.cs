@@ -20,6 +20,7 @@ namespace Game.Runtime
 
         protected Rigidbody2D _rb;
         protected BoxCollider2D _collider;
+        protected DamageReceiver _damageReceiver;
 
         private int _objectHash;
         private bool _isGrounded;
@@ -27,6 +28,13 @@ namespace Game.Runtime
 
         public int ObjectHash => _objectHash;
         public bool IsGrounded => _isGrounded;
+        /// <summary>
+        /// DamageReceiver を IDamageable として外部公開。
+        /// SoA登録は <see cref="GameManager.Data"/>.SetManaged 経由で行われるため
+        /// 通常のダメージパイプラインでは GameManager.Data.GetManaged(hash) を使うこと。
+        /// このプロパティは GetComponent を避けてキャラ内部から直接参照したい場合の補助。
+        /// </summary>
+        public IDamageable Damageable => _damageReceiver;
         public CharacterInfo CharacterInfoRef => _characterInfo;
         public bool IsAlive
         {
@@ -54,6 +62,7 @@ namespace Game.Runtime
         {
             _rb = GetComponent<Rigidbody2D>();
             _collider = GetComponent<BoxCollider2D>();
+            _damageReceiver = GetComponent<DamageReceiver>();
             _objectHash = gameObject.GetInstanceID();
 
             // 物理設定
@@ -87,11 +96,16 @@ namespace Game.Runtime
             // 名前→ハッシュのマッピングを登録（DialogueSystem等の外部連携用）
             CharacterRegistry.RegisterName(_characterInfo.name, _objectHash);
 
-            // アーマー回復パラメータをDamageReceiverに設定
-            DamageReceiver receiver = GetComponent<DamageReceiver>();
-            if (receiver != null)
+            // DamageReceiverをSoAに登録し、アーマー回復パラメータを設定
+            // Awake時点でDamageReceiverが未Addだった場合に備え、null ならここで再取得
+            if (_damageReceiver == null)
             {
-                receiver.SetArmorRecoveryParams(
+                _damageReceiver = GetComponent<DamageReceiver>();
+            }
+            if (_damageReceiver != null)
+            {
+                GameManager.Data.SetManaged(_objectHash, _damageReceiver);
+                _damageReceiver.SetArmorRecoveryParams(
                     _characterInfo.maxArmor,
                     _characterInfo.armorRecoveryRate,
                     _characterInfo.armorRecoveryDelay);
@@ -142,10 +156,16 @@ namespace Game.Runtime
 
             CharacterRegistry.RegisterName(_characterInfo.name, _objectHash);
 
-            DamageReceiver receiver = GetComponent<DamageReceiver>();
-            if (receiver != null)
+            if (_damageReceiver == null)
             {
-                receiver.SetArmorRecoveryParams(
+                _damageReceiver = GetComponent<DamageReceiver>();
+            }
+            if (_damageReceiver != null)
+            {
+                // 前キャラの連続JG窓・ガード経過時間・行動特殊効果が残らないようクリア
+                _damageReceiver.ResetInternalState();
+                GameManager.Data.SetManaged(_objectHash, _damageReceiver);
+                _damageReceiver.SetArmorRecoveryParams(
                     _characterInfo.maxArmor,
                     _characterInfo.armorRecoveryRate,
                     _characterInfo.armorRecoveryDelay);

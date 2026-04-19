@@ -152,7 +152,8 @@ namespace Game.Tests.EditMode
             MagicDefinition strongMagic = _attackMagic;
             strongMagic.motionValue = 10f;
 
-            ProjectileHitProcessor.ProcessHit(p, _targetHash, _data, strongMagic);
+            SoABackedMockDamageable receiver = new SoABackedMockDamageable(_data, _targetHash);
+            ProjectileHitProcessor.ProcessHit(p, receiver, _data, strongMagic);
 
             ref CharacterVitals postTarget = ref _data.GetVitals(_targetHash);
             Assert.GreaterOrEqual(postTarget.currentHp, 0);
@@ -182,8 +183,9 @@ namespace Game.Tests.EditMode
             Projectile p = _pool.Get();
             p.Initialize(invalidCaster, _attackMagic.bulletProfile, Vector2.zero, Vector2.right);
 
+            SoABackedMockDamageable receiver = new SoABackedMockDamageable(_data, _targetHash);
             ProjectileHitProcessor.HitResult result =
-                ProjectileHitProcessor.ProcessHit(p, _targetHash, _data, _attackMagic);
+                ProjectileHitProcessor.ProcessHit(p, receiver, _data, _attackMagic);
 
             Assert.AreEqual(0, result.damage);
             // ターゲットのHPが変わっていないことを検証

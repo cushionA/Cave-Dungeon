@@ -139,20 +139,6 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(HitReaction.None, result);
         }
 
-        [Test]
-        public void HitReaction_EnhancedGuard_ReturnsNone()
-        {
-            HitReaction result = HitReactionLogic.Determine(
-                hasSuperArmor: false,
-                hasKnockbackImmunity: false,
-                totalArmorBefore: 0f,
-                hasKnockbackForce: true,
-                guardResult: GuardResult.EnhancedGuard,
-                currentState: ActState.Guarding);
-
-            Assert.AreEqual(HitReaction.None, result);
-        }
-
         // ===== ヒットスタン中の吹き飛ばし =====
 
         [Test]

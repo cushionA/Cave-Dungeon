@@ -53,20 +53,30 @@ namespace Game.Runtime
                 return;
             }
 
-            DamageReceiver receiver = other.GetComponent<DamageReceiver>();
+            // アーキテクチャ準拠: 毎衝突でのGetComponentを避け、
+            // GameObject.GetInstanceID → GameManager.Data.GetManaged で IDamageable 逆引き。
+            int targetHash = other.gameObject.GetInstanceID();
+
+            // 自分自身にはダメージを与えない
+            if (targetHash == _ownerHash)
+            {
+                return;
+            }
+
+            if (GameManager.Data == null)
+            {
+                return;
+            }
+
+            // 非キャラクター(地形等)との接触は _hitTargets 登録前にスキップして汚染を防ぐ
+            IDamageable receiver = GameManager.Data.GetManaged(targetHash);
             if (receiver == null)
             {
                 return;
             }
 
-            // 自分自身にはダメージを与えない
-            if (receiver.ObjectHash == _ownerHash)
-            {
-                return;
-            }
-
-            // 同一攻撃で同じターゲットに多重ヒットしない
-            if (!_hitTargets.Add(receiver.ObjectHash))
+            // 同一攻撃で同じターゲットに多重ヒットしない (キャラ衝突のみ登録)
+            if (!_hitTargets.Add(targetHash))
             {
                 return;
             }
@@ -74,7 +84,7 @@ namespace Game.Runtime
             // DamageData生成
             ElementalStatus attackStats = CombatDataHelper.GetAttackStats(GameManager.Data, _ownerHash);
             DamageData data = CombatDataHelper.BuildDamageData(
-                _ownerHash, receiver.ObjectHash, _currentMotion, attackStats);
+                _ownerHash, targetHash, _currentMotion, attackStats);
 
             receiver.ReceiveDamage(data);
         }

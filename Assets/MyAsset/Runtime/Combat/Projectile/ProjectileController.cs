@@ -97,27 +97,34 @@ namespace Game.Runtime
                 return;
             }
 
-            DamageReceiver receiver = other.GetComponent<DamageReceiver>();
+            // アーキテクチャ準拠: 毎衝突でのGetComponentを避け、GameObject.GetInstanceID から
+            // SoA逆引き(GameManager.Data.GetManaged)で IDamageable を取得する。
+            int targetHash = other.gameObject.GetInstanceID();
+
+            // 自分自身にはダメージを与えない
+            if (targetHash == _coreProjectile.CasterHash)
+            {
+                return;
+            }
+
+            // 非キャラクター(地形等)との接触は _hitTargets 登録前にスキップして汚染を防ぐ
+            IDamageable receiver = GameManager.Data != null
+                ? GameManager.Data.GetManaged(targetHash)
+                : null;
             if (receiver == null)
             {
                 return;
             }
 
-            // 自分自身にはダメージを与えない
-            if (receiver.ObjectHash == _coreProjectile.CasterHash)
+            // 同一飛翔体で同じターゲットに多重ヒットしない (キャラ衝突のみ登録)
+            if (!_hitTargets.Add(targetHash))
             {
                 return;
             }
 
-            // 同一飛翔体で同じターゲットに多重ヒットしない
-            if (!_hitTargets.Add(receiver.ObjectHash))
-            {
-                return;
-            }
-
-            // Core経由でダメージ処理
+            // Core経由でダメージ処理(IDamageable経由でガード/無敵/HitReaction/イベント発火を共通化)
             ProjectileHitProcessor.ProcessHit(
-                _coreProjectile, receiver.ObjectHash,
+                _coreProjectile, receiver,
                 GameManager.Data, _magic, GameManager.Events);
 
             // 爆発処理

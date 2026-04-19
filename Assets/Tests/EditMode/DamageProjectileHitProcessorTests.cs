@@ -5,7 +5,8 @@ using Game.Core;
 namespace Game.Tests.EditMode
 {
     /// <summary>
-    /// 設計書04: 飛翔体ダメージ(ProjectileHitProcessor) + HitboxLogic二重ヒット防止
+    /// 飛翔体ダメージ(ProjectileHitProcessor) + HitboxLogic二重ヒット防止。
+    /// 新仕様: ProcessHit(Projectile, IDamageable, ...) で IDamageable 経由。
     /// </summary>
     public class DamageProjectileHitProcessorTests
     {
@@ -71,10 +72,10 @@ namespace Game.Tests.EditMode
             return p;
         }
 
-        // --- ProjectileHitProcessor: Attack ---
+        // --- ProjectileHitProcessor: Attack (IDamageable経由) ---
 
         [Test]
-        public void ProjectileHitProcessor_AttackMagic_DealsDamageAndReducesHp()
+        public void ProjectileHitProcessor_AttackMagic_DealsDamageViaIDamageable()
         {
             Projectile projectile = CreateProjectile(_casterHash);
             MagicDefinition magic = new MagicDefinition
@@ -83,9 +84,10 @@ namespace Game.Tests.EditMode
                 motionValue = 1.0f,
                 attackElement = Element.Fire,
             };
+            SoABackedMockDamageable receiver = new SoABackedMockDamageable(_data, _targetHash);
 
             ProjectileHitProcessor.HitResult result =
-                ProjectileHitProcessor.ProcessHit(projectile, _targetHash, _data, magic);
+                ProjectileHitProcessor.ProcessHit(projectile, receiver, _data, magic);
 
             Assert.Greater(result.damage, 0, "飛翔体Attack魔法はダメージを与えるべき");
             Assert.AreEqual(MagicType.Attack, result.magicType);
@@ -95,9 +97,29 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
+        public void ProjectileHitProcessor_AttackMagic_PassesIsProjectileTrue()
+        {
+            // IDamageable.ReceiveDamage が受け取る DamageData.isProjectile が true であることを検証
+            Projectile projectile = CreateProjectile(_casterHash);
+            MagicDefinition magic = new MagicDefinition
+            {
+                magicType = MagicType.Attack,
+                motionValue = 1.0f,
+                attackElement = Element.Fire,
+            };
+            SoABackedMockDamageable receiver = new SoABackedMockDamageable(_data, _targetHash);
+
+            ProjectileHitProcessor.ProcessHit(projectile, receiver, _data, magic);
+
+            Assert.IsTrue(receiver.LastReceived.isProjectile,
+                "DamageData.isProjectile=true がDamageReceiverに伝わる");
+            Assert.AreEqual(_casterHash, receiver.LastReceived.attackerHash);
+            Assert.AreEqual(_targetHash, receiver.LastReceived.defenderHash);
+        }
+
+        [Test]
         public void ProjectileHitProcessor_AttackMagic_KillsTarget_WhenHpReachesZero()
         {
-            // 低HPターゲットを設定
             ref CharacterVitals v = ref _data.GetVitals(_targetHash);
             v.currentHp = 1;
 
@@ -108,13 +130,52 @@ namespace Game.Tests.EditMode
                 motionValue = 2.0f,
                 attackElement = Element.Fire,
             };
+            SoABackedMockDamageable receiver = new SoABackedMockDamageable(_data, _targetHash);
 
             ProjectileHitProcessor.HitResult result =
-                ProjectileHitProcessor.ProcessHit(projectile, _targetHash, _data, magic);
+                ProjectileHitProcessor.ProcessHit(projectile, receiver, _data, magic);
 
             Assert.IsTrue(result.isKill, "HP1のターゲットにダメージ→キル判定");
             ref CharacterVitals after = ref _data.GetVitals(_targetHash);
             Assert.AreEqual(0, after.currentHp, "HPは0にクランプされるべき");
+        }
+
+        [Test]
+        public void ProjectileHitProcessor_NullReceiver_ReturnsZeroDamage()
+        {
+            Projectile projectile = CreateProjectile(_casterHash);
+            MagicDefinition magic = new MagicDefinition
+            {
+                magicType = MagicType.Attack, motionValue = 1.0f
+            };
+
+            ProjectileHitProcessor.HitResult result =
+                ProjectileHitProcessor.ProcessHit(projectile, null, _data, magic);
+
+            Assert.AreEqual(0, result.damage, "receiver=null時はダメージ0");
+        }
+
+        [Test]
+        public void ProjectileHitProcessor_ReturnValue_IsCopiedFromDamageResult()
+        {
+            // Stubで返り値を制御し、ProjectileHitProcessorがDamageResultの totalDamage/isKill を転写することを検証
+            Projectile projectile = CreateProjectile(_casterHash);
+            MagicDefinition magic = new MagicDefinition
+            {
+                magicType = MagicType.Attack, motionValue = 1.0f
+            };
+            StubDamageable stub = new StubDamageable
+            {
+                ObjectHash = _targetHash,
+                ReturnValue = new DamageResult { totalDamage = 42, isKill = true }
+            };
+
+            ProjectileHitProcessor.HitResult result =
+                ProjectileHitProcessor.ProcessHit(projectile, stub, _data, magic);
+
+            Assert.AreEqual(42, result.damage);
+            Assert.IsTrue(result.isKill);
+            Assert.AreEqual(1, stub.ReceiveCount, "ReceiveDamageが1回呼ばれる");
         }
 
         // --- ProjectileHitProcessor: Recover ---
@@ -131,9 +192,11 @@ namespace Game.Tests.EditMode
                 magicType = MagicType.Recover,
                 healAmount = 30,
             };
+            // Recover は ObjectHash だけ使用。IDamageable の実装は何でもOK
+            StubDamageable stub = new StubDamageable { ObjectHash = _targetHash };
 
             ProjectileHitProcessor.HitResult result =
-                ProjectileHitProcessor.ProcessHit(projectile, _targetHash, _data, magic);
+                ProjectileHitProcessor.ProcessHit(projectile, stub, _data, magic);
 
             Assert.AreEqual(30, result.healAmount);
             ref CharacterVitals after = ref _data.GetVitals(_targetHash);
@@ -152,8 +215,9 @@ namespace Game.Tests.EditMode
                 magicType = MagicType.Recover,
                 healAmount = 50,
             };
+            StubDamageable stub = new StubDamageable { ObjectHash = _targetHash };
 
-            ProjectileHitProcessor.ProcessHit(projectile, _targetHash, _data, magic);
+            ProjectileHitProcessor.ProcessHit(projectile, stub, _data, magic);
 
             ref CharacterVitals after = ref _data.GetVitals(_targetHash);
             Assert.AreEqual(100, after.currentHp, "maxHPを超えない");
@@ -169,9 +233,10 @@ namespace Game.Tests.EditMode
             {
                 magicType = MagicType.Attack, motionValue = 1.0f,
             };
+            SoABackedMockDamageable receiver = new SoABackedMockDamageable(_data, _targetHash);
 
             ProjectileHitProcessor.HitResult result =
-                ProjectileHitProcessor.ProcessHit(projectile, _targetHash, _data, magic);
+                ProjectileHitProcessor.ProcessHit(projectile, receiver, _data, magic);
 
             Assert.AreEqual(0, result.damage, "無効なキャスターハッシュではダメージ0");
         }
@@ -184,9 +249,10 @@ namespace Game.Tests.EditMode
             {
                 magicType = MagicType.Attack, motionValue = 1.0f,
             };
+            StubDamageable stub = new StubDamageable { ObjectHash = 9999 };
 
             ProjectileHitProcessor.HitResult result =
-                ProjectileHitProcessor.ProcessHit(projectile, 9999, _data, magic);
+                ProjectileHitProcessor.ProcessHit(projectile, stub, _data, magic);
 
             Assert.AreEqual(0, result.damage, "無効なターゲットハッシュではダメージ0");
         }

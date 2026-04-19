@@ -51,16 +51,6 @@ namespace Game.Core
                         playBreakEffect = false,
                     };
 
-                case GuardResult.EnhancedGuard:
-                    return new GuardFeedbackData
-                    {
-                        result = GuardResult.EnhancedGuard,
-                        hitStopDuration = k_JustGuardHitStop,
-                        cameraShakeIntensity = k_JustGuardShake,
-                        playGuardEffect = true,
-                        playBreakEffect = false,
-                    };
-
                 case GuardResult.GuardBreak:
                     return new GuardFeedbackData
                     {

@@ -77,15 +77,25 @@ namespace Game.Runtime
                 return;
             }
 
-            DamageReceiver receiver = other.GetComponent<DamageReceiver>();
-            if (receiver == null)
+            // アーキテクチャ準拠: 毎衝突でのGetComponentを避け、
+            // GameObject.GetInstanceID → GameManager.Data.GetManaged で IDamageable 逆引き。
+            int targetHash = other.gameObject.GetInstanceID();
+
+            // 自分自身にはダメージを与えない
+            if (targetHash == _ownerHash)
             {
                 return;
             }
 
-            // 自分自身にはダメージを与えない
-            if (receiver.ObjectHash == _ownerHash)
+            if (GameManager.Data == null)
             {
+                return;
+            }
+
+            IDamageable receiver = GameManager.Data.GetManaged(targetHash);
+            if (receiver == null)
+            {
+                // 非キャラクター(地形等)との接触はスキップ
                 return;
             }
 
@@ -96,10 +106,10 @@ namespace Game.Runtime
             }
 
             // 味方同士はダメージを与えない（陣営チェック）
-            if (GameManager.IsCharacterValid(_ownerHash) && GameManager.IsCharacterValid(receiver.ObjectHash))
+            if (GameManager.IsCharacterValid(_ownerHash) && GameManager.IsCharacterValid(targetHash))
             {
                 CharacterBelong ownerBelong = GameManager.Data.GetFlags(_ownerHash).Belong;
-                CharacterBelong targetBelong = GameManager.Data.GetFlags(receiver.ObjectHash).Belong;
+                CharacterBelong targetBelong = GameManager.Data.GetFlags(targetHash).Belong;
                 if (ownerBelong == targetBelong)
                 {
                     return;
@@ -107,13 +117,13 @@ namespace Game.Runtime
             }
 
             // HitboxLogicでヒット登録（重複防止+上限管理）
-            if (!_logic.TryRegisterHit(receiver.ObjectHash))
+            if (!_logic.TryRegisterHit(targetHash))
             {
                 return;
             }
 
             // DamageData生成
-            DamageData data = BuildDamageData(receiver.ObjectHash);
+            DamageData data = BuildDamageData(targetHash);
 
             receiver.ReceiveDamage(data);
 

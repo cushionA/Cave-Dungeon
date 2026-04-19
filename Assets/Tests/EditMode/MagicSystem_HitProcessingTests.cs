@@ -24,8 +24,9 @@ namespace Game.Tests.EditMode
                 attackElement = Element.Fire
             };
 
+            SoABackedMockDamageable receiver = new SoABackedMockDamageable(data, 2);
             ProjectileHitProcessor.HitResult result =
-                ProjectileHitProcessor.ProcessHit(p, 2, data, magic);
+                ProjectileHitProcessor.ProcessHit(p, receiver, data, magic);
 
             Assert.Greater(result.damage, 0);
             ref CharacterVitals v = ref data.GetVitals(2);
@@ -49,8 +50,9 @@ namespace Game.Tests.EditMode
                 healAmount = 30
             };
 
+            StubDamageable stub = new StubDamageable { ObjectHash = 2 };
             ProjectileHitProcessor.HitResult result =
-                ProjectileHitProcessor.ProcessHit(p, 2, data, magic);
+                ProjectileHitProcessor.ProcessHit(p, stub, data, magic);
 
             Assert.AreEqual(30, result.healAmount);
             ref CharacterVitals v = ref data.GetVitals(2);
@@ -74,7 +76,8 @@ namespace Game.Tests.EditMode
                 healAmount = 50
             };
 
-            ProjectileHitProcessor.ProcessHit(p, 2, data, magic);
+            StubDamageable stub = new StubDamageable { ObjectHash = 2 };
+            ProjectileHitProcessor.ProcessHit(p, stub, data, magic);
 
             ref CharacterVitals v = ref data.GetVitals(2);
             Assert.AreEqual(100, v.currentHp);
@@ -99,7 +102,8 @@ namespace Game.Tests.EditMode
                 attackElement = Element.Fire
             };
 
-            ProjectileHitProcessor.ProcessHit(p, 2, data, magic);
+            SoABackedMockDamageable receiver = new SoABackedMockDamageable(data, 2);
+            ProjectileHitProcessor.ProcessHit(p, receiver, data, magic);
 
             Assert.AreEqual(1, p.RemainingHits);
             Assert.IsTrue(p.IsAlive);

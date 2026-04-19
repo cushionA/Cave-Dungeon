@@ -5,7 +5,7 @@ namespace Game.Runtime
 {
     /// <summary>
     /// ダメージ受付MonoBehaviour。IDamageable実装。
-    /// ActionEffectProcessor → ガード判定 → DamageCalculator → HpArmorLogic → SoA更新 → Events発火。
+    /// ActionEffectProcessor → ガード判定(スタミナ削り+連続JG窓) → DamageCalculator(属性別カット) → HpArmorLogic → SoA更新 → Events発火。
     /// </summary>
     public class DamageReceiver : MonoBehaviour, IDamageable
     {
@@ -28,6 +28,10 @@ namespace Game.Runtime
         private float _armorRecoveryDelay;
         private float _armorRecoveryRate;
         private float _maxArmor;
+
+        // 連続ジャストガード窓: 直前にJustGuardが成立した場合、
+        // k_ContinuousJustGuardWindow 秒以内の次ガードは即ジャスガ扱いになる。
+        private float _continuousJustGuardExpireTime = -1f;
 
         // 状況ボーナス設定（外部から注入可能）
         private SituationalBonusConfig _bonusConfig = SituationalBonusConfig.Default;
@@ -79,6 +83,21 @@ namespace Game.Runtime
             _maxArmor = maxArmor;
             _armorRecoveryRate = recoveryRate;
             _armorRecoveryDelay = recoveryDelay;
+        }
+
+        /// <summary>
+        /// プール再利用時に呼ばれる内部状態リセット。
+        /// ガード経過時間/連続JG窓/行動特殊効果/アーマー回復タイマーなど
+        /// 前キャラの残存状態が新キャラに漏れ込まないようクリアする。
+        /// </summary>
+        public void ResetInternalState()
+        {
+            _isGuarding = false;
+            _guardTimeSinceStart = 0f;
+            _currentActionEffects = null;
+            _actionElapsedTime = 0f;
+            _armorRecoveryTimer = 0f;
+            _continuousJustGuardExpireTime = -1f;
         }
 
         /// <summary>
@@ -164,12 +183,26 @@ namespace Game.Runtime
             ref CharacterVitals vitals = ref GameManager.Data.GetVitals(hash);
             ref CombatStats combat = ref GameManager.Data.GetCombatStats(hash);
 
-            // Step 2: ガード判定
+            // Step 2: ガード判定（連続JG窓・スタミナ削り判定を含む）
             bool isAttackFromFront = IsAttackFromFront(data);
-            GuardResult guardResult = EvaluateGuard(data, combat, isAttackFromFront, effectState);
+            bool inContinuousJustGuardWindow = IsInContinuousJustGuardWindow();
+            GuardResult guardResult = GuardJudgmentLogic.Judge(
+                _isGuarding,
+                _guardTimeSinceStart,
+                inContinuousJustGuardWindow,
+                data.feature,
+                combat.guardStats.guardDirection,
+                isAttackFromFront,
+                effectState.hasGuardAttackEffect,
+                vitals.currentStamina,
+                combat.guardStats.guardStrength,
+                data.armorBreakValue);
 
-            // Step 3: ジャストガード回復
+            // Step 3: ジャストガード回復 + 連続JG窓更新
             ApplyJustGuardRecovery(guardResult, ref vitals);
+
+            // Step 3.5: 通常ガード/ブレイクのスタミナ削りを適用
+            ApplyGuardStaminaDrain(data, guardResult, combat, ref vitals);
 
             // Step 4: ダメージ計算
             int reducedDamage = CalculateDamage(
@@ -220,29 +253,49 @@ namespace Game.Runtime
             };
         }
 
-        private GuardResult EvaluateGuard(
-            DamageData data, CombatStats combat,
-            bool isAttackFromFront, ActionEffectProcessor.EffectState effectState)
+        /// <summary>
+        /// 直前のJustGuard成立から連続ジャスガ窓内かを判定する。
+        /// 初期値 -1f と ResetInternalState のリセットにより、
+        /// JustGuard未成立時は常に Time.time (≥0) より小さく false を返す。
+        /// </summary>
+        private bool IsInContinuousJustGuardWindow()
         {
-            return GuardJudgmentLogic.Judge(
-                _isGuarding,
-                _guardTimeSinceStart,
-                combat.guardStats.guardStrength,
-                data.armorBreakValue,
-                data.feature,
-                combat.guardStats.guardDirection,
-                isAttackFromFront,
-                effectState.hasGuardAttackEffect);
+            return Time.time < _continuousJustGuardExpireTime;
         }
 
-        private static void ApplyJustGuardRecovery(GuardResult guardResult, ref CharacterVitals vitals)
+        private void ApplyJustGuardRecovery(GuardResult guardResult, ref CharacterVitals vitals)
         {
             if (guardResult == GuardResult.JustGuard)
             {
                 GuardJudgmentLogic.ApplyJustGuardRecovery(
                     ref vitals.currentStamina, vitals.maxStamina,
                     ref vitals.currentArmor, vitals.maxArmor);
+
+                // JustGuard成立直後は次の1ヒットも連続ジャスガ窓内とする
+                _continuousJustGuardExpireTime = Time.time + GuardJudgmentLogic.k_ContinuousJustGuardWindow;
             }
+        }
+
+        /// <summary>
+        /// 通常ガード/ブレイク時のスタミナ削りを適用する。JustGuard/NoGuard時は削らない。
+        /// 削り量 = max(0, armorBreakValue - guardStrength)。スタミナは0にクランプ。
+        /// </summary>
+        private static void ApplyGuardStaminaDrain(
+            DamageData data, GuardResult guardResult, CombatStats combat, ref CharacterVitals vitals)
+        {
+            if (guardResult != GuardResult.Guarded && guardResult != GuardResult.GuardBreak)
+            {
+                return;
+            }
+
+            float drain = GuardJudgmentLogic.CalculateStaminaDrain(
+                data.armorBreakValue, combat.guardStats.guardStrength);
+            if (drain <= 0f)
+            {
+                return;
+            }
+
+            vitals.currentStamina = Mathf.Max(0f, vitals.currentStamina - drain);
         }
 
         private int CalculateDamage(
@@ -251,13 +304,25 @@ namespace Game.Runtime
             ActionEffectProcessor.EffectState effectState,
             out SituationalBonus situationalBonus)
         {
-            float guardReduction = GuardJudgmentLogic.GetDamageReduction(guardResult);
-            int rawDamage = DamageCalculator.CalculateTotalDamage(
-                data.damage, data.motionValue, combat.defense, Element.None);
+            situationalBonus = SituationalBonus.None;
+
+            // JustGuardは軽減率100%相当（ダメージ完全0）
+            if (guardResult == GuardResult.JustGuard)
+            {
+                return 0;
+            }
+
+            bool guardSucceeded = GuardJudgmentLogic.IsGuardSucceeded(guardResult);
+
+            // 属性別カット率はガード成功時のみ適用
+            int rawDamage = DamageCalculator.CalculateTotalDamageWithElementalCut(
+                data.damage, data.motionValue, combat.defense,
+                Element.None,
+                combat.guardStats,
+                applyCuts: guardSucceeded);
 
             // 状況ダメージボーナス（ガード成功時は適用しない）
-            situationalBonus = SituationalBonus.None;
-            if (guardResult == GuardResult.NoGuard || guardResult == GuardResult.GuardBreak)
+            if (!guardSucceeded)
             {
                 bool isFromBehind = !isAttackFromFront;
                 bool isTargetAttacking = SituationalBonusLogic.IsTargetAttacking(currentActState);
@@ -273,10 +338,8 @@ namespace Game.Runtime
                 }
             }
 
-            // ガード軽減適用
-            int reducedDamage = Mathf.FloorToInt(rawDamage * (1f - guardReduction));
-
             // ActionEffect のダメージ軽減適用
+            int reducedDamage = rawDamage;
             if (effectState.damageReduction > 0f)
             {
                 reducedDamage = Mathf.FloorToInt(reducedDamage * (1f - effectState.damageReduction));
@@ -293,11 +356,18 @@ namespace Game.Runtime
             float actionArmor = effectState.actionArmorValue;
             float armorBefore = vitals.currentArmor;
 
-            // ジャストガード時はアーマー削りを justGuardResistance で軽減
+            // ジャストガード時のアーマー削り: 飛翔体は削り0固定、近接は justGuardResistance で軽減
             float effectiveArmorBreak = data.armorBreakValue;
             if (guardResult == GuardResult.JustGuard)
             {
-                effectiveArmorBreak *= (1f - data.justGuardResistance / 100f);
+                if (data.isProjectile)
+                {
+                    effectiveArmorBreak = 0f;
+                }
+                else
+                {
+                    effectiveArmorBreak *= (1f - data.justGuardResistance / 100f);
+                }
             }
 
             (int actualDamage, bool isKill, bool armorBroken) hpResult =

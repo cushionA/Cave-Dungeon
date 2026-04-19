@@ -26,6 +26,10 @@ namespace Game.Core
         private CharacterStatusEffects[] _statusEffects;
         private AnimationStateData[] _animationStates;
 
+        // Managed reference: ハッシュ→IDamageable 逆引き用。Runtime層の DamageReceiver が登録する。
+        // 飛翔体(Core層)等がガード/無敵/HitReactionを含む共通ダメージパイプラインを通すために使用。
+        private IDamageable[] _damageables;
+
         private int _count;
         private int _capacity;
         private bool _disposed;
@@ -56,6 +60,7 @@ namespace Game.Core
             _equipmentStatus = new EquipmentStatus[_capacity];
             _statusEffects = new CharacterStatusEffects[_capacity];
             _animationStates = new AnimationStateData[_capacity];
+            _damageables = new IDamageable[_capacity];
         }
 
         /// <summary>
@@ -88,6 +93,7 @@ namespace Game.Core
             _equipmentStatus[index] = equipmentStatus;
             _statusEffects[index] = statusEffects;
             _animationStates[index] = animationState;
+            _damageables[index] = null; // SetManaged で後から設定
 
             _count++;
             return index;
@@ -121,6 +127,7 @@ namespace Game.Core
                 _equipmentStatus[removeIndex] = _equipmentStatus[lastIndex];
                 _statusEffects[removeIndex] = _statusEffects[lastIndex];
                 _animationStates[removeIndex] = _animationStates[lastIndex];
+                _damageables[removeIndex] = _damageables[lastIndex];
 
                 // Update the moved element's hash mapping
                 _hashToIndex[lastHash] = removeIndex;
@@ -135,6 +142,7 @@ namespace Game.Core
             _equipmentStatus[lastIndex] = default;
             _statusEffects[lastIndex] = default;
             _animationStates[lastIndex] = default;
+            _damageables[lastIndex] = null;
 
             _hashToIndex.Remove(hash);
             _count--;
@@ -211,6 +219,35 @@ namespace Game.Core
         }
 
         /// <summary>
+        /// ハッシュに紐付いた IDamageable(DamageReceiver等)を取得する。未登録なら null を返す。
+        /// 飛翔体が被弾側の共通パイプライン(DamageReceiver.ReceiveDamage)を通すために使う。
+        /// </summary>
+        public IDamageable GetManaged(int hash)
+        {
+            ThrowIfDisposed();
+            if (!_hashToIndex.TryGetValue(hash, out int index))
+            {
+                return null;
+            }
+            return _damageables[index];
+        }
+
+        /// <summary>
+        /// ハッシュに IDamageable を登録する。BaseCharacter.Start/OnPoolAcquire から呼ばれる。
+        /// 未登録ハッシュでは何もせず false を返す (GetManaged と同じく null-safe な動作)。
+        /// </summary>
+        public bool SetManaged(int hash, IDamageable damageable)
+        {
+            ThrowIfDisposed();
+            if (!_hashToIndex.TryGetValue(hash, out int index))
+            {
+                return false;
+            }
+            _damageables[index] = damageable;
+            return true;
+        }
+
+        /// <summary>
         /// 登録中の全ハッシュを引数のリストに追加する。リストはクリアしない。
         /// アロケーション回避のため呼び出し側がリストを用意する。
         /// </summary>
@@ -250,6 +287,7 @@ namespace Game.Core
             _equipmentStatus = null;
             _statusEffects = null;
             _animationStates = null;
+            _damageables = null;
             _count = 0;
             _capacity = 0;
             _disposed = true;
@@ -276,6 +314,7 @@ namespace Game.Core
             EquipmentStatus[] newEquipmentStatus = new EquipmentStatus[newCapacity];
             CharacterStatusEffects[] newStatusEffects = new CharacterStatusEffects[newCapacity];
             AnimationStateData[] newAnimationStates = new AnimationStateData[newCapacity];
+            IDamageable[] newDamageables = new IDamageable[newCapacity];
 
             Array.Copy(_indexToHash, newIndexToHash, _count);
             Array.Copy(_vitals, newVitals, _count);
@@ -285,6 +324,7 @@ namespace Game.Core
             Array.Copy(_equipmentStatus, newEquipmentStatus, _count);
             Array.Copy(_statusEffects, newStatusEffects, _count);
             Array.Copy(_animationStates, newAnimationStates, _count);
+            Array.Copy(_damageables, newDamageables, _count);
 
             _indexToHash = newIndexToHash;
             _vitals = newVitals;
@@ -294,6 +334,7 @@ namespace Game.Core
             _equipmentStatus = newEquipmentStatus;
             _statusEffects = newStatusEffects;
             _animationStates = newAnimationStates;
+            _damageables = newDamageables;
             _capacity = newCapacity;
         }
 
