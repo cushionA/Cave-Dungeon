@@ -1,11 +1,21 @@
+using System;
 using System.Collections.Generic;
 
 namespace Game.Core
 {
     public partial class SoACharaDataDic
     {
+        private void ThrowIfDisposed()
+        {
+            if (_isDisposed)
+            {
+                throw new ObjectDisposedException(nameof(SoACharaDataDic));
+            }
+        }
+
         public ref CharacterVitals GetVitals(int hash)
         {
+            ThrowIfDisposed();
             if (!TryGetIndexByHash(hash, out int idx))
             {
                 throw new KeyNotFoundException($"Hash {hash} is not registered.");
@@ -15,6 +25,7 @@ namespace Game.Core
 
         public ref CombatStats GetCombatStats(int hash)
         {
+            ThrowIfDisposed();
             if (!TryGetIndexByHash(hash, out int idx))
             {
                 throw new KeyNotFoundException($"Hash {hash} is not registered.");
@@ -24,6 +35,7 @@ namespace Game.Core
 
         public ref CharacterFlags GetFlags(int hash)
         {
+            ThrowIfDisposed();
             if (!TryGetIndexByHash(hash, out int idx))
             {
                 throw new KeyNotFoundException($"Hash {hash} is not registered.");
@@ -33,6 +45,7 @@ namespace Game.Core
 
         public ref MoveParams GetMoveParams(int hash)
         {
+            ThrowIfDisposed();
             if (!TryGetIndexByHash(hash, out int idx))
             {
                 throw new KeyNotFoundException($"Hash {hash} is not registered.");
@@ -42,6 +55,7 @@ namespace Game.Core
 
         public ref EquipmentStatus GetEquipmentStatus(int hash)
         {
+            ThrowIfDisposed();
             if (!TryGetIndexByHash(hash, out int idx))
             {
                 throw new KeyNotFoundException($"Hash {hash} is not registered.");
@@ -51,6 +65,7 @@ namespace Game.Core
 
         public ref CharacterStatusEffects GetStatusEffects(int hash)
         {
+            ThrowIfDisposed();
             if (!TryGetIndexByHash(hash, out int idx))
             {
                 throw new KeyNotFoundException($"Hash {hash} is not registered.");
@@ -60,6 +75,7 @@ namespace Game.Core
 
         public ref AnimationStateData GetAnimationState(int hash)
         {
+            ThrowIfDisposed();
             if (!TryGetIndexByHash(hash, out int idx))
             {
                 throw new KeyNotFoundException($"Hash {hash} is not registered.");
@@ -69,11 +85,13 @@ namespace Game.Core
 
         public bool TryGetValue(int hash, out int index)
         {
+            ThrowIfDisposed();
             return TryGetIndexByHash(hash, out index);
         }
 
         public void GetAllHashes(List<int> output)
         {
+            ThrowIfDisposed();
             for (int i = 0; i < _count; i++)
             {
                 output.Add(_hashCodes[i]);
@@ -82,6 +100,7 @@ namespace Game.Core
 
         public ManagedCharacter GetManaged(int hash)
         {
+            ThrowIfDisposed();
             if (TryGetIndexByHash(hash, out int idx))
             {
                 return GetManagedCharacterByIndex(idx);
@@ -91,6 +110,7 @@ namespace Game.Core
 
         public bool TryGetManaged(int hash, out ManagedCharacter managed)
         {
+            ThrowIfDisposed();
             return TryGetManagedCharacterByHash(hash, out managed);
         }
 
@@ -99,12 +119,14 @@ namespace Game.Core
             EquipmentStatus equipmentStatus = default, CharacterStatusEffects statusEffects = default,
             AnimationStateData animationState = default, ManagedCharacter managed = null)
         {
+            ThrowIfDisposed();
             return AddByHash(hash, vitals, combatStats, flags, moveParams,
                 equipmentStatus, statusEffects, animationState, managed);
         }
 
         public void Remove(int hash)
         {
+            ThrowIfDisposed();
             if (!RemoveByHash(hash))
             {
                 throw new KeyNotFoundException($"Hash {hash} is not registered.");

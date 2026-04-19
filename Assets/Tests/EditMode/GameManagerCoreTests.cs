@@ -91,9 +91,8 @@ namespace Game.Tests.EditMode
 
             // Assert
             Assert.IsFalse(_core.IsInitialized);
-            // Dispose 後の Data 参照は無効化されており、アクセスすると例外が発生する
-            // （自動生成コンテナは ObjectDisposedException ではなく IndexOutOfRange/NullRef を投げる）
-            Assert.Catch<System.Exception>(() =>
+            // Compat 経由の Get 系は Dispose 後 ObjectDisposedException を投げる
+            Assert.Throws<System.ObjectDisposedException>(() =>
             {
                 _core.Data.GetVitals(1);
             });

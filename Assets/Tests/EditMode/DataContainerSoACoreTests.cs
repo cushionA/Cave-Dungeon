@@ -182,7 +182,7 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
-        public void SoACharaDataDic_Dispose_DoesNotThrowAndMarksDisposed()
+        public void SoACharaDataDic_Dispose_BlocksSubsequentAccess()
         {
             // Arrange
             SoACharaDataDic dic = new SoACharaDataDic(4);
@@ -190,11 +190,15 @@ namespace Game.Tests.EditMode
             dic.Add(2, default, default, default, default);
             Assert.AreEqual(2, dic.Count);
 
-            // Act & Assert: Dispose は例外を投げない
+            // Act
             Assert.DoesNotThrow(() => dic.Dispose());
 
-            // 二重 Dispose も許容される
+            // Assert: 二重 Dispose は許容、Compat 経由のアクセスは ObjectDisposedException
             Assert.DoesNotThrow(() => dic.Dispose());
+            Assert.Throws<System.ObjectDisposedException>(() =>
+            {
+                dic.TryGetValue(1, out int _);
+            });
         }
 
         [Test]

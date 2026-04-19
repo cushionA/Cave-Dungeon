@@ -11,6 +11,13 @@ namespace Game.Runtime
     [DefaultExecutionOrder(-100)]
     public class GameManager : MonoBehaviour
     {
+        /// <summary>
+        /// SoAコンテナ初期容量。同時登録キャラクター数（プレイヤー+仲間+敵+召喚+混乱+その他）を包含する。
+        /// 自動生成コンテナは固定容量で超過時に InvalidOperationException を投げるため、
+        /// ボス戦 + 弾幕 + 召喚獣の最大同時存在数を考慮して余裕を持たせる。
+        /// </summary>
+        private const int k_InitialContainerCapacity = 256;
+
         private GameManagerCore _core;
 
         private ProjectileManager _projectileManager;
@@ -45,7 +52,7 @@ namespace Game.Runtime
             DontDestroyOnLoad(gameObject);
 
             _core = new GameManagerCore();
-            _core.Initialize(64);
+            _core.Initialize(k_InitialContainerCapacity);
 
             _projectileManager = GetComponentInChildren<ProjectileManager>();
             if (_projectileManager != null)
@@ -69,7 +76,12 @@ namespace Game.Runtime
         /// <summary>
         /// CharacterInfoからSoA構造体を生成してキャラクター登録する。
         /// BaseCharacter 参照を持たない呼び出し元（テスト等）向けのオーバーロード。
+        /// このオーバーロードで登録したキャラは ManagedCharacter を持たないため、
+        /// GetManaged(hash) が null を返す。飛翔体/ヒット判定で .Damageable が nullとなり
+        /// ダメージ処理がスキップされる点に注意。ゲームコードでは必ず
+        /// <see cref="RegisterCharacter(BaseCharacter, CharacterInfo)"/> を使用すること。
         /// </summary>
+        [System.Obsolete("テスト専用。ゲームコードは RegisterCharacter(BaseCharacter, CharacterInfo) を使用してください。")]
         public int RegisterCharacter(int hash, CharacterInfo info)
         {
             return RegisterCharacterInternal(hash, info, null);
