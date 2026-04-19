@@ -89,6 +89,8 @@ namespace Game.Core
         /// <summary>
         /// 飛翔体の DamageData を組み立てる。isProjectile=true でDamageReceiverが
         /// JustGuard時のアーマー削り0扱いに分岐する。
+        /// TODO: MagicDefinition にノックバック/状態異常/feature/armorBreakValue が拡張された際は
+        ///       ここから伝搬する。現時点では仕様未定のため default 固定。
         /// </summary>
         private static DamageData BuildProjectileDamageData(
             int attackerHash, int defenderHash, MagicDefinition magic, SoACharaDataDic data)
@@ -100,11 +102,11 @@ namespace Game.Core
                 defenderHash = defenderHash,
                 damage = attackStats,
                 motionValue = magic.motionValue,
-                knockbackForce = default,
+                knockbackForce = default,           // TODO: magic.knockback 追加時に伝搬
                 attackElement = magic.attackElement,
-                statusEffectInfo = default,
-                feature = AttackFeature.None,
-                armorBreakValue = 0f,
+                statusEffectInfo = default,         // TODO: magic.statusEffect 追加時に伝搬
+                feature = AttackFeature.None,       // TODO: magic.feature 追加時に伝搬
+                armorBreakValue = 0f,               // 飛翔体は仕様上アーマー削りなし
                 justGuardResistance = 0f,
                 isProjectile = true
             };

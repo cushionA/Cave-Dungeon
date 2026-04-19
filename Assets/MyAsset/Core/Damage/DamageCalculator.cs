@@ -114,7 +114,8 @@ namespace Game.Core
                 float clampedCut = cut > 1f ? 1f : cut;
                 channelDmg *= (1f - clampedCut);
             }
-            return (int)channelDmg;
+            // channelDmg は非負 (baseDmg>=0, multiplier>=1, (1-cut)>=0 のため)。明示の意図でFloorToInt。
+            return UnityEngine.Mathf.FloorToInt(channelDmg);
         }
 
         /// <summary>

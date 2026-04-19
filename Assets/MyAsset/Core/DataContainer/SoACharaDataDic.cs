@@ -234,13 +234,17 @@ namespace Game.Core
 
         /// <summary>
         /// ハッシュに IDamageable を登録する。BaseCharacter.Start/OnPoolAcquire から呼ばれる。
-        /// 未登録ハッシュでは KeyNotFoundException を投げる（SoAに追加されてから呼ぶこと）。
+        /// 未登録ハッシュでは何もせず false を返す (GetManaged と同じく null-safe な動作)。
         /// </summary>
-        public void SetManaged(int hash, IDamageable damageable)
+        public bool SetManaged(int hash, IDamageable damageable)
         {
             ThrowIfDisposed();
-            int index = ResolveIndex(hash);
+            if (!_hashToIndex.TryGetValue(hash, out int index))
+            {
+                return false;
+            }
             _damageables[index] = damageable;
+            return true;
         }
 
         /// <summary>

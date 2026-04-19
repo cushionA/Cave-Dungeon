@@ -86,6 +86,21 @@ namespace Game.Runtime
         }
 
         /// <summary>
+        /// プール再利用時に呼ばれる内部状態リセット。
+        /// ガード経過時間/連続JG窓/行動特殊効果/アーマー回復タイマーなど
+        /// 前キャラの残存状態が新キャラに漏れ込まないようクリアする。
+        /// </summary>
+        public void ResetInternalState()
+        {
+            _isGuarding = false;
+            _guardTimeSinceStart = 0f;
+            _currentActionEffects = null;
+            _actionElapsedTime = 0f;
+            _armorRecoveryTimer = 0f;
+            _continuousJustGuardExpireTime = -1f;
+        }
+
+        /// <summary>
         /// 状況ダメージボーナス設定を注入する。
         /// </summary>
         public void SetBonusConfig(SituationalBonusConfig config)
@@ -240,10 +255,12 @@ namespace Game.Runtime
 
         /// <summary>
         /// 直前のJustGuard成立から連続ジャスガ窓内かを判定する。
+        /// 初期値 -1f と ResetInternalState のリセットにより、
+        /// JustGuard未成立時は常に Time.time (≥0) より小さく false を返す。
         /// </summary>
         private bool IsInContinuousJustGuardWindow()
         {
-            return _continuousJustGuardExpireTime > 0f && Time.time < _continuousJustGuardExpireTime;
+            return Time.time < _continuousJustGuardExpireTime;
         }
 
         private void ApplyJustGuardRecovery(GuardResult guardResult, ref CharacterVitals vitals)
