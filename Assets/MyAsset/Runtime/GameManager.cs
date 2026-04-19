@@ -68,8 +68,22 @@ namespace Game.Runtime
 
         /// <summary>
         /// CharacterInfoからSoA構造体を生成してキャラクター登録する。
+        /// BaseCharacter 参照を持たない呼び出し元（テスト等）向けのオーバーロード。
         /// </summary>
         public int RegisterCharacter(int hash, CharacterInfo info)
+        {
+            return RegisterCharacterInternal(hash, info, null);
+        }
+
+        /// <summary>
+        /// CharacterInfoからSoA構造体を生成してキャラクター登録する。
+        /// </summary>
+        public int RegisterCharacter(BaseCharacter chara, CharacterInfo info)
+        {
+            return RegisterCharacterInternal(chara.ObjectHash, info, chara);
+        }
+
+        private int RegisterCharacterInternal(int hash, CharacterInfo info, BaseCharacter chara)
         {
             float gravity = Physics2D.gravity.magnitude * GameConstants.k_GravityScale;
             float jumpForce = Mathf.Sqrt(2f * info.jumpHeight * gravity);
@@ -113,7 +127,7 @@ namespace Game.Runtime
                 sprintStaminaPerSecond = info.sprintStaminaPerSecond
             };
 
-            return _core.RegisterCharacter(hash, vitals, combat, flags, move);
+            return _core.RegisterCharacter(hash, vitals, combat, flags, move, chara);
         }
 
         public void UnregisterCharacter(int hash)

@@ -17,7 +17,6 @@ namespace Game.Runtime
         private GroundMovementLogic _movementLogic;
         private PlayerInputHandler _inputHandler;
         private ActionExecutorController _actionExecutor;
-        private DamageReceiver _damageReceiver;
         private CharacterCollisionController _collisionController;
         private SpriteRenderer _spriteRenderer;
         private AudioSource _audioSource;
@@ -144,7 +143,6 @@ namespace Game.Runtime
             _movementLogic = new GroundMovementLogic();
             _inputHandler = GetComponent<PlayerInputHandler>();
             _actionExecutor = GetComponent<ActionExecutorController>();
-            _damageReceiver = GetComponent<DamageReceiver>();
             _collisionController = GetComponent<CharacterCollisionController>();
             _spriteRenderer = GetComponent<SpriteRenderer>();
             _audioSource = GetComponent<AudioSource>();

@@ -220,7 +220,7 @@ namespace Game.Runtime
                 }
 
                 // SoAからIDamageable逆引き。未登録のキャラはスキップ
-                IDamageable receiver = GameManager.Data.GetManaged(targetHash);
+                IDamageable receiver = GameManager.Data.GetManaged(targetHash)?.Damageable;
                 if (receiver == null)
                 {
                     continue;

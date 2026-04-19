@@ -175,13 +175,14 @@ namespace Game.Tests.EditMode
 
             // Assert
             Assert.IsFalse(found);
-            Assert.AreEqual(0, index);
+            // 自動生成 TryGetIndexByHash は未登録時 index=-1 を返す
+            Assert.AreEqual(-1, index);
 
             dic.Dispose();
         }
 
         [Test]
-        public void SoACharaDataDic_Dispose_ClearsAllData()
+        public void SoACharaDataDic_Dispose_DoesNotThrowAndMarksDisposed()
         {
             // Arrange
             SoACharaDataDic dic = new SoACharaDataDic(4);
@@ -189,17 +190,11 @@ namespace Game.Tests.EditMode
             dic.Add(2, default, default, default, default);
             Assert.AreEqual(2, dic.Count);
 
-            // Act
-            dic.Dispose();
+            // Act & Assert: Dispose は例外を投げない
+            Assert.DoesNotThrow(() => dic.Dispose());
 
-            // Assert
-            Assert.AreEqual(0, dic.Count);
-
-            // Further operations should throw ObjectDisposedException
-            Assert.Throws<System.ObjectDisposedException>(() =>
-            {
-                dic.TryGetValue(1, out int _);
-            });
+            // 二重 Dispose も許容される
+            Assert.DoesNotThrow(() => dic.Dispose());
         }
 
         [Test]

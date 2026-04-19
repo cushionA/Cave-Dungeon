@@ -109,7 +109,7 @@ namespace Game.Runtime
 
             // 非キャラクター(地形等)との接触は _hitTargets 登録前にスキップして汚染を防ぐ
             IDamageable receiver = GameManager.Data != null
-                ? GameManager.Data.GetManaged(targetHash)
+                ? GameManager.Data.GetManaged(targetHash)?.Damageable
                 : null;
             if (receiver == null)
             {

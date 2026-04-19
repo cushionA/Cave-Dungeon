@@ -3,6 +3,7 @@
     "rootNamespace": "Game.Core",
     "references": [
         "Unity.Collections",
+        "Unity.Burst",
         "Unity.InputSystem",
         "UniTask",
         "R3.Unity",

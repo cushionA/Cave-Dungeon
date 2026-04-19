@@ -92,7 +92,7 @@ namespace Game.Runtime
                 return;
             }
 
-            IDamageable receiver = GameManager.Data.GetManaged(targetHash);
+            IDamageable receiver = GameManager.Data.GetManaged(targetHash)?.Damageable;
             if (receiver == null)
             {
                 // 非キャラクター(地形等)との接触はスキップ
