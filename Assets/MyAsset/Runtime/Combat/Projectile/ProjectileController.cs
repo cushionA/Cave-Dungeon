@@ -107,18 +107,18 @@ namespace Game.Runtime
                 return;
             }
 
-            // 同一飛翔体で同じターゲットに多重ヒットしない
-            if (!_hitTargets.Add(targetHash))
-            {
-                return;
-            }
-
+            // 非キャラクター(地形等)との接触は _hitTargets 登録前にスキップして汚染を防ぐ
             IDamageable receiver = GameManager.Data != null
                 ? GameManager.Data.GetManaged(targetHash)
                 : null;
             if (receiver == null)
             {
-                // 非キャラクター(地形等)との接触はスキップ
+                return;
+            }
+
+            // 同一飛翔体で同じターゲットに多重ヒットしない (キャラ衝突のみ登録)
+            if (!_hitTargets.Add(targetHash))
+            {
                 return;
             }
 

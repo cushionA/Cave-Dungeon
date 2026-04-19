@@ -63,21 +63,21 @@ namespace Game.Runtime
                 return;
             }
 
-            // 同一攻撃で同じターゲットに多重ヒットしない
-            if (!_hitTargets.Add(targetHash))
-            {
-                return;
-            }
-
             if (GameManager.Data == null)
             {
                 return;
             }
 
+            // 非キャラクター(地形等)との接触は _hitTargets 登録前にスキップして汚染を防ぐ
             IDamageable receiver = GameManager.Data.GetManaged(targetHash);
             if (receiver == null)
             {
-                // 非キャラクター(地形等)との接触はスキップ
+                return;
+            }
+
+            // 同一攻撃で同じターゲットに多重ヒットしない (キャラ衝突のみ登録)
+            if (!_hitTargets.Add(targetHash))
+            {
                 return;
             }
 
