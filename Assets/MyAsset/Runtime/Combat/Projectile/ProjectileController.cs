@@ -115,9 +115,9 @@ namespace Game.Runtime
                 return;
             }
 
-            // Core経由でダメージ処理
+            // Core経由でダメージ処理(IDamageable経由でガード/無敵/HitReaction/イベント発火を共通化)
             ProjectileHitProcessor.ProcessHit(
-                _coreProjectile, receiver.ObjectHash,
+                _coreProjectile, receiver,
                 GameManager.Data, _magic, GameManager.Events);
 
             // 爆発処理

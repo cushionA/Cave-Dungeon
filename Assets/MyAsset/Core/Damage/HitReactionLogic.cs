@@ -37,10 +37,9 @@ namespace Game.Core
                 return HitReaction.GuardBreak;
             }
 
-            // 2. ガード成功（Guarded/JustGuard/EnhancedGuard）
+            // 2. ガード成功（Guarded/JustGuard）
             if (guardResult == GuardResult.Guarded
-                || guardResult == GuardResult.JustGuard
-                || guardResult == GuardResult.EnhancedGuard)
+                || guardResult == GuardResult.JustGuard)
             {
                 return HitReaction.None;
             }

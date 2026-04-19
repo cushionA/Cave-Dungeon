@@ -172,7 +172,6 @@ namespace Game.Core
         Guarded,
         JustGuard,
         GuardBreak,
-        EnhancedGuard,
     }
 
     // ===== キャラクター =====

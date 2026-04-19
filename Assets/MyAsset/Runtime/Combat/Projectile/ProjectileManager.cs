@@ -219,8 +219,15 @@ namespace Game.Runtime
                     continue;
                 }
 
+                // SoAからIDamageable逆引き。未登録のキャラはスキップ
+                IDamageable receiver = GameManager.Data.GetManaged(targetHash);
+                if (receiver == null)
+                {
+                    continue;
+                }
+
                 ProjectileHitProcessor.ProcessHit(
-                    projectile, targetHash, GameManager.Data, magic, GameManager.Events);
+                    projectile, receiver, GameManager.Data, magic, GameManager.Events);
             }
         }
 

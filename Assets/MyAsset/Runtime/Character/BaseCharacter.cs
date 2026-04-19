@@ -20,6 +20,7 @@ namespace Game.Runtime
 
         protected Rigidbody2D _rb;
         protected BoxCollider2D _collider;
+        protected DamageReceiver _damageReceiver;
 
         private int _objectHash;
         private bool _isGrounded;
@@ -27,6 +28,7 @@ namespace Game.Runtime
 
         public int ObjectHash => _objectHash;
         public bool IsGrounded => _isGrounded;
+        public IDamageable Damageable => _damageReceiver;
         public CharacterInfo CharacterInfoRef => _characterInfo;
         public bool IsAlive
         {
@@ -54,6 +56,7 @@ namespace Game.Runtime
         {
             _rb = GetComponent<Rigidbody2D>();
             _collider = GetComponent<BoxCollider2D>();
+            _damageReceiver = GetComponent<DamageReceiver>();
             _objectHash = gameObject.GetInstanceID();
 
             // 物理設定
@@ -87,11 +90,11 @@ namespace Game.Runtime
             // 名前→ハッシュのマッピングを登録（DialogueSystem等の外部連携用）
             CharacterRegistry.RegisterName(_characterInfo.name, _objectHash);
 
-            // アーマー回復パラメータをDamageReceiverに設定
-            DamageReceiver receiver = GetComponent<DamageReceiver>();
-            if (receiver != null)
+            // DamageReceiverをSoAに登録し、アーマー回復パラメータを設定
+            if (_damageReceiver != null)
             {
-                receiver.SetArmorRecoveryParams(
+                GameManager.Data.SetManaged(_objectHash, _damageReceiver);
+                _damageReceiver.SetArmorRecoveryParams(
                     _characterInfo.maxArmor,
                     _characterInfo.armorRecoveryRate,
                     _characterInfo.armorRecoveryDelay);
@@ -142,10 +145,10 @@ namespace Game.Runtime
 
             CharacterRegistry.RegisterName(_characterInfo.name, _objectHash);
 
-            DamageReceiver receiver = GetComponent<DamageReceiver>();
-            if (receiver != null)
+            if (_damageReceiver != null)
             {
-                receiver.SetArmorRecoveryParams(
+                GameManager.Data.SetManaged(_objectHash, _damageReceiver);
+                _damageReceiver.SetArmorRecoveryParams(
                     _characterInfo.maxArmor,
                     _characterInfo.armorRecoveryRate,
                     _characterInfo.armorRecoveryDelay);

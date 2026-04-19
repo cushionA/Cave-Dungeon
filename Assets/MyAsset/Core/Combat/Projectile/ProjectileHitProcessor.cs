@@ -1,8 +1,10 @@
 namespace Game.Core
 {
     /// <summary>
-    /// Processes projectile hits against targets, handling attack damage,
-    /// recovery healing, and support effects based on MagicType.
+    /// 飛翔体の命中処理。
+    /// Attack系は IDamageable.ReceiveDamage を経由することで
+    /// ガード/無敵/行動アーマー/状況ボーナス/HitReaction/イベント発火を共通化する。
+    /// Recover/Support系は SoA を直接書き換える(被ダメージパイプライン不要)。
     /// </summary>
     public static class ProjectileHitProcessor
     {
@@ -15,16 +17,32 @@ namespace Game.Core
         }
 
         /// <summary>
-        /// Processes a projectile hit on a target. Applies damage or healing
-        /// based on magic type and registers the hit on the projectile.
+        /// 飛翔体がターゲットに命中した時の処理。
+        /// Attack: receiver.ReceiveDamage経由で共通パイプラインを通す。
+        /// Recover/Support: receiver.ObjectHash から SoA を直接書き換える。
         /// </summary>
-        public static HitResult ProcessHit(Projectile projectile, int targetHash,
+        /// <param name="projectile">飛翔体(生存・キャスター有効性は呼び出し側で保証)</param>
+        /// <param name="receiver">被弾側 IDamageable (通常 DamageReceiver)。null はスキップ</param>
+        /// <param name="data">SoAコンテナ(Recover/Support で必要)</param>
+        /// <param name="magic">魔法定義</param>
+        /// <param name="events">Recover系のイベント発火(Attack系はDamageReceiverが発火)</param>
+        public static HitResult ProcessHit(Projectile projectile, IDamageable receiver,
             SoACharaDataDic data, MagicDefinition magic, GameEvents events = null)
         {
             HitResult result = new HitResult { magicType = magic.magicType };
 
-            if (!data.TryGetValue(projectile.CasterHash, out int _) ||
-                !data.TryGetValue(targetHash, out int _))
+            if (projectile == null || receiver == null)
+            {
+                return result;
+            }
+
+            if (data == null || !data.TryGetValue(projectile.CasterHash, out int _))
+            {
+                return result;
+            }
+
+            int targetHash = receiver.ObjectHash;
+            if (!data.TryGetValue(targetHash, out int _))
             {
                 return result;
             }
@@ -33,43 +51,14 @@ namespace Game.Core
             {
                 case MagicType.Attack:
                 {
-                    ref CombatStats casterStats = ref data.GetCombatStats(projectile.CasterHash);
-                    ref CombatStats targetStats = ref data.GetCombatStats(targetHash);
+                    // IDamageable経由でガード/無敵/HitReaction/イベント発火まで一括処理
+                    DamageData damageData = BuildProjectileDamageData(
+                        projectile.CasterHash, targetHash, magic, data);
 
-                    int rawDamage = DamageCalculator.CalculateTotalDamage(
-                        casterStats.attack, magic.motionValue, targetStats.defense,
-                        magic.attackElement);
-
-                    ref CharacterVitals targetVitals = ref data.GetVitals(targetHash);
-                    float actionArmor = 0f;
-                    (int actualDamage, bool isKill, bool _) = HpArmorLogic.ApplyDamage(
-                        ref targetVitals.currentHp, ref targetVitals.currentArmor,
-                        rawDamage, 0f, ref actionArmor);
-                    result.damage = actualDamage;
-                    result.isKill = isKill;
-
-                    // HP率キャッシュ更新
-                    targetVitals.hpRatio = targetVitals.maxHp > 0
-                        ? (byte)(100 * targetVitals.currentHp / targetVitals.maxHp)
-                        : (byte)0;
-
-                    // GameEventsに通知（HUD・音声・クエスト等の外部システム連携）
-                    if (events != null)
-                    {
-                        DamageResult damageResult = new DamageResult
-                        {
-                            totalDamage = actualDamage,
-                            guardResult = GuardResult.NoGuard,
-                            hitReaction = isKill ? HitReaction.Knockback : HitReaction.Flinch,
-                            isKill = isKill
-                        };
-                        events.FireDamageDealt(damageResult, projectile.CasterHash, targetHash);
-
-                        if (isKill)
-                        {
-                            events.FireCharacterDeath(targetHash, projectile.CasterHash);
-                        }
-                    }
+                    DamageResult damageResult = receiver.ReceiveDamage(damageData);
+                    result.damage = damageResult.totalDamage;
+                    result.isKill = damageResult.isKill;
+                    // GameEvents.FireDamageDealt/FireCharacterDeath は DamageReceiver 内で発火済み
                     break;
                 }
 
@@ -95,6 +84,30 @@ namespace Game.Core
 
             projectile.RegisterHit();
             return result;
+        }
+
+        /// <summary>
+        /// 飛翔体の DamageData を組み立てる。isProjectile=true でDamageReceiverが
+        /// JustGuard時のアーマー削り0扱いに分岐する。
+        /// </summary>
+        private static DamageData BuildProjectileDamageData(
+            int attackerHash, int defenderHash, MagicDefinition magic, SoACharaDataDic data)
+        {
+            ElementalStatus attackStats = CombatDataHelper.GetAttackStats(data, attackerHash);
+            return new DamageData
+            {
+                attackerHash = attackerHash,
+                defenderHash = defenderHash,
+                damage = attackStats,
+                motionValue = magic.motionValue,
+                knockbackForce = default,
+                attackElement = magic.attackElement,
+                statusEffectInfo = default,
+                feature = AttackFeature.None,
+                armorBreakValue = 0f,
+                justGuardResistance = 0f,
+                isProjectile = true
+            };
         }
     }
 }

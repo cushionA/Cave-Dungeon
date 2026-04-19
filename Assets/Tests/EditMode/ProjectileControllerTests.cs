@@ -82,8 +82,9 @@ namespace Game.Tests.EditMode
                 attackElement = Element.Slash
             };
 
+            SoABackedMockDamageable receiver = new SoABackedMockDamageable(data, targetHash);
             ProjectileHitProcessor.HitResult result =
-                ProjectileHitProcessor.ProcessHit(p, targetHash, data, magic);
+                ProjectileHitProcessor.ProcessHit(p, receiver, data, magic);
 
             Assert.Greater(result.damage, 0);
             ref CharacterVitals postVitals = ref data.GetVitals(targetHash);

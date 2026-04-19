@@ -110,13 +110,27 @@ namespace Game.Tests.EditMode
             GuardResult guardResult = GuardJudgmentLogic.Judge(
                 isGuarding: true,
                 guardTimeSinceStart: 0.5f,
+                inContinuousJustGuardWindow: false,
+                attackFeature: AttackFeature.None,
+                guardDirection: GuardDirection.Both,
+                isAttackFromFront: true,
+                hasGuardAttackEffect: false,
+                currentStamina: 100f,
                 guardStrength: 80f,
-                attackPower: 50f,
-                attackFeature: AttackFeature.None
+                armorBreakValue: 50f
             );
 
-            float reduction = GuardJudgmentLogic.GetDamageReduction(guardResult);
-            int guardedDamage = (int)(rawDamage * (1f - reduction));
+            // 新仕様: GuardStats.xxxCut で軽減。斬撃カット50%を設定して検証。
+            GuardStats guardStats = new GuardStats
+            {
+                slashCut = 0.5f,
+                fireCut = 0.5f,
+                guardStrength = 80f
+            };
+            int guardedDamage = DamageCalculator.CalculateTotalDamageWithElementalCut(
+                equip.finalAttack, 1.0f,
+                _data.GetCombatStats(k_DefenderHash).defense,
+                Element.None, guardStats, applyCuts: true);
 
             // Assert
             Assert.AreEqual(GuardResult.Guarded, guardResult);

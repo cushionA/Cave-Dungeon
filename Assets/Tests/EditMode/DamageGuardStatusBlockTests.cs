@@ -184,17 +184,23 @@ namespace Game.Tests.EditMode
         }
 
         // --- ガードスタミナコスト: GuardJudgmentLogicのガードブレイク境界 ---
+        // 新仕様: ブレイクは「削り量(= max(0, armorBreakValue - guardStrength))が現在スタミナを超えた時」のみ。
 
         [Test]
         public void GuardJudgmentLogic_GuardBreak_WhenStaminaInsufficient()
         {
-            // guardStrength < attackPowerでガードブレイク
+            // 削り量 = max(0, 100 - 10) = 90、スタミナ5 < 90 → GuardBreak
             GuardResult result = GuardJudgmentLogic.Judge(
                 isGuarding: true,
                 guardTimeSinceStart: 1.0f, // ジャストガードウィンドウ外
+                inContinuousJustGuardWindow: false,
+                attackFeature: AttackFeature.None,
+                guardDirection: GuardDirection.Both,
+                isAttackFromFront: true,
+                hasGuardAttackEffect: false,
+                currentStamina: 5f,
                 guardStrength: 10f,
-                attackPower: 100f,
-                attackFeature: AttackFeature.None);
+                armorBreakValue: 100f);
 
             Assert.AreEqual(GuardResult.GuardBreak, result);
         }
@@ -202,12 +208,18 @@ namespace Game.Tests.EditMode
         [Test]
         public void GuardJudgmentLogic_GuardSuccess_WhenStaminaSufficient()
         {
+            // 削り量 = max(0, 30 - 100) = 0、完全受け流し → Guarded
             GuardResult result = GuardJudgmentLogic.Judge(
                 isGuarding: true,
                 guardTimeSinceStart: 1.0f,
+                inContinuousJustGuardWindow: false,
+                attackFeature: AttackFeature.None,
+                guardDirection: GuardDirection.Both,
+                isAttackFromFront: true,
+                hasGuardAttackEffect: false,
+                currentStamina: 100f,
                 guardStrength: 100f,
-                attackPower: 30f,
-                attackFeature: AttackFeature.None);
+                armorBreakValue: 30f);
 
             Assert.AreEqual(GuardResult.Guarded, result);
         }

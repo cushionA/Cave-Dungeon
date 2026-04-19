@@ -35,7 +35,8 @@ namespace Game.Core
                 contactType = info.contactType,
                 isAutoChain = info.isAutoChain,
                 isChainEndPoint = info.isChainEndPoint,
-                inputWindow = info.inputWindow
+                inputWindow = info.inputWindow,
+                justGuardResistance = info.justGuardResistance
             };
         }
 

@@ -71,6 +71,53 @@ namespace Game.Core
         }
 
         /// <summary>
+        /// 7属性それぞれについてダメージ計算し、属性別ガードカット率を適用して合計を返す。
+        /// applyCuts=false なら CalculateTotalDamage と等価（回帰互換）。
+        /// 各チャネル: CalculateBaseDamage × weakMult × (1 - xxxCut) を floor して合算。
+        /// </summary>
+        public static int CalculateTotalDamageWithElementalCut(
+            ElementalStatus attackStats,
+            float motionValue,
+            ElementalStatus defenseStats,
+            Element weakElement,
+            GuardStats guardCuts,
+            bool applyCuts)
+        {
+            int total = 0;
+            total += ApplyChannelWithCut(attackStats.slash,   motionValue, defenseStats.slash,   Element.Slash,   weakElement, applyCuts ? guardCuts.slashCut   : 0f);
+            total += ApplyChannelWithCut(attackStats.strike,  motionValue, defenseStats.strike,  Element.Strike,  weakElement, applyCuts ? guardCuts.strikeCut  : 0f);
+            total += ApplyChannelWithCut(attackStats.pierce,  motionValue, defenseStats.pierce,  Element.Pierce,  weakElement, applyCuts ? guardCuts.pierceCut  : 0f);
+            total += ApplyChannelWithCut(attackStats.fire,    motionValue, defenseStats.fire,    Element.Fire,    weakElement, applyCuts ? guardCuts.fireCut    : 0f);
+            total += ApplyChannelWithCut(attackStats.thunder, motionValue, defenseStats.thunder, Element.Thunder, weakElement, applyCuts ? guardCuts.thunderCut : 0f);
+            total += ApplyChannelWithCut(attackStats.light,   motionValue, defenseStats.light,   Element.Light,   weakElement, applyCuts ? guardCuts.lightCut   : 0f);
+            total += ApplyChannelWithCut(attackStats.dark,    motionValue, defenseStats.dark,    Element.Dark,    weakElement, applyCuts ? guardCuts.darkCut    : 0f);
+            return total < k_MinDamage ? k_MinDamage : total;
+        }
+
+        /// <summary>
+        /// 単一属性チャネルに属性別カット率を適用する。cut=0ならそのままのチャネルダメージを返す。
+        /// </summary>
+        private static int ApplyChannelWithCut(
+            int attack, float motionValue, int defense,
+            Element channel, Element weakElement, float cut)
+        {
+            if (attack <= 0)
+            {
+                return 0;
+            }
+
+            int baseDmg = CalculateBaseDamage(attack, motionValue, defense);
+            float multiplier = GetWeaknessMultiplier(channel, weakElement);
+            float channelDmg = baseDmg * multiplier;
+            if (cut > 0f)
+            {
+                float clampedCut = cut > 1f ? 1f : cut;
+                channelDmg *= (1f - clampedCut);
+            }
+            return (int)channelDmg;
+        }
+
+        /// <summary>
         /// 弱点倍率を取得。弱点ヒットならk_WeaknessMult、それ以外は1.0。
         /// Flags比較: weakElementに該当チャネルが含まれていればHit。
         /// </summary>
