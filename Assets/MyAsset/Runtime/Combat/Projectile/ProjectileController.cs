@@ -97,21 +97,28 @@ namespace Game.Runtime
                 return;
             }
 
-            DamageReceiver receiver = other.GetComponent<DamageReceiver>();
-            if (receiver == null)
-            {
-                return;
-            }
+            // アーキテクチャ準拠: 毎衝突でのGetComponentを避け、GameObject.GetInstanceID から
+            // SoA逆引き(GameManager.Data.GetManaged)で IDamageable を取得する。
+            int targetHash = other.gameObject.GetInstanceID();
 
             // 自分自身にはダメージを与えない
-            if (receiver.ObjectHash == _coreProjectile.CasterHash)
+            if (targetHash == _coreProjectile.CasterHash)
             {
                 return;
             }
 
             // 同一飛翔体で同じターゲットに多重ヒットしない
-            if (!_hitTargets.Add(receiver.ObjectHash))
+            if (!_hitTargets.Add(targetHash))
             {
+                return;
+            }
+
+            IDamageable receiver = GameManager.Data != null
+                ? GameManager.Data.GetManaged(targetHash)
+                : null;
+            if (receiver == null)
+            {
+                // 非キャラクター(地形等)との接触はスキップ
                 return;
             }
 
