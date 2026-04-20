@@ -504,14 +504,15 @@ namespace Game.Runtime
         {
             List<string> choices = new List<string>();
             choices.Add("(未割当)");
-            CompanionAIConfig[] presets = _tacticalRegistry.GetAll();
-            for (int i = 0; i < presets.Length; i++)
+            AIMode[] modes = _logic.EditingBuffer.modes;
+            int modesCount = modes != null ? modes.Length : 0;
+            for (int i = 0; i < modesCount; i++)
             {
-                choices.Add(string.IsNullOrEmpty(presets[i].configName) ? "(無名)" : presets[i].configName);
+                string modeName = string.IsNullOrEmpty(modes[i].modeName) ? "Mode" + i : modes[i].modeName;
+                choices.Add(modeName);
             }
 
             int[] bindings = _logic.EditingBuffer.shortcutModeBindings;
-            int presetsCount = presets.Length;
             for (int i = 0; i < k_ShortcutSlotCount; i++)
             {
                 DropdownField dropdown = _shortcutDropdowns[i];
@@ -521,15 +522,15 @@ namespace Game.Runtime
                 }
                 dropdown.choices = choices;
                 int boundIndex = bindings != null && i < bindings.Length ? bindings[i] : -1;
-                // プリセット数が変動して boundIndex が範囲外になった場合は未割当(-1)へフォールバック。
-                // Clamp で画面上だけズレた要素を選ぶと「意図しないプリセットが割り当たっている」状態になるため。
+                // モード数が変動して boundIndex が範囲外になった場合は未割当(-1)へフォールバック。
+                // Clamp で画面上だけズレた要素を選ぶと「意図しないモードが割り当たっている」状態になるため。
                 int displayIndex;
-                if (boundIndex < 0 || boundIndex >= presetsCount)
+                if (boundIndex < 0 || boundIndex >= modesCount)
                 {
                     displayIndex = 0;
                     if (bindings != null && i < bindings.Length && bindings[i] != -1)
                     {
-                        // データも未割当に合わせて書き戻す（プリセット削除時の自動クリーンアップ）
+                        // データも未割当に合わせて書き戻す（モード削除時の自動クリーンアップ）
                         bindings[i] = -1;
                     }
                 }
@@ -583,7 +584,7 @@ namespace Game.Runtime
                 configName = "新規戦術",
                 modes = new AIMode[0],
                 modeTransitionRules = new ModeTransitionRule[0],
-                shortcutModeBindings = new int[k_ShortcutSlotCount],
+                shortcutModeBindings = CompanionAISettingsLogic.CreateDefaultShortcutBindings(),
             };
             string newId = _tacticalRegistry.Save("新規戦術", empty);
             if (newId == null)

@@ -53,19 +53,25 @@ ID管理により、モード上書き時に参照元の戦術へ自動同期す
 ### タブ2: ショートカット
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│ パッドの十字キー等で戦術を素早く切替できます。                │
+│ パッドの十字キー等で「現在の戦術」内のモードを素早く切替できます。│
+│ 選択肢は現在編集中の戦術の modes[0..3] に対応する。             │
 │                                                              │
 │  ┌─ スロット1 ─┐  ┌─ スロット2 ─┐                         │
 │  │  ↑ Button   │  │  → Button   │                         │
-│  │ [均衡型 ▼] │  │ [攻撃型 ▼] │                          │
+│  │ [Mode1 ▼]  │  │ [Mode2 ▼]  │                          │
 │  └─────────────┘  └─────────────┘                         │
 │                                                              │
 │  ┌─ スロット3 ─┐  ┌─ スロット4 ─┐                         │
 │  │  ↓ Button   │  │  ← Button   │                         │
-│  │ [防御型 ▼] │  │ [未割当 ▼] │                          │
+│  │ [Mode3 ▼]  │  │ [未割当 ▼] │                          │
 │  └─────────────┘  └─────────────┘                         │
 └──────────────────────────────────────────────────────────────┘
 ```
+- 戦術プリセットごとに shortcutModeBindings[4] を保持。各値はその戦術の
+  modes 配列のindex (0..3)、または -1（未割当）。
+- モード数が変動して保存値が範囲外になった場合は未割当に自動フォールバック。
+- 戦術プリセットごと切り替える導線（L1/R1+十字キー等）は別途用意する予定
+  （docs/FUTURE_TASKS.md 参照）。
 
 ---
 
@@ -116,8 +122,9 @@ Root (VisualElement: companion-ai-settings-root)
 │        └─ [4個] ShortcutSlot (VisualElement: shortcut-slot)
 │           ├─ SlotLabel (Label) "スロット1"
 │           ├─ InputIcon (Label: input-icon) "↑"
-│           └─ TacticDropdown (DropdownField) "均衡型 ▼"
-│              — tooltip="このスロットに割り当てる戦術を選択"
+│           └─ TacticDropdown (DropdownField) "Mode1 ▼"
+│              — 選択肢: "(未割当)" + 現戦術の modes[i].modeName
+│              — tooltip="このスロットに割り当てるモードを選択"
 ├─ DialogLayer (VisualElement: dialog-layer) — display:none初期
 │  └─ [動的生成] ModalDialog
 └─ TooltipPanel (VisualElement: tooltip-panel) — display:none初期
@@ -266,7 +273,7 @@ Root (VisualElement: companion-ai-settings-root)
 | ModeSlotButton | clicked | `ShowModeSlotActionDialog(slotIndex)` |
 | AddModeButton | clicked | モードプリセット選択 → スロット追加 |
 | AddTransitionButton | clicked | 空のルール追加 |
-| ShortcutDropdown | value change | `_shortcutBindings[i] = index` + Dirty |
+| ShortcutDropdown | value change | `SetShortcutBinding(i, modeIndex)` — 現戦術の modes[modeIndex] を割当（-1=未割当） + Dirty |
 
 ### データソース
 - `ModePresetRegistry` — モードプリセット一覧（GetAll）
@@ -295,7 +302,7 @@ Root (VisualElement: companion-ai-settings-root)
 - SaveAsPresetButton: "現在の戦術を新しいプリセットとして保存"
 - AddModeButton: "モードを追加"
 - AddTransitionButton: "遷移ルールを追加"
-- ShortcutDropdown: "このスロットに割り当てる戦術を選択"
+- ShortcutDropdown: "このスロットに割り当てるモードを選択"
 - モードスロット上のリンクアイコン: "プリセット参照あり - このモードを上書きすると参照元も全て更新されます"
 
 パッド操作時もツールチップを表示するため、フォーカス時にも表示する方針:
@@ -327,8 +334,9 @@ Root (VisualElement: companion-ai-settings-root)
 - 独立コピー化（安全弁）
 
 **Phase 3d: ショートカットタブ** ← このPRで実装
-- 4スロットのドロップダウン
-- 戦術プリセット選択→shortcutModeBindings 反映
+- 4スロットのドロップダウン（現戦術の modes[0..3] を選択肢として表示）
+- モード選択→shortcutModeBindings 反映（未割当は -1）
+- 初期値は全スロット -1（未割当）。0埋めだと「modes[0]を指す」状態と区別できないため
 
 **後続PR（このPRでは実装しない）**
 - モード内部エディタ（AIRule/AITargetSelect/ActionSlot の GUI編集）
@@ -351,7 +359,11 @@ Controller のロジック部分をテスト可能な形で分離し、以下を
 6. `CompanionAISettingsLogic_ConvertModeToIndependent_ClearsModeId` — 独立コピー化で modeId が空文字列になる
 7. `CompanionAISettingsLogic_OverwriteExistingPreset_CascadesToReferencingConfigs` — モードプリセット上書きが戦術に波及
 8. `CompanionAISettingsLogic_DeleteLastPreset_Rejected` — 最後の1個は削除不可
-9. `CompanionAISettingsLogic_ShortcutBinding_UpdatesIndex` — ショートカット変更で index が反映
+9. `CompanionAISettingsLogic_SetShortcutBinding_UpdatesModeIndex` — 現戦術の modeIndex が反映
+   追加テスト:
+   - `InitialShortcutBindings_AllUnassigned` — 初期値は -1 埋め
+   - `SetShortcutBinding_UnassignedValue_Stored` — -1 で未割当に戻せる
+   - `CreateDefaultShortcutBindings_ReturnsMinusOneFilled` — ヘルパーの検証
 10. `CompanionAISettingsLogic_AddMode_ExceedsMaxModes_Rejected` — 5個目の追加は拒否（既存 RuleEditorLogic.k_MaxModes=4 と整合）
 
 ---

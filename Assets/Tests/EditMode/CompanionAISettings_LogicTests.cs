@@ -291,13 +291,40 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
-        public void CompanionAISettingsLogic_SetShortcutBinding_UpdatesIndex()
+        public void CompanionAISettingsLogic_InitialShortcutBindings_AllUnassigned()
         {
-            bool ok = _logic.SetShortcutBinding(2, 5);
+            // 初期状態ではすべてのスロットが未割当(-1)である
+            // 0埋めだと modes[0] を指すのと区別できないため -1 を既定とする
+            int[] bindings = _logic.EditingBuffer.shortcutModeBindings;
+
+            Assert.IsNotNull(bindings);
+            Assert.AreEqual(4, bindings.Length);
+            for (int i = 0; i < bindings.Length; i++)
+            {
+                Assert.AreEqual(-1, bindings[i]);
+            }
+        }
+
+        [Test]
+        public void CompanionAISettingsLogic_SetShortcutBinding_UpdatesModeIndex()
+        {
+            // slot 2 に modeIndex 1 を割り当てる
+            bool ok = _logic.SetShortcutBinding(2, 1);
 
             Assert.IsTrue(ok);
-            Assert.AreEqual(5, _logic.EditingBuffer.shortcutModeBindings[2]);
+            Assert.AreEqual(1, _logic.EditingBuffer.shortcutModeBindings[2]);
             Assert.IsTrue(_logic.IsDirty);
+        }
+
+        [Test]
+        public void CompanionAISettingsLogic_SetShortcutBinding_UnassignedValue_Stored()
+        {
+            // 一度割り当ててから -1（未割当）に戻せる
+            _logic.SetShortcutBinding(0, 2);
+            bool ok = _logic.SetShortcutBinding(0, -1);
+
+            Assert.IsTrue(ok);
+            Assert.AreEqual(-1, _logic.EditingBuffer.shortcutModeBindings[0]);
         }
 
         [Test]
@@ -308,6 +335,18 @@ namespace Game.Tests.EditMode
 
             Assert.IsFalse(okLow);
             Assert.IsFalse(okHigh);
+        }
+
+        [Test]
+        public void CompanionAISettingsLogic_CreateDefaultShortcutBindings_ReturnsMinusOneFilled()
+        {
+            int[] bindings = CompanionAISettingsLogic.CreateDefaultShortcutBindings();
+
+            Assert.AreEqual(4, bindings.Length);
+            for (int i = 0; i < bindings.Length; i++)
+            {
+                Assert.AreEqual(-1, bindings[i]);
+            }
         }
 
         [Test]
