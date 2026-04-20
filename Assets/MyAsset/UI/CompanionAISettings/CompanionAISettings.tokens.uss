@@ -1,0 +1,85 @@
+/* ============================================================================
+   SisterGame Design System — Design Tokens
+   ----------------------------------------------------------------------------
+   一次ソース: output/claudeDesignResult/colors_and_type.css / README.md
+   対象: Unity UI Toolkit (UXML/USS), 1920x1080, dark theme, single accent.
+   WCAG AA 検証済み（--color-bg-panel 上で text-muted 約5.4:1、accent 約7.0:1）。
+   ============================================================================ */
+
+:root {
+
+    /* ---------- Background Layers (ゲーム画面上に半透明で重ねる) ---------- */
+    --color-bg-overlay: rgba(0, 0, 0, 0.75);          /* フルスクリーンヴェール */
+    --color-bg-dialog-veil: rgba(0, 0, 0, 0.78);      /* モーダル用の強めのヴェール */
+    --color-bg-header: rgba(20, 20, 30, 0.95);
+    --color-bg-tabbar: rgba(15, 15, 25, 0.90);
+    --color-bg-panel: rgba(20, 20, 30, 0.95);         /* パネル・ダイアログ本体 */
+    --color-bg-item: rgba(35, 35, 45, 0.85);          /* リスト項目・モードスロット */
+    --color-bg-item-hover: rgba(55, 55, 75, 0.90);
+    --color-bg-input: rgba(10, 10, 20, 0.70);
+    --color-bg-section: rgba(0, 0, 0, 0.20);          /* エディタ内サブセクション */
+    --color-bg-tooltip: rgba(10, 10, 20, 0.95);
+
+    /* ---------- Accent (唯一のアクセント色 / cyan-blue) ---------- */
+    --color-accent: rgb(79, 195, 247);
+    --color-accent-hover: rgb(120, 215, 255);
+    --color-accent-selected-bg: rgba(60, 90, 120, 0.90);
+    --color-accent-wash: rgba(79, 195, 247, 0.15);
+    --color-accent-subtle: rgba(79, 195, 247, 0.60);
+
+    /* ---------- Semantic ---------- */
+    --color-current: rgb(76, 175, 80);                /* 「現在の戦術」緑 */
+    --color-current-wash: rgba(60, 100, 60, 0.50);
+    --color-warning: rgb(255, 193, 7);                /* 独立コピー・参照警告 */
+    --color-warning-subtle: rgba(255, 193, 7, 0.30);
+    --color-danger: rgb(244, 67, 54);                 /* 削除・未保存 */
+    --color-danger-bg: rgba(120, 40, 40, 0.90);
+
+    /* ---------- Text (5段階 / WCAG AA) ---------- */
+    --color-text-primary: rgb(240, 240, 245);         /* 14.2:1 on panel */
+    --color-text-secondary: rgb(220, 220, 230);       /* 11.8:1 */
+    --color-text-muted: rgb(160, 160, 175);           /*  5.4:1 (本文下限) */
+    --color-text-disabled: rgb(100, 100, 115);        /*  2.3:1 (disabled専用) */
+    --color-text-on-accent: rgb(10, 10, 20);          /* 13.5:1 on accent button */
+
+    /* ---------- Borders ---------- */
+    --color-border-subtle: rgba(80, 80, 100, 0.40);
+    --color-border-strong: rgba(100, 100, 130, 0.60);
+
+    /* ---------- Font Sizes (1920x1080 / TV視聴距離考慮) ---------- */
+    /* 見出し/本文 比 ≒ 2.0× で階層を強く分ける */
+    --fs-display: 40px;                               /* ブランド・スプラッシュ */
+    --fs-h1: 32px;                                    /* 画面タイトル */
+    --fs-h2: 22px;                                    /* セクション見出し・タブ */
+    --fs-h3: 18px;                                    /* サブ見出し・モード名 */
+    --fs-body: 16px;                                  /* 本文・ボタン (Medium 500) */
+    --fs-body-lg: 18px;                               /* 強調本文 */
+    --fs-label: 14px;                                 /* 副テキスト・セクションラベル */
+    --fs-mini: 13px;                                  /* 注釈の上限 */
+    --fs-caption: 12px;                               /* 注釈・ツールチップ */
+    --fs-icon-lg: 40px;                               /* 方向キーアイコン */
+    --fs-icon-md: 28px;                               /* ヘッダアイコンボタン */
+
+    /* ---------- Spacing (8px base) ---------- */
+    --s-2xs: 2px;
+    --s-xs: 4px;
+    --s-sm: 8px;
+    --s-md: 16px;
+    --s-lg: 24px;
+    --s-xl: 40px;
+    --s-2xl: 64px;
+
+    /* ---------- Radius ---------- */
+    --r-sm: 3px;                                      /* 項目・ボタン・入力欄 */
+    --r-md: 6px;                                      /* パネル・ダイアログ・カード */
+
+    /* ---------- Motion (Unity UI Toolkit: linear/ease のみ対応) ---------- */
+    --dur-fast: 0.10s;
+    --dur-base: 0.15s;                                /* 標準トランジション */
+    --dur-slow: 0.25s;
+
+    /* ---------- Hover Scales (ゲームUIらしい反応) ---------- */
+    --scale-row: 1.02;                                /* リスト行 */
+    --scale-btn: 1.03;                                /* primary / secondary ボタン */
+    --scale-icon: 1.10;                               /* アイコンボタン */
+}

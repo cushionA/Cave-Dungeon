@@ -1,6 +1,10 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
     <ui:VisualElement name="companion-ai-settings-root" class="companion-ai-settings-root">
 
+        <!-- デザイントークン（色/タイポ/スペーシング/トランジション）を先にロード -->
+        <ui:Style src="project://database/Assets/MyAsset/UI/CompanionAISettings/CompanionAISettings.tokens.uss" />
+        <ui:Style src="project://database/Assets/MyAsset/UI/CompanionAISettings/CompanionAISettings.uss" />
+
         <!-- ===== ヘッダー ===== -->
         <ui:VisualElement name="header" class="companion-ai-header">
             <ui:Button name="back-button" class="icon-button back-button" text="◀" tooltip="メニューに戻る" />
