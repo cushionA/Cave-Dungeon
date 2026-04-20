@@ -1151,7 +1151,7 @@
    opacity + translate のトランジションで出入りを作る。 */
 .toast-layer {
     position: absolute;
-    top: 80px;
+    top: var(--header-offset);
     right: var(--s-lg);
     align-items: flex-end;
 }

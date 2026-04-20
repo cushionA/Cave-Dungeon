@@ -346,7 +346,11 @@ namespace Game.Runtime
             _toastLabel.AddToClassList(GetToastKindClass(kind));
             _toastLabel.AddToClassList("toast--visible");
 
-            // 前回の自動フェードアウトスケジュールが走っていたら破棄し、今回の表示時間でタイマーを引き直す。
+            // 前回の自動フェードアウトスケジュールが走っていたら停止し、今回の表示時間でタイマーを引き直す。
+            // Pause した IVisualElementScheduledItem は _toastLabel（VisualElement）のスケジューラに
+            // ぶら下がったまま生き残るが、_toastLabel 自体は永続 UI なのでアプリ終了までの上限は
+            // 「表示回数」≒ユーザーの手動操作回数 で十分小さく、実用上の蓄積リスクは無視できる。
+            // より厳密に破棄したい場合は VisualElement ごと入れ替える必要があり、そこまでの価値はない。
             _toastHideScheduled?.Pause();
             _toastHideScheduled = _toastLabel.schedule.Execute(() =>
             {
@@ -394,6 +398,9 @@ namespace Game.Runtime
         /// Cancel は UI モジュールと共用のため Disable はしない（購読解除のみ）。
         /// MenuSave / MenuSaveAsPreset は CompanionAISettings 固有なので
         /// 明示的に Enable/Disable する。
+        /// フッター凡例（A/B/X/Y）は 3 アクションすべてが解決できた時のみ表示する。
+        /// 一部でも不足する（古いアセットが注入された等）場合は「ヒントが出ているのに動かない」
+        /// 状態を避けるため非表示を維持する。
         /// </summary>
         private void SetupInputActions()
         {
@@ -423,7 +430,11 @@ namespace Game.Runtime
                 _menuSaveAsPresetAction.Enable();
             }
 
-            SetFooterVisible(true);
+            // 3 アクション（Cancel/MenuSave/MenuSaveAsPreset）すべて解決できた時のみ凡例を出す。
+            // FindAction は未定義アクション名で null を返すので、古い InputActionAsset が
+            // 注入された場合に「B: 戻る」等のヒントが出ているのに機能しない誤解を防ぐ。
+            bool allResolved = _cancelAction != null && _menuSaveAction != null && _menuSaveAsPresetAction != null;
+            SetFooterVisible(allResolved);
         }
 
         private void TeardownInputActions()

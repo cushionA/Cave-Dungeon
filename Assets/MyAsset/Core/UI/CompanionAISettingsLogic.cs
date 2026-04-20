@@ -473,8 +473,10 @@ namespace Game.Core
 
         /// <summary>
         /// ショートカットスロットに「現在編集中の戦術内の modeIndex」を割り当てる。
-        /// -1 は未割当を示す。slotIndex が範囲外の場合は false を返す。
-        /// modeIndex の範囲チェックは呼び出し側（UI）の責務とし、ここでは保存のみ行う。
+        /// -1 は未割当、0..3 は modes 配列の index。それ以外の負値は未割当 (-1) に正規化する。
+        /// モード数上限側（modeIndex >= modes.Length）は UI 側で描画時にチェックするが、
+        /// 不正な負値だけは保存段階で落として、後続の差分保存やファイル永続化に不正値が漏れないようにする。
+        /// slotIndex が範囲外の場合は false を返す。
         /// </summary>
         public bool SetShortcutBinding(int slotIndex, int modeIndex)
         {
@@ -488,7 +490,9 @@ namespace Game.Core
                 _editingBuffer.shortcutModeBindings = CreateDefaultShortcutBindings();
             }
 
-            _editingBuffer.shortcutModeBindings[slotIndex] = modeIndex;
+            // -1 未満は未割当として正規化。上限側の範囲チェックは呼び出し側の責務。
+            int normalized = modeIndex < -1 ? -1 : modeIndex;
+            _editingBuffer.shortcutModeBindings[slotIndex] = normalized;
             _isDirty = true;
             return true;
         }

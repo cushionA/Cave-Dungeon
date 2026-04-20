@@ -338,6 +338,16 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
+        public void CompanionAISettingsLogic_SetShortcutBinding_NegativeModeIndex_NormalizedToMinusOne()
+        {
+            // -1 未満の modeIndex は未割当 (-1) に正規化され、不正値のまま保存されない
+            bool ok = _logic.SetShortcutBinding(1, -7);
+
+            Assert.IsTrue(ok);
+            Assert.AreEqual(-1, _logic.EditingBuffer.shortcutModeBindings[1]);
+        }
+
+        [Test]
         public void CompanionAISettingsLogic_CreateDefaultShortcutBindings_ReturnsMinusOneFilled()
         {
             int[] bindings = CompanionAISettingsLogic.CreateDefaultShortcutBindings();
