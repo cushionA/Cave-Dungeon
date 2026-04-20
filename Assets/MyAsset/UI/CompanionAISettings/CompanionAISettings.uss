@@ -1146,6 +1146,62 @@
     color: var(--color-text-muted);
 }
 
+/* ===== トースト通知 =====
+   操作完了フィードバック（保存・削除・エラー等）の右上アンカー。
+   opacity + translate のトランジションで出入りを作る。 */
+.toast-layer {
+    position: absolute;
+    top: 80px;
+    right: var(--s-lg);
+    align-items: flex-end;
+}
+
+.toast {
+    padding: var(--s-sm) var(--s-md);
+    background-color: var(--color-bg-panel);
+    border-width: 1px;
+    border-color: var(--color-border-subtle);
+    border-radius: var(--r-sm);
+    color: var(--color-text-primary);
+    font-size: var(--fs-label);
+    -unity-font-style: bold;
+    max-width: 360px;
+    white-space: normal;
+    opacity: 0;
+    translate: 0 -8px;
+    transition-property: opacity, translate;
+    transition-duration: var(--dur-base);
+    display: none;
+}
+
+.toast--visible {
+    display: flex;
+    opacity: 1;
+    translate: 0 0;
+}
+
+.toast--success {
+    border-left-width: 4px;
+    border-left-color: var(--color-current);
+}
+
+.toast--error {
+    border-left-width: 4px;
+    border-left-color: var(--color-danger);
+}
+
+.toast--info {
+    border-left-width: 4px;
+    border-left-color: var(--color-accent);
+}
+
+/* ===== 保存成功フラッシュ =====
+   保存ボタン（もしくは任意プライマリボタン）に一時付与して視認性を上げる。
+   transition は primary-button の既存定義に乗る。 */
+.primary-button--flash {
+    background-color: var(--color-current);
+}
+
 /* ===== ユーティリティ ===== */
 .hidden {
     display: none;

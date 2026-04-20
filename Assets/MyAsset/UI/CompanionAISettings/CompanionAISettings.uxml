@@ -152,5 +152,12 @@
             <ui:Label name="tooltip-text" class="tooltip-text" />
         </ui:VisualElement>
 
+        <!-- ===== トースト通知レイヤー =====
+             保存・削除・エラー等の一時的なフィードバックを右上に表示する。
+             dialog-layer より前面に置くことで、ダイアログ上からも通知が見える。 -->
+        <ui:VisualElement name="toast-layer" class="toast-layer" picking-mode="Ignore">
+            <ui:Label name="toast-label" class="toast" />
+        </ui:VisualElement>
+
     </ui:VisualElement>
 </ui:UXML>

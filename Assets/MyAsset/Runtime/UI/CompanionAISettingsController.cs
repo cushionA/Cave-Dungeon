@@ -71,6 +71,10 @@ namespace Game.Runtime
         private VisualElement _tooltipPanel;
         private Label _tooltipText;
 
+        // トースト
+        private Label _toastLabel;
+        private IVisualElementScheduledItem _toastHideScheduled;
+
         // 動的ハンドラ退避用（購読解除のため）
         private readonly List<Action> _unsubscribeActions = new List<Action>();
 
@@ -79,6 +83,21 @@ namespace Game.Runtime
         // 新規モード追加時のデフォルト判定間隔（min/max 秒）。ゆらぎ範囲。
         private const float k_DefaultJudgeIntervalMin = 0.4f;
         private const float k_DefaultJudgeIntervalMax = 0.6f;
+
+        // トースト通知の表示時間（ミリ秒）。USSトランジションのフェードアウトと重ならないよう余裕を取る。
+        private const int k_ToastVisibleDurationMs = 2200;
+        // 保存ボタンのフラッシュ持続時間（ミリ秒）。transition-duration(--dur-base=0.15s)×2〜3 くらいが自然。
+        private const int k_SaveFlashDurationMs = 380;
+
+        /// <summary>
+        /// トースト通知の種別。色アクセント（success=緑/error=赤/info=青）の切替に使う。
+        /// </summary>
+        public enum ToastKind
+        {
+            Success,
+            Error,
+            Info,
+        }
 
         // =========================================================================
         // Lifecycle
@@ -177,6 +196,7 @@ namespace Game.Runtime
             _dialogLayer = _root.Q<VisualElement>("dialog-layer");
             _tooltipPanel = _root.Q<VisualElement>("tooltip-panel");
             _tooltipText = _root.Q<Label>("tooltip-text");
+            _toastLabel = _root.Q<Label>("toast-label");
         }
 
         private void RegisterEventHandlers()
@@ -288,6 +308,67 @@ namespace Game.Runtime
                 return;
             }
             _tooltipPanel.RemoveFromClassList("tooltip-panel--visible");
+        }
+
+        // =========================================================================
+        // Toast / Flash
+        // =========================================================================
+
+        /// <summary>
+        /// 一時的なフィードバック（保存・削除等）を右上にトースト表示する。
+        /// ブロッキングが必要なエラー（上限到達等）はダイアログを使い分ける。
+        /// </summary>
+        private void ShowToast(string message, ToastKind kind = ToastKind.Success)
+        {
+            if (_toastLabel == null || string.IsNullOrEmpty(message))
+            {
+                return;
+            }
+
+            _toastLabel.text = message;
+            _toastLabel.RemoveFromClassList("toast--success");
+            _toastLabel.RemoveFromClassList("toast--error");
+            _toastLabel.RemoveFromClassList("toast--info");
+            _toastLabel.AddToClassList(GetToastKindClass(kind));
+            _toastLabel.AddToClassList("toast--visible");
+
+            // 前回の自動フェードアウトスケジュールが走っていたら破棄し、今回の表示時間でタイマーを引き直す。
+            _toastHideScheduled?.Pause();
+            _toastHideScheduled = _toastLabel.schedule.Execute(() =>
+            {
+                _toastLabel.RemoveFromClassList("toast--visible");
+            }).StartingIn(k_ToastVisibleDurationMs);
+        }
+
+        private static string GetToastKindClass(ToastKind kind)
+        {
+            switch (kind)
+            {
+                case ToastKind.Error:
+                    return "toast--error";
+                case ToastKind.Info:
+                    return "toast--info";
+                case ToastKind.Success:
+                default:
+                    return "toast--success";
+            }
+        }
+
+        /// <summary>
+        /// 保存成功時に保存ボタンを一時的に緑系背景でフラッシュする。
+        /// トーストだけだと視線移動が必要なので、ボタン自体の反応で成功を即伝える。
+        /// </summary>
+        private void FlashSaveButton()
+        {
+            if (_saveButton == null)
+            {
+                return;
+            }
+            _saveButton.AddToClassList("primary-button--flash");
+            _saveButton.schedule.Execute(() =>
+            {
+                _saveButton.RemoveFromClassList("primary-button--flash");
+            }).StartingIn(k_SaveFlashDurationMs);
         }
 
         // =========================================================================
@@ -627,6 +708,7 @@ namespace Game.Runtime
             }
             _logic.SwitchEditingTarget(newId, force: true);
             RefreshAll();
+            ShowToast("新規プリセットを作成しました");
         }
 
         private void OnSaveClicked()
@@ -634,10 +716,12 @@ namespace Game.Runtime
             bool ok = _logic.SaveBufferToEditingPreset();
             if (!ok)
             {
-                ShowInfoDialog("保存に失敗しました。");
+                ShowToast("保存に失敗しました", ToastKind.Error);
                 return;
             }
             RefreshAll();
+            FlashSaveButton();
+            ShowToast("保存しました");
         }
 
         private void OnSaveAsPresetClicked()
@@ -655,6 +739,7 @@ namespace Game.Runtime
                         return;
                     }
                     RefreshAll();
+                    ShowToast("プリセットとして保存しました");
                 });
         }
 
@@ -852,6 +937,7 @@ namespace Game.Runtime
                 _logic.SwitchEditingTarget(configId, force: true);
                 _logic.ApplyBufferToCurrentTactic();
                 RefreshAll();
+                ShowToast($"「{preset.Value.configName}」を現在の戦術に適用しました");
             }));
             buttons.Add(BuildDialogButton("編集する", "secondary-button", () =>
             {
@@ -876,10 +962,12 @@ namespace Game.Runtime
                     return;
                 }
                 RefreshAll();
+                ShowToast("プリセットを複製しました");
             }));
             buttons.Add(BuildDialogButton("削除", "danger-button", () =>
             {
-                ShowDeleteConfirmDialog(preset.Value.configName, () =>
+                string presetName = preset.Value.configName;
+                ShowDeleteConfirmDialog(presetName, () =>
                 {
                     bool ok = _logic.DeletePreset(configId);
                     if (!ok)
@@ -888,6 +976,7 @@ namespace Game.Runtime
                         return;
                     }
                     RefreshAll();
+                    ShowToast($"「{presetName}」を削除しました", ToastKind.Info);
                 });
             }));
             buttons.Add(BuildDialogButton("キャンセル", "secondary-button", null));
@@ -931,6 +1020,7 @@ namespace Game.Runtime
                             return;
                         }
                         RefreshAll();
+                        ShowToast("プリセットとして保存しました");
                     });
             }));
             buttons.Add(BuildDialogButton("キャンセル", "secondary-button", null));
@@ -1002,6 +1092,7 @@ namespace Game.Runtime
                         _logic.ReplaceModeFromPreset(slotIndex, newId);
                         RefreshEditor();
                         RefreshDirtyIndicator();
+                        ShowToast("モードプリセットとして保存しました");
                     });
             }));
             if (isLinked)
