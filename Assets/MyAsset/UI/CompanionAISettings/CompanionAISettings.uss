@@ -972,6 +972,180 @@
     scale: 1 1;
 }
 
+/* ===== 空状態 (Empty State) ===== */
+.empty-state {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--s-lg) var(--s-md);
+    background-color: var(--color-bg-section);
+    border-width: 1px;
+    border-color: var(--color-border-subtle);
+    border-radius: var(--r-sm);
+    margin-top: var(--s-sm);
+    margin-bottom: var(--s-sm);
+    display: none;
+}
+
+.empty-state--visible {
+    display: flex;
+}
+
+.empty-state--modes {
+    padding: var(--s-lg) var(--s-md);
+    margin-top: var(--s-md);
+}
+
+.empty-state--inline {
+    padding: var(--s-md) var(--s-sm);
+    margin-bottom: 0;
+}
+
+.empty-state__icon {
+    font-size: 36px;
+    color: var(--color-accent);
+    -unity-font-style: bold;
+    margin-bottom: var(--s-sm);
+    -unity-text-align: middle-center;
+}
+
+.empty-state__title {
+    font-size: var(--fs-h3);
+    color: var(--color-text-primary);
+    -unity-font-style: bold;
+    margin-bottom: var(--s-xs);
+    -unity-text-align: middle-center;
+    white-space: normal;
+}
+
+.empty-state__body {
+    font-size: var(--fs-label);
+    color: var(--color-text-muted);
+    -unity-text-align: middle-center;
+    white-space: normal;
+    max-width: 480px;
+}
+
+/* ===== Section hint（セクション直下の補助説明） ===== */
+.section-hint {
+    font-size: var(--fs-caption);
+    color: var(--color-text-muted);
+    margin-bottom: var(--s-sm);
+    padding-left: var(--s-xs);
+    white-space: normal;
+}
+
+/* ===== 新規作成ボタンのプライマリ強化 ===== */
+.add-preset-button--primary {
+    border-width: 2px;
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+    -unity-font-style: bold;
+}
+
+.add-preset-button--primary:hover {
+    background-color: var(--color-accent-wash);
+}
+
+/* ===== ショートカット凡例バー ===== */
+.shortcut-legend {
+    flex-direction: column;
+    padding: var(--s-md) var(--s-lg);
+    margin-bottom: var(--s-md);
+    background-color: var(--color-bg-panel);
+    border-width: 1px;
+    border-color: var(--color-border-subtle);
+    border-radius: var(--r-md);
+    max-width: 720px;
+}
+
+.shortcut-legend__title {
+    font-size: var(--fs-label);
+    color: var(--color-text-primary);
+    -unity-font-style: bold;
+    margin-bottom: var(--s-sm);
+}
+
+.shortcut-legend__row {
+    flex-direction: row;
+    align-items: center;
+    padding-top: var(--s-xs);
+    padding-bottom: var(--s-xs);
+}
+
+.shortcut-legend__row--future {
+    opacity: 0.55;
+}
+
+.shortcut-legend__keys {
+    min-width: 160px;
+    font-size: var(--fs-label);
+    color: var(--color-accent);
+    -unity-font-style: bold;
+}
+
+.shortcut-legend__arrow {
+    font-size: var(--fs-label);
+    color: var(--color-text-muted);
+    margin-left: var(--s-sm);
+    margin-right: var(--s-sm);
+}
+
+.shortcut-legend__desc {
+    font-size: var(--fs-label);
+    color: var(--color-text-secondary);
+    flex-grow: 1;
+    white-space: normal;
+}
+
+/* ===== フッターバー（パッド操作凡例） ===== */
+.footer-bar {
+    flex-direction: row;
+    align-items: center;
+    padding: var(--s-sm) var(--s-lg);
+    background-color: var(--color-bg-header);
+    border-top-width: 1px;
+    border-top-color: var(--color-border-subtle);
+}
+
+.footer-hint {
+    flex-direction: row;
+    align-items: center;
+    margin-right: var(--s-lg);
+}
+
+.footer-hint__glyph {
+    width: 24px;
+    height: 24px;
+    -unity-text-align: middle-center;
+    -unity-font-style: bold;
+    font-size: var(--fs-caption);
+    color: rgb(10, 10, 20);
+    border-radius: 12px;
+    margin-right: var(--s-sm);
+}
+
+.footer-hint__glyph--a {
+    background-color: rgb(111, 207, 122);
+}
+
+.footer-hint__glyph--b {
+    background-color: rgb(242, 107, 90);
+}
+
+.footer-hint__glyph--x {
+    background-color: rgb(90, 191, 242);
+}
+
+.footer-hint__glyph--y {
+    background-color: rgb(242, 209, 90);
+}
+
+.footer-hint__text {
+    font-size: var(--fs-label);
+    color: var(--color-text-muted);
+}
+
 /* ===== ユーティリティ ===== */
 .hidden {
     display: none;

@@ -53,12 +53,14 @@ namespace Game.Runtime
         private Label _presetSectionLabel;
         private ScrollView _presetScroll;
         private Button _addPresetButton;
+        private VisualElement _tacticListEmptyState;
 
         // エディタ
         private TextField _configNameField;
         private Button _saveButton;
         private Button _saveAsPresetButton;
         private VisualElement _modeSlotsContainer;
+        private VisualElement _modesEmptyState;
         private VisualElement _transitionList;
 
         // ショートカット
@@ -158,11 +160,13 @@ namespace Game.Runtime
             _presetSectionLabel = _root.Q<Label>("preset-section-label");
             _presetScroll = _root.Q<ScrollView>("preset-scroll");
             _addPresetButton = _root.Q<Button>("add-preset-button");
+            _tacticListEmptyState = _root.Q<VisualElement>("tactic-list-empty-state");
 
             _configNameField = _root.Q<TextField>("config-name-field");
             _saveButton = _root.Q<Button>("save-button");
             _saveAsPresetButton = _root.Q<Button>("save-as-preset-button");
             _modeSlotsContainer = _root.Q<VisualElement>("mode-slots-container");
+            _modesEmptyState = _root.Q<VisualElement>("modes-empty-state");
             _transitionList = _root.Q<VisualElement>("transition-list");
 
             for (int i = 0; i < k_ShortcutSlotCount; i++)
@@ -387,6 +391,29 @@ namespace Game.Runtime
             {
                 _presetSectionLabel.text = $"プリセット ({_tacticalRegistry.Count}/20)";
             }
+
+            // プリセットが0件のとき空状態CTAを表示
+            SetEmptyStateVisible(_tacticListEmptyState, _tacticalRegistry.Count == 0);
+        }
+
+        /// <summary>
+        /// 空状態UI要素の表示切替。
+        /// empty-state--visible クラスの付与/除去で USS の display を切り替える。
+        /// </summary>
+        private static void SetEmptyStateVisible(VisualElement element, bool visible)
+        {
+            if (element == null)
+            {
+                return;
+            }
+            if (visible)
+            {
+                element.AddToClassList("empty-state--visible");
+            }
+            else
+            {
+                element.RemoveFromClassList("empty-state--visible");
+            }
         }
 
         private Button CreateTacticListItem(string name, bool isCurrent, bool isSelected)
@@ -451,6 +478,9 @@ namespace Game.Runtime
                 }
 
                 AttachTooltipHandlers(_modeSlotsContainer);
+
+                // モードが未設定の戦術では、追加ガイドCTAを表示して視線を誘導
+                SetEmptyStateVisible(_modesEmptyState, modeCount == 0);
             }
 
             // 遷移ルール
