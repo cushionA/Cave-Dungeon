@@ -56,7 +56,7 @@
 
                     <ui:VisualElement name="modes-section" class="editor-section">
                         <ui:Label class="section-label" text="モードスロット" />
-                        <ui:Label class="section-hint" text="1つの戦術には最大4つのモード（戦闘時のふるまい）を設定できます。" />
+                        <ui:Label class="section-hint" text="1つの戦術には最大4つのモード（AIの行動パターン）を設定できます。" />
                         <ui:VisualElement name="mode-slots-container" class="mode-slots-container" />
                         <ui:VisualElement name="modes-empty-state" class="empty-state empty-state--modes">
                             <ui:Label class="empty-state__icon" text="＋" />
@@ -84,7 +84,7 @@
                         <ui:Label class="shortcut-legend__arrow" text="→" />
                         <ui:Label class="shortcut-legend__desc" text="現在の戦術内のモードを瞬時に切替" />
                     </ui:VisualElement>
-                    <ui:VisualElement class="shortcut-legend__row shortcut-legend__row--future">
+                    <ui:VisualElement class="shortcut-legend__row shortcut-legend__row--future" picking-mode="Ignore">
                         <ui:Label class="shortcut-legend__keys" text="L1 + ↑ → ↓ ←" />
                         <ui:Label class="shortcut-legend__arrow" text="→" />
                         <ui:Label class="shortcut-legend__desc" text="戦術プリセットごと切替（次回アップデートで対応予定）" />
@@ -122,8 +122,10 @@
 
         </ui:VisualElement>
 
-        <!-- ===== フッターバー（パッド操作凡例） ===== -->
-        <ui:VisualElement name="footer-bar" class="footer-bar">
+        <!-- ===== フッターバー（パッド操作凡例） =====
+             パッド入力のアクション紐付けは未実装のため、誤認識防止に hidden を付与。
+             配線完了時に hidden クラスを除去して表示する。docs/FUTURE_TASKS.md 参照。 -->
+        <ui:VisualElement name="footer-bar" class="footer-bar hidden" picking-mode="Ignore">
             <ui:VisualElement class="footer-hint">
                 <ui:Label class="footer-hint__glyph footer-hint__glyph--a" text="A" />
                 <ui:Label class="footer-hint__text" text="決定" />

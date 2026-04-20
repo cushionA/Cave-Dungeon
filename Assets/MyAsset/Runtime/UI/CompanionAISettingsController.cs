@@ -398,7 +398,9 @@ namespace Game.Runtime
 
         /// <summary>
         /// 空状態UI要素の表示切替。
-        /// empty-state--visible クラスの付与/除去で USS の display を切り替える。
+        /// インラインで style.display を直接書き換えず USSクラス切替で行うのは、
+        /// テーマやバリアント（empty-state--modes / empty-state--inline 等）ごとの
+        /// 見え方を USS 側に集約し、Controller から display の詳細を切り離すため。
         /// </summary>
         private static void SetEmptyStateVisible(VisualElement element, bool visible)
         {
