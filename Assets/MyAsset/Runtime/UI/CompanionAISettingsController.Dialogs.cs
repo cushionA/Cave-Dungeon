@@ -993,11 +993,7 @@ namespace Game.Runtime
                   .Append(f.distanceRange.y.ToString("0.#"))
                   .Append("m");
             }
-            if (f.includeSelf)
-            {
-                if (sb.Length > 0) sb.Append(", ");
-                sb.Append("自分も含む");
-            }
+            // includeSelf は UI 編集廃止（Companion 特徴で代替）したため、サマリでも表示しない。
             if (sb.Length == 0)
             {
                 return "条件なし（全員が対象）";
@@ -2238,25 +2234,11 @@ namespace Game.Runtime
                     }
                     setSelects(newArr);
 
-                    // targetRules のインデックス整合: 参照ルール破棄 + より大きい index を decrement
+                    // targetRules のインデックス整合: Logic 層の純粋関数を経由（テストで直接検証される）
                     AIRule[] rules = getTargetRules();
                     if (rules != null && rules.Length > 0)
                     {
-                        List<AIRule> adjusted = new List<AIRule>(rules.Length);
-                        for (int k = 0; k < rules.Length; k++)
-                        {
-                            AIRule r = rules[k];
-                            if (r.actionIndex == idx)
-                            {
-                                continue;
-                            }
-                            if (r.actionIndex > idx)
-                            {
-                                r.actionIndex--;
-                            }
-                            adjusted.Add(r);
-                        }
-                        setTargetRules(adjusted.ToArray());
+                        setTargetRules(CompanionAISettingsLogic.AdjustTargetRulesForRemovedSelect(rules, idx));
                     }
 
                     rebuild();
@@ -2296,6 +2278,15 @@ namespace Game.Runtime
             }
 
             AIMode parentMode = getParentMode();
+
+            // ルールはあるが targetSelects が空の場合、このモードの第1層判定は機能しない状態。警告を出す。
+            if (parentMode.targetSelects == null || parentMode.targetSelects.Length == 0)
+            {
+                Label warn = new Label("⚠ ターゲット選定が空のため、これらのルールは参照先が無く機能しません");
+                warn.AddToClassList("mode-detail-empty");
+                container.Add(warn);
+            }
+
             for (int i = 0; i < count; i++)
             {
                 int idx = i;
@@ -2313,12 +2304,17 @@ namespace Game.Runtime
 
                 Button editButton = new Button(() =>
                 {
-                    ShowTargetRuleEditDialog(rule, getParentMode(), edited =>
+                    AIRule[] arr = getRules();
+                    if (arr == null || idx >= arr.Length)
                     {
-                        AIRule[] arr = getRules();
-                        if (arr != null && idx < arr.Length)
+                        return;
+                    }
+                    ShowTargetRuleEditDialog(arr[idx], getParentMode(), edited =>
+                    {
+                        AIRule[] current = getRules();
+                        if (current != null && idx < current.Length)
                         {
-                            arr[idx] = edited;
+                            current[idx] = edited;
                         }
                         rebuild();
                     });

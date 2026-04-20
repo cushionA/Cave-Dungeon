@@ -74,6 +74,10 @@ namespace Game.Runtime
 
         private const int k_ShortcutSlotCount = 4;
 
+        // 新規モード追加時のデフォルト判定間隔（min/max 秒）。ゆらぎ範囲。
+        private const float k_DefaultJudgeIntervalMin = 0.4f;
+        private const float k_DefaultJudgeIntervalMax = 0.6f;
+
         // =========================================================================
         // Lifecycle
         // =========================================================================
@@ -672,7 +676,7 @@ namespace Game.Runtime
                         },
                     },
                     defaultActionIndex = 0,
-                    judgeInterval = new UnityEngine.Vector2(0.4f, 0.6f),
+                    judgeInterval = new Vector2(k_DefaultJudgeIntervalMin, k_DefaultJudgeIntervalMax),
                 };
                 bool ok = _logic.AddModeToBuffer(emptyMode);
                 if (!ok)

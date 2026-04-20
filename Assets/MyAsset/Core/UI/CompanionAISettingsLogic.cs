@@ -538,5 +538,34 @@ namespace Game.Core
 
             return clone;
         }
+
+        /// <summary>
+        /// targetSelect を1件削除した時の targetRules 配列を返す純粋関数。
+        /// 参照していた rule は破棄し、より大きい actionIndex を decrement する。
+        /// UI の RebuildTargetSelectList 削除ボタンから呼ばれ、同時にテストから直接検証される。
+        /// </summary>
+        public static AIRule[] AdjustTargetRulesForRemovedSelect(AIRule[] rules, int removedIdx)
+        {
+            if (rules == null || rules.Length == 0)
+            {
+                return rules ?? new AIRule[0];
+            }
+
+            List<AIRule> adjusted = new List<AIRule>(rules.Length);
+            for (int k = 0; k < rules.Length; k++)
+            {
+                AIRule r = rules[k];
+                if (r.actionIndex == removedIdx)
+                {
+                    continue;
+                }
+                if (r.actionIndex > removedIdx)
+                {
+                    r.actionIndex--;
+                }
+                adjusted.Add(r);
+            }
+            return adjusted.ToArray();
+        }
     }
 }

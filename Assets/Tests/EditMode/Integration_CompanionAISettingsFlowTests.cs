@@ -675,67 +675,66 @@ namespace Game.Tests.EditMode
         }
 
         /// <summary>
-        /// UI の RebuildTargetSelectList 削除ボタン挙動を Logic API 経由で再現し、
-        /// targetSelect 削除時に targetRules の actionIndex が整合補正される
-        /// （参照ルール破棄 + より大きい index の decrement）ことを確認する。
+        /// CompanionAISettingsLogic.AdjustTargetRulesForRemovedSelect を直接検証する。
+        /// UI の RebuildTargetSelectList 削除ボタンは実装本体としてこのヘルパーを呼んでおり、
+        /// ロジックを自前再現するのではなく純粋関数として直接テストする。
         /// </summary>
         [Test]
-        public void CompanionAISettings_UILike_RemoveTargetSelect_AdjustsReferencingRules()
+        public void AdjustTargetRulesForRemovedSelect_DiscardsReferencingRules_AndDecrementsHigherIndexes()
         {
-            _logic.AddModeToBuffer(new AIMode
+            AIRule[] rules = new AIRule[]
             {
-                modeName = "整合テスト",
-                actions = new ActionSlot[0],
-                actionRules = new AIRule[0],
-                targetSelects = new AITargetSelect[]
-                {
-                    new AITargetSelect { sortKey = TargetSortKey.Distance,     filter = new TargetFilter { belong = CharacterBelong.Enemy } },
-                    new AITargetSelect { sortKey = TargetSortKey.HpRatio,      filter = new TargetFilter { belong = CharacterBelong.Enemy } },
-                    new AITargetSelect { sortKey = TargetSortKey.DamageScore,  filter = new TargetFilter { belong = CharacterBelong.Enemy } },
-                },
-                targetRules = new AIRule[]
-                {
-                    new AIRule { actionIndex = 0, probability = 100, conditions = new AICondition[0] },
-                    new AIRule { actionIndex = 1, probability = 100, conditions = new AICondition[0] },
-                    new AIRule { actionIndex = 2, probability = 100, conditions = new AICondition[0] },
-                },
-            });
+                new AIRule { actionIndex = 0, probability = 100, conditions = new AICondition[0] },
+                new AIRule { actionIndex = 1, probability = 50,  conditions = new AICondition[0] },
+                new AIRule { actionIndex = 2, probability = 80,  conditions = new AICondition[0] },
+                new AIRule { actionIndex = 3, probability = 70,  conditions = new AICondition[0] },
+            };
 
-            // RebuildTargetSelectList 削除ボタン内ロジックを再現して idx=1 を削除
-            AIMode working = _logic.EditingBuffer.modes[0];
-            int removeIdx = 1;
+            AIRule[] adjusted = CompanionAISettingsLogic.AdjustTargetRulesForRemovedSelect(rules, 1);
 
-            AITargetSelect[] tsOld = working.targetSelects;
-            AITargetSelect[] tsNew = new AITargetSelect[tsOld.Length - 1];
-            int dst = 0;
-            for (int k = 0; k < tsOld.Length; k++)
+            Assert.AreEqual(3, adjusted.Length, "actionIndex=1 を参照していたルールは破棄");
+            Assert.AreEqual(0, adjusted[0].actionIndex, "元 actionIndex=0 は据え置き");
+            Assert.AreEqual(1, adjusted[1].actionIndex, "元 actionIndex=2 は decrement されて 1");
+            Assert.AreEqual(2, adjusted[2].actionIndex, "元 actionIndex=3 は decrement されて 2");
+
+            // probability など他フィールドが保持されていること
+            Assert.AreEqual((byte)100, adjusted[0].probability);
+            Assert.AreEqual((byte)80, adjusted[1].probability);
+            Assert.AreEqual((byte)70, adjusted[2].probability);
+        }
+
+        /// <summary>
+        /// null / 空配列 / 参照ルール全滅 の境界ケース。
+        /// </summary>
+        [Test]
+        public void AdjustTargetRulesForRemovedSelect_HandlesEdgeCases()
+        {
+            // null 入力 → 空配列
+            AIRule[] fromNull = CompanionAISettingsLogic.AdjustTargetRulesForRemovedSelect(null, 0);
+            Assert.IsNotNull(fromNull);
+            Assert.AreEqual(0, fromNull.Length);
+
+            // 空配列 → 空配列
+            AIRule[] fromEmpty = CompanionAISettingsLogic.AdjustTargetRulesForRemovedSelect(new AIRule[0], 0);
+            Assert.AreEqual(0, fromEmpty.Length);
+
+            // 全ルールが削除 idx を参照 → 全部破棄で空配列
+            AIRule[] allReferencing = new AIRule[]
             {
-                if (k == removeIdx) continue;
-                tsNew[dst++] = tsOld[k];
-            }
-            working.targetSelects = tsNew;
+                new AIRule { actionIndex = 2, probability = 100, conditions = new AICondition[0] },
+                new AIRule { actionIndex = 2, probability = 50,  conditions = new AICondition[0] },
+            };
+            AIRule[] afterAllRemoved = CompanionAISettingsLogic.AdjustTargetRulesForRemovedSelect(allReferencing, 2);
+            Assert.AreEqual(0, afterAllRemoved.Length);
 
-            System.Collections.Generic.List<AIRule> adjusted = new System.Collections.Generic.List<AIRule>(working.targetRules.Length);
-            for (int k = 0; k < working.targetRules.Length; k++)
+            // 削除 idx より小さい index のルールのみ → 変更なし
+            AIRule[] smallerOnly = new AIRule[]
             {
-                AIRule r = working.targetRules[k];
-                if (r.actionIndex == removeIdx) continue;
-                if (r.actionIndex > removeIdx) r.actionIndex--;
-                adjusted.Add(r);
-            }
-            working.targetRules = adjusted.ToArray();
-
-            Assert.IsTrue(_logic.UpdateModeInBuffer(0, working));
-            _logic.ApplyBufferToCurrentTactic();
-
-            AIMode result = _logic.CurrentTactic.modes[0];
-            Assert.AreEqual(2, result.targetSelects.Length);
-            Assert.AreEqual(TargetSortKey.Distance, result.targetSelects[0].sortKey);
-            Assert.AreEqual(TargetSortKey.DamageScore, result.targetSelects[1].sortKey, "idx=1 が削除され DamageScore が前詰め");
-
-            Assert.AreEqual(2, result.targetRules.Length, "actionIndex=1 を参照していたルールは破棄");
-            Assert.AreEqual(0, result.targetRules[0].actionIndex, "元 actionIndex=0 は据え置き");
-            Assert.AreEqual(1, result.targetRules[1].actionIndex, "元 actionIndex=2 は decrement されて 1");
+                new AIRule { actionIndex = 0, probability = 100, conditions = new AICondition[0] },
+            };
+            AIRule[] afterSmallerOnly = CompanionAISettingsLogic.AdjustTargetRulesForRemovedSelect(smallerOnly, 5);
+            Assert.AreEqual(1, afterSmallerOnly.Length);
+            Assert.AreEqual(0, afterSmallerOnly[0].actionIndex);
         }
     }
 }
