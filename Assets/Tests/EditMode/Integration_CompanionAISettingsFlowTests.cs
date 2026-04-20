@@ -547,5 +547,194 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(5, reloaded.operandA, "下限");
             Assert.AreEqual(15, reloaded.operandB, "上限");
         }
+
+        /// <summary>
+        /// targetRules / targetSelects が UI で編集後、保存 → 別プリセット切替 → 戻す
+        /// の流れでも全フィールドが永続化されることを確認する。
+        /// </summary>
+        [Test]
+        public void CompanionAISettings_EditMode_TargetRulesAndSelects_Roundtrip()
+        {
+            _logic.AddModeToBuffer(new AIMode
+            {
+                modeName = "ターゲット戦術",
+                judgeInterval = new Vector2(0.3f, 0.7f),
+                actions = new ActionSlot[0],
+                actionRules = new AIRule[0],
+                targetRules = new AIRule[0],
+                targetSelects = new AITargetSelect[0],
+            });
+
+            AIMode edited = new AIMode
+            {
+                modeName = "ターゲット戦術(編集済み)",
+                judgeInterval = new Vector2(0.3f, 0.7f),
+                defaultActionIndex = 0,
+                actions = new ActionSlot[0],
+                actionRules = new AIRule[0],
+                targetSelects = new AITargetSelect[]
+                {
+                    new AITargetSelect
+                    {
+                        sortKey = TargetSortKey.Distance,
+                        isDescending = false,
+                        filter = new TargetFilter
+                        {
+                            belong = CharacterBelong.Enemy,
+                            includeSelf = false,
+                        },
+                    },
+                    new AITargetSelect
+                    {
+                        sortKey = TargetSortKey.HpRatio,
+                        elementFilter = Element.Fire | Element.Thunder,
+                        isDescending = false,
+                        filter = new TargetFilter
+                        {
+                            belong = CharacterBelong.Enemy,
+                            feature = CharacterFeature.Boss,
+                            weakPoint = Element.Fire,
+                            distanceRange = new Vector2(0f, 20f),
+                            filterFlags = FilterBitFlag.FeatureAnd,
+                            includeSelf = false,
+                        },
+                    },
+                },
+                targetRules = new AIRule[]
+                {
+                    new AIRule
+                    {
+                        actionIndex = 1,
+                        probability = 80,
+                        conditions = new AICondition[]
+                        {
+                            new AICondition
+                            {
+                                conditionType = AIConditionType.HpRatio,
+                                compareOp = CompareOp.LessEqual,
+                                operandA = 30,
+                                operandB = 0,
+                                filter = new TargetFilter { includeSelf = true },
+                            },
+                        },
+                    },
+                    new AIRule
+                    {
+                        actionIndex = 0,
+                        probability = 100,
+                        conditions = new AICondition[0],
+                    },
+                },
+            };
+            Assert.IsTrue(_logic.UpdateModeInBuffer(0, edited));
+            _logic.ApplyBufferToCurrentTactic();
+
+            // 別プリセットへ切替 → 戻すで再読み込みを再現
+            string otherId = _tacticalRegistry.Save("別戦術", new CompanionAIConfig
+            {
+                configName = "別戦術",
+                modes = new AIMode[0],
+                modeTransitionRules = new ModeTransitionRule[0],
+                shortcutModeBindings = new int[4],
+            });
+            _logic.SwitchEditingTarget(otherId, force: false);
+            _logic.SwitchEditingTarget(null, force: false);
+
+            AIMode reloaded = _logic.EditingBuffer.modes[0];
+
+            // targetSelects 全フィールド
+            Assert.AreEqual(2, reloaded.targetSelects.Length);
+
+            Assert.AreEqual(TargetSortKey.Distance, reloaded.targetSelects[0].sortKey);
+            Assert.IsFalse(reloaded.targetSelects[0].isDescending);
+            Assert.AreEqual(CharacterBelong.Enemy, reloaded.targetSelects[0].filter.belong);
+            Assert.IsFalse(reloaded.targetSelects[0].filter.includeSelf);
+
+            Assert.AreEqual(TargetSortKey.HpRatio, reloaded.targetSelects[1].sortKey);
+            Assert.AreEqual(Element.Fire | Element.Thunder, reloaded.targetSelects[1].elementFilter);
+            Assert.AreEqual(CharacterFeature.Boss, reloaded.targetSelects[1].filter.feature);
+            Assert.AreEqual(Element.Fire, reloaded.targetSelects[1].filter.weakPoint);
+            Assert.AreEqual(new Vector2(0f, 20f), reloaded.targetSelects[1].filter.distanceRange);
+            Assert.IsTrue((reloaded.targetSelects[1].filter.filterFlags & FilterBitFlag.FeatureAnd) != 0);
+
+            // targetRules 全フィールド
+            Assert.AreEqual(2, reloaded.targetRules.Length);
+
+            AIRule tRule0 = reloaded.targetRules[0];
+            Assert.AreEqual(1, tRule0.actionIndex);
+            Assert.AreEqual((byte)80, tRule0.probability);
+            Assert.AreEqual(1, tRule0.conditions.Length);
+            Assert.AreEqual(AIConditionType.HpRatio, tRule0.conditions[0].conditionType);
+            Assert.AreEqual(CompareOp.LessEqual, tRule0.conditions[0].compareOp);
+            Assert.AreEqual(30, tRule0.conditions[0].operandA);
+
+            AIRule tRule1 = reloaded.targetRules[1];
+            Assert.AreEqual(0, tRule1.actionIndex);
+            Assert.AreEqual((byte)100, tRule1.probability);
+            Assert.AreEqual(0, tRule1.conditions.Length);
+        }
+
+        /// <summary>
+        /// CompanionAISettingsLogic.AdjustTargetRulesForRemovedSelect を直接検証する。
+        /// UI の RebuildTargetSelectList 削除ボタンは実装本体としてこのヘルパーを呼んでおり、
+        /// ロジックを自前再現するのではなく純粋関数として直接テストする。
+        /// </summary>
+        [Test]
+        public void AdjustTargetRulesForRemovedSelect_DiscardsReferencingRules_AndDecrementsHigherIndexes()
+        {
+            AIRule[] rules = new AIRule[]
+            {
+                new AIRule { actionIndex = 0, probability = 100, conditions = new AICondition[0] },
+                new AIRule { actionIndex = 1, probability = 50,  conditions = new AICondition[0] },
+                new AIRule { actionIndex = 2, probability = 80,  conditions = new AICondition[0] },
+                new AIRule { actionIndex = 3, probability = 70,  conditions = new AICondition[0] },
+            };
+
+            AIRule[] adjusted = CompanionAISettingsLogic.AdjustTargetRulesForRemovedSelect(rules, 1);
+
+            Assert.AreEqual(3, adjusted.Length, "actionIndex=1 を参照していたルールは破棄");
+            Assert.AreEqual(0, adjusted[0].actionIndex, "元 actionIndex=0 は据え置き");
+            Assert.AreEqual(1, adjusted[1].actionIndex, "元 actionIndex=2 は decrement されて 1");
+            Assert.AreEqual(2, adjusted[2].actionIndex, "元 actionIndex=3 は decrement されて 2");
+
+            // probability など他フィールドが保持されていること
+            Assert.AreEqual((byte)100, adjusted[0].probability);
+            Assert.AreEqual((byte)80, adjusted[1].probability);
+            Assert.AreEqual((byte)70, adjusted[2].probability);
+        }
+
+        /// <summary>
+        /// null / 空配列 / 参照ルール全滅 の境界ケース。
+        /// </summary>
+        [Test]
+        public void AdjustTargetRulesForRemovedSelect_HandlesEdgeCases()
+        {
+            // null 入力 → 空配列
+            AIRule[] fromNull = CompanionAISettingsLogic.AdjustTargetRulesForRemovedSelect(null, 0);
+            Assert.IsNotNull(fromNull);
+            Assert.AreEqual(0, fromNull.Length);
+
+            // 空配列 → 空配列
+            AIRule[] fromEmpty = CompanionAISettingsLogic.AdjustTargetRulesForRemovedSelect(new AIRule[0], 0);
+            Assert.AreEqual(0, fromEmpty.Length);
+
+            // 全ルールが削除 idx を参照 → 全部破棄で空配列
+            AIRule[] allReferencing = new AIRule[]
+            {
+                new AIRule { actionIndex = 2, probability = 100, conditions = new AICondition[0] },
+                new AIRule { actionIndex = 2, probability = 50,  conditions = new AICondition[0] },
+            };
+            AIRule[] afterAllRemoved = CompanionAISettingsLogic.AdjustTargetRulesForRemovedSelect(allReferencing, 2);
+            Assert.AreEqual(0, afterAllRemoved.Length);
+
+            // 削除 idx より小さい index のルールのみ → 変更なし
+            AIRule[] smallerOnly = new AIRule[]
+            {
+                new AIRule { actionIndex = 0, probability = 100, conditions = new AICondition[0] },
+            };
+            AIRule[] afterSmallerOnly = CompanionAISettingsLogic.AdjustTargetRulesForRemovedSelect(smallerOnly, 5);
+            Assert.AreEqual(1, afterSmallerOnly.Length);
+            Assert.AreEqual(0, afterSmallerOnly[0].actionIndex);
+        }
     }
 }

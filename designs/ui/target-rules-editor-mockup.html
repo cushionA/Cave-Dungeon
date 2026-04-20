@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>仲間AI設定 — ターゲット選定 / ターゲット切替ルール モックアップ</title>
+<style>
+    :root {
+        --bg-app: rgba(0, 0, 0, 0.75);
+        --bg-panel: rgba(20, 20, 30, 0.95);
+        --bg-panel-2: rgba(15, 15, 25, 0.9);
+        --bg-row: rgba(35, 35, 45, 0.85);
+        --bg-row-hover: rgba(55, 55, 75, 0.9);
+        --bg-section: rgba(0, 0, 0, 0.25);
+        --bg-inset: rgba(0, 0, 0, 0.35);
+
+        --border-soft: rgba(80, 80, 100, 0.4);
+        --border-mid: rgba(100, 100, 130, 0.6);
+
+        --text-primary: rgb(240, 240, 245);
+        --text-secondary: rgb(160, 160, 175);
+        --text-dim: rgb(100, 100, 115);
+
+        --accent: rgb(79, 195, 247);
+        --accent-soft: rgba(79, 195, 247, 0.15);
+        --warning: rgb(255, 193, 7);
+        --danger: rgb(244, 67, 54);
+        --success: rgb(76, 175, 80);
+        --target-color: rgb(186, 104, 200);
+        --target-soft: rgba(186, 104, 200, 0.15);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+        margin: 0;
+        padding: 24px;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f1626 100%);
+        background-attachment: fixed;
+        color: var(--text-primary);
+        font-family: "Segoe UI", "Yu Gothic UI", "Meiryo", sans-serif;
+        font-size: 14px;
+    }
+
+    h1 { font-size: 20px; margin: 0 0 4px 0; font-weight: bold; }
+    .page-intro { color: var(--text-secondary); font-size: 13px; margin-bottom: 24px; }
+
+    .mockup-wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 32px;
+        align-items: flex-start;
+    }
+
+    /* === モーダルダイアログ共通 === */
+    .mock-dialog {
+        background-color: rgba(20, 20, 30, 0.98);
+        border: 1px solid var(--border-mid);
+        border-radius: 8px;
+        width: 560px;
+        max-width: 100%;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+        overflow: hidden;
+    }
+
+    .mock-dialog__header {
+        display: flex;
+        align-items: center;
+        padding: 16px 20px;
+        background-color: var(--bg-panel-2);
+        border-bottom: 1px solid var(--border-soft);
+    }
+
+    .mock-dialog__title {
+        font-size: 18px;
+        font-weight: bold;
+        flex-grow: 1;
+    }
+
+    .mock-dialog__close {
+        width: 32px;
+        height: 32px;
+        border: 0;
+        background: transparent;
+        color: var(--text-secondary);
+        font-size: 20px;
+        cursor: pointer;
+        border-radius: 4px;
+    }
+
+    .mock-dialog__close:hover { color: var(--text-primary); background-color: rgba(80, 80, 110, 0.5); }
+
+    .mock-dialog__body {
+        padding: 16px 20px;
+        max-height: 640px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .mock-dialog__body::-webkit-scrollbar { width: 10px; }
+    .mock-dialog__body::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+    .mock-dialog__body::-webkit-scrollbar-thumb { background: rgba(100,100,130,0.5); border-radius: 4px; }
+
+    .mock-dialog__footer {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        padding: 12px 20px;
+        background-color: var(--bg-panel-2);
+        border-top: 1px solid var(--border-soft);
+        gap: 8px;
+    }
+
+    /* === セクション === */
+    .section {
+        background-color: var(--bg-section);
+        border-radius: 6px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .section-label {
+        font-size: 13px;
+        color: var(--text-secondary);
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .section-label--target { color: var(--target-color); }
+
+    .section-label__count {
+        font-size: 11px;
+        color: var(--text-dim);
+        font-weight: normal;
+    }
+
+    .section-hint {
+        font-size: 11px;
+        color: var(--text-dim);
+        font-style: italic;
+    }
+
+    /* === フォーム要素 === */
+    .form-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .form-row__label {
+        font-size: 12px;
+        color: var(--text-secondary);
+        min-width: 110px;
+    }
+
+    .form-row--grid {
+        display: grid;
+        grid-template-columns: 110px 1fr;
+        gap: 10px 14px;
+        align-items: center;
+    }
+
+    .form-input {
+        background-color: rgba(0, 0, 0, 0.45);
+        border: 1px solid var(--border-soft);
+        border-radius: 3px;
+        padding: 6px 10px;
+        color: var(--text-primary);
+        font-size: 13px;
+        font-family: inherit;
+        flex-grow: 1;
+        min-width: 0;
+    }
+
+    .form-input:focus { outline: none; border-color: var(--accent); }
+    .form-input--small { max-width: 80px; flex-grow: 0; }
+
+    .form-select {
+        background-color: rgba(0, 0, 0, 0.45);
+        color: var(--text-primary);
+        border: 1px solid var(--border-soft);
+        border-radius: 3px;
+        padding: 6px 24px 6px 10px;
+        font-size: 13px;
+        font-family: inherit;
+        appearance: none;
+        background-image: linear-gradient(45deg, transparent 50%, var(--text-secondary) 50%),
+                          linear-gradient(135deg, var(--text-secondary) 50%, transparent 50%);
+        background-position: right 10px center, right 5px center;
+        background-size: 5px 5px, 5px 5px;
+        background-repeat: no-repeat;
+        flex-grow: 1;
+        min-width: 0;
+    }
+
+    .form-select:focus { outline: none; border-color: var(--accent); }
+
+    .toggle-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--text-secondary);
+    }
+
+    .toggle-row input[type="checkbox"] { accent-color: var(--accent); }
+
+    /* === ボタン === */
+    .btn {
+        padding: 6px 14px;
+        border-radius: 3px;
+        font-size: 13px;
+        cursor: pointer;
+        font-family: inherit;
+        font-weight: bold;
+        transition: all 0.15s;
+    }
+
+    .btn--primary { background-color: var(--accent); color: rgb(10, 10, 20); border: 0; }
+    .btn--primary:hover { background-color: rgb(120, 215, 255); }
+    .btn--secondary { background-color: rgba(60, 60, 80, 0.8); color: var(--text-primary); border: 1px solid var(--border-mid); }
+    .btn--secondary:hover { background-color: rgba(80, 80, 110, 0.9); border-color: var(--accent); }
+
+    .btn--ghost {
+        background-color: transparent;
+        color: var(--text-secondary);
+        border: 1px dashed var(--border-mid);
+        padding: 8px;
+        font-weight: normal;
+        font-size: 12px;
+    }
+
+    .btn--ghost:hover { border-color: var(--accent); color: var(--accent); border-style: solid; }
+
+    .btn--icon {
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        background-color: transparent;
+        color: var(--text-secondary);
+        border: 0;
+        font-size: 16px;
+        border-radius: 3px;
+        cursor: pointer;
+    }
+
+    .btn--icon:hover { color: var(--danger); background-color: rgba(244, 67, 54, 0.1); }
+
+    /* === ターゲット選定カード (AITargetSelect) === */
+    .tselect-card {
+        background-color: var(--bg-row);
+        border: 1px solid var(--border-soft);
+        border-left: 3px solid var(--target-color);
+        border-radius: 4px;
+        padding: 10px 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .tselect-card__index {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background-color: var(--target-soft);
+        color: var(--target-color);
+        font-size: 12px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .tselect-card__summary {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+    }
+
+    .tselect-card__sort {
+        font-size: 13px;
+        color: var(--text-primary);
+        font-weight: bold;
+    }
+
+    .tselect-card__sort .dir {
+        color: var(--target-color);
+        margin-left: 4px;
+        font-size: 11px;
+    }
+
+    .tselect-card__filter-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .chip {
+        font-size: 10px;
+        padding: 2px 6px;
+        background-color: rgba(0, 0, 0, 0.35);
+        border: 1px solid var(--border-soft);
+        border-radius: 10px;
+        color: var(--text-secondary);
+        white-space: nowrap;
+    }
+
+    .chip--target { border-color: var(--target-color); color: var(--target-color); background-color: var(--target-soft); }
+    .chip--element { border-color: var(--warning); color: var(--warning); background-color: rgba(255, 193, 7, 0.1); }
+
+    /* === ターゲット切替ルールカード === */
+    .trule-card {
+        background-color: var(--bg-row);
+        border: 1px solid var(--border-soft);
+        border-left: 3px solid var(--target-color);
+        border-radius: 4px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .trule-card__head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .trule-card__badge {
+        font-size: 11px;
+        color: var(--target-color);
+        font-weight: bold;
+        padding: 2px 6px;
+        background-color: var(--target-soft);
+        border-radius: 2px;
+    }
+
+    .trule-card__conditions {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding-left: 12px;
+        border-left: 2px dashed rgba(100, 100, 130, 0.3);
+        margin-left: 4px;
+    }
+
+    .condition-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 0;
+    }
+
+    .condition-row__prefix {
+        font-size: 11px;
+        color: var(--text-dim);
+        min-width: 28px;
+        font-style: italic;
+    }
+
+    .condition-row .form-select,
+    .condition-row .form-input {
+        padding: 4px 22px 4px 8px;
+        font-size: 12px;
+    }
+
+    .condition-row .form-select--type { flex: 2; }
+    .condition-row .form-select--op { flex: 1; max-width: 68px; padding: 4px 22px 4px 8px; }
+    .condition-row .form-input--operand { flex: 1; max-width: 80px; }
+
+    .trule-card__then {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background-color: rgba(0, 0, 0, 0.3);
+        border-radius: 3px;
+        margin-left: 4px;
+    }
+
+    .trule-card__then-label {
+        font-size: 12px;
+        color: var(--target-color);
+        font-weight: bold;
+        min-width: 56px;
+    }
+
+    .trule-card__then .form-select {
+        flex-grow: 1;
+        padding: 4px 22px 4px 8px;
+        font-size: 12px;
+    }
+
+    .trule-card__probability {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--text-secondary);
+        font-size: 11px;
+        flex-shrink: 0;
+    }
+
+    .trule-card__probability .form-input {
+        max-width: 50px;
+        padding: 4px 6px;
+        font-size: 12px;
+    }
+
+    /* === フィルタ Foldout === */
+    .foldout {
+        background-color: var(--bg-inset);
+        border: 1px solid var(--border-soft);
+        border-radius: 4px;
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .foldout__title {
+        font-size: 12px;
+        color: var(--text-primary);
+        font-weight: bold;
+    }
+
+    .flag-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 4px 12px;
+        font-size: 11px;
+        color: var(--text-secondary);
+    }
+
+    .flag-grid--wide { grid-template-columns: repeat(2, 1fr); }
+
+    .flag-grid label { display: flex; align-items: center; gap: 4px; }
+    .flag-grid input[type="checkbox"] { accent-color: var(--accent); }
+
+    .and-or-toggle {
+        display: flex;
+        gap: 4px;
+    }
+
+    .and-or-toggle button {
+        font-size: 10px;
+        padding: 2px 8px;
+        background-color: rgba(0, 0, 0, 0.35);
+        border: 1px solid var(--border-soft);
+        color: var(--text-dim);
+        border-radius: 2px;
+        cursor: pointer;
+    }
+
+    .and-or-toggle button.active { color: var(--accent); border-color: var(--accent); background-color: var(--accent-soft); }
+
+    .row-controls { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+
+    .notice {
+        padding: 10px 12px;
+        background-color: rgba(79, 195, 247, 0.08);
+        border: 1px solid rgba(79, 195, 247, 0.3);
+        border-radius: 4px;
+        color: var(--accent);
+        font-size: 11px;
+    }
+</style>
+</head>
+<body>
+
+<h1>仲間AI設定 — ターゲット選定 / ターゲット切替ルール モックアップ</h1>
+<p class="page-intro">
+    既存 mode-editor-mockup.html の「Stage 2 予定」だった targetRules / targetSelects 編集UI。<br>
+    モード詳細ダイアログに2セクション追加 + 個別編集ダイアログ2枚。
+</p>
+
+<div class="mockup-wrap">
+
+    <!-- =====================================================
+         Window A: モード詳細 (新セクションの位置に抜粋)
+         ===================================================== -->
+    <div class="mock-dialog" style="width: 700px;">
+        <div class="mock-dialog__header">
+            <div class="mock-dialog__title">モード詳細 — 通常攻撃</div>
+            <button class="mock-dialog__close" title="閉じる">×</button>
+        </div>
+
+        <div class="mock-dialog__body">
+
+            <div class="section">
+                <div class="section-label">① 基本設定</div>
+                <div class="section-hint" style="color: var(--text-dim); font-size: 10px;">(モード名/判定間隔/デフォルト行動 — 省略)</div>
+            </div>
+
+            <!-- 新規セクション② ターゲット選定 -->
+            <div class="section" style="border: 1px solid var(--target-color);">
+                <div class="section-label section-label--target">
+                    ② ターゲット選定 (targetSelects)
+                    <span class="section-label__count">(2件 / 上限 8件)</span>
+                </div>
+                <div class="section-hint">
+                    「どのキャラを狙うか」のパターンを登録。下の「ターゲット切替ルール」から index で参照されます。<br>
+                    並び順キー + 昇降順 + 弱点属性 + 対象フィルタ(陣営/特徴/距離)の組み合わせ。
+                </div>
+
+                <!-- TargetSelect #0 : 最近距離敵 -->
+                <div class="tselect-card">
+                    <div class="tselect-card__index">0</div>
+                    <div class="tselect-card__summary">
+                        <div class="tselect-card__sort">距離 <span class="dir">↑ 昇順 (近い順)</span></div>
+                        <div class="tselect-card__filter-chips">
+                            <span class="chip chip--target">陣営=Enemy</span>
+                            <span class="chip">自分を含めない</span>
+                        </div>
+                    </div>
+                    <div class="row-controls">
+                        <button class="btn btn--secondary" style="padding:4px 10px; font-size:11px;">編集</button>
+                        <button class="btn--icon" title="削除">🗑</button>
+                    </div>
+                </div>
+
+                <!-- TargetSelect #1 : HP低いボス優先 -->
+                <div class="tselect-card">
+                    <div class="tselect-card__index">1</div>
+                    <div class="tselect-card__summary">
+                        <div class="tselect-card__sort">HP割合 <span class="dir">↑ 昇順 (瀕死優先)</span></div>
+                        <div class="tselect-card__filter-chips">
+                            <span class="chip chip--target">陣営=Enemy</span>
+                            <span class="chip chip--target">特徴=Boss</span>
+                            <span class="chip chip--element">弱点=炎 OR 雷</span>
+                            <span class="chip">距離 0〜20</span>
+                        </div>
+                    </div>
+                    <div class="row-controls">
+                        <button class="btn btn--secondary" style="padding:4px 10px; font-size:11px;">編集</button>
+                        <button class="btn--icon" title="削除">🗑</button>
+                    </div>
+                </div>
+
+                <button class="btn btn--ghost" style="padding:10px;">＋ ターゲット選定を追加</button>
+            </div>
+
+            <!-- 新規セクション③ ターゲット切替ルール -->
+            <div class="section" style="border: 1px solid var(--target-color);">
+                <div class="section-label section-label--target">
+                    ③ ターゲット切替ルール (targetRules)
+                    <span class="section-label__count">(2件 / 上限 16件)</span>
+                </div>
+                <div class="section-hint">
+                    条件を満たした時、「どの targetSelect を使うか」を決めるルール。<br>
+                    並び順が優先度 (先勝ち)。
+                </div>
+
+                <!-- Rule 1: HP瀕死敵を優先 -->
+                <div class="trule-card">
+                    <div class="trule-card__head">
+                        <span class="trule-card__badge">RULE 1</span>
+                        <span style="color:var(--text-secondary); font-size:11px;">優先度1位</span>
+                        <div class="row-controls">
+                            <button class="btn--icon" title="上へ">▲</button>
+                            <button class="btn--icon" title="下へ">▼</button>
+                            <button class="btn btn--secondary" style="padding:4px 10px; font-size:11px;">編集</button>
+                            <button class="btn--icon" title="ルール削除">🗑</button>
+                        </div>
+                    </div>
+
+                    <div class="trule-card__conditions">
+                        <div class="condition-row">
+                            <span class="condition-row__prefix">IF</span>
+                            <select class="form-select form-select--type">
+                                <option selected>EnemyHpRatioMin</option>
+                                <option>SelfHpRatio</option>
+                                <option>MpRatio</option>
+                            </select>
+                            <select class="form-select form-select--op">
+                                <option selected>&lt;=</option>
+                            </select>
+                            <input class="form-input form-input--operand" value="30">
+                            <input class="form-input form-input--operand" value="" placeholder="(上限)">
+                        </div>
+                    </div>
+
+                    <div class="trule-card__then">
+                        <span class="trule-card__then-label">TARGET</span>
+                        <select class="form-select">
+                            <option>#0 距離↑ / Enemy</option>
+                            <option selected>#1 HP割合↑ / Boss 弱点=炎,雷</option>
+                        </select>
+                        <div class="trule-card__probability">
+                            確率 <input class="form-input" value="100"> %
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rule 2: デフォルト = 最近距離敵 -->
+                <div class="trule-card">
+                    <div class="trule-card__head">
+                        <span class="trule-card__badge">RULE 2</span>
+                        <span style="color:var(--text-secondary); font-size:11px;">優先度2位 (無条件フォールバック)</span>
+                        <div class="row-controls">
+                            <button class="btn--icon" title="上へ">▲</button>
+                            <button class="btn--icon" title="下へ">▼</button>
+                            <button class="btn btn--secondary" style="padding:4px 10px; font-size:11px;">編集</button>
+                            <button class="btn--icon" title="ルール削除">🗑</button>
+                        </div>
+                    </div>
+
+                    <div class="trule-card__conditions">
+                        <div style="padding: 4px 0; font-size:11px; color: var(--text-dim); font-style:italic;">(条件なし = 常に合致)</div>
+                    </div>
+
+                    <div class="trule-card__then">
+                        <span class="trule-card__then-label">TARGET</span>
+                        <select class="form-select">
+                            <option selected>#0 距離↑ / Enemy</option>
+                            <option>#1 HP割合↑ / Boss 弱点=炎,雷</option>
+                        </select>
+                        <div class="trule-card__probability">
+                            確率 <input class="form-input" value="100"> %
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn btn--ghost" style="padding:10px;">＋ ターゲット切替ルールを追加</button>
+            </div>
+
+            <div class="section">
+                <div class="section-label">④ 行動定義 (ActionSlot)</div>
+                <div class="section-hint" style="color: var(--text-dim); font-size: 10px;">(既存 — 省略)</div>
+            </div>
+
+            <div class="section">
+                <div class="section-label">⑤ 行動切替ルール (actionRules)</div>
+                <div class="section-hint" style="color: var(--text-dim); font-size: 10px;">(既存 — 省略)</div>
+            </div>
+
+            <div class="notice">
+                <strong>評価順:</strong> JudgmentLoop は「② ターゲット選定 → ③ ターゲット切替ルール」で誰を狙うか決め、その後に「④ 行動定義 → ⑤ 行動切替ルール」で何をするか決める。<br>
+                UI のセクション順序もこの評価順に揃える。
+            </div>
+
+        </div>
+
+        <div class="mock-dialog__footer">
+            <button class="btn btn--secondary">キャンセル</button>
+            <button class="btn btn--primary">保存</button>
+        </div>
+    </div>
+
+
+    <!-- =====================================================
+         Window B: ターゲット選定編集ダイアログ (ShowTargetSelectEditDialog)
+         ===================================================== -->
+    <div class="mock-dialog">
+        <div class="mock-dialog__header">
+            <div class="mock-dialog__title">ターゲット選定編集 — #1</div>
+            <button class="mock-dialog__close" title="閉じる">×</button>
+        </div>
+
+        <div class="mock-dialog__body">
+
+            <!-- 並び順 -->
+            <div class="section">
+                <div class="section-label">並び順</div>
+                <div class="section-hint">候補の中から最優先を1体選ぶ判断基準。</div>
+
+                <div class="form-row--grid">
+                    <label class="form-row__label">並び順キー</label>
+                    <select class="form-select">
+                        <option>距離 (Distance)</option>
+                        <option selected>HP割合 (HpRatio)</option>
+                        <option>HP値 (HpValue)</option>
+                        <option>攻撃力 (AttackPower)</option>
+                        <option>防御力 (DefensePower)</option>
+                        <option>狙われ数 (TargetingCount)</option>
+                        <option>最終攻撃者 (LastAttacker)</option>
+                        <option>ダメージスコア (DamageScore)</option>
+                        <option>自分 (Self)</option>
+                        <option>プレイヤー (Player)</option>
+                        <option>妹 (Sister)</option>
+                    </select>
+
+                    <label class="form-row__label">並び順</label>
+                    <div class="toggle-row">
+                        <label><input type="checkbox"> 降順 (大きい順)</label>
+                        <span style="color:var(--text-dim);">※ HP割合の昇順 = 瀕死優先</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 弱点属性フィルタ -->
+            <div class="section">
+                <div class="section-label">弱点属性フィルタ (elementFilter)</div>
+                <div class="section-hint">指定属性に弱い候補のみを対象に絞る。未指定=属性フィルタなし。</div>
+                <div class="foldout">
+                    <div class="flag-grid">
+                        <label><input type="checkbox"> 斬撃</label>
+                        <label><input type="checkbox"> 打撃</label>
+                        <label><input type="checkbox"> 刺突</label>
+                        <label><input type="checkbox" checked> 炎</label>
+                        <label><input type="checkbox" checked> 雷</label>
+                        <label><input type="checkbox"> 聖</label>
+                        <label><input type="checkbox"> 闇</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 対象キャラクターフィルタ (TargetFilter 再利用) -->
+            <div class="section">
+                <div class="section-label">対象フィルタ (TargetFilter)</div>
+                <div class="section-hint">BuildTargetFilterSection を再利用。陣営/特徴/弱点/距離を複合指定。</div>
+
+                <div class="toggle-row" style="margin-bottom: 4px;">
+                    <label><input type="checkbox"> 自分を含める (includeSelf)</label>
+                </div>
+
+                <!-- 陣営 -->
+                <div class="foldout">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div class="foldout__title">陣営 (belong)</div>
+                        <div class="and-or-toggle">
+                            <button>AND</button>
+                            <button class="active">OR</button>
+                        </div>
+                    </div>
+                    <div class="flag-grid">
+                        <label><input type="checkbox"> Ally</label>
+                        <label><input type="checkbox" checked> Enemy</label>
+                        <label><input type="checkbox"> Neutral</label>
+                    </div>
+                </div>
+
+                <!-- 特徴 -->
+                <div class="foldout">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div class="foldout__title">特徴 (feature)</div>
+                        <div class="and-or-toggle">
+                            <button class="active">AND</button>
+                            <button>OR</button>
+                        </div>
+                    </div>
+                    <div class="flag-grid">
+                        <label><input type="checkbox"> Humanoid</label>
+                        <label><input type="checkbox" checked> Boss</label>
+                        <label><input type="checkbox"> Summon</label>
+                        <label><input type="checkbox"> Flying</label>
+                        <label><input type="checkbox"> Undead</label>
+                        <label><input type="checkbox"> Elite</label>
+                    </div>
+                </div>
+
+                <!-- 距離範囲 -->
+                <div class="foldout">
+                    <div class="foldout__title">距離範囲 (distanceRange)</div>
+                    <div class="form-row">
+                        <label class="form-row__label">最小 〜 最大</label>
+                        <input class="form-input form-input--small" value="0"> 〜
+                        <input class="form-input form-input--small" value="20">
+                        <span style="color:var(--text-dim); font-size:11px;">※ 0〜0=無制限</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="mock-dialog__footer">
+            <button class="btn btn--secondary">キャンセル</button>
+            <button class="btn btn--primary">保存</button>
+        </div>
+    </div>
+
+
+    <!-- =====================================================
+         Window C: ターゲット切替ルール編集ダイアログ (ShowTargetRuleEditDialog)
+         ===================================================== -->
+    <div class="mock-dialog">
+        <div class="mock-dialog__header">
+            <div class="mock-dialog__title">ターゲット切替ルール編集 — RULE 1</div>
+            <button class="mock-dialog__close" title="閉じる">×</button>
+        </div>
+
+        <div class="mock-dialog__body">
+
+            <!-- 条件 (既存 RebuildConditionList / BuildConditionRow 再利用) -->
+            <div class="section">
+                <div class="section-label">
+                    条件 (AND結合)
+                    <span class="section-label__count">(1件)</span>
+                </div>
+                <div class="section-hint">全ての条件を満たした時に、このルールの TARGET が選ばれます。</div>
+
+                <div class="condition-row">
+                    <span class="condition-row__prefix">IF</span>
+                    <select class="form-select form-select--type">
+                        <option selected>EnemyHpRatioMin</option>
+                        <option>SelfHpRatio</option>
+                        <option>MpRatio</option>
+                        <option>ObjectNearby</option>
+                        <option>EventFired</option>
+                    </select>
+                    <select class="form-select form-select--op">
+                        <option selected>&lt;=</option>
+                        <option>&gt;=</option>
+                        <option>==</option>
+                        <option>!=</option>
+                    </select>
+                    <input class="form-input form-input--operand" value="30">
+                    <input class="form-input form-input--operand" value="" placeholder="(上限)">
+                    <button class="btn--icon" title="削除">×</button>
+                </div>
+
+                <button class="btn btn--ghost">＋ 条件を追加 (AND)</button>
+            </div>
+
+            <!-- TARGET (actionIndex) -->
+            <div class="section">
+                <div class="section-label section-label--target">TARGET (targetSelects から選択)</div>
+
+                <div class="form-row--grid">
+                    <label class="form-row__label">選ぶパターン</label>
+                    <select class="form-select">
+                        <option>#0 距離↑ / Enemy</option>
+                        <option selected>#1 HP割合↑ / Boss 弱点=炎,雷</option>
+                    </select>
+
+                    <label class="form-row__label">確率</label>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <input class="form-input form-input--small" value="100">
+                        <span style="color:var(--text-dim); font-size:11px;">% (0〜100)</span>
+                    </div>
+                </div>
+                <div class="section-hint">
+                    確率 &lt; 100 の時は抽選でこのルールを使うか判定。外れたら次のルールへ。
+                </div>
+            </div>
+
+        </div>
+
+        <div class="mock-dialog__footer">
+            <button class="btn btn--secondary">キャンセル</button>
+            <button class="btn btn--primary">保存</button>
+        </div>
+    </div>
+
+</div>
+
+<div style="margin-top: 32px; padding: 16px; background: rgba(20,20,30,0.8); border: 1px solid var(--border-mid); border-radius: 6px;">
+    <h2 style="font-size: 16px; color: var(--target-color); margin: 0 0 8px 0;">実装仕様まとめ</h2>
+    <ul style="color: var(--text-secondary); font-size: 13px; line-height: 1.8; margin: 0; padding-left: 20px;">
+        <li><strong style="color:var(--text-primary);">Window A (モード詳細改訂):</strong>
+            既存4セクションの間に2セクション挿入。評価順に合わせて「基本設定 → ② ターゲット選定 → ③ ターゲット切替ルール → ④ 行動定義 → ⑤ 行動切替ルール」</li>
+        <li><strong style="color:var(--text-primary);">Window B (ShowTargetSelectEditDialog):</strong>
+            AITargetSelect 1件の編集。sortKey / isDescending / elementFilter / TargetFilter(既存 BuildTargetFilterSection 再利用)</li>
+        <li><strong style="color:var(--text-primary);">Window C (ShowTargetRuleEditDialog):</strong>
+            AIRule 1件の編集。conditions (既存 RebuildConditionList 再利用) + TARGET 選択(targetSelects からドロップダウン) + probability</li>
+        <li><strong style="color:var(--text-primary);">targetSelect 削除時:</strong>
+            自動補正。参照していたルールは削除、より大きい index を参照していたルールは decrement</li>
+        <li><strong style="color:var(--text-primary);">新規モード作成時:</strong>
+            デフォルトで「距離↑ / Enemy」1件と「無条件 → #0 / 100%」1件を投入。UI単独で即座に動作する状態</li>
+    </ul>
+</div>
+
+</body>
+</html>
