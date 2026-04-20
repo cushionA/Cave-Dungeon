@@ -55,9 +55,10 @@ namespace Game.Core
 
         /// <summary>キャラクター登録</summary>
         public int RegisterCharacter(int hash, CharacterVitals vitals, CombatStats combat,
-            CharacterFlags flags, MoveParams move)
+            CharacterFlags flags, MoveParams move, ManagedCharacter managed = null)
         {
-            int index = _data.Add(hash, vitals, combat, flags, move);
+            int index = _data.Add(hash, vitals, combat, flags, move,
+                default, default, default, managed);
             _events.FireCharacterRegistered(hash);
             return index;
         }

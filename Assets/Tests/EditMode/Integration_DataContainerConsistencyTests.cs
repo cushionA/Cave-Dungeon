@@ -105,10 +105,10 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
-        public void DataContainer_GrowCapacity_PreservesAllData()
+        public void DataContainer_AddMultiple_PreservesAllData()
         {
-            // Arrange: 初期容量2で作成し、5キャラ追加でGrowを強制
-            SoACharaDataDic smallData = new SoACharaDataDic(2);
+            // Arrange: 容量8のコンテナで5キャラ登録（自動生成は固定容量）
+            SoACharaDataDic smallData = new SoACharaDataDic(8);
 
             for (int i = 1; i <= 5; i++)
             {

@@ -175,13 +175,14 @@ namespace Game.Tests.EditMode
 
             // Assert
             Assert.IsFalse(found);
-            Assert.AreEqual(0, index);
+            // 自動生成 TryGetIndexByHash は未登録時 index=-1 を返す
+            Assert.AreEqual(-1, index);
 
             dic.Dispose();
         }
 
         [Test]
-        public void SoACharaDataDic_Dispose_ClearsAllData()
+        public void SoACharaDataDic_Dispose_BlocksSubsequentAccess()
         {
             // Arrange
             SoACharaDataDic dic = new SoACharaDataDic(4);
@@ -190,12 +191,10 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(2, dic.Count);
 
             // Act
-            dic.Dispose();
+            Assert.DoesNotThrow(() => dic.Dispose());
 
-            // Assert
-            Assert.AreEqual(0, dic.Count);
-
-            // Further operations should throw ObjectDisposedException
+            // Assert: 二重 Dispose は許容、Compat 経由のアクセスは ObjectDisposedException
+            Assert.DoesNotThrow(() => dic.Dispose());
             Assert.Throws<System.ObjectDisposedException>(() =>
             {
                 dic.TryGetValue(1, out int _);

@@ -39,7 +39,10 @@ namespace Game.Tests.PlayMode
             CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo(maxHp: 200);
             int hash = 12345;
 
+            // テスト専用オーバーロードのためObsolete警告を抑制
+#pragma warning disable CS0618
             GameManager.Instance.RegisterCharacter(hash, info);
+#pragma warning restore CS0618
             yield return null;
 
             Assert.IsTrue(GameManager.Data.TryGetValue(hash, out int _));
@@ -55,7 +58,9 @@ namespace Game.Tests.PlayMode
             CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo();
             int hash = 99999;
 
+#pragma warning disable CS0618
             GameManager.Instance.RegisterCharacter(hash, info);
+#pragma warning restore CS0618
             GameManager.Instance.UnregisterCharacter(hash);
             yield return null;
 

@@ -91,7 +91,7 @@ namespace Game.Tests.EditMode
 
             // Assert
             Assert.IsFalse(_core.IsInitialized);
-            // Data has been disposed; accessing it should throw ObjectDisposedException
+            // Compat 経由の Get 系は Dispose 後 ObjectDisposedException を投げる
             Assert.Throws<System.ObjectDisposedException>(() =>
             {
                 _core.Data.GetVitals(1);

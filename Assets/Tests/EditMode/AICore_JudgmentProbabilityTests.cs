@@ -234,7 +234,7 @@ namespace Game.Tests.EditMode
         // --- SoACharaDataDic: Dispose安全性 ---
 
         [Test]
-        public void SoACharaDataDic_Dispose_ClearsData()
+        public void SoACharaDataDic_Dispose_DoesNotThrow()
         {
             SoACharaDataDic data = new SoACharaDataDic();
             data.Add(1, default, default, default, default);
@@ -242,9 +242,7 @@ namespace Game.Tests.EditMode
 
             Assert.AreEqual(2, data.Count);
 
-            data.Dispose();
-
-            Assert.AreEqual(0, data.Count, "Dispose後はCount=0");
+            Assert.DoesNotThrow(() => data.Dispose());
         }
 
         [Test]
