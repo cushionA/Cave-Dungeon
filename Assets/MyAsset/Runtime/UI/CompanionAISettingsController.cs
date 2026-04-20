@@ -642,8 +642,39 @@ namespace Game.Runtime
             AIMode[] available = _modeRegistry.GetAll();
             if (available.Length == 0)
             {
-                // 空のモードを追加
-                bool ok = _logic.AddModeToBuffer(new AIMode { modeName = "新規モード", modeId = "" });
+                // UI単独で即動作する最小構成: Enemy を近距離順に狙う targetSelect 1件 + 無条件ルール 1件
+                AIMode emptyMode = new AIMode
+                {
+                    modeName = "新規モード",
+                    modeId = "",
+                    actions = new ActionSlot[0],
+                    actionRules = new AIRule[0],
+                    targetSelects = new AITargetSelect[]
+                    {
+                        new AITargetSelect
+                        {
+                            sortKey = TargetSortKey.Distance,
+                            isDescending = false,
+                            filter = new TargetFilter
+                            {
+                                belong = CharacterBelong.Enemy,
+                                includeSelf = false,
+                            },
+                        },
+                    },
+                    targetRules = new AIRule[]
+                    {
+                        new AIRule
+                        {
+                            conditions = new AICondition[0],
+                            actionIndex = 0,
+                            probability = 100,
+                        },
+                    },
+                    defaultActionIndex = 0,
+                    judgeInterval = new UnityEngine.Vector2(0.4f, 0.6f),
+                };
+                bool ok = _logic.AddModeToBuffer(emptyMode);
                 if (!ok)
                 {
                     ShowInfoDialog("モードは最大4個までです。");
