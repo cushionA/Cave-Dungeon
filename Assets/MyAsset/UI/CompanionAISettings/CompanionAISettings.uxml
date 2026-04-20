@@ -1,6 +1,10 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
     <ui:VisualElement name="companion-ai-settings-root" class="companion-ai-settings-root">
 
+        <!-- デザイントークン（色/タイポ/スペーシング/トランジション）を先にロード -->
+        <ui:Style src="project://database/Assets/MyAsset/UI/CompanionAISettings/CompanionAISettings.tokens.uss" />
+        <ui:Style src="project://database/Assets/MyAsset/UI/CompanionAISettings/CompanionAISettings.uss" />
+
         <!-- ===== ヘッダー ===== -->
         <ui:VisualElement name="header" class="companion-ai-header">
             <ui:Button name="back-button" class="icon-button back-button" text="◀" tooltip="メニューに戻る" />
@@ -30,9 +34,13 @@
                     <ui:VisualElement class="tactic-section tactic-section--flex">
                         <ui:Label name="preset-section-label" class="section-label" text="プリセット (0/20)" />
                         <ui:ScrollView name="preset-scroll" class="preset-scroll" vertical-scroller-visibility="Auto" />
+                        <ui:VisualElement name="tactic-list-empty-state" class="empty-state empty-state--inline">
+                            <ui:Label class="empty-state__title" text="プリセットはまだありません" />
+                            <ui:Label class="empty-state__body" text="最初の戦術を作成して、モードとルールを設定しましょう。" />
+                        </ui:VisualElement>
                     </ui:VisualElement>
 
-                    <ui:Button name="add-preset-button" class="add-preset-button" text="＋ 新規作成" tooltip="空の戦術プリセットを追加" />
+                    <ui:Button name="add-preset-button" class="add-preset-button add-preset-button--primary" text="＋ 新規作成" tooltip="空の戦術プリセットを追加" />
                 </ui:VisualElement>
 
                 <!-- 右ペイン: エディタ -->
@@ -48,7 +56,13 @@
 
                     <ui:VisualElement name="modes-section" class="editor-section">
                         <ui:Label class="section-label" text="モードスロット" />
+                        <ui:Label class="section-hint" text="1つの戦術には最大4つのモード（AIの行動パターン）を設定できます。" />
                         <ui:VisualElement name="mode-slots-container" class="mode-slots-container" />
+                        <ui:VisualElement name="modes-empty-state" class="empty-state empty-state--modes">
+                            <ui:Label class="empty-state__icon" text="＋" />
+                            <ui:Label class="empty-state__title" text="モードを追加して戦術を組む" />
+                            <ui:Label class="empty-state__body" text="上の「＋」から最初のモードを追加してください。条件によって自動でモードが切り替わります。" />
+                        </ui:VisualElement>
                     </ui:VisualElement>
 
                     <ui:VisualElement name="transition-section" class="editor-section">
@@ -63,7 +77,20 @@
 
             <!-- === タブ2: ショートカット === -->
             <ui:VisualElement name="shortcut-tab" class="shortcut-tab">
-                <ui:Label class="shortcut-description" text="パッドの方向キーで戦術を素早く切替できます。" />
+                <ui:VisualElement class="shortcut-legend">
+                    <ui:Label class="shortcut-legend__title" text="ショートカットの使い方" />
+                    <ui:VisualElement class="shortcut-legend__row">
+                        <ui:Label class="shortcut-legend__keys" text="↑  →  ↓  ←" />
+                        <ui:Label class="shortcut-legend__arrow" text="→" />
+                        <ui:Label class="shortcut-legend__desc" text="現在の戦術内のモードを瞬時に切替" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="shortcut-legend__row shortcut-legend__row--future" picking-mode="Ignore">
+                        <ui:Label class="shortcut-legend__keys" text="L1 + ↑ → ↓ ←" />
+                        <ui:Label class="shortcut-legend__arrow" text="→" />
+                        <ui:Label class="shortcut-legend__desc" text="戦術プリセットごと切替（次回アップデートで対応予定）" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:Label class="shortcut-description" text="現在の戦術に設定された各モードを、十字キーのどの方向に割り当てるか選びます。" />
                 <ui:VisualElement name="shortcut-grid" class="shortcut-grid">
 
                     <ui:VisualElement class="shortcut-slot">
@@ -95,12 +122,41 @@
 
         </ui:VisualElement>
 
+        <!-- ===== フッターバー（パッド操作凡例） =====
+             パッド入力のアクション紐付けは未実装のため、誤認識防止に hidden を付与。
+             配線完了時に hidden クラスを除去して表示する。docs/FUTURE_TASKS.md 参照。 -->
+        <ui:VisualElement name="footer-bar" class="footer-bar hidden" picking-mode="Ignore">
+            <ui:VisualElement class="footer-hint">
+                <ui:Label class="footer-hint__glyph footer-hint__glyph--a" text="A" />
+                <ui:Label class="footer-hint__text" text="決定" />
+            </ui:VisualElement>
+            <ui:VisualElement class="footer-hint">
+                <ui:Label class="footer-hint__glyph footer-hint__glyph--b" text="B" />
+                <ui:Label class="footer-hint__text" text="戻る" />
+            </ui:VisualElement>
+            <ui:VisualElement class="footer-hint">
+                <ui:Label class="footer-hint__glyph footer-hint__glyph--x" text="X" />
+                <ui:Label class="footer-hint__text" text="上書き保存" />
+            </ui:VisualElement>
+            <ui:VisualElement class="footer-hint">
+                <ui:Label class="footer-hint__glyph footer-hint__glyph--y" text="Y" />
+                <ui:Label class="footer-hint__text" text="プリセット化" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
         <!-- ===== ダイアログレイヤー ===== -->
         <ui:VisualElement name="dialog-layer" class="dialog-layer" picking-mode="Ignore" />
 
         <!-- ===== ツールチップパネル ===== -->
         <ui:VisualElement name="tooltip-panel" class="tooltip-panel" picking-mode="Ignore">
             <ui:Label name="tooltip-text" class="tooltip-text" />
+        </ui:VisualElement>
+
+        <!-- ===== トースト通知レイヤー =====
+             保存・削除・エラー等の一時的なフィードバックを右上に表示する。
+             dialog-layer より前面に置くことで、ダイアログ上からも通知が見える。 -->
+        <ui:VisualElement name="toast-layer" class="toast-layer" picking-mode="Ignore">
+            <ui:Label name="toast-label" class="toast" />
         </ui:VisualElement>
 
     </ui:VisualElement>

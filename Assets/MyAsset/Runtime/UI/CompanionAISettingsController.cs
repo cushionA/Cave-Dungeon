@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
 using Game.Core;
 
@@ -32,6 +33,10 @@ namespace Game.Runtime
         [Tooltip("解放済みアクションを参照するレジストリ。null の場合はデフォルト（全 Instant/Sustained を許可）で動作")]
         [SerializeField] private bool _useActionTypeRegistry = false;
 
+        [Header("Input (パッド/キーボード ショートカット)")]
+        [Tooltip("Cancel/MenuSave/MenuSaveAsPreset を購読する InputActionAsset。未設定なら入力購読をスキップし、マウス/クリックのみで動作する。")]
+        [SerializeField] private InputActionAsset _inputActionAsset;
+
         // 純ロジック
         private CompanionAISettingsLogic _logic;
         private ModePresetRegistry _modeRegistry;
@@ -53,12 +58,14 @@ namespace Game.Runtime
         private Label _presetSectionLabel;
         private ScrollView _presetScroll;
         private Button _addPresetButton;
+        private VisualElement _tacticListEmptyState;
 
         // エディタ
         private TextField _configNameField;
         private Button _saveButton;
         private Button _saveAsPresetButton;
         private VisualElement _modeSlotsContainer;
+        private VisualElement _modesEmptyState;
         private VisualElement _transitionList;
 
         // ショートカット
@@ -69,6 +76,16 @@ namespace Game.Runtime
         private VisualElement _tooltipPanel;
         private Label _tooltipText;
 
+        // トースト
+        private Label _toastLabel;
+        private IVisualElementScheduledItem _toastHideScheduled;
+
+        // 入力
+        private VisualElement _footerBar;
+        private InputAction _cancelAction;
+        private InputAction _menuSaveAction;
+        private InputAction _menuSaveAsPresetAction;
+
         // 動的ハンドラ退避用（購読解除のため）
         private readonly List<Action> _unsubscribeActions = new List<Action>();
 
@@ -77,6 +94,21 @@ namespace Game.Runtime
         // 新規モード追加時のデフォルト判定間隔（min/max 秒）。ゆらぎ範囲。
         private const float k_DefaultJudgeIntervalMin = 0.4f;
         private const float k_DefaultJudgeIntervalMax = 0.6f;
+
+        // トースト通知の表示時間（ミリ秒）。USSトランジションのフェードアウトと重ならないよう余裕を取る。
+        private const int k_ToastVisibleDurationMs = 2200;
+        // 保存ボタンのフラッシュ持続時間（ミリ秒）。transition-duration(--dur-base=0.15s)×2〜3 くらいが自然。
+        private const int k_SaveFlashDurationMs = 380;
+
+        /// <summary>
+        /// トースト通知の種別。色アクセント（success=緑/error=赤/info=青）の切替に使う。
+        /// </summary>
+        public enum ToastKind
+        {
+            Success,
+            Error,
+            Info,
+        }
 
         // =========================================================================
         // Lifecycle
@@ -128,11 +160,13 @@ namespace Game.Runtime
 
             QueryElements();
             RegisterEventHandlers();
+            SetupInputActions();
             RefreshAll();
         }
 
         private void OnDisable()
         {
+            TeardownInputActions();
             UnregisterEventHandlers();
         }
 
@@ -158,11 +192,13 @@ namespace Game.Runtime
             _presetSectionLabel = _root.Q<Label>("preset-section-label");
             _presetScroll = _root.Q<ScrollView>("preset-scroll");
             _addPresetButton = _root.Q<Button>("add-preset-button");
+            _tacticListEmptyState = _root.Q<VisualElement>("tactic-list-empty-state");
 
             _configNameField = _root.Q<TextField>("config-name-field");
             _saveButton = _root.Q<Button>("save-button");
             _saveAsPresetButton = _root.Q<Button>("save-as-preset-button");
             _modeSlotsContainer = _root.Q<VisualElement>("mode-slots-container");
+            _modesEmptyState = _root.Q<VisualElement>("modes-empty-state");
             _transitionList = _root.Q<VisualElement>("transition-list");
 
             for (int i = 0; i < k_ShortcutSlotCount; i++)
@@ -173,6 +209,8 @@ namespace Game.Runtime
             _dialogLayer = _root.Q<VisualElement>("dialog-layer");
             _tooltipPanel = _root.Q<VisualElement>("tooltip-panel");
             _tooltipText = _root.Q<Label>("tooltip-text");
+            _toastLabel = _root.Q<Label>("toast-label");
+            _footerBar = _root.Q<VisualElement>("footer-bar");
         }
 
         private void RegisterEventHandlers()
@@ -287,6 +325,190 @@ namespace Game.Runtime
         }
 
         // =========================================================================
+        // Toast / Flash
+        // =========================================================================
+
+        /// <summary>
+        /// 一時的なフィードバック（保存・削除等）を右上にトースト表示する。
+        /// ブロッキングが必要なエラー（上限到達等）はダイアログを使い分ける。
+        /// </summary>
+        private void ShowToast(string message, ToastKind kind = ToastKind.Success)
+        {
+            if (_toastLabel == null || string.IsNullOrEmpty(message))
+            {
+                return;
+            }
+
+            _toastLabel.text = message;
+            _toastLabel.RemoveFromClassList("toast--success");
+            _toastLabel.RemoveFromClassList("toast--error");
+            _toastLabel.RemoveFromClassList("toast--info");
+            _toastLabel.AddToClassList(GetToastKindClass(kind));
+            _toastLabel.AddToClassList("toast--visible");
+
+            // 前回の自動フェードアウトスケジュールが走っていたら停止し、今回の表示時間でタイマーを引き直す。
+            // Pause した IVisualElementScheduledItem は _toastLabel（VisualElement）のスケジューラに
+            // ぶら下がったまま生き残るが、_toastLabel 自体は永続 UI なのでアプリ終了までの上限は
+            // 「表示回数」≒ユーザーの手動操作回数 で十分小さく、実用上の蓄積リスクは無視できる。
+            // より厳密に破棄したい場合は VisualElement ごと入れ替える必要があり、そこまでの価値はない。
+            _toastHideScheduled?.Pause();
+            _toastHideScheduled = _toastLabel.schedule.Execute(() =>
+            {
+                _toastLabel.RemoveFromClassList("toast--visible");
+            }).StartingIn(k_ToastVisibleDurationMs);
+        }
+
+        private static string GetToastKindClass(ToastKind kind)
+        {
+            switch (kind)
+            {
+                case ToastKind.Error:
+                    return "toast--error";
+                case ToastKind.Info:
+                    return "toast--info";
+                case ToastKind.Success:
+                default:
+                    return "toast--success";
+            }
+        }
+
+        /// <summary>
+        /// 保存成功時に保存ボタンを一時的に緑系背景でフラッシュする。
+        /// トーストだけだと視線移動が必要なので、ボタン自体の反応で成功を即伝える。
+        /// </summary>
+        private void FlashSaveButton()
+        {
+            if (_saveButton == null)
+            {
+                return;
+            }
+            _saveButton.AddToClassList("primary-button--flash");
+            _saveButton.schedule.Execute(() =>
+            {
+                _saveButton.RemoveFromClassList("primary-button--flash");
+            }).StartingIn(k_SaveFlashDurationMs);
+        }
+
+        // =========================================================================
+        // Input (Pad / Keyboard shortcut)
+        // =========================================================================
+
+        /// <summary>
+        /// InputActionAsset からショートカットアクションを解決して購読する。
+        /// Cancel は UI モジュールと共用のため Disable はしない（購読解除のみ）。
+        /// MenuSave / MenuSaveAsPreset は CompanionAISettings 固有なので
+        /// 明示的に Enable/Disable する。
+        /// フッター凡例（A/B/X/Y）は 3 アクションすべてが解決できた時のみ表示する。
+        /// 一部でも不足する（古いアセットが注入された等）場合は「ヒントが出ているのに動かない」
+        /// 状態を避けるため非表示を維持する。
+        /// </summary>
+        private void SetupInputActions()
+        {
+            if (_inputActionAsset == null)
+            {
+                // 入力アセット未注入: マウス/クリックのみで動作。フッター凡例は非表示のまま。
+                SetFooterVisible(false);
+                return;
+            }
+
+            _cancelAction = _inputActionAsset.FindAction("UI/Cancel");
+            _menuSaveAction = _inputActionAsset.FindAction("UI/MenuSave");
+            _menuSaveAsPresetAction = _inputActionAsset.FindAction("UI/MenuSaveAsPreset");
+
+            if (_cancelAction != null)
+            {
+                _cancelAction.performed += OnCancelPerformed;
+            }
+            if (_menuSaveAction != null)
+            {
+                _menuSaveAction.performed += OnMenuSavePerformed;
+                _menuSaveAction.Enable();
+            }
+            if (_menuSaveAsPresetAction != null)
+            {
+                _menuSaveAsPresetAction.performed += OnMenuSaveAsPresetPerformed;
+                _menuSaveAsPresetAction.Enable();
+            }
+
+            // 3 アクション（Cancel/MenuSave/MenuSaveAsPreset）すべて解決できた時のみ凡例を出す。
+            // FindAction は未定義アクション名で null を返すので、古い InputActionAsset が
+            // 注入された場合に「B: 戻る」等のヒントが出ているのに機能しない誤解を防ぐ。
+            bool allResolved = _cancelAction != null && _menuSaveAction != null && _menuSaveAsPresetAction != null;
+            SetFooterVisible(allResolved);
+        }
+
+        private void TeardownInputActions()
+        {
+            if (_cancelAction != null)
+            {
+                _cancelAction.performed -= OnCancelPerformed;
+                _cancelAction = null;
+            }
+            if (_menuSaveAction != null)
+            {
+                _menuSaveAction.performed -= OnMenuSavePerformed;
+                _menuSaveAction.Disable();
+                _menuSaveAction = null;
+            }
+            if (_menuSaveAsPresetAction != null)
+            {
+                _menuSaveAsPresetAction.performed -= OnMenuSaveAsPresetPerformed;
+                _menuSaveAsPresetAction.Disable();
+                _menuSaveAsPresetAction = null;
+            }
+        }
+
+        /// <summary>
+        /// フッターバーの表示切替。入力アセット未設定時は誤認識防止に非表示を維持する。
+        /// </summary>
+        private void SetFooterVisible(bool visible)
+        {
+            if (_footerBar == null)
+            {
+                return;
+            }
+            if (visible)
+            {
+                _footerBar.RemoveFromClassList("hidden");
+            }
+            else
+            {
+                _footerBar.AddToClassList("hidden");
+            }
+        }
+
+        private void OnCancelPerformed(InputAction.CallbackContext ctx)
+        {
+            // ダイアログが開いていれば閉じる。なければ画面を閉じる（Backボタン相当）。
+            // TextField 編集中の Cancel は EventSystem が先に処理するため、ここには来ないはず。
+            if (_dialogLayer != null && _dialogLayer.childCount > 0)
+            {
+                CloseDialog();
+                return;
+            }
+            OnBackClicked();
+        }
+
+        private void OnMenuSavePerformed(InputAction.CallbackContext ctx)
+        {
+            // ダイアログ表示中は誤操作防止で無視（ダイアログ外の保存ショートカットのみ有効）。
+            if (_dialogLayer != null && _dialogLayer.childCount > 0)
+            {
+                return;
+            }
+            OnSaveClicked();
+        }
+
+        private void OnMenuSaveAsPresetPerformed(InputAction.CallbackContext ctx)
+        {
+            if (_dialogLayer != null && _dialogLayer.childCount > 0)
+            {
+                return;
+            }
+            OnSaveAsPresetClicked();
+        }
+
+        // =========================================================================
         // Refresh
         // =========================================================================
 
@@ -387,6 +609,31 @@ namespace Game.Runtime
             {
                 _presetSectionLabel.text = $"プリセット ({_tacticalRegistry.Count}/20)";
             }
+
+            // プリセットが0件のとき空状態CTAを表示
+            SetEmptyStateVisible(_tacticListEmptyState, _tacticalRegistry.Count == 0);
+        }
+
+        /// <summary>
+        /// 空状態UI要素の表示切替。
+        /// インラインで style.display を直接書き換えず USSクラス切替で行うのは、
+        /// テーマやバリアント（empty-state--modes / empty-state--inline 等）ごとの
+        /// 見え方を USS 側に集約し、Controller から display の詳細を切り離すため。
+        /// </summary>
+        private static void SetEmptyStateVisible(VisualElement element, bool visible)
+        {
+            if (element == null)
+            {
+                return;
+            }
+            if (visible)
+            {
+                element.AddToClassList("empty-state--visible");
+            }
+            else
+            {
+                element.RemoveFromClassList("empty-state--visible");
+            }
         }
 
         private Button CreateTacticListItem(string name, bool isCurrent, bool isSelected)
@@ -451,6 +698,9 @@ namespace Game.Runtime
                 }
 
                 AttachTooltipHandlers(_modeSlotsContainer);
+
+                // モードが未設定の戦術では、追加ガイドCTAを表示して視線を誘導
+                SetEmptyStateVisible(_modesEmptyState, modeCount == 0);
             }
 
             // 遷移ルール
@@ -504,14 +754,15 @@ namespace Game.Runtime
         {
             List<string> choices = new List<string>();
             choices.Add("(未割当)");
-            CompanionAIConfig[] presets = _tacticalRegistry.GetAll();
-            for (int i = 0; i < presets.Length; i++)
+            AIMode[] modes = _logic.EditingBuffer.modes;
+            int modesCount = modes != null ? modes.Length : 0;
+            for (int i = 0; i < modesCount; i++)
             {
-                choices.Add(string.IsNullOrEmpty(presets[i].configName) ? "(無名)" : presets[i].configName);
+                string modeName = string.IsNullOrEmpty(modes[i].modeName) ? "Mode" + i : modes[i].modeName;
+                choices.Add(modeName);
             }
 
             int[] bindings = _logic.EditingBuffer.shortcutModeBindings;
-            int presetsCount = presets.Length;
             for (int i = 0; i < k_ShortcutSlotCount; i++)
             {
                 DropdownField dropdown = _shortcutDropdowns[i];
@@ -521,15 +772,15 @@ namespace Game.Runtime
                 }
                 dropdown.choices = choices;
                 int boundIndex = bindings != null && i < bindings.Length ? bindings[i] : -1;
-                // プリセット数が変動して boundIndex が範囲外になった場合は未割当(-1)へフォールバック。
-                // Clamp で画面上だけズレた要素を選ぶと「意図しないプリセットが割り当たっている」状態になるため。
+                // モード数が変動して boundIndex が範囲外になった場合は未割当(-1)へフォールバック。
+                // Clamp で画面上だけズレた要素を選ぶと「意図しないモードが割り当たっている」状態になるため。
                 int displayIndex;
-                if (boundIndex < 0 || boundIndex >= presetsCount)
+                if (boundIndex < 0 || boundIndex >= modesCount)
                 {
                     displayIndex = 0;
                     if (bindings != null && i < bindings.Length && bindings[i] != -1)
                     {
-                        // データも未割当に合わせて書き戻す（プリセット削除時の自動クリーンアップ）
+                        // データも未割当に合わせて書き戻す（モード削除時の自動クリーンアップ）
                         bindings[i] = -1;
                     }
                 }
@@ -583,7 +834,7 @@ namespace Game.Runtime
                 configName = "新規戦術",
                 modes = new AIMode[0],
                 modeTransitionRules = new ModeTransitionRule[0],
-                shortcutModeBindings = new int[k_ShortcutSlotCount],
+                shortcutModeBindings = CompanionAISettingsLogic.CreateDefaultShortcutBindings(),
             };
             string newId = _tacticalRegistry.Save("新規戦術", empty);
             if (newId == null)
@@ -594,6 +845,7 @@ namespace Game.Runtime
             }
             _logic.SwitchEditingTarget(newId, force: true);
             RefreshAll();
+            ShowToast("新規プリセットを作成しました");
         }
 
         private void OnSaveClicked()
@@ -601,10 +853,12 @@ namespace Game.Runtime
             bool ok = _logic.SaveBufferToEditingPreset();
             if (!ok)
             {
-                ShowInfoDialog("保存に失敗しました。");
+                ShowToast("保存に失敗しました", ToastKind.Error);
                 return;
             }
             RefreshAll();
+            FlashSaveButton();
+            ShowToast("保存しました");
         }
 
         private void OnSaveAsPresetClicked()
@@ -622,6 +876,7 @@ namespace Game.Runtime
                         return;
                     }
                     RefreshAll();
+                    ShowToast("プリセットとして保存しました");
                 });
         }
 
@@ -819,6 +1074,7 @@ namespace Game.Runtime
                 _logic.SwitchEditingTarget(configId, force: true);
                 _logic.ApplyBufferToCurrentTactic();
                 RefreshAll();
+                ShowToast($"「{preset.Value.configName}」を現在の戦術に適用しました");
             }));
             buttons.Add(BuildDialogButton("編集する", "secondary-button", () =>
             {
@@ -843,10 +1099,12 @@ namespace Game.Runtime
                     return;
                 }
                 RefreshAll();
+                ShowToast("プリセットを複製しました");
             }));
             buttons.Add(BuildDialogButton("削除", "danger-button", () =>
             {
-                ShowDeleteConfirmDialog(preset.Value.configName, () =>
+                string presetName = preset.Value.configName;
+                ShowDeleteConfirmDialog(presetName, () =>
                 {
                     bool ok = _logic.DeletePreset(configId);
                     if (!ok)
@@ -855,6 +1113,7 @@ namespace Game.Runtime
                         return;
                     }
                     RefreshAll();
+                    ShowToast($"「{presetName}」を削除しました", ToastKind.Info);
                 });
             }));
             buttons.Add(BuildDialogButton("キャンセル", "secondary-button", null));
@@ -898,6 +1157,7 @@ namespace Game.Runtime
                             return;
                         }
                         RefreshAll();
+                        ShowToast("プリセットとして保存しました");
                     });
             }));
             buttons.Add(BuildDialogButton("キャンセル", "secondary-button", null));
@@ -969,6 +1229,7 @@ namespace Game.Runtime
                         _logic.ReplaceModeFromPreset(slotIndex, newId);
                         RefreshEditor();
                         RefreshDirtyIndicator();
+                        ShowToast("モードプリセットとして保存しました");
                     });
             }));
             if (isLinked)

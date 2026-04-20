@@ -52,9 +52,23 @@ namespace Game.Core
                 configName = "現在の戦術",
                 modes = new AIMode[0],
                 modeTransitionRules = new ModeTransitionRule[0],
-                shortcutModeBindings = new int[k_ShortcutSlotCount],
+                shortcutModeBindings = CreateDefaultShortcutBindings(),
             };
             _editingBuffer = CloneConfig(_currentTactic);
+        }
+
+        /// <summary>
+        /// ショートカットスロット配列のデフォルト値（全スロット未割当 = -1）を生成する。
+        /// 0埋めだと「modes[0]を指す」と区別できないため、未割当は -1 で表現する。
+        /// </summary>
+        public static int[] CreateDefaultShortcutBindings()
+        {
+            int[] arr = new int[k_ShortcutSlotCount];
+            for (int i = 0; i < k_ShortcutSlotCount; i++)
+            {
+                arr[i] = -1;
+            }
+            return arr;
         }
 
         /// <summary>現在アクティブなタブ。</summary>
@@ -458,9 +472,13 @@ namespace Game.Core
         }
 
         /// <summary>
-        /// ショートカットスロットに戦術プリセットindexを割り当てる。
+        /// ショートカットスロットに「現在編集中の戦術内の modeIndex」を割り当てる。
+        /// -1 は未割当、0..3 は modes 配列の index。それ以外の負値は未割当 (-1) に正規化する。
+        /// モード数上限側（modeIndex >= modes.Length）は UI 側で描画時にチェックするが、
+        /// 不正な負値だけは保存段階で落として、後続の差分保存やファイル永続化に不正値が漏れないようにする。
+        /// slotIndex が範囲外の場合は false を返す。
         /// </summary>
-        public bool SetShortcutBinding(int slotIndex, int tacticIndex)
+        public bool SetShortcutBinding(int slotIndex, int modeIndex)
         {
             if (slotIndex < 0 || slotIndex >= k_ShortcutSlotCount)
             {
@@ -469,10 +487,12 @@ namespace Game.Core
 
             if (_editingBuffer.shortcutModeBindings == null || _editingBuffer.shortcutModeBindings.Length != k_ShortcutSlotCount)
             {
-                _editingBuffer.shortcutModeBindings = new int[k_ShortcutSlotCount];
+                _editingBuffer.shortcutModeBindings = CreateDefaultShortcutBindings();
             }
 
-            _editingBuffer.shortcutModeBindings[slotIndex] = tacticIndex;
+            // -1 未満は未割当として正規化。上限側の範囲チェックは呼び出し側の責務。
+            int normalized = modeIndex < -1 ? -1 : modeIndex;
+            _editingBuffer.shortcutModeBindings[slotIndex] = normalized;
             _isDirty = true;
             return true;
         }
@@ -533,7 +553,7 @@ namespace Game.Core
             }
             else
             {
-                clone.shortcutModeBindings = new int[k_ShortcutSlotCount];
+                clone.shortcutModeBindings = CreateDefaultShortcutBindings();
             }
 
             return clone;
