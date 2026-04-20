@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
 using Game.Core;
 
@@ -31,6 +32,10 @@ namespace Game.Runtime
         [Header("Action Type Registry (任意注入)")]
         [Tooltip("解放済みアクションを参照するレジストリ。null の場合はデフォルト（全 Instant/Sustained を許可）で動作")]
         [SerializeField] private bool _useActionTypeRegistry = false;
+
+        [Header("Input (パッド/キーボード ショートカット)")]
+        [Tooltip("Cancel/MenuSave/MenuSaveAsPreset を購読する InputActionAsset。未設定なら入力購読をスキップし、マウス/クリックのみで動作する。")]
+        [SerializeField] private InputActionAsset _inputActionAsset;
 
         // 純ロジック
         private CompanionAISettingsLogic _logic;
@@ -74,6 +79,12 @@ namespace Game.Runtime
         // トースト
         private Label _toastLabel;
         private IVisualElementScheduledItem _toastHideScheduled;
+
+        // 入力
+        private VisualElement _footerBar;
+        private InputAction _cancelAction;
+        private InputAction _menuSaveAction;
+        private InputAction _menuSaveAsPresetAction;
 
         // 動的ハンドラ退避用（購読解除のため）
         private readonly List<Action> _unsubscribeActions = new List<Action>();
@@ -149,11 +160,13 @@ namespace Game.Runtime
 
             QueryElements();
             RegisterEventHandlers();
+            SetupInputActions();
             RefreshAll();
         }
 
         private void OnDisable()
         {
+            TeardownInputActions();
             UnregisterEventHandlers();
         }
 
@@ -197,6 +210,7 @@ namespace Game.Runtime
             _tooltipPanel = _root.Q<VisualElement>("tooltip-panel");
             _tooltipText = _root.Q<Label>("tooltip-text");
             _toastLabel = _root.Q<Label>("toast-label");
+            _footerBar = _root.Q<VisualElement>("footer-bar");
         }
 
         private void RegisterEventHandlers()
@@ -369,6 +383,118 @@ namespace Game.Runtime
             {
                 _saveButton.RemoveFromClassList("primary-button--flash");
             }).StartingIn(k_SaveFlashDurationMs);
+        }
+
+        // =========================================================================
+        // Input (Pad / Keyboard shortcut)
+        // =========================================================================
+
+        /// <summary>
+        /// InputActionAsset からショートカットアクションを解決して購読する。
+        /// Cancel は UI モジュールと共用のため Disable はしない（購読解除のみ）。
+        /// MenuSave / MenuSaveAsPreset は CompanionAISettings 固有なので
+        /// 明示的に Enable/Disable する。
+        /// </summary>
+        private void SetupInputActions()
+        {
+            if (_inputActionAsset == null)
+            {
+                // 入力アセット未注入: マウス/クリックのみで動作。フッター凡例は非表示のまま。
+                SetFooterVisible(false);
+                return;
+            }
+
+            _cancelAction = _inputActionAsset.FindAction("UI/Cancel");
+            _menuSaveAction = _inputActionAsset.FindAction("UI/MenuSave");
+            _menuSaveAsPresetAction = _inputActionAsset.FindAction("UI/MenuSaveAsPreset");
+
+            if (_cancelAction != null)
+            {
+                _cancelAction.performed += OnCancelPerformed;
+            }
+            if (_menuSaveAction != null)
+            {
+                _menuSaveAction.performed += OnMenuSavePerformed;
+                _menuSaveAction.Enable();
+            }
+            if (_menuSaveAsPresetAction != null)
+            {
+                _menuSaveAsPresetAction.performed += OnMenuSaveAsPresetPerformed;
+                _menuSaveAsPresetAction.Enable();
+            }
+
+            SetFooterVisible(true);
+        }
+
+        private void TeardownInputActions()
+        {
+            if (_cancelAction != null)
+            {
+                _cancelAction.performed -= OnCancelPerformed;
+                _cancelAction = null;
+            }
+            if (_menuSaveAction != null)
+            {
+                _menuSaveAction.performed -= OnMenuSavePerformed;
+                _menuSaveAction.Disable();
+                _menuSaveAction = null;
+            }
+            if (_menuSaveAsPresetAction != null)
+            {
+                _menuSaveAsPresetAction.performed -= OnMenuSaveAsPresetPerformed;
+                _menuSaveAsPresetAction.Disable();
+                _menuSaveAsPresetAction = null;
+            }
+        }
+
+        /// <summary>
+        /// フッターバーの表示切替。入力アセット未設定時は誤認識防止に非表示を維持する。
+        /// </summary>
+        private void SetFooterVisible(bool visible)
+        {
+            if (_footerBar == null)
+            {
+                return;
+            }
+            if (visible)
+            {
+                _footerBar.RemoveFromClassList("hidden");
+            }
+            else
+            {
+                _footerBar.AddToClassList("hidden");
+            }
+        }
+
+        private void OnCancelPerformed(InputAction.CallbackContext ctx)
+        {
+            // ダイアログが開いていれば閉じる。なければ画面を閉じる（Backボタン相当）。
+            // TextField 編集中の Cancel は EventSystem が先に処理するため、ここには来ないはず。
+            if (_dialogLayer != null && _dialogLayer.childCount > 0)
+            {
+                CloseDialog();
+                return;
+            }
+            OnBackClicked();
+        }
+
+        private void OnMenuSavePerformed(InputAction.CallbackContext ctx)
+        {
+            // ダイアログ表示中は誤操作防止で無視（ダイアログ外の保存ショートカットのみ有効）。
+            if (_dialogLayer != null && _dialogLayer.childCount > 0)
+            {
+                return;
+            }
+            OnSaveClicked();
+        }
+
+        private void OnMenuSaveAsPresetPerformed(InputAction.CallbackContext ctx)
+        {
+            if (_dialogLayer != null && _dialogLayer.childCount > 0)
+            {
+                return;
+            }
+            OnSaveAsPresetClicked();
         }
 
         // =========================================================================
