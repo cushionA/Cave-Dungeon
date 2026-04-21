@@ -77,15 +77,9 @@ namespace Game.Runtime
             intervalRow.Add(intervalMax);
             basicSection.Add(intervalRow);
 
-            IntegerField defaultIndexField = new IntegerField("デフォルト行動index");
-            defaultIndexField.value = working.defaultActionIndex;
-            defaultIndexField.tooltip = "どのルールにも合致しない場合に使用する行動のインデックス";
-            defaultIndexField.RegisterValueChangedCallback(evt =>
-            {
-                int clamped = working.actions != null ? Mathf.Clamp(evt.newValue, 0, Mathf.Max(0, working.actions.Length - 1)) : 0;
-                working.defaultActionIndex = clamped;
-            });
-            basicSection.Add(defaultIndexField);
+            // defaultActionIndex は「行動」セクションのデフォルト行（DEFAULT バッジ付き）から
+            // 直接編集する。ここでは IntegerField を出さないことでユーザーが index を意識しなくて
+            // 済むようにする（Phase 5 UX 刷新）。
 
             // === ターゲット選定 (targetSelects) — JudgmentLoop 第1層 ===
             VisualElement targetSelectsSection = BuildDetailSection("ターゲット選定 (誰を狙うか)");
@@ -178,89 +172,56 @@ namespace Game.Runtime
             addTargetRuleButton.AddToClassList("mode-detail-add-button");
             targetRulesSection.Add(addTargetRuleButton);
 
-            // === 行動スロット ===
-            VisualElement actionsSection = BuildDetailSection("行動スロット");
-            scroll.Add(actionsSection);
+            // === 行動（優先度順） — Phase 5 統合UI ===
+            // 「1ルール = 条件 + 行動」として 1行で見せる。上から順に評価され、最初に成立した
+            // ルールの行動が実行される。デフォルト行動はリスト末尾に DEFAULT バッジ付きで表示。
+            // 行クリックで [編集 / 別条件で複製 / 削除] メニューを開く。
+            VisualElement actionSection = BuildDetailSection("行動（優先度順）");
+            scroll.Add(actionSection);
 
-            VisualElement actionsList = new VisualElement();
-            actionsList.AddToClassList("mode-detail-list");
-            actionsSection.Add(actionsList);
+            Label actionHint = new Label("上から順に評価され、最初に成立したルールの行動が実行されます。行をクリックして編集・複製・削除できます。");
+            actionHint.AddToClassList("section-hint");
+            actionSection.Add(actionHint);
 
-            // struct 値渡しによるコピー問題を避けるため getter/setter closure を渡す。
-            Action rebuildActions = null;
-            rebuildActions = () => RebuildActionSlotList(
-                actionsList,
-                () => working.actions,
-                arr => working.actions = arr,
-                rebuildActions);
-            rebuildActions();
+            VisualElement unifiedList = new VisualElement();
+            unifiedList.AddToClassList("mode-detail-list");
+            unifiedList.AddToClassList("unified-action-list");
+            actionSection.Add(unifiedList);
 
-            Button addActionButton = new Button(() =>
+            // struct working を reassign する必要があるので getter/setter closure で書き戻す
+            Action rebuildUnified = null;
+            rebuildUnified = () => RebuildUnifiedActionList(
+                unifiedList,
+                () => working,
+                m => working = m,
+                rebuildUnified);
+            rebuildUnified();
+
+            Button addActionRuleButton = new Button(() =>
             {
                 ShowActionPickerDialog(PickerTabId.Attack, picked =>
                 {
-                    int newCount = (working.actions != null ? working.actions.Length : 0) + 1;
-                    ActionSlot[] newArr = new ActionSlot[newCount];
-                    if (working.actions != null)
-                    {
-                        for (int i = 0; i < working.actions.Length; i++)
-                        {
-                            newArr[i] = working.actions[i];
-                        }
-                    }
-                    newArr[newCount - 1] = picked;
-                    working.actions = newArr;
-                    rebuildActions();
+                    working = CompanionAISettingsLogic.AddActionRuleWithNewSlot(
+                        working,
+                        new AICondition[0],
+                        picked,
+                        100);
+                    rebuildUnified();
+                    // 追加直後に編集ダイアログを開いて条件入力を促す。
+                    // 行クリック経路と完全に同じ共通エントリを使い、振る舞いを一元化する。
+                    int newIdx = working.actionRules.Length - 1;
+                    OpenActionRuleEditorForIndex(
+                        newIdx,
+                        isNewlyAdded: true,
+                        () => working,
+                        m => working = m,
+                        rebuildUnified);
                 });
             });
-            addActionButton.text = "＋ 行動を追加";
-            addActionButton.tooltip = "新しい行動スロットを追加";
-            addActionButton.AddToClassList("mode-detail-add-button");
-            actionsSection.Add(addActionButton);
-
-            // === 行動ルール ===
-            VisualElement rulesSection = BuildDetailSection("行動ルール (優先度順)");
-            scroll.Add(rulesSection);
-
-            VisualElement rulesList = new VisualElement();
-            rulesList.AddToClassList("mode-detail-list");
-            rulesSection.Add(rulesList);
-
-            // 削除経路が struct コピーで切れる問題を避けるため getter/setter closure を渡す。
-            Action rebuildRules = null;
-            rebuildRules = () => RebuildActionRuleList(
-                rulesList,
-                () => working.actionRules,
-                arr => working.actionRules = arr,
-                () => working,
-                rebuildRules);
-            rebuildRules();
-
-            Button addRuleButton = new Button(() =>
-            {
-                AIRule newRule = new AIRule
-                {
-                    conditions = new AICondition[0],
-                    actionIndex = 0,
-                    probability = 100,
-                };
-                int newCount = (working.actionRules != null ? working.actionRules.Length : 0) + 1;
-                AIRule[] newArr = new AIRule[newCount];
-                if (working.actionRules != null)
-                {
-                    for (int i = 0; i < working.actionRules.Length; i++)
-                    {
-                        newArr[i] = working.actionRules[i];
-                    }
-                }
-                newArr[newCount - 1] = newRule;
-                working.actionRules = newArr;
-                rebuildRules();
-            });
-            addRuleButton.text = "＋ ルールを追加";
-            addRuleButton.tooltip = "新しい行動ルールを追加";
-            addRuleButton.AddToClassList("mode-detail-add-button");
-            rulesSection.Add(addRuleButton);
+            addActionRuleButton.text = "＋ 行動を追加";
+            addActionRuleButton.tooltip = "新しい行動ルールを追加（行動を選択→条件を設定）";
+            addActionRuleButton.AddToClassList("mode-detail-add-button");
+            actionSection.Add(addActionRuleButton);
 
             // === ボタン列 ===
             VisualElement buttons = BuildButtonRow();
@@ -268,6 +229,9 @@ namespace Game.Runtime
             {
                 // modeId を空にして独立コピー扱い（参照リンクを切る安全弁）
                 working.modeId = "";
+                // 編集中に発生した orphan ActionSlot を保存時に一括 GC し、
+                // actionRules/defaultActionIndex を詰め後のインデックスにリマップする
+                working = CompanionAISettingsLogic.GcOrphanActionSlots(working);
                 _logic.UpdateModeInBuffer(slotIndex, working);
                 RefreshEditor();
                 RefreshDirtyIndicator();
@@ -279,269 +243,326 @@ namespace Game.Runtime
             AttachTooltipHandlers(dialog);
         }
 
+        // =====================================================================
+        // Phase 5: 統合「行動」リスト
+        //
+        // 1行=1ルール(条件+行動) として表示する。
+        // - 通常ルール行: [#N] 行動名 / 条件サマリ  → クリックで行動詳細ダイアログへ直行
+        // - デフォルト行: DEFAULTバッジ + 「何もしない」 / (編集不可)  → クリック不可
+        //
+        // 中間メニュー（編集/複製/削除の選択）は廃止し、詳細ダイアログのフッターに
+        // 「別条件で複製」「削除」を配置する（モックアップ仕様）。
+        // =====================================================================
+
         /// <summary>
-        /// 行動スロットリストを描画する。
-        /// AIMode(struct) の値渡しだと削除時の代入が呼び出し元に伝播しないため、
-        /// 呼び出し側が getter/setter の closure を渡す形にする。
+        /// 「行動」統合リストを描画する。AIMode(struct) の丸ごと再構築が必要なので
+        /// getter/setter の closure を受ける。
         /// </summary>
-        private void RebuildActionSlotList(
+        private void RebuildUnifiedActionList(
             VisualElement container,
-            Func<ActionSlot[]> getActions,
-            Action<ActionSlot[]> setActions,
+            Func<AIMode> getMode,
+            Action<AIMode> setMode,
             Action rebuild)
         {
             container.Clear();
 
-            ActionSlot[] actions = getActions();
-            int count = actions != null ? actions.Length : 0;
-            if (count == 0)
+            AIMode mode = getMode();
+            AIRule[] rules = mode.actionRules ?? new AIRule[0];
+
+            if (rules.Length == 0 && (mode.actions == null || mode.actions.Length == 0))
             {
-                Label empty = new Label("(行動スロットが空です)");
+                Label empty = new Label("(まだ行動がありません。下の『＋ 行動を追加』から登録してください)");
                 empty.AddToClassList("mode-detail-empty");
                 container.Add(empty);
+                // actions が空ならデフォルト行も情報を持たないので出さない
                 return;
             }
 
-            for (int i = 0; i < count; i++)
-            {
-                int idx = i;
-                ActionSlot slot = actions[idx];
-                VisualElement row = new VisualElement();
-                row.AddToClassList("mode-detail-row");
-
-                Label indexLabel = new Label("[" + idx + "]");
-                indexLabel.AddToClassList("mode-detail-row__index");
-                row.Add(indexLabel);
-
-                Label label = new Label(ResolveActionSlotLabel(slot));
-                label.AddToClassList("mode-detail-row__label");
-                row.Add(label);
-
-                if (slot.execType == ActionExecType.Sustained)
-                {
-                    Label duration = new Label(SustainedActionMetadata.GetDurationLabel(slot.paramValue));
-                    duration.tooltip = SustainedActionMetadata.GetNaturalEndCondition((SustainedAction)slot.paramId);
-                    duration.AddToClassList("mode-detail-row__duration");
-                    row.Add(duration);
-                }
-
-                Button editButton = new Button(() =>
-                {
-                    ShowActionPickerDialog(ResolveInitialTab(slot), picked =>
-                    {
-                        ActionSlot[] arr = getActions();
-                        if (arr != null && idx < arr.Length)
-                        {
-                            arr[idx] = picked;
-                        }
-                        rebuild();
-                    });
-                });
-                editButton.text = "変更";
-                editButton.tooltip = "この行動を別の行動に差し替え";
-                editButton.AddToClassList("mode-detail-row__button");
-                editButton.AddToClassList("secondary-button");
-                row.Add(editButton);
-
-                Button removeButton = new Button(() =>
-                {
-                    ActionSlot[] arr = getActions();
-                    if (arr == null || arr.Length == 0)
-                    {
-                        return;
-                    }
-                    ActionSlot[] newArr = new ActionSlot[arr.Length - 1];
-                    int dst = 0;
-                    for (int k = 0; k < arr.Length; k++)
-                    {
-                        if (k == idx)
-                        {
-                            continue;
-                        }
-                        newArr[dst++] = arr[k];
-                    }
-                    setActions(newArr);
-                    rebuild();
-                });
-                removeButton.text = "×";
-                removeButton.tooltip = "この行動を削除";
-                removeButton.AddToClassList("mode-detail-row__button");
-                removeButton.AddToClassList("danger-button");
-                row.Add(removeButton);
-
-                container.Add(row);
-            }
-
-            AttachTooltipHandlers(container);
-        }
-
-        /// <summary>
-        /// 行動ルールリストを描画する。
-        /// AIMode(struct) の値渡し問題を避けるため getter/setter + getMode の closure を受ける。
-        /// getMode は FormatRuleSummary / ShowRuleEditDialog に「今の actions[] が乗った AIMode」を渡すために必要。
-        /// </summary>
-        private void RebuildActionRuleList(
-            VisualElement container,
-            Func<AIRule[]> getRules,
-            Action<AIRule[]> setRules,
-            Func<AIMode> getParentMode,
-            Action rebuild)
-        {
-            container.Clear();
-
-            AIRule[] rules = getRules();
-            int count = rules != null ? rules.Length : 0;
-            if (count == 0)
-            {
-                Label empty = new Label("(ルールなし - デフォルト行動が実行されます)");
-                empty.AddToClassList("mode-detail-empty");
-                container.Add(empty);
-                return;
-            }
-
-            AIMode parentMode = getParentMode();
-            for (int i = 0; i < count; i++)
+            // 通常ルール行（クリックで詳細ダイアログを開く）
+            for (int i = 0; i < rules.Length; i++)
             {
                 int idx = i;
                 AIRule rule = rules[idx];
-                VisualElement row = new VisualElement();
-                row.AddToClassList("mode-detail-row");
-
-                Label priority = new Label("#" + (idx + 1));
-                priority.AddToClassList("mode-detail-row__index");
-                row.Add(priority);
-
-                Label summary = new Label(FormatRuleSummary(rule, parentMode));
-                summary.AddToClassList("mode-detail-row__label");
-                row.Add(summary);
-
-                Button editButton = new Button(() =>
+                VisualElement row = BuildUnifiedActionRow(rule, mode, idx, isDefault: false);
+                row.RegisterCallback<ClickEvent>(evt =>
                 {
-                    ShowRuleEditDialog(rule, getParentMode(), edited =>
-                    {
-                        AIRule[] arr = getRules();
-                        if (arr != null && idx < arr.Length)
-                        {
-                            arr[idx] = edited;
-                        }
-                        rebuild();
-                    });
+                    OpenActionRuleEditorForIndex(idx, isNewlyAdded: false, getMode, setMode, rebuild);
                 });
-                editButton.text = "編集";
-                editButton.tooltip = "このルールを編集";
-                editButton.AddToClassList("mode-detail-row__button");
-                editButton.AddToClassList("secondary-button");
-                row.Add(editButton);
-
-                Button removeButton = new Button(() =>
-                {
-                    AIRule[] arr = getRules();
-                    if (arr == null || arr.Length == 0)
-                    {
-                        return;
-                    }
-                    AIRule[] newArr = new AIRule[arr.Length - 1];
-                    int dst = 0;
-                    for (int k = 0; k < arr.Length; k++)
-                    {
-                        if (k == idx)
-                        {
-                            continue;
-                        }
-                        newArr[dst++] = arr[k];
-                    }
-                    setRules(newArr);
-                    rebuild();
-                });
-                removeButton.text = "×";
-                removeButton.tooltip = "このルールを削除";
-                removeButton.AddToClassList("mode-detail-row__button");
-                removeButton.AddToClassList("danger-button");
-                row.Add(removeButton);
-
                 container.Add(row);
             }
+
+            // デフォルト行動（DEFAULTバッジ付き、ルール不一致時の既定行動）
+            // Phase 5 方針: デフォルトは「何もしない」固定表示。クリック不可・編集不可。
+            // 内部 defaultActionIndex は従来通り保持するが UI からは編集しない
+            // （別 Phase で runtime 側に "Idle" アクションを追加したら連動させる）。
+            VisualElement defaultRow = BuildUnifiedActionRow(default, mode, -1, isDefault: true);
+            container.Add(defaultRow);
 
             AttachTooltipHandlers(container);
         }
 
-        private string FormatRuleSummary(AIRule rule, AIMode mode)
+        /// <summary>
+        /// 指定 ruleIdx のルールに対して統合編集ダイアログを開き、各コールバックを配線する。
+        /// 行クリック・「＋ 行動を追加」両方から呼ばれる共通エントリ。
+        /// </summary>
+        private void OpenActionRuleEditorForIndex(
+            int idx,
+            bool isNewlyAdded,
+            Func<AIMode> getMode,
+            Action<AIMode> setMode,
+            Action rebuild)
         {
-            int condCount = rule.conditions != null ? rule.conditions.Length : 0;
-            string condText = condCount == 0 ? "常時" : condCount + "個の条件(AND)";
-            string actionName = "#" + rule.actionIndex;
+            AIMode modeNow = getMode();
+            if (modeNow.actionRules == null || idx < 0 || idx >= modeNow.actionRules.Length)
+            {
+                return;
+            }
+
+            AIRule ruleNow = modeNow.actionRules[idx];
+            ShowUnifiedActionRuleEditorDialog(
+                ruleNow,
+                modeNow,
+                isNewlyAdded,
+                onConfirmMeta: editedMeta =>
+                {
+                    AIMode m = getMode();
+                    if (m.actionRules != null && idx < m.actionRules.Length)
+                    {
+                        AIRule r = m.actionRules[idx];
+                        r.conditions = editedMeta.conditions;
+                        r.probability = editedMeta.probability;
+                        m.actionRules[idx] = r;
+                        setMode(m);
+                    }
+                    rebuild();
+                },
+                onActionChanged: pickedNewSlot =>
+                {
+                    AIMode m = getMode();
+                    m = CompanionAISettingsLogic.ReplaceActionRuleSlot(m, idx, pickedNewSlot);
+                    setMode(m);
+                    rebuild();
+                },
+                onDuplicate: () =>
+                {
+                    AIMode m = getMode();
+                    m = CompanionAISettingsLogic.DuplicateActionRule(m, idx);
+                    setMode(m);
+                    rebuild();
+                },
+                onDelete: () =>
+                {
+                    AIMode m = getMode();
+                    m = CompanionAISettingsLogic.RemoveActionRule(m, idx);
+                    setMode(m);
+                    rebuild();
+                });
+        }
+
+        /// <summary>
+        /// 統合行動リストの1行ビルダー。
+        /// 通常行: [優先度] 行動名 ─ 条件サマリ
+        /// デフォルト行: [DEFAULT] 何もしない ─ ルール不一致時の既定行動（編集不可）
+        /// </summary>
+        private VisualElement BuildUnifiedActionRow(AIRule rule, AIMode mode, int priorityIdx, bool isDefault)
+        {
+            VisualElement row = new VisualElement();
+            row.AddToClassList("unified-action-row");
+            if (isDefault)
+            {
+                row.AddToClassList("unified-action-row--default");
+                // デフォルト行はクリックを吸わない（背後要素もクリック不可で問題ないが、
+                // hover 効果を消すことで「編集できる要素ではない」という非言語的シグナルを送る）
+                row.pickingMode = PickingMode.Ignore;
+            }
+
+            // 左端: 優先度番号 or DEFAULTバッジ
+            if (isDefault)
+            {
+                Label badge = new Label("DEFAULT");
+                badge.AddToClassList("unified-action-row__default-badge");
+                row.Add(badge);
+            }
+            else
+            {
+                Label priority = new Label("#" + (priorityIdx + 1));
+                priority.AddToClassList("unified-action-row__priority");
+                row.Add(priority);
+            }
+
+            // 中央: 行動名（プライマリに視覚化）。デフォルト行は「何もしない」固定。
+            string actionText = isDefault ? "何もしない" : FormatRuleActionName(rule, mode);
+            Label actionName = new Label(actionText);
+            actionName.AddToClassList("unified-action-row__action");
+            row.Add(actionName);
+
+            // Sustained なら継続時間を小さく表示（通常行のみ）
+            if (!isDefault
+                && mode.actions != null
+                && rule.actionIndex >= 0
+                && rule.actionIndex < mode.actions.Length
+                && mode.actions[rule.actionIndex].execType == ActionExecType.Sustained)
+            {
+                ActionSlot slot = mode.actions[rule.actionIndex];
+                Label duration = new Label(SustainedActionMetadata.GetDurationLabel(slot.paramValue));
+                duration.tooltip = SustainedActionMetadata.GetNaturalEndCondition((SustainedAction)slot.paramId);
+                duration.AddToClassList("unified-action-row__duration");
+                row.Add(duration);
+            }
+
+            // 区切り
+            Label sep = new Label("─");
+            sep.AddToClassList("unified-action-row__sep");
+            row.Add(sep);
+
+            // 右側: 条件サマリ（補助）
+            Label conditions = new Label(FormatRuleConditionSummary(rule, isDefault));
+            conditions.AddToClassList("unified-action-row__conditions");
+            row.Add(conditions);
+
+            // 右端: 発動確率（通常行かつ100%以外のみ）
+            if (!isDefault && rule.probability != 100)
+            {
+                Label prob = new Label(rule.probability + "%");
+                prob.tooltip = "発動確率（条件成立しても確率的にスキップ）";
+                prob.AddToClassList("unified-action-row__prob");
+                row.Add(prob);
+            }
+
+            // 行全体にツールチップでも詳細を再掲
+            row.tooltip = isDefault
+                ? "デフォルト行動（ルール不一致時に実行）— 何もしない"
+                : FormatRuleActionName(rule, mode) + " / " + FormatRuleConditionSummary(rule, isDefault);
+
+            return row;
+        }
+
+        /// <summary>
+        /// ルールが指す ActionSlot の表示名（"#index" プレフィックスなし）。
+        /// index を露出しないのが Phase 5 の方針。
+        /// </summary>
+        private string FormatRuleActionName(AIRule rule, AIMode mode)
+        {
             if (mode.actions != null && rule.actionIndex >= 0 && rule.actionIndex < mode.actions.Length)
             {
-                actionName = "#" + rule.actionIndex + " " + ResolveActionSlotLabel(mode.actions[rule.actionIndex]);
+                return ResolveActionSlotLabel(mode.actions[rule.actionIndex]);
             }
-            string prob = rule.probability == 100 ? "" : " (" + rule.probability + "%)";
-            return condText + " → " + actionName + prob;
+            return "(未設定)";
+        }
+
+        /// <summary>
+        /// 条件サマリの1行テキスト。条件数だけ示す簡易版。
+        /// デフォルト行は「ルール不一致時の既定行動」固定。
+        /// </summary>
+        private string FormatRuleConditionSummary(AIRule rule, bool isDefault)
+        {
+            if (isDefault)
+            {
+                return "ルール不一致時の既定行動";
+            }
+            int condCount = rule.conditions != null ? rule.conditions.Length : 0;
+            if (condCount == 0)
+            {
+                return "無条件（常時成立）";
+            }
+            return condCount + "個の条件（AND結合）";
+        }
+
+        /// <summary>
+        /// ResolveInitialTab の安全版。actionIndex が範囲外でも Attack にフォールバックする。
+        /// </summary>
+        private PickerTabId ResolveInitialTabSafe(AIMode mode, int actionIndex)
+        {
+            if (mode.actions == null || actionIndex < 0 || actionIndex >= mode.actions.Length)
+            {
+                return PickerTabId.Attack;
+            }
+            return ResolveInitialTab(mode.actions[actionIndex]);
+        }
+
+        /// <summary>
+        /// 編集ダイアログから返ってくる「ルールのメタ情報（条件・確率）」。
+        /// ActionSlot 差し替えは別コールバックで通知するため、ここには含めない。
+        /// </summary>
+        private struct EditedRuleMeta
+        {
+            public AICondition[] conditions;
+            public byte probability;
         }
 
         // =========================================================================
-        // Rule Edit Dialog (Mode Detail から呼ばれるサブダイアログ)
+        // 統合アクションルール編集ダイアログ（Phase 5）
+        //
+        // 1クリックで行動詳細ウインドウが開き、その中で「行動」「各条件」「発動確率」を
+        // 個別にクリックして編集できる。「別条件で複製」「削除」はフッターに配置。
+        //
+        // 行動変更・各条件編集はスタック式サブダイアログで開く（このダイアログは残る）。
+        // ActionSlot の差し替えは ReplaceActionRuleSlot を経由するため、親UI側で
+        // 共有判定と append/in-place の使い分けが自動で行われる。
         // =========================================================================
 
-        private void ShowRuleEditDialog(AIRule initialRule, AIMode parentMode, Action<AIRule> onConfirm)
+        private void ShowUnifiedActionRuleEditorDialog(
+            AIRule initialRule,
+            AIMode parentMode,
+            bool isNewlyAdded,
+            Action<EditedRuleMeta> onConfirmMeta,
+            Action<ActionSlot> onActionChanged,
+            Action onDuplicate,
+            Action onDelete)
         {
             AIRule working = CloneRule(initialRule);
 
-            VisualElement dialog = BuildModalDialog("行動ルール編集", "条件はすべて AND 結合されます。ルール配列の順序が優先度（先勝ち）です。");
-            dialog.AddToClassList("rule-edit-dialog");
+            string titleText = isNewlyAdded ? "追加した行動の条件を設定" : FormatRuleActionName(working, parentMode);
+            VisualElement dialog = BuildModalDialog(
+                titleText,
+                "「行動」「各条件」「発動確率」はそれぞれクリックして個別に編集できます。条件は全て AND 結合されます。");
+            dialog.AddToClassList("unified-action-editor-dialog");
 
             ScrollView scroll = new ScrollView(ScrollViewMode.Vertical);
             scroll.AddToClassList("mode-detail-scroll");
             dialog.Add(scroll);
 
-            // actionIndex
-            VisualElement targetSection = BuildDetailSection("発動する行動");
-            scroll.Add(targetSection);
+            // === この条件で実行する行動（クリッカブルチップ） ===
+            VisualElement actionSection = BuildDetailSection("この条件で実行する行動");
+            Label actionHint = new Label("クリックして別の行動に差し替え");
+            actionHint.AddToClassList("section-hint");
+            actionSection.Add(actionHint);
+            scroll.Add(actionSection);
 
-            List<string> actionChoices = new List<string>();
-            int actionCount = parentMode.actions != null ? parentMode.actions.Length : 0;
-            for (int i = 0; i < actionCount; i++)
+            // 行動チップはクリックで ActionPicker を stacked ダイアログで開く。
+            // BuildDialogButton は CloseDialog を挟むので使わず、直接 Button を使う。
+            // クロージャ内で chip 自身を参照するため、先に null で宣言してから割当する。
+            Button actionChip = null;
+            actionChip = new Button(() =>
             {
-                actionChoices.Add("#" + i + " " + ResolveActionSlotLabel(parentMode.actions[i]));
-            }
-            if (actionChoices.Count == 0)
-            {
-                actionChoices.Add("(行動スロットが空です)");
-            }
-
-            DropdownField actionDropdown = new DropdownField("行動", actionChoices, Mathf.Clamp(working.actionIndex, 0, actionChoices.Count - 1));
-            actionDropdown.tooltip = "このルールが満たされた時に発動する行動スロット";
-            actionDropdown.RegisterValueChangedCallback(evt =>
-            {
-                int newIndex = actionDropdown.index;
-                if (newIndex >= 0)
-                {
-                    working.actionIndex = newIndex;
-                }
+                ShowActionPickerDialog(
+                    ResolveInitialTabSafe(parentMode, working.actionIndex),
+                    picked =>
+                    {
+                        // 親UI側で ReplaceActionRuleSlot を呼ぶ（共有判定込み）。
+                        // 本ダイアログはスタック下層に残るので、ここでは chip のラベルだけ更新する。
+                        onActionChanged?.Invoke(picked);
+                        UpdateActionChipLabel(actionChip, picked);
+                    });
             });
-            targetSection.Add(actionDropdown);
+            UpdateActionChipLabel(actionChip, ResolveActionSlotFromRule(working, parentMode));
+            actionChip.tooltip = "この行動を別のものに差し替え";
+            actionChip.AddToClassList("action-chip");
+            actionSection.Add(actionChip);
 
-            // probability slider
-            Slider probSlider = new Slider("発動確率(%)", 0, 100);
-            probSlider.value = working.probability;
-            probSlider.tooltip = "ルール条件成立時にこの行動を選ぶ確率(0-100)";
-            probSlider.showInputField = true;
-            probSlider.RegisterValueChangedCallback(evt =>
-            {
-                working.probability = (byte)Mathf.Clamp(Mathf.RoundToInt(evt.newValue), 0, 100);
-            });
-            targetSection.Add(probSlider);
-
-            // conditions
-            VisualElement conditionsSection = BuildDetailSection("条件 (AND結合)");
+            // === 条件（クリッカブルチップリスト） ===
+            VisualElement conditionsSection = BuildDetailSection("条件（AND結合）");
+            Label condHint = new Label("各条件をクリックして詳細を編集。追加・削除もここから。");
+            condHint.AddToClassList("section-hint");
+            conditionsSection.Add(condHint);
             scroll.Add(conditionsSection);
 
             VisualElement conditionsList = new VisualElement();
-            conditionsList.AddToClassList("mode-detail-list");
+            conditionsList.AddToClassList("condition-chip-list");
             conditionsSection.Add(conditionsList);
 
-            // struct を値渡しするとコピーになり変更が伝播しないため、getter/setter closure を経由する
             Action rebuildConditions = null;
-            rebuildConditions = () => RebuildConditionList(
+            rebuildConditions = () => RebuildConditionChipList(
                 conditionsList,
                 () => working.conditions,
                 arr => working.conditions = arr,
@@ -550,6 +571,7 @@ namespace Game.Runtime
 
             Button addCondButton = new Button(() =>
             {
+                // 新規条件を追加し、その場で編集ダイアログを開いて入力を促す
                 int newCount = (working.conditions != null ? working.conditions.Length : 0) + 1;
                 AICondition[] newArr = new AICondition[newCount];
                 if (working.conditions != null)
@@ -559,7 +581,7 @@ namespace Game.Runtime
                         newArr[i] = working.conditions[i];
                     }
                 }
-                newArr[newCount - 1] = new AICondition
+                AICondition blank = new AICondition
                 {
                     conditionType = AIConditionType.HpRatio,
                     compareOp = CompareOp.LessEqual,
@@ -567,28 +589,98 @@ namespace Game.Runtime
                     operandB = 0,
                     filter = new TargetFilter(),
                 };
+                newArr[newCount - 1] = blank;
                 working.conditions = newArr;
                 rebuildConditions();
+
+                int addedIdx = newCount - 1;
+                ShowConditionEditorDialog(blank, updated =>
+                {
+                    if (working.conditions != null && addedIdx < working.conditions.Length)
+                    {
+                        working.conditions[addedIdx] = updated;
+                    }
+                    rebuildConditions();
+                });
             });
             addCondButton.text = "＋ 条件を追加";
+            addCondButton.tooltip = "新しい条件を追加（すべて AND で結合されます）";
             addCondButton.AddToClassList("mode-detail-add-button");
             conditionsSection.Add(addCondButton);
 
-            VisualElement buttons = BuildButtonRow();
-            buttons.Add(BuildDialogButton("保存", "primary-button", () => onConfirm?.Invoke(working)));
-            buttons.Add(BuildDialogButton("キャンセル", "secondary-button", null));
-            dialog.Add(buttons);
+            // === 発動確率 ===
+            VisualElement probSection = BuildDetailSection("発動確率");
+            scroll.Add(probSection);
+
+            Slider probSlider = new Slider("発動確率(%)", 0, 100);
+            probSlider.value = working.probability;
+            probSlider.tooltip = "ルール条件成立時にこの行動を選ぶ確率(0-100)。100未満なら確率的にスキップされ、次のルールに評価が進む。";
+            probSlider.showInputField = true;
+            probSlider.RegisterValueChangedCallback(evt =>
+            {
+                working.probability = (byte)Mathf.Clamp(Mathf.RoundToInt(evt.newValue), 0, 100);
+            });
+            probSection.Add(probSlider);
+
+            // === フッター: 左に 複製/削除、右に 保存/キャンセル ===
+            VisualElement footer = new VisualElement();
+            footer.AddToClassList("modal-dialog__buttons");
+            footer.AddToClassList("modal-dialog__buttons--split");
+
+            VisualElement footerLeft = new VisualElement();
+            footerLeft.AddToClassList("modal-dialog__buttons-group");
+            footerLeft.Add(BuildDialogButton("別条件で複製", "secondary-button", onDuplicate));
+            footerLeft.Add(BuildDialogButton("削除", "danger-button", onDelete));
+            footer.Add(footerLeft);
+
+            VisualElement footerRight = new VisualElement();
+            footerRight.AddToClassList("modal-dialog__buttons-group");
+            footerRight.Add(BuildDialogButton("キャンセル", "secondary-button", null));
+            footerRight.Add(BuildDialogButton("保存", "primary-button", () =>
+            {
+                EditedRuleMeta meta = new EditedRuleMeta
+                {
+                    conditions = working.conditions,
+                    probability = working.probability,
+                };
+                onConfirmMeta?.Invoke(meta);
+            }));
+            footer.Add(footerRight);
+
+            dialog.Add(footer);
 
             ShowDialog(dialog);
             AttachTooltipHandlers(dialog);
         }
 
         /// <summary>
-        /// 条件リストを描画する。
-        /// AICondition[] は struct AIRule の中にあるため値渡しでのバグを避けるため、
-        /// 呼び出し側が getter/setter を渡す形にしている。
+        /// アクションチップのラベル/tooltipを現在の ActionSlot 内容で更新する。
+        /// 行動差し替え時にもこれで即時反映する。
         /// </summary>
-        private void RebuildConditionList(
+        private void UpdateActionChipLabel(Button chip, ActionSlot slot)
+        {
+            string name = ResolveActionSlotLabel(slot);
+            chip.text = string.IsNullOrEmpty(name) ? "(未設定) — クリックして選択" : name;
+        }
+
+        /// <summary>
+        /// AIRule の actionIndex から ActionSlot を解決する。範囲外なら default(ActionSlot)。
+        /// </summary>
+        private ActionSlot ResolveActionSlotFromRule(AIRule rule, AIMode mode)
+        {
+            if (mode.actions != null && rule.actionIndex >= 0 && rule.actionIndex < mode.actions.Length)
+            {
+                return mode.actions[rule.actionIndex];
+            }
+            return default;
+        }
+
+        /// <summary>
+        /// 条件リストを「クリッカブルチップ」形式で描画する（Phase 5）。
+        /// 各チップはサマリ表示のみ、クリックで <see cref="ShowConditionEditorDialog"/> を開いて
+        /// 詳細編集する。× ボタンで単体削除も可能。
+        /// </summary>
+        private void RebuildConditionChipList(
             VisualElement container,
             Func<AICondition[]> getConditions,
             Action<AICondition[]> setConditions,
@@ -600,7 +692,7 @@ namespace Game.Runtime
             int count = conditions != null ? conditions.Length : 0;
             if (count == 0)
             {
-                Label empty = new Label("(条件なし - 常時成立)");
+                Label empty = new Label("(条件なし — このルールは常時成立します)");
                 empty.AddToClassList("mode-detail-empty");
                 container.Add(empty);
                 return;
@@ -609,15 +701,35 @@ namespace Game.Runtime
             for (int i = 0; i < count; i++)
             {
                 int idx = i;
-                VisualElement row = BuildConditionRow(conditions[idx], updated =>
+                AICondition cond = conditions[idx];
+
+                VisualElement chip = new VisualElement();
+                chip.AddToClassList("condition-chip");
+
+                // 本体をクリックすると編集ダイアログを開く
+                Button body = new Button(() =>
                 {
                     AICondition[] arr = getConditions();
-                    if (arr != null && idx < arr.Length)
+                    if (arr == null || idx >= arr.Length)
                     {
-                        arr[idx] = updated;
+                        return;
                     }
+                    ShowConditionEditorDialog(arr[idx], updated =>
+                    {
+                        AICondition[] arr2 = getConditions();
+                        if (arr2 != null && idx < arr2.Length)
+                        {
+                            arr2[idx] = updated;
+                        }
+                        rebuild();
+                    });
                 });
+                body.text = FormatConditionSummary(cond);
+                body.tooltip = "クリックして条件の詳細を編集";
+                body.AddToClassList("condition-chip__body");
+                chip.Add(body);
 
+                // × 削除ボタン（チップ本体のクリックと分離するため独立）
                 Button removeButton = new Button(() =>
                 {
                     AICondition[] arr = getConditions();
@@ -640,14 +752,124 @@ namespace Game.Runtime
                 });
                 removeButton.text = "×";
                 removeButton.tooltip = "この条件を削除";
-                removeButton.AddToClassList("mode-detail-row__button");
+                removeButton.AddToClassList("condition-chip__remove");
                 removeButton.AddToClassList("danger-button");
-                row.Add(removeButton);
+                chip.Add(removeButton);
 
-                container.Add(row);
+                container.Add(chip);
+
+                // チップ間に AND 区切り（最終チップの後には出さない）
+                if (idx < count - 1)
+                {
+                    Label andLabel = new Label("AND");
+                    andLabel.AddToClassList("condition-chip__and-sep");
+                    container.Add(andLabel);
+                }
             }
 
             AttachTooltipHandlers(container);
+        }
+
+        /// <summary>
+        /// 条件を1行テキストに整形する。行動詳細ダイアログ内の条件チップ表示に使う。
+        /// 例: "HP ratio ≤ 30%"、"距離 3.0 ≤ X ≤ 10.0"、"敵の種類 含む(OR) 弱点=Fire"
+        /// TargetFilter が非空のときは末尾に [陣営=Enemy, 弱点=Fire] の形で追記する。
+        /// </summary>
+        private string FormatConditionSummary(AICondition cond)
+        {
+            string typeLabel = ConditionTypeMetadata.GetLabel(cond.conditionType);
+            string opSymbol = FormatCompareOpSymbol(cond.compareOp);
+
+            string main;
+            if (cond.compareOp == CompareOp.InRange)
+            {
+                main = typeLabel + " " + cond.operandA + " ≤ X ≤ " + cond.operandB;
+            }
+            else if (cond.compareOp == CompareOp.HasFlag || cond.compareOp == CompareOp.HasAny)
+            {
+                main = typeLabel + " " + opSymbol + " (" + cond.operandA + ")";
+            }
+            else
+            {
+                main = typeLabel + " " + opSymbol + " " + cond.operandA;
+            }
+
+            // TargetFilter が制約を持っているときだけ末尾に追記（空のときに冗長な
+            //「条件なし（全員が対象）」は出さない）
+            if (HasFilterConstraints(cond.filter))
+            {
+                main += " [" + FormatFilterSummary(cond.filter) + "]";
+            }
+            return main;
+        }
+
+        /// <summary>
+        /// TargetFilter が何らかの絞り込み条件を持っているかどうか。
+        /// chip サマリに filter 情報を出すか判定するために使う。
+        /// </summary>
+        private static bool HasFilterConstraints(TargetFilter f)
+        {
+            return f.belong != 0
+                || f.feature != 0
+                || f.weakPoint != 0
+                || f.distanceRange.x > 0f
+                || f.distanceRange.y > 0f;
+        }
+
+        /// <summary>
+        /// CompareOp を記号表記へ変換する。
+        /// </summary>
+        private string FormatCompareOpSymbol(CompareOp op)
+        {
+            switch (op)
+            {
+                case CompareOp.Less:         return "<";
+                case CompareOp.LessEqual:    return "≤";
+                case CompareOp.Equal:        return "=";
+                case CompareOp.GreaterEqual: return "≥";
+                case CompareOp.Greater:      return ">";
+                case CompareOp.NotEqual:     return "≠";
+                case CompareOp.InRange:      return "範囲内";
+                case CompareOp.HasFlag:      return "含む(AND)";
+                case CompareOp.HasAny:       return "含む(OR)";
+                default:                     return op.ToString();
+            }
+        }
+
+        /// <summary>
+        /// 単一の条件を編集する個別ダイアログ（Phase 5）。
+        /// 既存 <see cref="BuildConditionRow"/> が inline で生成していた UI を
+        /// そのままダイアログコンテンツとして利用し、保存/キャンセルで確定する。
+        /// タイトルには初期状態の条件種別を含めて、どの条件を編集しているか文脈が分かるようにする。
+        /// </summary>
+        private void ShowConditionEditorDialog(AICondition initial, Action<AICondition> onConfirm)
+        {
+            AICondition working = initial;
+
+            string title = "条件: " + ConditionTypeMetadata.GetLabel(initial.conditionType);
+            VisualElement dialog = BuildModalDialog(
+                title,
+                "条件の種類・比較演算子・閾値・対象フィルタを設定してください。");
+            dialog.AddToClassList("condition-editor-dialog");
+
+            ScrollView scroll = new ScrollView(ScrollViewMode.Vertical);
+            scroll.AddToClassList("mode-detail-scroll");
+            dialog.Add(scroll);
+
+            VisualElement editorRow = BuildConditionRow(working, updated =>
+            {
+                working = updated;
+            });
+            editorRow.AddToClassList("condition-editor-dialog__row");
+            scroll.Add(editorRow);
+
+            VisualElement buttons = BuildButtonRow();
+            buttons.Add(BuildDialogButton("保存", "primary-button", () => onConfirm?.Invoke(working)));
+            buttons.Add(BuildDialogButton("キャンセル", "secondary-button", null));
+            dialog.Add(buttons);
+
+            ShowDialog(dialog);
+            AttachTooltipHandlers(dialog);
         }
 
         private VisualElement BuildConditionRow(AICondition initial, Action<AICondition> onChanged)
@@ -1419,12 +1641,12 @@ namespace Game.Runtime
             scroll.Add(conditionsSection);
 
             VisualElement conditionsList = new VisualElement();
-            conditionsList.AddToClassList("mode-detail-list");
+            conditionsList.AddToClassList("condition-chip-list");
             conditionsSection.Add(conditionsList);
 
-            // struct の値渡しを避けるため getter/setter closure を渡す
+            // Phase 5: チップ式（クリックで個別編集ダイアログ）に統一
             Action rebuildConditions = null;
-            rebuildConditions = () => RebuildConditionList(
+            rebuildConditions = () => RebuildConditionChipList(
                 conditionsList,
                 () => working.conditions,
                 arr => working.conditions = arr,
@@ -1442,7 +1664,7 @@ namespace Game.Runtime
                         newArr[i] = working.conditions[i];
                     }
                 }
-                newArr[newCount - 1] = new AICondition
+                AICondition blank = new AICondition
                 {
                     conditionType = AIConditionType.HpRatio,
                     compareOp = CompareOp.LessEqual,
@@ -1450,8 +1672,19 @@ namespace Game.Runtime
                     operandB = 0,
                     filter = new TargetFilter(),
                 };
+                newArr[newCount - 1] = blank;
                 working.conditions = newArr;
                 rebuildConditions();
+
+                int addedIdx = newCount - 1;
+                ShowConditionEditorDialog(blank, updated =>
+                {
+                    if (working.conditions != null && addedIdx < working.conditions.Length)
+                    {
+                        working.conditions[addedIdx] = updated;
+                    }
+                    rebuildConditions();
+                });
             });
             addCondButton.text = "＋ 条件を追加";
             addCondButton.AddToClassList("mode-detail-add-button");
@@ -2507,16 +2740,16 @@ namespace Game.Runtime
             });
             targetSection.Add(probSlider);
 
-            // === 条件 (既存 RebuildConditionList を再利用) ===
+            // === 条件（Phase 5: チップ式） ===
             VisualElement conditionsSection = BuildDetailSection("条件 (AND結合)");
             scroll.Add(conditionsSection);
 
             VisualElement conditionsList = new VisualElement();
-            conditionsList.AddToClassList("mode-detail-list");
+            conditionsList.AddToClassList("condition-chip-list");
             conditionsSection.Add(conditionsList);
 
             Action rebuildConditions = null;
-            rebuildConditions = () => RebuildConditionList(
+            rebuildConditions = () => RebuildConditionChipList(
                 conditionsList,
                 () => working.conditions,
                 arr => working.conditions = arr,
@@ -2534,7 +2767,7 @@ namespace Game.Runtime
                         newArr[i] = working.conditions[i];
                     }
                 }
-                newArr[newCount - 1] = new AICondition
+                AICondition blank = new AICondition
                 {
                     conditionType = AIConditionType.HpRatio,
                     compareOp = CompareOp.LessEqual,
@@ -2542,8 +2775,19 @@ namespace Game.Runtime
                     operandB = 0,
                     filter = new TargetFilter(),
                 };
+                newArr[newCount - 1] = blank;
                 working.conditions = newArr;
                 rebuildConditions();
+
+                int addedIdx = newCount - 1;
+                ShowConditionEditorDialog(blank, updated =>
+                {
+                    if (working.conditions != null && addedIdx < working.conditions.Length)
+                    {
+                        working.conditions[addedIdx] = updated;
+                    }
+                    rebuildConditions();
+                });
             });
             addCondButton.text = "＋ 条件を追加";
             addCondButton.AddToClassList("mode-detail-add-button");

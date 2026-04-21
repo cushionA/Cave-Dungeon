@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Phase 5: モード詳細 → 行動詳細 → 個別エディタ フローモックアップ</title>
+<style>
+  /* デザイントークン（Assets/MyAsset/UI/CompanionAISettings/CompanionAISettings.tokens.uss と同期） */
+  :root {
+    --color-bg-overlay: rgba(0, 0, 0, 0.75);
+    --color-bg-header: rgba(20, 20, 30, 0.95);
+    --color-bg-panel: rgba(20, 20, 30, 0.98);
+    --color-bg-item: rgba(35, 35, 45, 0.85);
+    --color-bg-item-hover: rgba(55, 55, 75, 0.90);
+    --color-bg-input: rgba(10, 10, 20, 0.70);
+    --color-bg-section: rgba(0, 0, 0, 0.20);
+
+    --color-accent: rgb(79, 195, 247);
+    --color-accent-hover: rgb(120, 215, 255);
+    --color-accent-wash: rgba(79, 195, 247, 0.15);
+    --color-accent-subtle: rgba(79, 195, 247, 0.60);
+
+    --color-current: rgb(76, 175, 80);
+    --color-current-wash: rgba(60, 100, 60, 0.50);
+    --color-warning: rgb(255, 193, 7);
+    --color-warning-subtle: rgba(255, 193, 7, 0.30);
+    --color-danger: rgb(244, 67, 54);
+
+    --color-text-primary: rgb(240, 240, 245);
+    --color-text-secondary: rgb(220, 220, 230);
+    --color-text-muted: rgb(160, 160, 175);
+    --color-text-disabled: rgb(100, 100, 115);
+    --color-text-on-accent: rgb(10, 10, 20);
+
+    --color-border-subtle: rgba(80, 80, 100, 0.40);
+    --color-border-strong: rgba(100, 100, 130, 0.60);
+
+    --fs-h1: 32px;
+    --fs-h2: 22px;
+    --fs-h3: 18px;
+    --fs-body-lg: 18px;
+    --fs-body: 16px;
+    --fs-label: 14px;
+    --fs-mini: 13px;
+    --fs-caption: 12px;
+
+    --s-2xs: 2px;
+    --s-xs: 4px;
+    --s-sm: 8px;
+    --s-md: 16px;
+    --s-lg: 24px;
+    --s-xl: 40px;
+
+    --r-sm: 3px;
+    --r-md: 6px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 32px;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f1626 100%);
+    background-attachment: fixed;
+    color: var(--color-text-primary);
+    font-family: "Segoe UI", "Yu Gothic UI", "Meiryo", sans-serif;
+    font-size: var(--fs-body);
+    min-height: 100vh;
+  }
+
+  h1 {
+    margin: 0 0 8px 0;
+    font-size: 24px;
+    color: var(--color-text-primary);
+  }
+
+  .page-lead {
+    color: var(--color-text-muted);
+    font-size: var(--fs-label);
+    margin-bottom: 32px;
+    max-width: 960px;
+    line-height: 1.6;
+  }
+
+  .page-lead strong {
+    color: var(--color-accent);
+    font-weight: 600;
+  }
+
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 32px;
+  }
+
+  .step {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .step-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-accent);
+    font-size: var(--fs-label);
+    font-weight: 700;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .step-label__num {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-accent);
+    color: var(--color-text-on-accent);
+    border-radius: 50%;
+    font-size: var(--fs-label);
+  }
+
+  .flow-arrow {
+    align-self: center;
+    color: var(--color-accent);
+    font-size: 32px;
+    font-weight: bold;
+    margin: 0 -8px;
+  }
+
+  /* ========================
+     ダイアログ共通
+     ======================== */
+  .dialog {
+    width: 560px;
+    background-color: var(--color-bg-panel);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--r-md);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dialog--wide { width: 640px; }
+  .dialog--narrow { width: 480px; }
+
+  .dialog__title {
+    padding: var(--s-md) var(--s-lg);
+    font-size: var(--fs-h3);
+    font-weight: 700;
+    color: var(--color-text-primary);
+    border-bottom: 1px solid var(--color-border-subtle);
+    background: var(--color-bg-header);
+  }
+
+  .dialog__body {
+    padding: var(--s-md) var(--s-lg);
+    color: var(--color-text-secondary);
+    font-size: var(--fs-label);
+    border-bottom: 1px solid var(--color-border-subtle);
+    line-height: 1.5;
+  }
+
+  .dialog__scroll {
+    max-height: 560px;
+    overflow-y: auto;
+    padding: var(--s-md) var(--s-lg);
+  }
+
+  .dialog__footer {
+    padding: var(--s-md) var(--s-lg);
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--s-sm);
+    border-top: 1px solid var(--color-border-subtle);
+    background: var(--color-bg-section);
+  }
+
+  /* セクション */
+  .section {
+    margin-bottom: var(--s-lg);
+  }
+  .section__title {
+    font-size: var(--fs-h3);
+    color: var(--color-text-primary);
+    font-weight: 700;
+    margin: 0 0 var(--s-xs) 0;
+  }
+  .section__hint {
+    font-size: var(--fs-mini);
+    color: var(--color-text-muted);
+    margin: 0 0 var(--s-sm) 0;
+    line-height: 1.5;
+  }
+
+  /* ボタン */
+  .btn {
+    padding: 8px 20px;
+    border-radius: var(--r-sm);
+    font-size: var(--fs-body);
+    font-weight: 500;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .btn--primary {
+    background: var(--color-accent);
+    color: var(--color-text-on-accent);
+  }
+  .btn--primary:hover { background: var(--color-accent-hover); }
+  .btn--secondary {
+    background: transparent;
+    color: var(--color-text-secondary);
+    border-color: var(--color-border-strong);
+  }
+  .btn--secondary:hover {
+    background: var(--color-bg-item-hover);
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+  .btn--danger {
+    background: transparent;
+    color: var(--color-danger);
+    border-color: rgba(244, 67, 54, 0.5);
+  }
+  .btn--danger:hover {
+    background: rgba(244, 67, 54, 0.15);
+    border-color: var(--color-danger);
+  }
+
+  /* 基本設定フォーム */
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2xs);
+    margin-bottom: var(--s-sm);
+  }
+  .form-field__label {
+    font-size: var(--fs-label);
+    color: var(--color-text-muted);
+  }
+  .form-field__input {
+    padding: var(--s-sm);
+    background: var(--color-bg-input);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--r-sm);
+    color: var(--color-text-primary);
+    font-size: var(--fs-body);
+  }
+  .form-row {
+    display: flex;
+    gap: var(--s-sm);
+  }
+  .form-row .form-field { flex: 1; }
+
+  /* ========================
+     統合行動リスト（Phase 5）
+     ======================== */
+  .unified-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-xs);
+    margin-bottom: var(--s-sm);
+  }
+
+  .unified-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: var(--s-sm) var(--s-md);
+    background: var(--color-bg-item);
+    border-radius: var(--r-sm);
+    border-left: 3px solid var(--color-accent-subtle);
+    cursor: pointer;
+    transition: all 0.15s linear;
+  }
+
+  .unified-row:hover {
+    background: var(--color-bg-item-hover);
+    border-left-color: var(--color-accent);
+    transform: scale(1.02);
+  }
+
+  .unified-row__priority {
+    min-width: 40px;
+    color: var(--color-accent);
+    font-weight: 700;
+    font-size: var(--fs-label);
+    margin-right: var(--s-sm);
+  }
+
+  .unified-row__action {
+    color: var(--color-text-primary);
+    font-size: var(--fs-body-lg);
+    font-weight: 700;
+    margin-right: var(--s-sm);
+  }
+
+  .unified-row__sep {
+    color: var(--color-text-disabled);
+    margin: 0 var(--s-sm);
+  }
+
+  .unified-row__conditions {
+    flex: 1;
+    color: var(--color-text-muted);
+    font-size: var(--fs-label);
+  }
+
+  .unified-row__prob {
+    color: var(--color-warning);
+    font-size: var(--fs-caption);
+    background: var(--color-warning-subtle);
+    padding: 2px 6px;
+    border-radius: var(--r-sm);
+    margin-left: var(--s-sm);
+  }
+
+  .unified-row--default {
+    background: var(--color-current-wash);
+    border-left-color: var(--color-current);
+    cursor: default;
+    opacity: 0.85;
+  }
+  .unified-row--default:hover {
+    transform: none;
+    background: var(--color-current-wash);
+  }
+
+  .default-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 72px;
+    padding: 2px 8px;
+    margin-right: var(--s-sm);
+    background: var(--color-current);
+    color: var(--color-text-on-accent);
+    font-size: var(--fs-caption);
+    font-weight: 700;
+    border-radius: var(--r-sm);
+  }
+
+  .add-button {
+    padding: var(--s-sm);
+    background: transparent;
+    border: 1px dashed var(--color-text-disabled);
+    border-radius: var(--r-sm);
+    color: var(--color-text-muted);
+    font-size: var(--fs-label);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    width: 100%;
+    text-align: center;
+  }
+  .add-button:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  /* クリック先を示す矢印 */
+  .click-hint {
+    position: absolute;
+    right: -36px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-accent);
+    font-size: 20px;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.5; transform: translateY(-50%) translateX(0); }
+    50% { opacity: 1; transform: translateY(-50%) translateX(4px); }
+  }
+
+  .unified-row__target {
+    outline: 2px dashed var(--color-accent);
+    outline-offset: 2px;
+    background: var(--color-bg-item-hover);
+    border-left-color: var(--color-accent);
+  }
+
+  /* ========================
+     行動詳細ウインドウ (Step 2)
+     ======================== */
+  .action-detail-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-sm);
+    padding: var(--s-md);
+    background: var(--color-bg-input);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--r-md);
+    border-left: 4px solid var(--color-accent);
+    margin-bottom: var(--s-md);
+  }
+
+  .clickable-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--s-sm) var(--s-md);
+    background: var(--color-bg-item);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--r-sm);
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .clickable-chip:hover {
+    background: var(--color-bg-item-hover);
+    border-color: var(--color-accent);
+  }
+  .clickable-chip__icon {
+    margin-right: var(--s-sm);
+    color: var(--color-accent);
+  }
+
+  .action-chip {
+    padding: var(--s-md) var(--s-lg);
+    font-size: var(--fs-body-lg);
+    font-weight: 700;
+  }
+
+  .condition-chip {
+    padding: var(--s-sm) var(--s-md);
+    font-size: var(--fs-body);
+    margin-bottom: var(--s-xs);
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .condition-chip__expr {
+    color: var(--color-text-primary);
+    font-family: "Consolas", monospace;
+  }
+  .condition-chip__edit-hint {
+    color: var(--color-text-muted);
+    font-size: var(--fs-caption);
+  }
+
+  .meta-row {
+    display: flex;
+    align-items: center;
+    gap: var(--s-md);
+    padding: var(--s-sm);
+  }
+  .meta-row__label {
+    font-size: var(--fs-label);
+    color: var(--color-text-muted);
+    min-width: 120px;
+  }
+  .meta-row__value {
+    font-size: var(--fs-body);
+    color: var(--color-text-primary);
+  }
+
+  /* ========================
+     個別エディタ (Step 3)
+     ======================== */
+  .picker-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--color-border-subtle);
+    margin-bottom: var(--s-md);
+  }
+  .picker-tab {
+    padding: var(--s-sm) var(--s-md);
+    background: transparent;
+    color: var(--color-text-muted);
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-size: var(--fs-label);
+    transition: all 0.15s ease;
+  }
+  .picker-tab--active {
+    color: var(--color-accent);
+    border-bottom-color: var(--color-accent);
+    font-weight: 700;
+  }
+  .picker-tab:hover:not(.picker-tab--active) {
+    color: var(--color-text-secondary);
+  }
+
+  .picker-group {
+    margin-bottom: var(--s-md);
+  }
+  .picker-group__header {
+    font-size: var(--fs-label);
+    color: var(--color-text-muted);
+    margin-bottom: var(--s-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .picker-item {
+    display: block;
+    padding: var(--s-sm) var(--s-md);
+    background: var(--color-bg-item);
+    color: var(--color-text-primary);
+    border-radius: var(--r-sm);
+    margin-bottom: var(--s-2xs);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .picker-item:hover {
+    background: var(--color-bg-item-hover);
+    color: var(--color-accent);
+  }
+  .picker-item--selected {
+    background: var(--color-accent-wash);
+    color: var(--color-accent);
+    font-weight: 600;
+  }
+
+  /* 条件エディタフォーム */
+  .cond-editor-row {
+    display: grid;
+    grid-template-columns: 140px 100px 1fr;
+    gap: var(--s-sm);
+    align-items: end;
+    margin-bottom: var(--s-md);
+  }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: var(--s-sm);
+  }
+  .slider-row__track {
+    flex: 1;
+    height: 6px;
+    background: var(--color-bg-input);
+    border-radius: 3px;
+    position: relative;
+  }
+  .slider-row__fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    background: var(--color-accent);
+    border-radius: 3px;
+  }
+  .slider-row__thumb {
+    position: absolute;
+    top: 50%;
+    width: 16px;
+    height: 16px;
+    background: var(--color-accent);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    border: 2px solid rgba(10, 10, 20, 0.8);
+  }
+  .slider-row__value {
+    min-width: 48px;
+    text-align: right;
+    color: var(--color-text-primary);
+    font-family: "Consolas", monospace;
+  }
+
+  /* 注釈 */
+  .annotations {
+    margin-top: 48px;
+    padding: 24px;
+    background: var(--color-bg-section);
+    border-radius: var(--r-md);
+    max-width: 960px;
+  }
+  .annotations h2 {
+    font-size: var(--fs-h3);
+    color: var(--color-accent);
+    margin: 0 0 12px 0;
+  }
+  .annotations ul {
+    margin: 0;
+    padding-left: 24px;
+    color: var(--color-text-secondary);
+    font-size: var(--fs-label);
+    line-height: 1.7;
+  }
+  .annotations li strong {
+    color: var(--color-text-primary);
+  }
+  .annotations code {
+    background: var(--color-bg-input);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: "Consolas", monospace;
+    color: var(--color-accent);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Phase 5: 仲間AI設定 — モード詳細 ▶ 行動詳細 ▶ 個別エディタ</h1>
+  <p class="page-lead">
+    モード詳細ウインドウの<strong>行動リスト</strong>から任意の行をクリックすると、その行動と条件が並んだ
+    <strong>行動詳細ウインドウ</strong>が開く。詳細ウインドウ内で<strong>行動ラベル</strong>や<strong>各条件</strong>をクリックすると、
+    それぞれ個別エディタが開いて中身を編集できる。<br>
+    デフォルト行動は<strong>「何もしない」で固定</strong>（ルール不一致時のアイドル状態）。クリック不可。
+  </p>
+
+  <div class="flow">
+
+    <!-- ==========================================
+         STEP 1: モード詳細ウインドウ（統合行動リスト）
+         ========================================== -->
+    <div class="step">
+      <div class="step-label"><span class="step-label__num">1</span>モード詳細（行動リスト）</div>
+      <div class="dialog dialog--wide">
+        <div class="dialog__title">モード詳細: 通常戦闘</div>
+        <div class="dialog__body">
+          1つのモードに紐づく行動を上から優先度順に評価し、最初に条件が成立したルールの行動を実行します。
+        </div>
+        <div class="dialog__scroll">
+
+          <!-- 基本設定（簡略表示） -->
+          <div class="section">
+            <div class="section__title">基本設定</div>
+            <div class="form-row">
+              <div class="form-field">
+                <div class="form-field__label">モード名</div>
+                <div class="form-field__input">通常戦闘</div>
+              </div>
+              <div class="form-field">
+                <div class="form-field__label">判定間隔(秒)</div>
+                <div class="form-field__input">0.2 ~ 0.4</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 行動（優先度順） — Phase 5 統合リスト -->
+          <div class="section">
+            <div class="section__title">行動（優先度順）</div>
+            <div class="section__hint">
+              上から順に評価され、最初に成立したルールの行動が実行されます。行をクリックすると行動と条件の詳細を編集できます。
+            </div>
+
+            <div class="unified-list">
+              <!-- ハイライト: ここがクリック対象 -->
+              <div class="unified-row unified-row__target" style="position: relative;">
+                <span class="unified-row__priority">#1</span>
+                <span class="unified-row__action">回復アイテム使用</span>
+                <span class="unified-row__sep">─</span>
+                <span class="unified-row__conditions">HP ≤ 30%（AND）MP ≥ 10</span>
+                <span class="click-hint">▶</span>
+              </div>
+
+              <div class="unified-row">
+                <span class="unified-row__priority">#2</span>
+                <span class="unified-row__action">強攻撃（飛燕斬）</span>
+                <span class="unified-row__sep">─</span>
+                <span class="unified-row__conditions">敵との距離 ≤ 3.0m</span>
+                <span class="unified-row__prob">70%</span>
+              </div>
+
+              <div class="unified-row">
+                <span class="unified-row__priority">#3</span>
+                <span class="unified-row__action">通常攻撃</span>
+                <span class="unified-row__sep">─</span>
+                <span class="unified-row__conditions">無条件（常時成立）</span>
+              </div>
+
+              <!-- デフォルト行: クリック不可、"何もしない" 固定 -->
+              <div class="unified-row unified-row--default">
+                <span class="default-badge">DEFAULT</span>
+                <span class="unified-row__action" style="color: var(--color-text-secondary);">何もしない</span>
+                <span class="unified-row__sep">─</span>
+                <span class="unified-row__conditions">ルール不一致時の既定行動（編集不可）</span>
+              </div>
+            </div>
+
+            <button class="add-button">＋ 行動を追加</button>
+          </div>
+
+        </div>
+        <div class="dialog__footer">
+          <button class="btn btn--secondary">キャンセル</button>
+          <button class="btn btn--primary">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 矢印 -->
+    <div class="flow-arrow">→</div>
+
+    <!-- ==========================================
+         STEP 2: 行動詳細ウインドウ（クリックで開く）
+         ========================================== -->
+    <div class="step">
+      <div class="step-label"><span class="step-label__num">2</span>行動詳細（行動+条件）</div>
+      <div class="dialog">
+        <div class="dialog__title">#1 回復アイテム使用</div>
+        <div class="dialog__body">
+          このルールの<strong style="color: var(--color-accent);">行動</strong>や
+          <strong style="color: var(--color-accent);">各条件</strong>をクリックすると、個別に編集できます。
+        </div>
+        <div class="dialog__scroll">
+
+          <!-- 現在の行動（プライマリカード、クリックで変更） -->
+          <div class="section">
+            <div class="section__title">この条件で実行する行動</div>
+            <div class="section__hint">クリックして行動を別のものに差し替え</div>
+            <div class="action-detail-card">
+              <button class="clickable-chip action-chip" style="position: relative;">
+                <span class="clickable-chip__icon">🛠</span>
+                <span>回復アイテム使用（ポーション）</span>
+                <span class="click-hint" style="right: 12px;">▶</span>
+              </button>
+              <div class="meta-row">
+                <span class="meta-row__label">MPコスト</span>
+                <span class="meta-row__value">0</span>
+                <span class="meta-row__label" style="margin-left: 24px;">クールダウン</span>
+                <span class="meta-row__value">5.0秒</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 条件リスト（各行クリックで個別編集） -->
+          <div class="section">
+            <div class="section__title">条件（AND結合）</div>
+            <div class="section__hint">すべての条件が成立したときに行動が発動。各行をクリックして内容を編集</div>
+
+            <button class="clickable-chip condition-chip">
+              <span>
+                <span class="clickable-chip__icon">⚡</span>
+                <span class="condition-chip__expr">HP ratio ≤ 30%</span>
+              </span>
+              <span class="condition-chip__edit-hint">編集 ▶</span>
+            </button>
+
+            <button class="clickable-chip condition-chip">
+              <span>
+                <span class="clickable-chip__icon">💎</span>
+                <span class="condition-chip__expr">MP ≥ 10</span>
+              </span>
+              <span class="condition-chip__edit-hint">編集 ▶</span>
+            </button>
+
+            <button class="add-button" style="margin-top: 8px;">＋ 条件を追加</button>
+          </div>
+
+          <!-- 発動確率 -->
+          <div class="section">
+            <div class="section__title">発動確率</div>
+            <div class="slider-row">
+              <span style="font-size: var(--fs-label); color: var(--color-text-muted);">0%</span>
+              <div class="slider-row__track">
+                <div class="slider-row__fill" style="width: 100%;"></div>
+                <div class="slider-row__thumb" style="left: 100%;"></div>
+              </div>
+              <span style="font-size: var(--fs-label); color: var(--color-text-muted);">100%</span>
+              <span class="slider-row__value">100%</span>
+            </div>
+          </div>
+
+        </div>
+        <div class="dialog__footer" style="justify-content: space-between;">
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn--secondary">別条件で複製</button>
+            <button class="btn btn--danger">削除</button>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn--secondary">キャンセル</button>
+            <button class="btn btn--primary">保存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 矢印 -->
+    <div class="flow-arrow">→</div>
+
+    <!-- ==========================================
+         STEP 3: 個別エディタ（2種類を上下に並べる）
+         ========================================== -->
+    <div class="step">
+      <div class="step-label"><span class="step-label__num">3</span>個別エディタ（どちらか）</div>
+
+      <!-- 3A: 行動ラベルをクリックしたとき -->
+      <div class="dialog dialog--narrow" style="margin-bottom: 24px;">
+        <div class="dialog__title">行動を選択</div>
+        <div class="dialog__body">タブで行動タイプを切り替えて、候補から選択してください。</div>
+        <div class="dialog__scroll" style="max-height: 360px;">
+          <div class="picker-tabs">
+            <button class="picker-tab">攻撃</button>
+            <button class="picker-tab picker-tab--active">即時行動</button>
+            <button class="picker-tab">詠唱/発射</button>
+            <button class="picker-tab">継続</button>
+            <button class="picker-tab">アイテム</button>
+          </div>
+
+          <div class="picker-group">
+            <div class="picker-group__header">アイテム使用</div>
+            <button class="picker-item picker-item--selected">ポーション（HP回復）</button>
+            <button class="picker-item">エーテル（MP回復）</button>
+            <button class="picker-item">解毒薬</button>
+          </div>
+          <div class="picker-group">
+            <div class="picker-group__header">回避</div>
+            <button class="picker-item">バックステップ</button>
+            <button class="picker-item">サイドロール</button>
+          </div>
+        </div>
+        <div class="dialog__footer">
+          <button class="btn btn--secondary">キャンセル</button>
+        </div>
+      </div>
+
+      <!-- 3B: 条件をクリックしたとき -->
+      <div class="dialog dialog--narrow">
+        <div class="dialog__title">条件を編集</div>
+        <div class="dialog__body">この条件の種類・比較演算子・閾値を設定します。</div>
+        <div class="dialog__scroll" style="max-height: 360px;">
+
+          <div class="cond-editor-row">
+            <div class="form-field">
+              <div class="form-field__label">条件種類</div>
+              <div class="form-field__input">HP ratio ▼</div>
+            </div>
+            <div class="form-field">
+              <div class="form-field__label">比較</div>
+              <div class="form-field__input">≤ ▼</div>
+            </div>
+            <div class="form-field">
+              <div class="form-field__label">閾値(%)</div>
+              <div class="form-field__input">30</div>
+            </div>
+          </div>
+
+          <div class="form-field">
+            <div class="form-field__label">対象フィルタ</div>
+            <div class="form-field__input" style="color: var(--color-text-muted);">(自分を対象に適用)</div>
+          </div>
+
+          <div style="margin-top: 16px; padding: 12px; background: var(--color-accent-wash); border-radius: var(--r-sm); font-size: var(--fs-label); color: var(--color-text-secondary); line-height: 1.5;">
+            <strong style="color: var(--color-accent);">プレビュー:</strong><br>
+            「自分の HP が最大値の 30% 以下になったら成立」
+          </div>
+
+        </div>
+        <div class="dialog__footer">
+          <button class="btn btn--secondary">キャンセル</button>
+          <button class="btn btn--primary">適用</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ==========================================
+       設計メモ
+       ========================================== -->
+  <div class="annotations">
+    <h2>設計メモ</h2>
+    <ul>
+      <li><strong>ステップ1（モード詳細）</strong>: 1行=1ルールで表示。<code>[優先度] 行動名 ─ 条件サマリ</code> の並び。行動をプライマリに視覚化、条件は補助。</li>
+      <li><strong>ステップ2（行動詳細）</strong>: 行をクリックすると開く。行動カード（1枚）+ 条件リスト（複数）+ 発動確率が同居。フッタに「別条件で複製」「削除」を配置して、中間メニュー層を省略。</li>
+      <li><strong>ステップ3A（ActionPicker）</strong>: 行動ラベルをクリックすると開く。タブ切替で全行動タイプから選択。</li>
+      <li><strong>ステップ3B（条件エディタ）</strong>: 条件行をクリックすると開く。条件種類・演算子・閾値・フィルタをまとめて編集。下部に自然文プレビュー。</li>
+      <li><strong>デフォルト行動</strong>: <code>何もしない</code> で固定。モード詳細のリスト末尾に DEFAULT バッジ付きで表示するが、<strong>クリック不可・編集不可</strong>。</li>
+      <li><strong>データモデル整合</strong>: 内部は従来通り <code>actions[]</code> + <code>actionRules[]</code>（<code>actionIndex</code>で参照）を維持。「別条件で複製」は <code>actionIndex</code>を共有する形で実装され、UI上は見えない。保存時に未参照スロットを GC。</li>
+    </ul>
+  </div>
+
+</body>
+</html>

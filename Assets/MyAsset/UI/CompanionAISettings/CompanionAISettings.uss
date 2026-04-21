@@ -1202,6 +1202,251 @@
     background-color: var(--color-current);
 }
 
+/* ============================================================================
+   Phase 5: 統合「行動」リスト
+   1ルール=1行で表示。行動をプライマリに、条件を補助として視覚化。
+   行クリックで [編集 / 別条件で複製 / 削除] メニューを開く。
+   ============================================================================ */
+
+.unified-action-list {
+    flex-direction: column;
+    margin-top: var(--s-xs);
+    margin-bottom: var(--s-sm);
+}
+
+.unified-action-row {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: var(--s-sm) var(--s-md);
+    background-color: var(--color-bg-item);
+    border-radius: var(--r-sm);
+    border-left-width: 3px;
+    border-left-color: var(--color-accent-subtle);
+    margin-top: var(--s-2xs);
+    margin-bottom: var(--s-2xs);
+    color: var(--color-text-primary);
+    cursor: link;
+    transition-property: background-color, scale, border-left-color;
+    transition-duration: var(--dur-base);
+    transition-timing-function: linear;
+}
+
+.unified-action-row:hover {
+    background-color: var(--color-bg-item-hover);
+    border-left-color: var(--color-accent);
+    scale: var(--scale-row);
+}
+
+.unified-action-row__priority {
+    min-width: 40px;
+    color: var(--color-accent);
+    font-size: var(--fs-label);
+    -unity-font-style: bold;
+    margin-right: var(--s-sm);
+}
+
+.unified-action-row__action {
+    /* 行動名はプライマリ要素として一番目立たせる（body-lg） */
+    color: var(--color-text-primary);
+    font-size: var(--fs-body-lg);
+    -unity-font-style: bold;
+    margin-right: var(--s-sm);
+    white-space: normal;
+}
+
+.unified-action-row__duration {
+    color: var(--color-warning);
+    font-size: var(--fs-caption);
+    -unity-font-style: italic;
+    margin-right: var(--s-sm);
+}
+
+.unified-action-row__sep {
+    color: var(--color-text-disabled);
+    font-size: var(--fs-label);
+    margin-right: var(--s-sm);
+    margin-left: var(--s-xs);
+}
+
+.unified-action-row__conditions {
+    /* 条件は補助情報として控えめに */
+    flex-grow: 1;
+    color: var(--color-text-muted);
+    font-size: var(--fs-label);
+    white-space: normal;
+}
+
+.unified-action-row__prob {
+    color: var(--color-warning);
+    font-size: var(--fs-caption);
+    -unity-font-style: italic;
+    margin-left: var(--s-sm);
+    padding: 2px 6px;
+    background-color: var(--color-warning-subtle);
+    border-radius: var(--r-sm);
+}
+
+/* --- デフォルト行（DEFAULTバッジ付き） --- */
+.unified-action-row--default {
+    /* Phase 5: デフォルト行は「何もしない」固定。クリック不可・編集不可を
+       視覚的に伝えるため、hover 効果を無効化しカーソルも通常矢印にする。 */
+    background-color: var(--color-current-wash);
+    border-left-color: var(--color-current);
+    cursor: default;
+    opacity: 0.85;
+}
+
+.unified-action-row--default:hover {
+    /* hover による背景色・スケール変化を抑制してクリック不可を表現 */
+    background-color: var(--color-current-wash);
+    border-left-color: var(--color-current);
+    scale: 1;
+}
+
+.unified-action-row__default-badge {
+    min-width: 64px;
+    padding: 2px 8px;
+    margin-right: var(--s-sm);
+    background-color: var(--color-current);
+    color: var(--color-text-on-accent);
+    font-size: var(--fs-caption);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    border-radius: var(--r-sm);
+}
+
+/* ============================================================================
+   Phase 5: 統合アクションルールエディタダイアログ
+   行動/条件/確率をクリッカブルチップで表示し、各要素をクリックで個別編集する。
+   ============================================================================ */
+
+.unified-action-editor-dialog {
+    max-width: 680px;
+}
+
+/* --- 行動チップ（でかでかと、クリックで ActionPicker を開く） --- */
+.action-chip {
+    padding: var(--s-md) var(--s-lg);
+    margin-top: var(--s-xs);
+    margin-bottom: var(--s-sm);
+    background-color: var(--color-bg-input);
+    border-width: 1px;
+    border-color: var(--color-accent-subtle);
+    border-left-width: 4px;
+    border-left-color: var(--color-accent);
+    border-radius: var(--r-sm);
+    color: var(--color-text-primary);
+    font-size: var(--fs-body-lg);
+    -unity-font-style: bold;
+    -unity-text-align: middle-left;
+    cursor: link;
+    transition-property: background-color, border-color, scale;
+    transition-duration: var(--dur-base);
+    transition-timing-function: linear;
+    white-space: normal;
+}
+
+.action-chip:hover {
+    background-color: var(--color-bg-item-hover);
+    border-color: var(--color-accent);
+    scale: var(--scale-row);
+}
+
+.action-chip:focus {
+    border-color: var(--color-accent-hover);
+}
+
+/* --- 条件チップリスト --- */
+.condition-chip-list {
+    flex-direction: column;
+    margin-top: var(--s-xs);
+    margin-bottom: var(--s-sm);
+}
+
+.condition-chip {
+    flex-direction: row;
+    align-items: center;
+    margin-top: var(--s-2xs);
+    margin-bottom: var(--s-2xs);
+}
+
+.condition-chip__body {
+    flex-grow: 1;
+    padding: var(--s-sm) var(--s-md);
+    margin: 0;
+    background-color: var(--color-bg-item);
+    border-width: 1px;
+    border-color: var(--color-border-subtle);
+    border-left-width: 3px;
+    border-left-color: var(--color-accent-subtle);
+    border-radius: var(--r-sm);
+    color: var(--color-text-primary);
+    font-size: var(--fs-body);
+    -unity-text-align: middle-left;
+    cursor: link;
+    transition-property: background-color, border-color;
+    transition-duration: var(--dur-base);
+    transition-timing-function: linear;
+    white-space: normal;
+}
+
+.condition-chip__body:hover {
+    background-color: var(--color-bg-item-hover);
+    border-left-color: var(--color-accent);
+}
+
+.condition-chip__body:focus {
+    border-color: var(--color-accent);
+}
+
+.condition-chip__and-sep {
+    /* チップ間に縦並びで入る AND ラベル。キャプション相当の控えめな表示 */
+    -unity-text-align: middle-center;
+    color: var(--color-accent);
+    font-size: var(--fs-caption);
+    -unity-font-style: bold;
+    padding: var(--s-2xs) 0;
+    margin-top: var(--s-2xs);
+    margin-bottom: var(--s-2xs);
+}
+
+.condition-chip__remove {
+    min-width: 32px;
+    margin-left: var(--s-xs);
+    padding: var(--s-xs) var(--s-sm);
+    font-size: var(--fs-caption);
+    flex-grow: 0;
+}
+
+/* --- 条件エディタダイアログ --- */
+.condition-editor-dialog {
+    max-width: 640px;
+}
+
+.condition-editor-dialog__row {
+    /* BuildConditionRow は .mode-detail-row を付けて細いレイアウトで描画されるため、
+       ダイアログ内ではパディングを増やして読みやすくする。 */
+    padding: var(--s-sm) var(--s-md);
+    background-color: var(--color-bg-section);
+    border-radius: var(--r-sm);
+}
+
+/* --- 編集ダイアログのフッターを左右分割（複製/削除 と キャンセル/保存） --- */
+.modal-dialog__buttons--split {
+    justify-content: space-between;
+}
+
+.modal-dialog__buttons-group {
+    flex-direction: row;
+    align-items: center;
+}
+
+.modal-dialog__buttons-group Button {
+    margin-left: var(--s-xs);
+    margin-right: var(--s-xs);
+}
+
 /* ===== ユーティリティ ===== */
 .hidden {
     display: none;

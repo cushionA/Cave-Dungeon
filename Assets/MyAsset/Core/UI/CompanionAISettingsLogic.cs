@@ -587,5 +587,333 @@ namespace Game.Core
             }
             return adjusted.ToArray();
         }
+
+        // =====================================================================
+        // 行動ルール×ActionSlot 統合モデル用のヘルパー群（純関数）
+        //
+        // UI上は「1行=1ルール（条件+行動）」として見せるが、内部モデルは従来どおり
+        // AIMode.actions[] と AIMode.actionRules[]（actionIndexで参照）を維持する。
+        // 複数ルールが同一 ActionSlot を共有するケース（「同じ攻撃を別条件で」）も
+        // サポートするため、編集中は actions[] を保持し、保存時に未参照スロットを
+        // GC する設計にしている。
+        //
+        // いずれも AIMode を値渡し→更新→返却の形にして、テスト可能な純関数にしている。
+        // ただし配列は新規確保するが、内部の struct 要素コピーは浅い（conditions 等の
+        // 参照型フィールドはそのまま引き継ぐ）。UI側の呼び出しはローカル working を
+        // 上書きする前提なので、呼び出し側が不変性を要求する場合は事前に CloneMode 済み。
+        // =====================================================================
+
+        /// <summary>
+        /// モード保存時に未参照(orphan)となっている ActionSlot を除去し、
+        /// 残ったスロットを詰めたうえで actionRules と defaultActionIndex の
+        /// 参照インデックスを再マッピングする純関数。
+        ///
+        /// 編集中は呼ばない（index がズレると編集UIの整合が崩れるため）。
+        /// 保存ボタン押下時にのみ呼び、その結果を UpdateModeInBuffer に渡す。
+        ///
+        /// 注: targetRules[*].actionIndex は targetSelects[] 側を指すので touch しない。
+        /// </summary>
+        public static AIMode GcOrphanActionSlots(AIMode mode)
+        {
+            int slotCount = mode.actions != null ? mode.actions.Length : 0;
+
+            if (slotCount == 0)
+            {
+                // actions 配列が空なら defaultActionIndex と actionRules は意味を持たない
+                mode.defaultActionIndex = 0;
+                mode.actionRules = mode.actionRules ?? new AIRule[0];
+                mode.actions = mode.actions ?? new ActionSlot[0];
+                return mode;
+            }
+
+            bool[] used = new bool[slotCount];
+
+            if (mode.actionRules != null)
+            {
+                for (int i = 0; i < mode.actionRules.Length; i++)
+                {
+                    int idx = mode.actionRules[i].actionIndex;
+                    if (idx >= 0 && idx < slotCount)
+                    {
+                        used[idx] = true;
+                    }
+                }
+            }
+
+            int def = mode.defaultActionIndex;
+            if (def >= 0 && def < slotCount)
+            {
+                used[def] = true;
+            }
+
+            bool anyUnused = false;
+            for (int i = 0; i < slotCount; i++)
+            {
+                if (!used[i])
+                {
+                    anyUnused = true;
+                    break;
+                }
+            }
+            if (!anyUnused)
+            {
+                return mode;
+            }
+
+            // 残存スロットを詰める
+            int[] remap = new int[slotCount];
+            List<ActionSlot> compact = new List<ActionSlot>(slotCount);
+            for (int i = 0; i < slotCount; i++)
+            {
+                if (used[i])
+                {
+                    remap[i] = compact.Count;
+                    compact.Add(mode.actions[i]);
+                }
+                else
+                {
+                    remap[i] = -1;
+                }
+            }
+
+            // actionRules の actionIndex を詰め後の index にリマップ
+            if (mode.actionRules != null)
+            {
+                for (int i = 0; i < mode.actionRules.Length; i++)
+                {
+                    AIRule r = mode.actionRules[i];
+                    int oldIdx = r.actionIndex;
+                    int newIdx = (oldIdx >= 0 && oldIdx < slotCount) ? remap[oldIdx] : -1;
+                    // 原則 used[oldIdx]=true なので remap[oldIdx] >= 0。不正値は 0 に寄せて保険。
+                    r.actionIndex = newIdx < 0 ? 0 : newIdx;
+                    mode.actionRules[i] = r;
+                }
+            }
+
+            if (def >= 0 && def < slotCount)
+            {
+                int newDef = remap[def];
+                mode.defaultActionIndex = newDef < 0 ? 0 : newDef;
+            }
+            else
+            {
+                mode.defaultActionIndex = 0;
+            }
+
+            mode.actions = compact.ToArray();
+            return mode;
+        }
+
+        /// <summary>
+        /// 新しい ActionSlot を追加し、同時にそれを指す AIRule を actionRules 末尾に追加する。
+        /// UI の「＋ 行動を追加」ボタンから呼ばれる。
+        /// </summary>
+        public static AIMode AddActionRuleWithNewSlot(AIMode mode, AICondition[] conditions, ActionSlot slot, byte probability)
+        {
+            int newSlotIdx = AppendSlot(ref mode, slot);
+
+            int oldRuleCount = mode.actionRules != null ? mode.actionRules.Length : 0;
+            AIRule[] newRules = new AIRule[oldRuleCount + 1];
+            for (int i = 0; i < oldRuleCount; i++)
+            {
+                newRules[i] = mode.actionRules[i];
+            }
+            newRules[oldRuleCount] = new AIRule
+            {
+                conditions = conditions ?? new AICondition[0],
+                actionIndex = newSlotIdx,
+                probability = probability,
+            };
+            mode.actionRules = newRules;
+            return mode;
+        }
+
+        /// <summary>
+        /// 指定 ruleIdx のルールを「別条件で複製」する。actionIndex を共有したまま
+        /// conditions を深くコピーして直後に挿入することで、「同じ行動を別条件で使う」
+        /// というユースケースを実現する。
+        /// </summary>
+        public static AIMode DuplicateActionRule(AIMode mode, int ruleIdx)
+        {
+            AIRule[] rules = mode.actionRules ?? new AIRule[0];
+            if (ruleIdx < 0 || ruleIdx >= rules.Length)
+            {
+                return mode;
+            }
+
+            AIRule orig = rules[ruleIdx];
+            AIRule dup = new AIRule
+            {
+                actionIndex = orig.actionIndex, // ActionSlot は共有
+                probability = orig.probability,
+                conditions = orig.conditions != null ? (AICondition[])orig.conditions.Clone() : new AICondition[0],
+            };
+
+            AIRule[] newRules = new AIRule[rules.Length + 1];
+            for (int i = 0; i <= ruleIdx; i++)
+            {
+                newRules[i] = rules[i];
+            }
+            newRules[ruleIdx + 1] = dup;
+            for (int i = ruleIdx + 1; i < rules.Length; i++)
+            {
+                newRules[i + 1] = rules[i];
+            }
+            mode.actionRules = newRules;
+            return mode;
+        }
+
+        /// <summary>
+        /// 指定 ruleIdx のルールを削除する。ActionSlot は GC しない（保存時に
+        /// <see cref="GcOrphanActionSlots"/> で一括処理する方針）。
+        /// 編集中に index が動くと UI 側の再構築が煩雑になるのを避ける意図。
+        /// </summary>
+        public static AIMode RemoveActionRule(AIMode mode, int ruleIdx)
+        {
+            AIRule[] rules = mode.actionRules ?? new AIRule[0];
+            if (ruleIdx < 0 || ruleIdx >= rules.Length)
+            {
+                return mode;
+            }
+
+            AIRule[] newRules = new AIRule[rules.Length - 1];
+            int dst = 0;
+            for (int i = 0; i < rules.Length; i++)
+            {
+                if (i == ruleIdx)
+                {
+                    continue;
+                }
+                newRules[dst] = rules[i];
+                dst++;
+            }
+            mode.actionRules = newRules;
+            return mode;
+        }
+
+        /// <summary>
+        /// 指定 ruleIdx のルールが指す ActionSlot の内容を差し替える。
+        ///
+        /// - 他のルール/defaultActionIndex が同じスロットを共有している場合: 新スロットを
+        ///   actions[] 末尾に追加し、対象ルールだけをそこに repoint する。共有先は影響なし。
+        /// - 単独参照の場合: actions[既存index] をその場で書き換える。
+        ///
+        /// 参照整合性が崩れている（actionIndex が範囲外）場合は安全側として新スロットを追加。
+        /// </summary>
+        public static AIMode ReplaceActionRuleSlot(AIMode mode, int ruleIdx, ActionSlot newSlot)
+        {
+            AIRule[] rules = mode.actionRules ?? new AIRule[0];
+            if (ruleIdx < 0 || ruleIdx >= rules.Length)
+            {
+                return mode;
+            }
+
+            int targetActionIdx = rules[ruleIdx].actionIndex;
+            int slotCount = mode.actions != null ? mode.actions.Length : 0;
+
+            if (targetActionIdx < 0 || targetActionIdx >= slotCount)
+            {
+                return AppendSlotAndRepoint(mode, ruleIdx, newSlot);
+            }
+
+            bool shared = false;
+            if (mode.defaultActionIndex == targetActionIdx)
+            {
+                shared = true;
+            }
+            if (!shared)
+            {
+                for (int i = 0; i < rules.Length; i++)
+                {
+                    if (i == ruleIdx)
+                    {
+                        continue;
+                    }
+                    if (rules[i].actionIndex == targetActionIdx)
+                    {
+                        shared = true;
+                        break;
+                    }
+                }
+            }
+
+            if (shared)
+            {
+                return AppendSlotAndRepoint(mode, ruleIdx, newSlot);
+            }
+
+            mode.actions[targetActionIdx] = newSlot;
+            return mode;
+        }
+
+        /// <summary>
+        /// defaultActionIndex が指す ActionSlot を差し替える。
+        /// 共有時は新スロット追加、単独時はその場更新（<see cref="ReplaceActionRuleSlot"/> の
+        /// default 版）。
+        /// </summary>
+        public static AIMode ReplaceDefaultActionSlot(AIMode mode, ActionSlot newSlot)
+        {
+            int slotCount = mode.actions != null ? mode.actions.Length : 0;
+            int def = mode.defaultActionIndex;
+
+            if (def < 0 || def >= slotCount)
+            {
+                // 不正参照なら末尾に追加して default を向け直す
+                int newIdx = AppendSlot(ref mode, newSlot);
+                mode.defaultActionIndex = newIdx;
+                return mode;
+            }
+
+            bool shared = false;
+            AIRule[] rules = mode.actionRules ?? new AIRule[0];
+            for (int i = 0; i < rules.Length; i++)
+            {
+                if (rules[i].actionIndex == def)
+                {
+                    shared = true;
+                    break;
+                }
+            }
+
+            if (shared)
+            {
+                int newIdx = AppendSlot(ref mode, newSlot);
+                mode.defaultActionIndex = newIdx;
+                return mode;
+            }
+
+            mode.actions[def] = newSlot;
+            return mode;
+        }
+
+        /// <summary>
+        /// 新しい ActionSlot を actions[] の末尾に追加し、追加後の index を返すヘルパー。
+        /// AIMode は struct なので ref 渡し。呼び出し側は返却 index を使って AIRule や
+        /// defaultActionIndex を更新する。
+        /// </summary>
+        private static int AppendSlot(ref AIMode mode, ActionSlot slot)
+        {
+            int oldCount = mode.actions != null ? mode.actions.Length : 0;
+            ActionSlot[] newActions = new ActionSlot[oldCount + 1];
+            if (mode.actions != null)
+            {
+                for (int i = 0; i < oldCount; i++)
+                {
+                    newActions[i] = mode.actions[i];
+                }
+            }
+            newActions[oldCount] = slot;
+            mode.actions = newActions;
+            return oldCount;
+        }
+
+        private static AIMode AppendSlotAndRepoint(AIMode mode, int ruleIdx, ActionSlot newSlot)
+        {
+            int newIdx = AppendSlot(ref mode, newSlot);
+            AIRule r = mode.actionRules[ruleIdx];
+            r.actionIndex = newIdx;
+            mode.actionRules[ruleIdx] = r;
+            return mode;
+        }
     }
 }

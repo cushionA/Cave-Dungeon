@@ -536,5 +536,366 @@ namespace Game.Tests.EditMode
 
             Assert.IsNull(result);
         }
+
+        // =====================================================================
+        // 行動ルール×ActionSlot 統合モデル用ヘルパー（Phase 5）
+        // =====================================================================
+
+        [Test]
+        public void GcOrphanActionSlots_RemovesUnreferencedSlots_AndRemapsIndices()
+        {
+            AIMode mode = new AIMode
+            {
+                actions = new ActionSlot[]
+                {
+                    new ActionSlot { displayName = "A_unused" },
+                    new ActionSlot { displayName = "B_usedByRule" },
+                    new ActionSlot { displayName = "C_unused" },
+                    new ActionSlot { displayName = "D_usedByDefault" },
+                },
+                actionRules = new AIRule[]
+                {
+                    new AIRule { actionIndex = 1, conditions = new AICondition[0], probability = 100 },
+                },
+                defaultActionIndex = 3,
+            };
+
+            AIMode result = CompanionAISettingsLogic.GcOrphanActionSlots(mode);
+
+            Assert.AreEqual(2, result.actions.Length);
+            Assert.AreEqual("B_usedByRule", result.actions[0].displayName);
+            Assert.AreEqual("D_usedByDefault", result.actions[1].displayName);
+            Assert.AreEqual(0, result.actionRules[0].actionIndex);
+            Assert.AreEqual(1, result.defaultActionIndex);
+        }
+
+        [Test]
+        public void GcOrphanActionSlots_NoOrphans_StructurePreserved()
+        {
+            AIMode mode = new AIMode
+            {
+                actions = new ActionSlot[]
+                {
+                    new ActionSlot { displayName = "X" },
+                    new ActionSlot { displayName = "Y" },
+                },
+                actionRules = new AIRule[]
+                {
+                    new AIRule { actionIndex = 1, conditions = new AICondition[0], probability = 100 },
+                    new AIRule { actionIndex = 0, conditions = new AICondition[0], probability = 100 },
+                },
+                defaultActionIndex = 0,
+            };
+
+            AIMode result = CompanionAISettingsLogic.GcOrphanActionSlots(mode);
+
+            Assert.AreEqual(2, result.actions.Length);
+            Assert.AreEqual("X", result.actions[0].displayName);
+            Assert.AreEqual("Y", result.actions[1].displayName);
+            Assert.AreEqual(1, result.actionRules[0].actionIndex);
+            Assert.AreEqual(0, result.actionRules[1].actionIndex);
+            Assert.AreEqual(0, result.defaultActionIndex);
+        }
+
+        [Test]
+        public void GcOrphanActionSlots_EmptyActions_NormalizesDefault()
+        {
+            AIMode mode = new AIMode
+            {
+                actions = null,
+                actionRules = null,
+                defaultActionIndex = 5, // 不正値
+            };
+
+            AIMode result = CompanionAISettingsLogic.GcOrphanActionSlots(mode);
+
+            Assert.IsNotNull(result.actions);
+            Assert.AreEqual(0, result.actions.Length);
+            Assert.IsNotNull(result.actionRules);
+            Assert.AreEqual(0, result.actionRules.Length);
+            Assert.AreEqual(0, result.defaultActionIndex);
+        }
+
+        [Test]
+        public void AddActionRuleWithNewSlot_AppendsBothArrays()
+        {
+            AIMode mode = new AIMode
+            {
+                actions = new ActionSlot[0],
+                actionRules = new AIRule[0],
+                defaultActionIndex = 0,
+            };
+            ActionSlot slot = new ActionSlot { displayName = "Attack1" };
+
+            AIMode result = CompanionAISettingsLogic.AddActionRuleWithNewSlot(
+                mode, new AICondition[0], slot, 75);
+
+            Assert.AreEqual(1, result.actions.Length);
+            Assert.AreEqual("Attack1", result.actions[0].displayName);
+            Assert.AreEqual(1, result.actionRules.Length);
+            Assert.AreEqual(0, result.actionRules[0].actionIndex);
+            Assert.AreEqual((byte)75, result.actionRules[0].probability);
+        }
+
+        [Test]
+        public void AddActionRuleWithNewSlot_PreservesExistingArrays()
+        {
+            AIMode mode = new AIMode
+            {
+                actions = new ActionSlot[] { new ActionSlot { displayName = "Old" } },
+                actionRules = new AIRule[]
+                {
+                    new AIRule { actionIndex = 0, conditions = new AICondition[0], probability = 50 },
+                },
+                defaultActionIndex = 0,
+            };
+            ActionSlot slot = new ActionSlot { displayName = "New" };
+
+            AIMode result = CompanionAISettingsLogic.AddActionRuleWithNewSlot(
+                mode, new AICondition[0], slot, 100);
+
+            Assert.AreEqual(2, result.actions.Length);
+            Assert.AreEqual("Old", result.actions[0].displayName);
+            Assert.AreEqual("New", result.actions[1].displayName);
+            Assert.AreEqual(2, result.actionRules.Length);
+            Assert.AreEqual(0, result.actionRules[0].actionIndex);
+            Assert.AreEqual(1, result.actionRules[1].actionIndex);
+        }
+
+        [Test]
+        public void DuplicateActionRule_InsertsDuplicateSharingActionIndex()
+        {
+            AIMode mode = new AIMode
+            {
+                actions = new ActionSlot[] { new ActionSlot { displayName = "Shared" } },
+                actionRules = new AIRule[]
+                {
+                    new AIRule { actionIndex = 0, conditions = new AICondition[0], probability = 80 },
+                },
+                defaultActionIndex = 0,
+            };
+
+            AIMode result = CompanionAISettingsLogic.DuplicateActionRule(mode, 0);
+
+            Assert.AreEqual(2, result.actionRules.Length);
+            Assert.AreEqual(0, result.actionRules[0].actionIndex);
+            Assert.AreEqual(0, result.actionRules[1].actionIndex); // 共有
+            Assert.AreEqual(1, result.actions.Length, "ActionSlot は複製されない");
+        }
+
+        [Test]
+        public void DuplicateActionRule_DeepClonesConditionsArray()
+        {
+            AICondition[] origConds = new AICondition[]
+            {
+                new AICondition { conditionType = AIConditionType.HpRatio, operandA = 50 },
+            };
+            AIMode mode = new AIMode
+            {
+                actions = new ActionSlot[] { new ActionSlot { displayName = "A" } },
+                actionRules = new AIRule[]
+                {
+                    new AIRule { actionIndex = 0, conditions = origConds, probability = 100 },
+                },
+                defaultActionIndex = 0,
+            };
+
+            AIMode result = CompanionAISettingsLogic.DuplicateActionRule(mode, 0);
+
+            Assert.AreNotSame(origConds, result.actionRules[1].conditions, "conditions配列は別参照");
+            // 複製側を書き換えても元配列に伝播しない
+            result.actionRules[1].conditions[0].operandA = 99;
+            Assert.AreEqual(50, origConds[0].operandA);
+        }
+
+        [Test]
+        public void DuplicateActionRule_OutOfRange_NoChange()
+        {
+            AIMode mode = new AIMode
+            {
+                actions = new ActionSlot[] { new ActionSlot { displayName = "A" } },
+                actionRules = new AIRule[]
+                {
+                    new AIRule { actionIndex = 0, conditions = new AICondition[0], probability = 100 },
+                },
+                defaultActionIndex = 0,
+            };
+
+            AIMode result = CompanionAISettingsLogic.DuplicateActionRule(mode, 5);
+
+            Assert.AreEqual(1, result.actionRules.Length);
+        }
+
+        [Test]
+        public void RemoveActionRule_RemovesOnlyRule_KeepsActionSlotAsOrphan()
+        {
+            AIMode mode = new AIMode
+            {
+                actions = new ActionSlot[]
+                {
+                    new ActionSlot { displayName = "A" },
+                    new ActionSlot { displayName = "B" },
+                },
+                actionRules = new AIRule[]
+                {
+                    new AIRule { actionIndex = 0, conditions = new AICondition[0], probability = 100 },
+                    new AIRule { actionIndex = 1, conditions = new AICondition[0], probability = 100 },
+                },
+                defaultActionIndex = 1,
+            };
+
+            AIMode result = CompanionAISettingsLogic.RemoveActionRule(mode, 0);
+
+            Assert.AreEqual(1, result.actionRules.Length);
+            Assert.AreEqual(1, result.actionRules[0].actionIndex);
+            Assert.AreEqual(2, result.actions.Length, "ActionSlot は削除時点では GC しない");
+        }
+
+        [Test]
+        public void RemoveThenGc_OrphanSlotIsCollected()
+        {
+            AIMode mode = new AIMode
+            {
+                actions = new ActionSlot[]
+                {
+                    new ActionSlot { displayName = "Keep" },
+                    new ActionSlot { displayName = "Orphan" },
+                },
+                actionRules = new AIRule[]
+                {
+                    new AIRule { actionIndex = 0, conditions = new AICondition[0], probability = 100 },
+                    new AIRule { actionIndex = 1, conditions = new AICondition[0], probability = 100 },
+                },
+                defaultActionIndex = 0,
+            };
+
+            AIMode afterRemove = CompanionAISettingsLogic.RemoveActionRule(mode, 1);
+            AIMode afterGc = CompanionAISettingsLogic.GcOrphanActionSlots(afterRemove);
+
+            Assert.AreEqual(1, afterGc.actions.Length);
+            Assert.AreEqual("Keep", afterGc.actions[0].displayName);
+            Assert.AreEqual(0, afterGc.actionRules[0].actionIndex);
+            Assert.AreEqual(0, afterGc.defaultActionIndex);
+        }
+
+        [Test]
+        public void ReplaceActionRuleSlot_SharedWithDefault_AppendsAndRepoints()
+        {
+            AIMode mode = new AIMode
+            {
+                actions = new ActionSlot[] { new ActionSlot { displayName = "Shared" } },
+                actionRules = new AIRule[]
+                {
+                    new AIRule { actionIndex = 0, conditions = new AICondition[0], probability = 100 },
+                },
+                defaultActionIndex = 0, // ルールと default が同じ actions[0] を参照
+            };
+            ActionSlot newSlot = new ActionSlot { displayName = "New" };
+
+            AIMode result = CompanionAISettingsLogic.ReplaceActionRuleSlot(mode, 0, newSlot);
+
+            Assert.AreEqual(2, result.actions.Length);
+            Assert.AreEqual("Shared", result.actions[0].displayName);
+            Assert.AreEqual("New", result.actions[1].displayName);
+            Assert.AreEqual(0, result.defaultActionIndex, "default の参照は変えない");
+            Assert.AreEqual(1, result.actionRules[0].actionIndex, "rule だけ新 slot を指す");
+        }
+
+        [Test]
+        public void ReplaceActionRuleSlot_SharedWithOtherRule_AppendsAndRepoints()
+        {
+            AIMode mode = new AIMode
+            {
+                actions = new ActionSlot[] { new ActionSlot { displayName = "Shared" } },
+                actionRules = new AIRule[]
+                {
+                    new AIRule { actionIndex = 0, conditions = new AICondition[0], probability = 100 },
+                    new AIRule { actionIndex = 0, conditions = new AICondition[0], probability = 50 },
+                },
+                defaultActionIndex = 0,
+            };
+            ActionSlot newSlot = new ActionSlot { displayName = "New" };
+
+            AIMode result = CompanionAISettingsLogic.ReplaceActionRuleSlot(mode, 0, newSlot);
+
+            Assert.AreEqual(2, result.actions.Length);
+            Assert.AreEqual(1, result.actionRules[0].actionIndex);
+            Assert.AreEqual(0, result.actionRules[1].actionIndex, "別ルールの参照は温存");
+        }
+
+        [Test]
+        public void ReplaceActionRuleSlot_Unshared_UpdatesInPlace()
+        {
+            AIMode mode = new AIMode
+            {
+                actions = new ActionSlot[]
+                {
+                    new ActionSlot { displayName = "Unique" },
+                    new ActionSlot { displayName = "DefaultSlot" },
+                },
+                actionRules = new AIRule[]
+                {
+                    new AIRule { actionIndex = 0, conditions = new AICondition[0], probability = 100 },
+                },
+                defaultActionIndex = 1,
+            };
+            ActionSlot newSlot = new ActionSlot { displayName = "Replaced" };
+
+            AIMode result = CompanionAISettingsLogic.ReplaceActionRuleSlot(mode, 0, newSlot);
+
+            Assert.AreEqual(2, result.actions.Length, "新スロットは追加されない");
+            Assert.AreEqual("Replaced", result.actions[0].displayName);
+            Assert.AreEqual(0, result.actionRules[0].actionIndex);
+            Assert.AreEqual("DefaultSlot", result.actions[1].displayName);
+            Assert.AreEqual(1, result.defaultActionIndex);
+        }
+
+        [Test]
+        public void ReplaceDefaultActionSlot_SharedWithRule_AppendsAndRepointsDefault()
+        {
+            AIMode mode = new AIMode
+            {
+                actions = new ActionSlot[] { new ActionSlot { displayName = "Shared" } },
+                actionRules = new AIRule[]
+                {
+                    new AIRule { actionIndex = 0, conditions = new AICondition[0], probability = 100 },
+                },
+                defaultActionIndex = 0,
+            };
+            ActionSlot newSlot = new ActionSlot { displayName = "NewDefault" };
+
+            AIMode result = CompanionAISettingsLogic.ReplaceDefaultActionSlot(mode, newSlot);
+
+            Assert.AreEqual(2, result.actions.Length);
+            Assert.AreEqual("Shared", result.actions[0].displayName, "ルール側は不変");
+            Assert.AreEqual("NewDefault", result.actions[1].displayName);
+            Assert.AreEqual(0, result.actionRules[0].actionIndex, "ルールの参照は温存");
+            Assert.AreEqual(1, result.defaultActionIndex);
+        }
+
+        [Test]
+        public void ReplaceDefaultActionSlot_Unshared_UpdatesInPlace()
+        {
+            AIMode mode = new AIMode
+            {
+                actions = new ActionSlot[]
+                {
+                    new ActionSlot { displayName = "RuleSlot" },
+                    new ActionSlot { displayName = "OldDefault" },
+                },
+                actionRules = new AIRule[]
+                {
+                    new AIRule { actionIndex = 0, conditions = new AICondition[0], probability = 100 },
+                },
+                defaultActionIndex = 1,
+            };
+            ActionSlot newSlot = new ActionSlot { displayName = "NewDefault" };
+
+            AIMode result = CompanionAISettingsLogic.ReplaceDefaultActionSlot(mode, newSlot);
+
+            Assert.AreEqual(2, result.actions.Length);
+            Assert.AreEqual("NewDefault", result.actions[1].displayName);
+            Assert.AreEqual(1, result.defaultActionIndex);
+        }
     }
 }
