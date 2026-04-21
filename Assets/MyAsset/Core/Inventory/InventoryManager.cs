@@ -50,11 +50,20 @@ namespace Game.Core
         }
 
         /// <summary>
-        /// アイテム追加。同一itemIdの全スタックを走査して余裕があれば順次充填し、
-        /// 余剰分は新スロットとして追加する（k_MaxSlotCount まで）。
-        /// 戻り値: 実際に追加された数量（上限到達で受け入れ切れなかった分は加算されない）。
+        /// アイテム追加。AddItem への後方互換ラッパー。
         /// </summary>
         public int Add(int itemId, ItemCategory category, int count, int maxStack)
+        {
+            return AddItem(itemId, category, count, maxStack);
+        }
+
+        /// <summary>
+        /// アイテム追加 (v2)。同一itemIdの全スタックを走査して余裕があれば順次充填し、
+        /// 余剰分は新スロットとして追加する（k_MaxSlotCount まで）。
+        /// 戻り値: 実際に追加された数量（上限到達で受け入れ切れなかった分は加算されない）。
+        /// JIT キャッシュ回避のため Add から名前変更した新規メソッド。
+        /// </summary>
+        public int AddItem(int itemId, ItemCategory category, int count, int maxStack)
         {
             if (count <= 0)
             {
