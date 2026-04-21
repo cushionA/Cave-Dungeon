@@ -54,6 +54,8 @@ namespace Game.Core
             Unlock(new ActionUnlockKey { execType = ActionExecType.Sustained, paramId = (int)SustainedAction.Follow });
             Unlock(new ActionUnlockKey { execType = ActionExecType.Sustained, paramId = (int)SustainedAction.MoveToTarget });
             Unlock(new ActionUnlockKey { execType = ActionExecType.Sustained, paramId = (int)SustainedAction.Guard });
+            // Idle はデフォルト行動として常時解放（新規 AIMode 作成時に defaultAction へ自動設定される）
+            Unlock(new ActionUnlockKey { execType = ActionExecType.Sustained, paramId = (int)SustainedAction.Idle });
         }
 
         /// <summary>

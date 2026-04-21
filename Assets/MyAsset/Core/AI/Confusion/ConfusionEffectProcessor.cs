@@ -16,15 +16,31 @@ namespace Game.Core
         private readonly List<int> _tempKeys = new List<int>(8);
         private readonly List<int> _tempExpired = new List<int>(4);
 
+        /// <summary>
+        /// (optional) 混乱解除を GameEvents 経由でグローバルに通知するためのブリッジ。
+        /// null の場合はローカルイベント (OnConfusionCleared) のみ発火。
+        /// </summary>
+        private readonly GameEvents _events;
+
         public int ConfusedCount => _confusedEntities.Count;
 
         public event Action<int, int> OnConfusionApplied;   // (targetHash, controllerHash)
         public event Action<int> OnConfusionCleared;         // (targetHash)
 
-        public ConfusionEffectProcessor()
+        public ConfusionEffectProcessor() : this(null)
+        {
+        }
+
+        /// <summary>
+        /// GameEvents ブリッジ付きで初期化する。ClearConfusion 時に
+        /// <see cref="GameEvents.FireConfusionCleared"/> も発火し、
+        /// AI 側が購読して JudgmentLoop.ForceEvaluate() を呼べるようにする。
+        /// </summary>
+        public ConfusionEffectProcessor(GameEvents events)
         {
             _accumulations = new Dictionary<int, float>();
             _confusedEntities = new Dictionary<int, ConfusionState>();
+            _events = events;
         }
 
         /// <summary>
@@ -93,13 +109,16 @@ namespace Game.Core
         }
 
         /// <summary>
-        /// 混乱を解除する。
+        /// 混乱を解除する。GameEvents が注入されている場合は
+        /// <see cref="GameEvents.FireConfusionCleared"/> 経由で AI 層へ通知し、
+        /// 受け手が JudgmentLoop.ForceEvaluate() で即時再評価できるようにする。
         /// </summary>
         public void ClearConfusion(int targetHash)
         {
             if (_confusedEntities.Remove(targetHash))
             {
                 OnConfusionCleared?.Invoke(targetHash);
+                _events?.FireConfusionCleared(targetHash);
             }
         }
 

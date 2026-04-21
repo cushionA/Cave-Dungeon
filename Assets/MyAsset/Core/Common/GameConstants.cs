@@ -11,12 +11,6 @@ namespace Game.Core
         /// <summary>ダッシュのデフォルト持続時間（秒）。</summary>
         public const float k_DefaultDashDuration = 0.25f;
 
-        /// <summary>クリティカル率の初期値。</summary>
-        public const float k_DefaultCriticalRate = 0.05f;
-
-        /// <summary>クリティカル倍率の初期値。</summary>
-        public const float k_DefaultCriticalMultiplier = 1.5f;
-
         /// <summary>AI追尾時のデフォルト攻撃範囲（この距離以内で停止）。</summary>
         public const float k_DefaultAttackRange = 1.5f;
 

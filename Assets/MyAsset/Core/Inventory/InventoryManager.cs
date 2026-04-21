@@ -6,6 +6,9 @@ namespace Game.Core
 {
     public class InventoryManager : ISaveable
     {
+        /// <summary>インベントリの最大スロット数（暫定）</summary>
+        public const int k_MaxSlotCount = 99;
+
         private readonly List<ItemEntry> _items;
 
         // ===== ISaveable =====
@@ -47,8 +50,9 @@ namespace Game.Core
         }
 
         /// <summary>
-        /// アイテム追加。既存スタック可能ならスタック、上限超過分は追加しない。
-        /// 戻り値: 実際に追加された数量。
+        /// アイテム追加。同一itemIdの全スタックを走査して余裕があれば順次充填し、
+        /// 余剰分は新スロットとして追加する（k_MaxSlotCount まで）。
+        /// 戻り値: 実際に追加された数量（上限到達で受け入れ切れなかった分は加算されない）。
         /// </summary>
         public int Add(int itemId, ItemCategory category, int count, int maxStack)
         {
@@ -57,35 +61,48 @@ namespace Game.Core
                 return 0;
             }
 
-            // Search for existing entry with same itemId
-            for (int i = 0; i < _items.Count; i++)
+            int remaining = count;
+            int added = 0;
+
+            // Pass 1: 既存の同一itemIdスタックに余地があれば順次詰める
+            for (int i = 0; i < _items.Count && remaining > 0; i++)
             {
-                if (_items[i].itemId == itemId)
+                if (_items[i].itemId != itemId)
                 {
-                    ItemEntry entry = _items[i];
-                    int space = entry.maxStack - entry.count;
-                    int toAdd = Math.Min(count, space);
-                    if (toAdd <= 0)
-                    {
-                        return 0;
-                    }
-                    entry.count += toAdd;
-                    _items[i] = entry;
-                    return toAdd;
+                    continue;
                 }
+
+                ItemEntry entry = _items[i];
+                int space = entry.maxStack - entry.count;
+                if (space <= 0)
+                {
+                    continue;
+                }
+
+                int toAdd = Math.Min(remaining, space);
+                entry.count += toAdd;
+                _items[i] = entry;
+                added += toAdd;
+                remaining -= toAdd;
             }
 
-            // New entry
-            int actualCount = Math.Min(count, maxStack);
-            ItemEntry newEntry = new ItemEntry
+            // Pass 2: 余剰分は新スロットに配置（k_MaxSlotCount 上限まで）
+            while (remaining > 0 && _items.Count < k_MaxSlotCount)
             {
-                itemId = itemId,
-                category = category,
-                count = actualCount,
-                maxStack = maxStack,
-            };
-            _items.Add(newEntry);
-            return actualCount;
+                int toAdd = Math.Min(remaining, maxStack);
+                ItemEntry newEntry = new ItemEntry
+                {
+                    itemId = itemId,
+                    category = category,
+                    count = toAdd,
+                    maxStack = maxStack,
+                };
+                _items.Add(newEntry);
+                added += toAdd;
+                remaining -= toAdd;
+            }
+
+            return added;
         }
 
         /// <summary>

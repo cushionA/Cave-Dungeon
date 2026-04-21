@@ -48,5 +48,27 @@ namespace Game.Tests.EditMode
 
             Assert.AreEqual(500, restored.Balance);
         }
+
+        [Test]
+        public void CurrencyManager_Add_WhenOverflowWouldOccur_ClampsToIntMax()
+        {
+            CurrencyManager manager = new CurrencyManager(int.MaxValue - 10);
+
+            manager.Add(100);
+
+            Assert.AreEqual(int.MaxValue, manager.Balance,
+                "オーバーフローは int.MaxValue で飽和する");
+        }
+
+        [Test]
+        public void CurrencyManager_Add_WhenNearLimitWithSafeAmount_AddsNormally()
+        {
+            CurrencyManager manager = new CurrencyManager(int.MaxValue - 100);
+
+            manager.Add(50);
+
+            Assert.AreEqual(int.MaxValue - 50, manager.Balance,
+                "オーバーフロー域に入らない追加は通常通り加算");
+        }
     }
 }

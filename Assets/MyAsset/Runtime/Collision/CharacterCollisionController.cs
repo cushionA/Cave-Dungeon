@@ -138,7 +138,11 @@ namespace Game.Runtime
         }
 
         /// <summary>
-        /// 運搬中の対象位置を同期する。FixedUpdateで呼ぶ。
+        /// 運搬中の対象位置を同期する。
+        /// 呼び出し元: <see cref="ActionExecutorController"/> の FixedUpdate から、
+        /// 運搬系 Sustained 行動（Carry / ShieldDeploy 等）の実行中に毎物理フレーム呼ぶ想定。
+        /// Rigidbody2D の物理解決と同じ周期で位置更新するため Update ではなく FixedUpdate 推奨。
+        /// 対象キャラが SoA から居なくなっていたら自動で ReleaseCarry を呼んで運搬解除する。
         /// </summary>
         public void SyncCarriedPosition(Vector2 carrierPosition, Vector2 carryOffset)
         {

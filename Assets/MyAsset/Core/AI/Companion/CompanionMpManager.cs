@@ -16,6 +16,13 @@ namespace Game.Core
         private bool _isRecovering;
         private CompanionMpSettings _settings;
 
+        /// <summary>
+        /// reserveMP → currentMP 転送時の端数累積。毎Tickの actualRecovery は
+        /// 小数点を持つため、int の _reserveMp と整合させるため端数をここに貯め、
+        /// 1.0 以上になったら整数分だけ転送する。
+        /// </summary>
+        private float _reserveTransferCarry;
+
         public float CurrentMp => _currentMp;
         public float MaxMp => _maxMp;
         public int ReserveMp => _reserveMp;
@@ -97,14 +104,28 @@ namespace Game.Core
                 float deficit = _maxMp - _currentMp;
                 float actualRecovery = Mathf.Min(recoveryAmount, deficit);
 
-                // reserveMP から補充（reserveMP が足りなければ補充量を制限）
+                // reserveMP → currentMP 転送。
+                // 旧実装は currentMp を float で加算しつつ _reserveMp を CeilToInt で減算していたため、
+                // 毎Tickで差分が「上方向に丸め」で消失する総和ズレバグがあった (FUTURE_TASKS参照)。
+                // 端数を _reserveTransferCarry に累積し、整数分だけ双方同時に動かす対称構造に修正。
                 if (_reserveMp > 0)
                 {
-                    float fromReserve = Mathf.Min(actualRecovery, _reserveMp);
-                    _currentMp += fromReserve;
-                    _reserveMp -= Mathf.CeilToInt(fromReserve);
-                    _reserveMp = Mathf.Max(_reserveMp, 0);
+                    float rawFromReserve = Mathf.Min(actualRecovery, (float)_reserveMp);
+                    _reserveTransferCarry += rawFromReserve;
+                    int transferAmount = Mathf.FloorToInt(_reserveTransferCarry);
+                    if (transferAmount > 0)
+                    {
+                        transferAmount = Mathf.Min(transferAmount, _reserveMp);
+                        _currentMp += transferAmount;
+                        _reserveMp -= transferAmount;
+                        _reserveTransferCarry -= transferAmount;
+                    }
                 }
+            }
+            else
+            {
+                // 回復しないTickでは端数をリセット（長時間保持して突発的に大量転送されるのを防ぐ）
+                _reserveTransferCarry = 0f;
             }
 
             // 消滅中の復帰判定

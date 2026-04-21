@@ -2179,7 +2179,7 @@ namespace Game.Runtime
 
             // 「戻る」ボタン相当でピッカーに戻るのは複雑なのでキャンセルのみサポート
             ShowDialog(dialog);
-            durationField.schedule.Execute(() => durationField.Focus()).ExecuteLater(50);
+            durationField.schedule.Execute(() => durationField.Focus()).ExecuteLater(k_DialogFocusDelayMs);
         }
 
         // =========================================================================

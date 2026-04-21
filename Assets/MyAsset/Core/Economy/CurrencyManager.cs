@@ -20,11 +20,17 @@ namespace Game.Core
             _balance = Math.Max(0, initialBalance);
         }
 
-        /// <summary>通貨を追加。amount が 0 以下なら無視。</summary>
+        /// <summary>通貨を追加。amount が 0 以下なら無視。int.MaxValue で飽和する。</summary>
         public void Add(int amount)
         {
             if (amount <= 0)
             {
+                return;
+            }
+
+            if (amount > int.MaxValue - _balance)
+            {
+                _balance = int.MaxValue;
                 return;
             }
 

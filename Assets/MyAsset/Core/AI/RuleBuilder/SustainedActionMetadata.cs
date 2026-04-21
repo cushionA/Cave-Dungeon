@@ -49,6 +49,8 @@ namespace Game.Core
                     return "周回移動（タイムアウトまで継続、ハンドラ未実装）";
                 case SustainedAction.MpRecover:
                     return "MP回復専念（タイムアウトまで継続、ハンドラ未実装）";
+                case SustainedAction.Idle:
+                    return "何もせず待機（タイムアウトまたはモード切替で終了）";
                 default:
                     return "タイムアウトまで継続";
             }

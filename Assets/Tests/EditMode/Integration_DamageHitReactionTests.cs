@@ -606,7 +606,7 @@ namespace Game.Tests.EditMode
             ElementalStatus attackStats = new ElementalStatus { slash = 50 };
             ElementalStatus defenseStats = new ElementalStatus { slash = 20 };
             int rawDamage = DamageCalculator.CalculateTotalDamage(
-                attackStats, 1.0f, defenseStats, Element.None);
+                attackStats, 1.0f, defenseStats);
 
             // Step 2: 状況ボーナス（対象はAttacking中）
             (float mult, SituationalBonus bonus) =

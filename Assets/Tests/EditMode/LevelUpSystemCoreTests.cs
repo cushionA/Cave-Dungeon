@@ -69,5 +69,35 @@ namespace Game.Tests.EditMode
             // level should be updated
             Assert.AreEqual(2, result.level);
         }
+
+        [Test]
+        public void LevelUpLogic_AddExp_AtMaxLevel_DoesNotExceedCap()
+        {
+            LevelUpLogic logic = new LevelUpLogic(LevelUpLogic.k_MaxLevel);
+
+            // 最大レベルで膨大な exp を与える
+            int levelsGained = logic.AddExp(int.MaxValue / 2);
+
+            Assert.AreEqual(0, levelsGained,
+                "最大レベル到達時はレベルアップしない");
+            Assert.AreEqual(LevelUpLogic.k_MaxLevel, logic.Level);
+            Assert.AreEqual(0, logic.CurrentExp,
+                "最大レベル到達後は余剰 exp を破棄する");
+        }
+
+        [Test]
+        public void LevelUpLogic_AddExp_AtNearMaxLevel_StopsAtCap()
+        {
+            // MaxLevel-1 から大量 exp で MaxLevel に到達する
+            LevelUpLogic logic = new LevelUpLogic(LevelUpLogic.k_MaxLevel - 1);
+
+            int levelsGained = logic.AddExp(int.MaxValue / 2);
+
+            Assert.AreEqual(1, levelsGained,
+                "レベルは最大1つだけ上がる（MaxLevel に到達）");
+            Assert.AreEqual(LevelUpLogic.k_MaxLevel, logic.Level);
+            Assert.AreEqual(0, logic.CurrentExp,
+                "MaxLevel 到達時の余剰 exp は破棄");
+        }
     }
 }
