@@ -127,7 +127,6 @@ namespace Game.Runtime
                 defense = info.baseDefense,
                 criticalRate = GameConstants.k_DefaultCriticalRate,
                 criticalMultiplier = GameConstants.k_DefaultCriticalMultiplier,
-                weakElement = info.weakPoint,
                 knockbackResistance = info.knockbackResistance
             };
 

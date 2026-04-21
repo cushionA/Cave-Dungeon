@@ -34,7 +34,6 @@ namespace Game.Tests.EditMode
                 defense = new ElementalStatus { slash = 15, fire = 8 },
                 criticalRate = 0.1f,
                 criticalMultiplier = 1.5f,
-                weakElement = Element.Fire,
                 knockbackResistance = 0.4f
             };
 
@@ -71,7 +70,6 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(25, storedCombat.attack.slash);
             Assert.AreEqual(10, storedCombat.attack.fire);
             Assert.AreEqual(0.1f, storedCombat.criticalRate, 0.001f);
-            Assert.AreEqual(Element.Fire, storedCombat.weakElement);
             Assert.AreEqual(0.4f, storedCombat.knockbackResistance, 0.001f);
 
             CharacterFlags storedFlags = dic.GetFlags(hash);

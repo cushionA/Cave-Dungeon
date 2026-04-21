@@ -26,22 +26,18 @@ namespace Game.Core
     }
 
     /// <summary>
-    /// 7属性別の攻撃力・防御力 + クリティカル + ガード + 弱点 + ノックバック耐性。
+    /// 7属性別の攻撃力・防御力 + ガード + ノックバック耐性。
+    /// criticalRate/criticalMultiplier は廃止済みクリティカルシステムの残骸 (互換のため残置、未使用)。
+    /// 弱点ダメージボーナスは仕様上存在しない (弱点は defense の属性別低さで表現)。
     /// </summary>
     [Serializable]
     public struct CombatStats
     {
         public ElementalStatus attack;    // 7属性別攻撃力
         public ElementalStatus defense;   // 7属性別防御力
-        public float criticalRate;
-        public float criticalMultiplier;
+        public float criticalRate;        // 未使用 (廃止済みクリティカル機構の残骸)
+        public float criticalMultiplier;  // 未使用 (同上)
         public GuardStats guardStats;
-
-        /// <summary>
-        /// 弱点属性。該当チャネルで被弾時、DamageCalculator.GetWeaknessMultiplier により
-        /// 1.5倍ボーナス適用。Element.None で弱点なし。[Flags] で複合指定可。
-        /// </summary>
-        public Element weakElement;
 
         /// <summary>
         /// ノックバック耐性（0.0-1.0）。HpArmorLogic.CalculateKnockback で

@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 using Game.Core;
 
@@ -36,10 +35,6 @@ namespace Game.Runtime
 
         // 状況ボーナス設定（外部から注入可能）
         private SituationalBonusConfig _bonusConfig = SituationalBonusConfig.Default;
-
-        // クリティカル判定用の乱数プロバイダ。デフォルトは UnityEngine.Random.value。
-        // テストで SetRandomValueProviderForTest により決定論的に差し替え可能。
-        private Func<float> _randomValueProvider = () => UnityEngine.Random.value;
 
         public int ObjectHash => _character != null ? _character.ObjectHash : 0;
         public bool IsAlive => _character != null && _character.IsAlive;
@@ -119,19 +114,6 @@ namespace Game.Runtime
         public void SetStatusEffectManager(StatusEffectManager manager)
         {
             _statusEffectManager = manager;
-        }
-
-        /// <summary>
-        /// クリティカル判定の乱数プロバイダを差し替える。テストで決定論的な
-        /// 値を返したいケース向け。プロダクションでは呼ぶ必要はなく、
-        /// デフォルトで <see cref="UnityEngine.Random.value"/> を使用する。
-        /// </summary>
-        public void SetRandomValueProviderForTest(Func<float> provider)
-        {
-            if (provider != null)
-            {
-                _randomValueProvider = provider;
-            }
         }
 
         private void Update()
@@ -222,12 +204,11 @@ namespace Game.Runtime
             // Step 3.5: 通常ガード/ブレイクのスタミナ削りを適用
             ApplyGuardStaminaDrain(data, guardResult, combat, ref vitals);
 
-            // Step 4: ダメージ計算（weakElement ボーナス + クリティカル + 状況ボーナス）
+            // Step 4: ダメージ計算（属性別カット + 状況ボーナス）
             int reducedDamage = CalculateDamage(
                 data, guardResult, combat, currentActState,
                 isAttackFromFront, effectState,
-                out SituationalBonus situationalBonus,
-                out bool isCritical);
+                out SituationalBonus situationalBonus);
 
             // Step 5: アーマー削り + HP適用
             (int actualDamage, bool isKill, float armorBefore) = ApplyDamageToVitals(
@@ -251,8 +232,7 @@ namespace Game.Runtime
             // Step 7: 結果構築 + イベント + ノックバック
             DamageResult result = BuildResult(
                 actualDamage, guardResult, hitReaction, situationalBonus,
-                isKill, armorBefore - vitals.currentArmor, appliedEffect,
-                isCritical);
+                isKill, armorBefore - vitals.currentArmor, appliedEffect);
 
             FireEvents(result, hash, data);
             ApplyKnockback(data, hitReaction, hasKnockbackForce, combat.knockbackResistance);
@@ -322,11 +302,9 @@ namespace Game.Runtime
             DamageData data, GuardResult guardResult, CombatStats combat,
             ActState currentActState, bool isAttackFromFront,
             ActionEffectProcessor.EffectState effectState,
-            out SituationalBonus situationalBonus,
-            out bool isCritical)
+            out SituationalBonus situationalBonus)
         {
             situationalBonus = SituationalBonus.None;
-            isCritical = false;
 
             // JustGuardは軽減率100%相当（ダメージ完全0）
             if (guardResult == GuardResult.JustGuard)
@@ -336,10 +314,11 @@ namespace Game.Runtime
 
             bool guardSucceeded = GuardJudgmentLogic.IsGuardSucceeded(guardResult);
 
-            // 属性別カット率はガード成功時のみ適用。被弾側の弱点属性で該当チャネルが1.5倍化する。
+            // 属性別カット率はガード成功時のみ適用。弱点倍率は仕様上存在しない
+            // (弱点は defense の属性別低さで表現) ため Element.None を渡す。
             int rawDamage = DamageCalculator.CalculateTotalDamageWithElementalCut(
                 data.damage, data.motionValue, combat.defense,
-                combat.weakElement,
+                Element.None,
                 combat.guardStats,
                 applyCuts: guardSucceeded);
 
@@ -357,21 +336,6 @@ namespace Game.Runtime
                 {
                     rawDamage = Mathf.FloorToInt(rawDamage * bonusMult);
                     situationalBonus = bonus;
-                }
-            }
-
-            // クリティカル判定（ガード成功時は発動しない = 安定したガード挙動維持）。
-            // 適用順は 状況ボーナス → クリティカル → ActionEffect.damageReduction。
-            // damageReduction (ガードポイント / 無敵系行動) は「自発的軽減」であり
-            // クリティカル倍率もまとめて軽減されるべき、という設計。
-            // 掛け算の結合則で連続乗算の結果は順序によらず等しいが、整数化 (Mathf.FloorToInt) が
-            // 挟まるため実数上は 1〜2 ポイントの差が出る。現状は攻撃側に有利な配置。
-            if (!guardSucceeded && combat.criticalRate > 0f)
-            {
-                isCritical = DamageCalculator.IsCritical(combat.criticalRate, _randomValueProvider());
-                if (isCritical)
-                {
-                    rawDamage = DamageCalculator.ApplyCritical(rawDamage, combat.criticalMultiplier, true);
                 }
             }
 
@@ -429,8 +393,7 @@ namespace Game.Runtime
         private static DamageResult BuildResult(
             int actualDamage, GuardResult guardResult, HitReaction hitReaction,
             SituationalBonus situationalBonus, bool isKill,
-            float armorDamage, StatusEffectId appliedEffect,
-            bool isCritical)
+            float armorDamage, StatusEffectId appliedEffect)
         {
             return new DamageResult
             {
@@ -438,7 +401,7 @@ namespace Game.Runtime
                 guardResult = guardResult,
                 hitReaction = hitReaction,
                 situationalBonus = situationalBonus,
-                isCritical = isCritical,
+                isCritical = false,  // クリティカル機構は仕様外として廃止済み。フィールド自体は互換性のため残置
                 isKill = isKill,
                 armorDamage = armorDamage,
                 appliedEffect = appliedEffect

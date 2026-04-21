@@ -121,6 +121,11 @@ namespace Game.Core
         /// <summary>
         /// 弱点倍率を取得。弱点ヒットならk_WeaknessMult、それ以外は1.0。
         /// Flags比較: weakElementに該当チャネルが含まれていればHit。
+        ///
+        /// 注: 本プロジェクトのゲーム仕様では弱点ダメージ倍率は採用していない
+        /// (弱点は defense[channel] を属性別に低く設定することで表現する)。
+        /// DamageReceiver からの呼び出しは常に weakElement=Element.None で、
+        /// この関数は実質的に 1.0 を返し続ける。API は互換性のため残置。
         /// </summary>
         public static float GetWeaknessMultiplier(Element channel, Element weakElement)
         {
@@ -134,6 +139,9 @@ namespace Game.Core
         /// <summary>
         /// クリティカル判定。critRate(0.0~1.0)を超えるか。
         /// randomValueを使った決定論的判定（テスト用）。
+        ///
+        /// 注: 本プロジェクトのゲーム仕様ではクリティカルヒット機構は採用していない。
+        /// DamageReceiver からは呼ばれず、API は互換性のため残置。
         /// </summary>
         public static bool IsCritical(float critRate, float randomValue)
         {
@@ -142,6 +150,7 @@ namespace Game.Core
 
         /// <summary>
         /// クリティカル倍率適用。damage * critMultiplier。
+        /// 注: 本プロジェクトのゲーム仕様ではクリティカルヒット機構は採用していない (残置 API)。
         /// </summary>
         public static int ApplyCritical(int damage, float critMultiplier, bool isCritical)
         {
