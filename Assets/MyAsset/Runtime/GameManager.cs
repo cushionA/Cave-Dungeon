@@ -125,8 +125,6 @@ namespace Game.Runtime
             {
                 attack = info.baseAttack,
                 defense = info.baseDefense,
-                criticalRate = GameConstants.k_DefaultCriticalRate,
-                criticalMultiplier = GameConstants.k_DefaultCriticalMultiplier,
                 knockbackResistance = info.knockbackResistance
             };
 

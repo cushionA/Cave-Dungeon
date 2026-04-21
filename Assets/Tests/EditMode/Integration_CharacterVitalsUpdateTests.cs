@@ -67,8 +67,7 @@ namespace Game.Tests.EditMode
             int damage = DamageCalculator.CalculateTotalDamage(
                 new ElementalStatus { slash = 200 },
                 1.5f,
-                _data.GetCombatStats(1).defense,
-                Element.None
+                _data.GetCombatStats(1).defense
             );
 
             ref CharacterVitals vitals = ref _data.GetVitals(1);

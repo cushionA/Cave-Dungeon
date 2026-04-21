@@ -77,9 +77,9 @@ namespace Game.Tests.EditMode
             CharacterVitals v2 = new CharacterVitals { currentHp = 200, level = 2 };
             CharacterVitals v3 = new CharacterVitals { currentHp = 300, level = 3 };
 
-            CombatStats c1 = new CombatStats { criticalRate = 0.1f };
-            CombatStats c2 = new CombatStats { criticalRate = 0.2f };
-            CombatStats c3 = new CombatStats { criticalRate = 0.3f };
+            CombatStats c1 = new CombatStats { knockbackResistance = 0.1f };
+            CombatStats c2 = new CombatStats { knockbackResistance = 0.2f };
+            CombatStats c3 = new CombatStats { knockbackResistance = 0.3f };
 
             _data.Add(1, v1, c1, default, default);
             _data.Add(2, v2, c2, default, default);
@@ -93,11 +93,11 @@ namespace Game.Tests.EditMode
 
             // hash=1は変更なし
             Assert.AreEqual(100, _data.GetVitals(1).currentHp);
-            Assert.AreEqual(0.1f, _data.GetCombatStats(1).criticalRate, 0.001f);
+            Assert.AreEqual(0.1f, _data.GetCombatStats(1).knockbackResistance, 0.001f);
 
             // hash=3はデータ保持（slot移動しても値は維持）
             Assert.AreEqual(300, _data.GetVitals(3).currentHp);
-            Assert.AreEqual(0.3f, _data.GetCombatStats(3).criticalRate, 0.001f);
+            Assert.AreEqual(0.3f, _data.GetCombatStats(3).knockbackResistance, 0.001f);
 
             // hash=2はアクセス不可
             Assert.IsFalse(_data.TryGetValue(2, out int _));
@@ -151,8 +151,7 @@ namespace Game.Tests.EditMode
             };
             CombatStats combat = new CombatStats
             {
-                attack = new ElementalStatus { slash = 80, fire = 40 },
-                criticalRate = 0.25f
+                attack = new ElementalStatus { slash = 80, fire = 40 }
             };
             CharacterFlags flags = CharacterFlags.Pack(
                 CharacterBelong.Enemy,

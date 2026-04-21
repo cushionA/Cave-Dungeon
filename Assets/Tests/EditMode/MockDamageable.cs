@@ -38,7 +38,7 @@ namespace Game.Tests.EditMode
             ref CombatStats combat = ref _data.GetCombatStats(_hash);
 
             int raw = DamageCalculator.CalculateTotalDamage(
-                data.damage, data.motionValue, combat.defense, Element.None);
+                data.damage, data.motionValue, combat.defense);
 
             float actionArmor = 0f;
             (int actualDamage, bool isKill, bool _) = HpArmorLogic.ApplyDamage(

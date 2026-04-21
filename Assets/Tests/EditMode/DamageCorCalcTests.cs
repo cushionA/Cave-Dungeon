@@ -26,35 +26,24 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(DamageCalculator.k_MinDamage, result);
         }
 
-        // --- 属性ダメージ ---
+        // --- 属性チャネルダメージ ---
 
         [Test]
-        public void DamageCalculator_GetWeaknessMultiplier_AppliesWeakness()
+        public void DamageCalculator_CalculateChannelDamage_ReturnsBaseDamage()
         {
-            // 弱点属性 => 1.5x
-            float weakMult = DamageCalculator.GetWeaknessMultiplier(Element.Fire, Element.Fire);
-            Assert.AreEqual(DamageCalculator.k_WeaknessMult, weakMult, 0.001f);
+            // 弱点倍率は仕様外。チャネルダメージは CalculateBaseDamage と等価。
+            int channelResult = DamageCalculator.CalculateChannelDamage(100, 1.0f, 0);
+            int baseResult = DamageCalculator.CalculateBaseDamage(100, 1.0f, 0);
 
-            // 非弱点属性 => 1.0x
-            float normalMult = DamageCalculator.GetWeaknessMultiplier(Element.Light, Element.Fire);
-            Assert.AreEqual(1.0f, normalMult, 0.001f);
-
-            // None属性 => 1.0x
-            float noneMult = DamageCalculator.GetWeaknessMultiplier(Element.None, Element.Fire);
-            Assert.AreEqual(1.0f, noneMult, 0.001f);
+            Assert.AreEqual(baseResult, channelResult);
         }
 
         [Test]
-        public void DamageCalculator_CalculateChannelDamage_AppliesWeaknessMultiplier()
+        public void DamageCalculator_CalculateChannelDamage_ZeroAttack_ReturnsZero()
         {
-            // atk=100, motionValue=1.0, def=0, 弱点ヒット => baseDmg * 1.5
-            int weakResult = DamageCalculator.CalculateChannelDamage(100, 1.0f, 0, Element.Fire, Element.Fire);
-            int baseResult = DamageCalculator.CalculateBaseDamage(100, 1.0f, 0);
-            Assert.AreEqual((int)(baseResult * DamageCalculator.k_WeaknessMult), weakResult);
+            int result = DamageCalculator.CalculateChannelDamage(0, 1.0f, 10);
 
-            // 非弱点 => baseDmg * 1.0
-            int normalResult = DamageCalculator.CalculateChannelDamage(100, 1.0f, 0, Element.Light, Element.Fire);
-            Assert.AreEqual(baseResult, normalResult);
+            Assert.AreEqual(0, result);
         }
 
         // --- 属性別ガードカット (新仕様) ---
@@ -71,9 +60,9 @@ namespace Game.Tests.EditMode
                 slashCut = 0.9f
             };
 
-            int oldApi = DamageCalculator.CalculateTotalDamage(attack, 1.0f, defense, Element.None);
+            int oldApi = DamageCalculator.CalculateTotalDamage(attack, 1.0f, defense);
             int newApiNoCut = DamageCalculator.CalculateTotalDamageWithElementalCut(
-                attack, 1.0f, defense, Element.None, cuts, applyCuts: false);
+                attack, 1.0f, defense, cuts, applyCuts: false);
 
             Assert.AreEqual(oldApi, newApiNoCut);
         }
@@ -81,15 +70,15 @@ namespace Game.Tests.EditMode
         [Test]
         public void DamageCalculator_CalculateTotalDamageWithElementalCut_SingleElement_AppliesCut()
         {
-            // fireだけで50%カットすると、旧APIの半分以下になる(丸め誤差含む)
+            // fireだけで50%カットすると、カットなしの半分以下になる(丸め誤差含む)
             ElementalStatus attack = new ElementalStatus { fire = 100 };
             ElementalStatus defense = new ElementalStatus { fire = 10 };
             GuardStats cuts = new GuardStats { fireCut = 0.5f };
 
             int full = DamageCalculator.CalculateTotalDamageWithElementalCut(
-                attack, 1.0f, defense, Element.None, cuts, applyCuts: false);
+                attack, 1.0f, defense, cuts, applyCuts: false);
             int cut = DamageCalculator.CalculateTotalDamageWithElementalCut(
-                attack, 1.0f, defense, Element.None, cuts, applyCuts: true);
+                attack, 1.0f, defense, cuts, applyCuts: true);
 
             // 50%カット: 約半分(整数化の誤差で一致しない可能性があるため範囲比較)
             Assert.Less(cut, full);
@@ -107,11 +96,11 @@ namespace Game.Tests.EditMode
             GuardStats cutsOnlySlash = new GuardStats { slashCut = 1.0f };  // slash完全カット
 
             int noCut = DamageCalculator.CalculateTotalDamageWithElementalCut(
-                attack, 1.0f, defense, Element.None, default, applyCuts: false);
+                attack, 1.0f, defense, default, applyCuts: false);
             int fireOnly = DamageCalculator.CalculateTotalDamageWithElementalCut(
-                attack, 1.0f, defense, Element.None, cutsOnlyFire, applyCuts: true);
+                attack, 1.0f, defense, cutsOnlyFire, applyCuts: true);
             int slashOnly = DamageCalculator.CalculateTotalDamageWithElementalCut(
-                attack, 1.0f, defense, Element.None, cutsOnlySlash, applyCuts: true);
+                attack, 1.0f, defense, cutsOnlySlash, applyCuts: true);
 
             // Fire完全カット時 ≒ slashチャネル分のみ
             // Slash完全カット時 ≒ fireチャネル分のみ
@@ -131,42 +120,9 @@ namespace Game.Tests.EditMode
             GuardStats cuts = new GuardStats { fireCut = 1.5f };
 
             int result = DamageCalculator.CalculateTotalDamageWithElementalCut(
-                attack, 1.0f, defense, Element.None, cuts, applyCuts: true);
+                attack, 1.0f, defense, cuts, applyCuts: true);
 
             Assert.AreEqual(DamageCalculator.k_MinDamage, result);
-        }
-
-        // --- クリティカル ---
-
-        [Test]
-        public void DamageCalculator_ApplyCritical_MultipliesDamage()
-        {
-            // isCritical=true, mult=1.5 => damage*1.5
-            int critResult = DamageCalculator.ApplyCritical(100, 1.5f, true);
-            Assert.AreEqual(150, critResult);
-
-            // isCritical=false => ダメージそのまま
-            int noCritResult = DamageCalculator.ApplyCritical(100, 1.5f, false);
-            Assert.AreEqual(100, noCritResult);
-        }
-
-        // --- クリティカル判定（決定論的） ---
-
-        [Test]
-        public void DamageCalculator_IsCritical_DeterministicCheck()
-        {
-            // randomValue < critRate => true
-            Assert.IsTrue(DamageCalculator.IsCritical(0.5f, 0.3f));
-
-            // randomValue >= critRate => false
-            Assert.IsFalse(DamageCalculator.IsCritical(0.5f, 0.5f));
-            Assert.IsFalse(DamageCalculator.IsCritical(0.5f, 0.8f));
-
-            // critRate=0 => always false
-            Assert.IsFalse(DamageCalculator.IsCritical(0.0f, 0.0f));
-
-            // critRate=1 => always true (randomValue < 1.0)
-            Assert.IsTrue(DamageCalculator.IsCritical(1.0f, 0.99f));
         }
     }
 }

@@ -26,9 +26,7 @@ namespace Game.Tests.EditMode
             CharacterVitals atkVitals = new CharacterVitals { currentHp = 200, maxHp = 200, level = 10 };
             CombatStats atkCombat = new CombatStats
             {
-                attack = new ElementalStatus { slash = 100, fire = 30 },
-                criticalRate = 0.3f,
-                criticalMultiplier = 1.5f
+                attack = new ElementalStatus { slash = 100, fire = 30 }
             };
             EquipmentStatus atkEquip = new EquipmentStatus
             {
@@ -79,15 +77,14 @@ namespace Game.Tests.EditMode
             int totalDamage = DamageCalculator.CalculateTotalDamage(
                 equip.finalAttack,
                 1.2f,
-                defenseStats,
-                Element.None
+                defenseStats
             );
 
             // Assert: 各チャネルの計算値を手動検証
             // slash: (100²×1.2)/(100+20) = 12000/120 = 100
             // fire:  (30²×1.2)/(30+10)   = 1080/40   = 27
-            int expectedSlash = DamageCalculator.CalculateChannelDamage(100, 1.2f, 20, Element.Slash, Element.None);
-            int expectedFire = DamageCalculator.CalculateChannelDamage(30, 1.2f, 10, Element.Fire, Element.None);
+            int expectedSlash = DamageCalculator.CalculateChannelDamage(100, 1.2f, 20);
+            int expectedFire = DamageCalculator.CalculateChannelDamage(30, 1.2f, 10);
             int expected = expectedSlash + expectedFire;
 
             Assert.AreEqual(expected, totalDamage);
@@ -102,8 +99,7 @@ namespace Game.Tests.EditMode
             int rawDamage = DamageCalculator.CalculateTotalDamage(
                 equip.finalAttack,
                 1.0f,
-                _data.GetCombatStats(k_DefenderHash).defense,
-                Element.None
+                _data.GetCombatStats(k_DefenderHash).defense
             );
 
             // Act: ガード判定（通常ガード: guardTime > JustGuardWindow）
@@ -130,7 +126,7 @@ namespace Game.Tests.EditMode
             int guardedDamage = DamageCalculator.CalculateTotalDamageWithElementalCut(
                 equip.finalAttack, 1.0f,
                 _data.GetCombatStats(k_DefenderHash).defense,
-                Element.None, guardStats, applyCuts: true);
+                guardStats, applyCuts: true);
 
             // Assert
             Assert.AreEqual(GuardResult.Guarded, guardResult);
@@ -181,8 +177,7 @@ namespace Game.Tests.EditMode
             int totalDamage = DamageCalculator.CalculateTotalDamage(
                 equip.finalAttack,
                 1.2f,
-                _data.GetCombatStats(k_DefenderHash).defense,
-                Element.None
+                _data.GetCombatStats(k_DefenderHash).defense
             );
 
             // Act: HP/アーマーにダメージ適用
@@ -226,15 +221,15 @@ namespace Game.Tests.EditMode
             ElementalStatus defBalanced = new ElementalStatus { slash = 50, fire = 50 };
 
             // Act
-            int dmgVsLowFire = DamageCalculator.CalculateTotalDamage(atkStats, 1.0f, defLowFire, Element.None);
-            int dmgVsBalanced = DamageCalculator.CalculateTotalDamage(atkStats, 1.0f, defBalanced, Element.None);
+            int dmgVsLowFire = DamageCalculator.CalculateTotalDamage(atkStats, 1.0f, defLowFire);
+            int dmgVsBalanced = DamageCalculator.CalculateTotalDamage(atkStats, 1.0f, defBalanced);
 
             // Assert: fire防御が低い相手の方がトータルダメージが高い
             Assert.Greater(dmgVsLowFire, dmgVsBalanced);
 
             // 個別チャネル検証: fire防御5 vs fire防御50
-            int fireDmgLow = DamageCalculator.CalculateChannelDamage(30, 1.0f, 5, Element.Fire, Element.None);
-            int fireDmgHigh = DamageCalculator.CalculateChannelDamage(30, 1.0f, 50, Element.Fire, Element.None);
+            int fireDmgLow = DamageCalculator.CalculateChannelDamage(30, 1.0f, 5);
+            int fireDmgHigh = DamageCalculator.CalculateChannelDamage(30, 1.0f, 50);
             Assert.Greater(fireDmgLow, fireDmgHigh);
         }
     }

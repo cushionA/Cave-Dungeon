@@ -2,13 +2,13 @@ namespace Game.Core
 {
     /// <summary>
     /// ダメージ計算の静的ユーティリティ。
-    /// 7属性別ダメージ計算、弱点倍率、クリティカル判定を提供する。
+    /// 7属性別ダメージ計算 + ガードカット率適用を提供する。
+    /// 弱点倍率・クリティカル機構は仕様外のため非搭載
+    /// (弱点は defense[channel] を属性別に低く設定することで表現)。
     /// </summary>
     public static class DamageCalculator
     {
         public const int k_MinDamage = 1;
-        public const float k_WeaknessMult = 1.5f;
-        public const float k_ResistMult = 0.5f;
 
         /// <summary>
         /// 単一属性の基本ダメージ計算。
@@ -34,22 +34,21 @@ namespace Game.Core
 
         /// <summary>
         /// 7属性それぞれについてダメージ計算し、合計を返す。
-        /// 各属性: CalculateBaseDamage(atk, motionValue, def) × weakMult
+        /// 各属性: CalculateBaseDamage(atk, motionValue, def)
         /// </summary>
         public static int CalculateTotalDamage(
             ElementalStatus attackStats,
             float motionValue,
-            ElementalStatus defenseStats,
-            Element weakElement)
+            ElementalStatus defenseStats)
         {
             int total = 0;
-            total += CalculateChannelDamage(attackStats.slash, motionValue, defenseStats.slash, Element.Slash, weakElement);
-            total += CalculateChannelDamage(attackStats.strike, motionValue, defenseStats.strike, Element.Strike, weakElement);
-            total += CalculateChannelDamage(attackStats.pierce, motionValue, defenseStats.pierce, Element.Pierce, weakElement);
-            total += CalculateChannelDamage(attackStats.fire, motionValue, defenseStats.fire, Element.Fire, weakElement);
-            total += CalculateChannelDamage(attackStats.thunder, motionValue, defenseStats.thunder, Element.Thunder, weakElement);
-            total += CalculateChannelDamage(attackStats.light, motionValue, defenseStats.light, Element.Light, weakElement);
-            total += CalculateChannelDamage(attackStats.dark, motionValue, defenseStats.dark, Element.Dark, weakElement);
+            total += CalculateChannelDamage(attackStats.slash, motionValue, defenseStats.slash);
+            total += CalculateChannelDamage(attackStats.strike, motionValue, defenseStats.strike);
+            total += CalculateChannelDamage(attackStats.pierce, motionValue, defenseStats.pierce);
+            total += CalculateChannelDamage(attackStats.fire, motionValue, defenseStats.fire);
+            total += CalculateChannelDamage(attackStats.thunder, motionValue, defenseStats.thunder);
+            total += CalculateChannelDamage(attackStats.light, motionValue, defenseStats.light);
+            total += CalculateChannelDamage(attackStats.dark, motionValue, defenseStats.dark);
             return total < k_MinDamage ? k_MinDamage : total;
         }
 
@@ -57,40 +56,36 @@ namespace Game.Core
         /// 単一属性チャネルのダメージ計算。attackが0なら0を返す。
         /// </summary>
         public static int CalculateChannelDamage(
-            int attack, float motionValue, int defense,
-            Element channel, Element weakElement)
+            int attack, float motionValue, int defense)
         {
             if (attack <= 0)
             {
                 return 0;
             }
 
-            int baseDmg = CalculateBaseDamage(attack, motionValue, defense);
-            float multiplier = GetWeaknessMultiplier(channel, weakElement);
-            return (int)(baseDmg * multiplier);
+            return CalculateBaseDamage(attack, motionValue, defense);
         }
 
         /// <summary>
         /// 7属性それぞれについてダメージ計算し、属性別ガードカット率を適用して合計を返す。
         /// applyCuts=false なら CalculateTotalDamage と等価（回帰互換）。
-        /// 各チャネル: CalculateBaseDamage × weakMult × (1 - xxxCut) を floor して合算。
+        /// 各チャネル: CalculateBaseDamage × (1 - xxxCut) を floor して合算。
         /// </summary>
         public static int CalculateTotalDamageWithElementalCut(
             ElementalStatus attackStats,
             float motionValue,
             ElementalStatus defenseStats,
-            Element weakElement,
             GuardStats guardCuts,
             bool applyCuts)
         {
             int total = 0;
-            total += ApplyChannelWithCut(attackStats.slash,   motionValue, defenseStats.slash,   Element.Slash,   weakElement, applyCuts ? guardCuts.slashCut   : 0f);
-            total += ApplyChannelWithCut(attackStats.strike,  motionValue, defenseStats.strike,  Element.Strike,  weakElement, applyCuts ? guardCuts.strikeCut  : 0f);
-            total += ApplyChannelWithCut(attackStats.pierce,  motionValue, defenseStats.pierce,  Element.Pierce,  weakElement, applyCuts ? guardCuts.pierceCut  : 0f);
-            total += ApplyChannelWithCut(attackStats.fire,    motionValue, defenseStats.fire,    Element.Fire,    weakElement, applyCuts ? guardCuts.fireCut    : 0f);
-            total += ApplyChannelWithCut(attackStats.thunder, motionValue, defenseStats.thunder, Element.Thunder, weakElement, applyCuts ? guardCuts.thunderCut : 0f);
-            total += ApplyChannelWithCut(attackStats.light,   motionValue, defenseStats.light,   Element.Light,   weakElement, applyCuts ? guardCuts.lightCut   : 0f);
-            total += ApplyChannelWithCut(attackStats.dark,    motionValue, defenseStats.dark,    Element.Dark,    weakElement, applyCuts ? guardCuts.darkCut    : 0f);
+            total += ApplyChannelWithCut(attackStats.slash,   motionValue, defenseStats.slash,   applyCuts ? guardCuts.slashCut   : 0f);
+            total += ApplyChannelWithCut(attackStats.strike,  motionValue, defenseStats.strike,  applyCuts ? guardCuts.strikeCut  : 0f);
+            total += ApplyChannelWithCut(attackStats.pierce,  motionValue, defenseStats.pierce,  applyCuts ? guardCuts.pierceCut  : 0f);
+            total += ApplyChannelWithCut(attackStats.fire,    motionValue, defenseStats.fire,    applyCuts ? guardCuts.fireCut    : 0f);
+            total += ApplyChannelWithCut(attackStats.thunder, motionValue, defenseStats.thunder, applyCuts ? guardCuts.thunderCut : 0f);
+            total += ApplyChannelWithCut(attackStats.light,   motionValue, defenseStats.light,   applyCuts ? guardCuts.lightCut   : 0f);
+            total += ApplyChannelWithCut(attackStats.dark,    motionValue, defenseStats.dark,    applyCuts ? guardCuts.darkCut    : 0f);
             return total < k_MinDamage ? k_MinDamage : total;
         }
 
@@ -98,8 +93,7 @@ namespace Game.Core
         /// 単一属性チャネルに属性別カット率を適用する。cut=0ならそのままのチャネルダメージを返す。
         /// </summary>
         private static int ApplyChannelWithCut(
-            int attack, float motionValue, int defense,
-            Element channel, Element weakElement, float cut)
+            int attack, float motionValue, int defense, float cut)
         {
             if (attack <= 0)
             {
@@ -107,59 +101,14 @@ namespace Game.Core
             }
 
             int baseDmg = CalculateBaseDamage(attack, motionValue, defense);
-            float multiplier = GetWeaknessMultiplier(channel, weakElement);
-            float channelDmg = baseDmg * multiplier;
+            float channelDmg = baseDmg;
             if (cut > 0f)
             {
                 float clampedCut = cut > 1f ? 1f : cut;
                 channelDmg *= (1f - clampedCut);
             }
-            // channelDmg は非負 (baseDmg>=0, multiplier>=1, (1-cut)>=0 のため)。明示の意図でFloorToInt。
+            // channelDmg は非負 (baseDmg>=0, (1-cut)>=0 のため)。明示の意図でFloorToInt。
             return UnityEngine.Mathf.FloorToInt(channelDmg);
-        }
-
-        /// <summary>
-        /// 弱点倍率を取得。弱点ヒットならk_WeaknessMult、それ以外は1.0。
-        /// Flags比較: weakElementに該当チャネルが含まれていればHit。
-        ///
-        /// 注: 本プロジェクトのゲーム仕様では弱点ダメージ倍率は採用していない
-        /// (弱点は defense[channel] を属性別に低く設定することで表現する)。
-        /// DamageReceiver からの呼び出しは常に weakElement=Element.None で、
-        /// この関数は実質的に 1.0 を返し続ける。API は互換性のため残置。
-        /// </summary>
-        public static float GetWeaknessMultiplier(Element channel, Element weakElement)
-        {
-            if (channel != Element.None && (weakElement & channel) != 0)
-            {
-                return k_WeaknessMult;
-            }
-            return 1.0f;
-        }
-
-        /// <summary>
-        /// クリティカル判定。critRate(0.0~1.0)を超えるか。
-        /// randomValueを使った決定論的判定（テスト用）。
-        ///
-        /// 注: 本プロジェクトのゲーム仕様ではクリティカルヒット機構は採用していない。
-        /// DamageReceiver からは呼ばれず、API は互換性のため残置。
-        /// </summary>
-        public static bool IsCritical(float critRate, float randomValue)
-        {
-            return randomValue < critRate;
-        }
-
-        /// <summary>
-        /// クリティカル倍率適用。damage * critMultiplier。
-        /// 注: 本プロジェクトのゲーム仕様ではクリティカルヒット機構は採用していない (残置 API)。
-        /// </summary>
-        public static int ApplyCritical(int damage, float critMultiplier, bool isCritical)
-        {
-            if (!isCritical)
-            {
-                return damage;
-            }
-
-            return (int)(damage * critMultiplier);
         }
     }
 }

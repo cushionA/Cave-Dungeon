@@ -314,11 +314,10 @@ namespace Game.Runtime
 
             bool guardSucceeded = GuardJudgmentLogic.IsGuardSucceeded(guardResult);
 
-            // 属性別カット率はガード成功時のみ適用。弱点倍率は仕様上存在しない
-            // (弱点は defense の属性別低さで表現) ため Element.None を渡す。
+            // 属性別カット率はガード成功時のみ適用。
+            // 弱点は defense の属性別低さで表現（DamageCalculator 側で弱点倍率は非搭載）。
             int rawDamage = DamageCalculator.CalculateTotalDamageWithElementalCut(
                 data.damage, data.motionValue, combat.defense,
-                Element.None,
                 combat.guardStats,
                 applyCuts: guardSucceeded);
 

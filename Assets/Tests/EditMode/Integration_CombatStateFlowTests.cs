@@ -24,9 +24,7 @@ namespace Game.Tests.EditMode
             CharacterVitals playerVitals = new CharacterVitals { currentHp = 200, maxHp = 200, level = 10 };
             CombatStats playerCombat = new CombatStats
             {
-                attack = new ElementalStatus { slash = 80 },
-                criticalRate = 0.2f,
-                criticalMultiplier = 1.5f
+                attack = new ElementalStatus { slash = 80 }
             };
             CharacterFlags playerFlags = CharacterFlags.Pack(
                 CharacterBelong.Ally, CharacterFeature.Player, ActState.Neutral, AbilityFlag.None);
@@ -66,9 +64,9 @@ namespace Game.Tests.EditMode
             ElementalStatus defStats = _data.GetCombatStats(k_EnemyHash).defense;
 
             // Act: 各段のダメージを計算
-            int dmg1 = DamageCalculator.CalculateTotalDamage(atkStats, motionValues[0], defStats, Element.None);
-            int dmg2 = DamageCalculator.CalculateTotalDamage(atkStats, motionValues[1], defStats, Element.None);
-            int dmg3 = DamageCalculator.CalculateTotalDamage(atkStats, motionValues[2], defStats, Element.None);
+            int dmg1 = DamageCalculator.CalculateTotalDamage(atkStats, motionValues[0], defStats);
+            int dmg2 = DamageCalculator.CalculateTotalDamage(atkStats, motionValues[1], defStats);
+            int dmg3 = DamageCalculator.CalculateTotalDamage(atkStats, motionValues[2], defStats);
 
             // Assert: コンボ段数が上がるとダメージも上がる
             Assert.Greater(dmg2, dmg1);
@@ -108,7 +106,7 @@ namespace Game.Tests.EditMode
             ElementalStatus defStats = _data.GetCombatStats(k_EnemyHash).defense;
 
             // Act: 1撃目 armorBreak=40 → アーマー0
-            int dmgHit1 = DamageCalculator.CalculateTotalDamage(atkStats, 1.0f, defStats, Element.None);
+            int dmgHit1 = DamageCalculator.CalculateTotalDamage(atkStats, 1.0f, defStats);
             float actionArmor1 = 0f;
             (int actual1, bool kill1, bool armorBroken) = HpArmorLogic.ApplyDamage(
                 ref enemyVitals.currentHp, ref enemyVitals.currentArmor, dmgHit1, 40f, ref actionArmor1);
@@ -120,7 +118,7 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(0f, enemyVitals.currentArmor, 0.001f);
 
             // 2撃目: アーマー0状態でのダメージ → アーマーブレイクボーナスなし
-            int dmgHit2 = DamageCalculator.CalculateTotalDamage(atkStats, 1.0f, defStats, Element.None);
+            int dmgHit2 = DamageCalculator.CalculateTotalDamage(atkStats, 1.0f, defStats);
             float actionArmor2 = 0f;
             (int actual2, bool kill2, bool armorBroken2) = HpArmorLogic.ApplyDamage(
                 ref enemyVitals.currentHp, ref enemyVitals.currentArmor, dmgHit2, 0f, ref actionArmor2);
@@ -143,7 +141,7 @@ namespace Game.Tests.EditMode
             // Act: 3段コンボ、各ヒットでイベント発火
             for (int i = 0; i < motionValues.Length; i++)
             {
-                int dmg = DamageCalculator.CalculateTotalDamage(atkStats, motionValues[i], defStats, Element.None);
+                int dmg = DamageCalculator.CalculateTotalDamage(atkStats, motionValues[i], defStats);
                 ref CharacterVitals enemyVitals = ref _data.GetVitals(k_EnemyHash);
                 float actionArmorCombo = 0f;
                 HpArmorLogic.ApplyDamage(ref enemyVitals.currentHp, ref enemyVitals.currentArmor, dmg, 0f, ref actionArmorCombo);
