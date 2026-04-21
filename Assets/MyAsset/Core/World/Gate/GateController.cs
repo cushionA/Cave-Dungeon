@@ -44,9 +44,18 @@ namespace Game.Core
             OnGateOpened?.Invoke(_definition.gateId);
         }
 
-        public void ForceClose()
+        /// <summary>
+        /// ゲートを強制クローズする。永続ゲート (isPermanent = true、ボスクリア等) は
+        /// ゲーム進行フラグと紐づいているため ForceClose では閉じない。戻り値: 実際に閉じたかどうか。
+        /// </summary>
+        public bool ForceClose()
         {
+            if (_definition.isPermanent)
+            {
+                return false;
+            }
             _isOpen = false;
+            return true;
         }
 
         private static string GetDefaultHint(GateDefinition def)

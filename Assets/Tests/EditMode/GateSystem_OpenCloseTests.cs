@@ -50,5 +50,45 @@ namespace Game.Tests.EditMode
 
             Assert.AreEqual("gate_01", firedId);
         }
+
+        [Test]
+        public void GateController_ForceClose_OnTemporaryGate_ClosesAndReturnsTrue()
+        {
+            GateDefinition def = new GateDefinition
+            {
+                gateId = "tmp_01",
+                gateType = GateType.Clear,
+                requiredClearFlag = "boss1",
+                isPermanent = false
+            };
+            GateStateController gate = new GateStateController(def);
+            gate.ForceOpen();
+            Assert.IsTrue(gate.IsOpen);
+
+            bool closed = gate.ForceClose();
+
+            Assert.IsTrue(closed);
+            Assert.IsFalse(gate.IsOpen);
+        }
+
+        [Test]
+        public void GateController_ForceClose_OnPermanentGate_IsIgnored()
+        {
+            GateDefinition def = new GateDefinition
+            {
+                gateId = "perm_01",
+                gateType = GateType.Clear,
+                requiredClearFlag = "boss_final",
+                isPermanent = true
+            };
+            GateStateController gate = new GateStateController(def);
+            gate.ForceOpen();
+            Assert.IsTrue(gate.IsOpen);
+
+            bool closed = gate.ForceClose();
+
+            Assert.IsFalse(closed, "永続ゲートは ForceClose で閉じてはならない");
+            Assert.IsTrue(gate.IsOpen, "永続ゲートは開いたままであるべき");
+        }
     }
 }
