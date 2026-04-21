@@ -773,21 +773,47 @@ namespace Game.Runtime
         /// <summary>
         /// 条件を1行テキストに整形する。行動詳細ダイアログ内の条件チップ表示に使う。
         /// 例: "HP ratio ≤ 30%"、"距離 3.0 ≤ X ≤ 10.0"、"敵の種類 含む(OR) 弱点=Fire"
+        /// TargetFilter が非空のときは末尾に [陣営=Enemy, 弱点=Fire] の形で追記する。
         /// </summary>
         private string FormatConditionSummary(AICondition cond)
         {
             string typeLabel = ConditionTypeMetadata.GetLabel(cond.conditionType);
             string opSymbol = FormatCompareOpSymbol(cond.compareOp);
 
+            string main;
             if (cond.compareOp == CompareOp.InRange)
             {
-                return typeLabel + " " + cond.operandA + " ≤ X ≤ " + cond.operandB;
+                main = typeLabel + " " + cond.operandA + " ≤ X ≤ " + cond.operandB;
             }
-            if (cond.compareOp == CompareOp.HasFlag || cond.compareOp == CompareOp.HasAny)
+            else if (cond.compareOp == CompareOp.HasFlag || cond.compareOp == CompareOp.HasAny)
             {
-                return typeLabel + " " + opSymbol + " (" + cond.operandA + ")";
+                main = typeLabel + " " + opSymbol + " (" + cond.operandA + ")";
             }
-            return typeLabel + " " + opSymbol + " " + cond.operandA;
+            else
+            {
+                main = typeLabel + " " + opSymbol + " " + cond.operandA;
+            }
+
+            // TargetFilter が制約を持っているときだけ末尾に追記（空のときに冗長な
+            //「条件なし（全員が対象）」は出さない）
+            if (HasFilterConstraints(cond.filter))
+            {
+                main += " [" + FormatFilterSummary(cond.filter) + "]";
+            }
+            return main;
+        }
+
+        /// <summary>
+        /// TargetFilter が何らかの絞り込み条件を持っているかどうか。
+        /// chip サマリに filter 情報を出すか判定するために使う。
+        /// </summary>
+        private static bool HasFilterConstraints(TargetFilter f)
+        {
+            return f.belong != 0
+                || f.feature != 0
+                || f.weakPoint != 0
+                || f.distanceRange.x > 0f
+                || f.distanceRange.y > 0f;
         }
 
         /// <summary>
@@ -803,7 +829,7 @@ namespace Game.Runtime
                 case CompareOp.GreaterEqual: return "≥";
                 case CompareOp.Greater:      return ">";
                 case CompareOp.NotEqual:     return "≠";
-                case CompareOp.InRange:      return "In Range";
+                case CompareOp.InRange:      return "範囲内";
                 case CompareOp.HasFlag:      return "含む(AND)";
                 case CompareOp.HasAny:       return "含む(OR)";
                 default:                     return op.ToString();
@@ -814,13 +840,15 @@ namespace Game.Runtime
         /// 単一の条件を編集する個別ダイアログ（Phase 5）。
         /// 既存 <see cref="BuildConditionRow"/> が inline で生成していた UI を
         /// そのままダイアログコンテンツとして利用し、保存/キャンセルで確定する。
+        /// タイトルには初期状態の条件種別を含めて、どの条件を編集しているか文脈が分かるようにする。
         /// </summary>
         private void ShowConditionEditorDialog(AICondition initial, Action<AICondition> onConfirm)
         {
             AICondition working = initial;
 
+            string title = "条件: " + ConditionTypeMetadata.GetLabel(initial.conditionType);
             VisualElement dialog = BuildModalDialog(
-                "条件を編集",
+                title,
                 "条件の種類・比較演算子・閾値・対象フィルタを設定してください。");
             dialog.AddToClassList("condition-editor-dialog");
 

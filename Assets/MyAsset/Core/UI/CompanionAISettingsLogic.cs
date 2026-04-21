@@ -710,14 +710,7 @@ namespace Game.Core
         /// </summary>
         public static AIMode AddActionRuleWithNewSlot(AIMode mode, AICondition[] conditions, ActionSlot slot, byte probability)
         {
-            int oldSlotCount = mode.actions != null ? mode.actions.Length : 0;
-            ActionSlot[] newActions = new ActionSlot[oldSlotCount + 1];
-            for (int i = 0; i < oldSlotCount; i++)
-            {
-                newActions[i] = mode.actions[i];
-            }
-            newActions[oldSlotCount] = slot;
-            mode.actions = newActions;
+            int newSlotIdx = AppendSlot(ref mode, slot);
 
             int oldRuleCount = mode.actionRules != null ? mode.actionRules.Length : 0;
             AIRule[] newRules = new AIRule[oldRuleCount + 1];
@@ -728,7 +721,7 @@ namespace Game.Core
             newRules[oldRuleCount] = new AIRule
             {
                 conditions = conditions ?? new AICondition[0],
-                actionIndex = oldSlotCount,
+                actionIndex = newSlotIdx,
                 probability = probability,
             };
             mode.actionRules = newRules;
@@ -866,15 +859,8 @@ namespace Game.Core
             if (def < 0 || def >= slotCount)
             {
                 // 不正参照なら末尾に追加して default を向け直す
-                int oldCount = slotCount;
-                ActionSlot[] newActions = new ActionSlot[oldCount + 1];
-                for (int i = 0; i < oldCount; i++)
-                {
-                    newActions[i] = mode.actions[i];
-                }
-                newActions[oldCount] = newSlot;
-                mode.actions = newActions;
-                mode.defaultActionIndex = oldCount;
+                int newIdx = AppendSlot(ref mode, newSlot);
+                mode.defaultActionIndex = newIdx;
                 return mode;
             }
 
@@ -891,15 +877,8 @@ namespace Game.Core
 
             if (shared)
             {
-                int oldCount = slotCount;
-                ActionSlot[] newActions = new ActionSlot[oldCount + 1];
-                for (int i = 0; i < oldCount; i++)
-                {
-                    newActions[i] = mode.actions[i];
-                }
-                newActions[oldCount] = newSlot;
-                mode.actions = newActions;
-                mode.defaultActionIndex = oldCount;
+                int newIdx = AppendSlot(ref mode, newSlot);
+                mode.defaultActionIndex = newIdx;
                 return mode;
             }
 
@@ -907,19 +886,32 @@ namespace Game.Core
             return mode;
         }
 
-        private static AIMode AppendSlotAndRepoint(AIMode mode, int ruleIdx, ActionSlot newSlot)
+        /// <summary>
+        /// 新しい ActionSlot を actions[] の末尾に追加し、追加後の index を返すヘルパー。
+        /// AIMode は struct なので ref 渡し。呼び出し側は返却 index を使って AIRule や
+        /// defaultActionIndex を更新する。
+        /// </summary>
+        private static int AppendSlot(ref AIMode mode, ActionSlot slot)
         {
             int oldCount = mode.actions != null ? mode.actions.Length : 0;
             ActionSlot[] newActions = new ActionSlot[oldCount + 1];
-            for (int i = 0; i < oldCount; i++)
+            if (mode.actions != null)
             {
-                newActions[i] = mode.actions[i];
+                for (int i = 0; i < oldCount; i++)
+                {
+                    newActions[i] = mode.actions[i];
+                }
             }
-            newActions[oldCount] = newSlot;
+            newActions[oldCount] = slot;
             mode.actions = newActions;
+            return oldCount;
+        }
 
+        private static AIMode AppendSlotAndRepoint(AIMode mode, int ruleIdx, ActionSlot newSlot)
+        {
+            int newIdx = AppendSlot(ref mode, newSlot);
             AIRule r = mode.actionRules[ruleIdx];
-            r.actionIndex = oldCount;
+            r.actionIndex = newIdx;
             mode.actionRules[ruleIdx] = r;
             return mode;
         }
