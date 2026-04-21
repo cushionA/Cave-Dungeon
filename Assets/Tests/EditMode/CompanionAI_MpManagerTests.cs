@@ -229,5 +229,27 @@ namespace Game.Tests.EditMode
 
             Assert.IsFalse(mgr.IsRecovering);
         }
+
+        [Test]
+        public void MpManager_Tick_ReserveToCurrentTransfer_PreservesTotalMp()
+        {
+            // 細かい dt で大量 Tick しても reserve→current 転送で総和が消失しないこと。
+            // 旧仕様は float(_currentMp) += x と int(_reserveMp) -= CeilToInt(x) で
+            // 毎Tickで差分 (CeilToInt - x) が一方的に消えていた。新仕様の accumulator で対称化。
+            CompanionMpManager mgr = new CompanionMpManager(100f, 50, DefaultSettings());
+            mgr.ConsumeMp(50f); // currentMP=50, reserveMP=50, total=100
+
+            float initialTotal = mgr.CurrentMp + mgr.ReserveMp;
+            Assert.AreEqual(100f, initialTotal, 0.01f);
+
+            for (int i = 0; i < 500; i++)
+            {
+                mgr.Tick(0.01f);
+            }
+
+            float finalTotal = mgr.CurrentMp + mgr.ReserveMp;
+            Assert.That(finalTotal, Is.GreaterThanOrEqualTo(initialTotal - 0.5f),
+                "細かいTickで reserve→current 転送時に MP 総和が消失してはならない");
+        }
     }
 }

@@ -204,11 +204,12 @@ namespace Game.Runtime
             // Step 3.5: 通常ガード/ブレイクのスタミナ削りを適用
             ApplyGuardStaminaDrain(data, guardResult, combat, ref vitals);
 
-            // Step 4: ダメージ計算
+            // Step 4: ダメージ計算（weakElement ボーナス + クリティカル + 状況ボーナス）
             int reducedDamage = CalculateDamage(
                 data, guardResult, combat, currentActState,
                 isAttackFromFront, effectState,
-                out SituationalBonus situationalBonus);
+                out SituationalBonus situationalBonus,
+                out bool isCritical);
 
             // Step 5: アーマー削り + HP適用
             (int actualDamage, bool isKill, float armorBefore) = ApplyDamageToVitals(
@@ -232,10 +233,11 @@ namespace Game.Runtime
             // Step 7: 結果構築 + イベント + ノックバック
             DamageResult result = BuildResult(
                 actualDamage, guardResult, hitReaction, situationalBonus,
-                isKill, armorBefore - vitals.currentArmor, appliedEffect);
+                isKill, armorBefore - vitals.currentArmor, appliedEffect,
+                isCritical);
 
             FireEvents(result, hash, data);
-            ApplyKnockback(data, hitReaction, hasKnockbackForce, hash);
+            ApplyKnockback(data, hitReaction, hasKnockbackForce, combat.knockbackResistance);
 
             return result;
         }
@@ -302,9 +304,11 @@ namespace Game.Runtime
             DamageData data, GuardResult guardResult, CombatStats combat,
             ActState currentActState, bool isAttackFromFront,
             ActionEffectProcessor.EffectState effectState,
-            out SituationalBonus situationalBonus)
+            out SituationalBonus situationalBonus,
+            out bool isCritical)
         {
             situationalBonus = SituationalBonus.None;
+            isCritical = false;
 
             // JustGuardは軽減率100%相当（ダメージ完全0）
             if (guardResult == GuardResult.JustGuard)
@@ -314,10 +318,10 @@ namespace Game.Runtime
 
             bool guardSucceeded = GuardJudgmentLogic.IsGuardSucceeded(guardResult);
 
-            // 属性別カット率はガード成功時のみ適用
+            // 属性別カット率はガード成功時のみ適用。被弾側の弱点属性で該当チャネルが1.5倍化する。
             int rawDamage = DamageCalculator.CalculateTotalDamageWithElementalCut(
                 data.damage, data.motionValue, combat.defense,
-                Element.None,
+                combat.weakElement,
                 combat.guardStats,
                 applyCuts: guardSucceeded);
 
@@ -335,6 +339,16 @@ namespace Game.Runtime
                 {
                     rawDamage = Mathf.FloorToInt(rawDamage * bonusMult);
                     situationalBonus = bonus;
+                }
+            }
+
+            // クリティカル判定（ガード成功時は発動しない = 安定したガード挙動維持）
+            if (!guardSucceeded && combat.criticalRate > 0f)
+            {
+                isCritical = DamageCalculator.IsCritical(combat.criticalRate, UnityEngine.Random.value);
+                if (isCritical)
+                {
+                    rawDamage = DamageCalculator.ApplyCritical(rawDamage, combat.criticalMultiplier, true);
                 }
             }
 
@@ -392,7 +406,8 @@ namespace Game.Runtime
         private static DamageResult BuildResult(
             int actualDamage, GuardResult guardResult, HitReaction hitReaction,
             SituationalBonus situationalBonus, bool isKill,
-            float armorDamage, StatusEffectId appliedEffect)
+            float armorDamage, StatusEffectId appliedEffect,
+            bool isCritical)
         {
             return new DamageResult
             {
@@ -400,7 +415,7 @@ namespace Game.Runtime
                 guardResult = guardResult,
                 hitReaction = hitReaction,
                 situationalBonus = situationalBonus,
-                isCritical = false,
+                isCritical = isCritical,
                 isKill = isKill,
                 armorDamage = armorDamage,
                 appliedEffect = appliedEffect
@@ -455,12 +470,10 @@ namespace Game.Runtime
             }
         }
 
-        private void ApplyKnockback(DamageData data, HitReaction hitReaction, bool hasKnockbackForce, int hash)
+        private void ApplyKnockback(DamageData data, HitReaction hitReaction, bool hasKnockbackForce, float knockbackResistance)
         {
             if (_rb != null && hasKnockbackForce && hitReaction == HitReaction.Knockback)
             {
-                // TODO: CombatStatsにknockbackResistanceフィールド追加後、ここで参照する
-                float knockbackResistance = 0f;
                 Vector2 knockback = HpArmorLogic.CalculateKnockback(
                     data.knockbackForce, knockbackResistance);
                 _rb.AddForce(knockback, ForceMode2D.Impulse);

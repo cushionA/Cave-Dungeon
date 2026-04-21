@@ -144,6 +144,11 @@ namespace Game.Core
         [TitleGroup("耐性")]
         public PhysicalResistance physicalResistance;
 
+        [TitleGroup("耐性")]
+        [Tooltip("ノックバック耐性（0=無耐性、1=完全無効化）")]
+        [Range(0f, 1f)]
+        public float knockbackResistance;
+
         // ─────────────────────────────────────────────
         //  スタミナ詳細
         // ─────────────────────────────────────────────

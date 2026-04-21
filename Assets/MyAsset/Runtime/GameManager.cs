@@ -18,6 +18,12 @@ namespace Game.Runtime
         /// </summary>
         private const int k_InitialContainerCapacity = 256;
 
+        /// <summary>SoA 容量使用率警告閾値（開発ビルドのみ）。</summary>
+        private const float k_CapacityWarningThreshold = 0.8f;
+
+        /// <summary>警告発報済みフラグ（同一閾値で連続ログを出さない）。</summary>
+        private bool _capacityWarningFired;
+
         private GameManagerCore _core;
 
         private ProjectileManager _projectileManager;
@@ -120,7 +126,9 @@ namespace Game.Runtime
                 attack = info.baseAttack,
                 defense = info.baseDefense,
                 criticalRate = GameConstants.k_DefaultCriticalRate,
-                criticalMultiplier = GameConstants.k_DefaultCriticalMultiplier
+                criticalMultiplier = GameConstants.k_DefaultCriticalMultiplier,
+                weakElement = info.weakPoint,
+                knockbackResistance = info.knockbackResistance
             };
 
             CharacterFlags flags = CharacterFlags.Pack(
@@ -139,7 +147,9 @@ namespace Game.Runtime
                 sprintStaminaPerSecond = info.sprintStaminaPerSecond
             };
 
-            return _core.RegisterCharacter(hash, vitals, combat, flags, move, chara);
+            int result = _core.RegisterCharacter(hash, vitals, combat, flags, move, chara);
+            WarnIfCapacityUsageHigh();
+            return result;
         }
 
         public void UnregisterCharacter(int hash)
@@ -147,6 +157,36 @@ namespace Game.Runtime
             if (_core != null && _core.IsInitialized)
             {
                 _core.UnregisterCharacter(hash);
+                // 下回ったら再警告できるようフラグ復帰
+                if (_capacityWarningFired && _core.Data != null
+                    && (float)_core.Data.Count / k_InitialContainerCapacity < k_CapacityWarningThreshold)
+                {
+                    _capacityWarningFired = false;
+                }
+            }
+        }
+
+        /// <summary>
+        /// SoA コンテナの使用率が閾値を超えていたら開発ビルドで警告を出す。
+        /// 自動生成コンテナは固定容量で、超過すると InvalidOperationException を投げるため、
+        /// 超過前にチューニング機会を与える目的。
+        /// </summary>
+        [System.Diagnostics.Conditional("UNITY_EDITOR")]
+        [System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
+        private void WarnIfCapacityUsageHigh()
+        {
+            if (_capacityWarningFired || _core == null || _core.Data == null)
+            {
+                return;
+            }
+
+            int count = _core.Data.Count;
+            float ratio = (float)count / k_InitialContainerCapacity;
+            if (ratio >= k_CapacityWarningThreshold)
+            {
+                _capacityWarningFired = true;
+                Debug.LogWarning(
+                    $"[SoACharaDataDic] 容量逼迫: {count}/{k_InitialContainerCapacity} ({ratio * 100f:F0}%). 超過すると InvalidOperationException が発生します。k_InitialContainerCapacity の引き上げを検討してください。");
             }
         }
 

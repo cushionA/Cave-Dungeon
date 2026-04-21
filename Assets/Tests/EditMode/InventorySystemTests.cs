@@ -74,18 +74,48 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
-        public void InventoryManager_Add_RespectsMaxStack()
+        public void InventoryManager_Add_OverflowsToNewStack()
         {
+            // maxStack=5, count=8 → 1枠目満杯(5) + 2枠目(3) で全8個格納
             int added = _inventory.Add(1, ItemCategory.Consumable, 8, 5);
 
+            Assert.AreEqual(8, added);
+            Assert.AreEqual(8, _inventory.GetCount(1));
+            Assert.AreEqual(2, _inventory.ItemCount,
+                "maxStack超過分は新スロットへ");
+        }
+
+        [Test]
+        public void InventoryManager_Add_FillsExistingStacksBeforeCreatingNew()
+        {
+            // 1枠目を4まで追加（余裕1）、2枠目を3まで追加（余裕2）を事前に作る
+            _inventory.Add(1, ItemCategory.Consumable, 4, 5);
+            _inventory.Add(1, ItemCategory.Consumable, 3, 5);
+            // この時点で 1 entry (count=5) + 1 entry (count=2) を想定
+
+            // 5個追加: 1枠目満杯(+1)、2枠目満杯(+3)、残り1は新枠
+            int added = _inventory.Add(1, ItemCategory.Consumable, 5, 5);
+
             Assert.AreEqual(5, added);
-            Assert.AreEqual(5, _inventory.GetCount(1));
+            Assert.AreEqual(12, _inventory.GetCount(1));
+        }
 
-            // Adding more to an already-full stack
-            int addedMore = _inventory.Add(1, ItemCategory.Consumable, 3, 5);
+        [Test]
+        public void InventoryManager_Add_WhenMaxSlotReached_ReturnsPartialAdded()
+        {
+            // k_MaxSlotCount 個の別アイテムを事前に満載
+            for (int i = 0; i < InventoryManager.k_MaxSlotCount; i++)
+            {
+                _inventory.Add(100 + i, ItemCategory.Consumable, 1, 1);
+            }
 
-            Assert.AreEqual(0, addedMore);
-            Assert.AreEqual(5, _inventory.GetCount(1));
+            Assert.AreEqual(InventoryManager.k_MaxSlotCount, _inventory.ItemCount);
+
+            // 新アイテム追加 → k_MaxSlotCount に達しているため追加不可
+            int added = _inventory.Add(9999, ItemCategory.Consumable, 10, 5);
+
+            Assert.AreEqual(0, added,
+                "スロット上限到達で新規アイテム追加不可");
         }
     }
 }

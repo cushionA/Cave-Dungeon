@@ -25,6 +25,9 @@ namespace Game.Core
         public const int k_HpPerVit = 10;
         public const int k_MpPerMnd = 5;
 
+        /// <summary>最大レベルキャップ。到達後の余剰 exp は破棄する。</summary>
+        public const int k_MaxLevel = 99;
+
         private int _currentExp;
         private int _level;
         private int _availablePoints;
@@ -71,12 +74,18 @@ namespace Game.Core
             _currentExp += amount;
             int levelsGained = 0;
 
-            while (_currentExp >= GetExpForNextLevel())
+            while (_level < k_MaxLevel && _currentExp >= GetExpForNextLevel())
             {
                 _currentExp -= GetExpForNextLevel();
                 _level++;
                 _availablePoints += k_PointsPerLevel;
                 levelsGained++;
+            }
+
+            // 最大レベル到達時は余剰 exp を破棄（無限蓄積防止）
+            if (_level >= k_MaxLevel)
+            {
+                _currentExp = 0;
             }
 
             return levelsGained;

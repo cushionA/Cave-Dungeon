@@ -26,7 +26,7 @@ namespace Game.Core
     }
 
     /// <summary>
-    /// 7属性別の攻撃力・防御力 + クリティカル + ガード。
+    /// 7属性別の攻撃力・防御力 + クリティカル + ガード + 弱点 + ノックバック耐性。
     /// </summary>
     [Serializable]
     public struct CombatStats
@@ -36,6 +36,18 @@ namespace Game.Core
         public float criticalRate;
         public float criticalMultiplier;
         public GuardStats guardStats;
+
+        /// <summary>
+        /// 弱点属性。該当チャネルで被弾時、DamageCalculator.GetWeaknessMultiplier により
+        /// 1.5倍ボーナス適用。Element.None で弱点なし。[Flags] で複合指定可。
+        /// </summary>
+        public Element weakElement;
+
+        /// <summary>
+        /// ノックバック耐性（0.0-1.0）。HpArmorLogic.CalculateKnockback で
+        /// knockbackForce に (1 - resistance) を乗じる。1.0 で完全無効化。
+        /// </summary>
+        public float knockbackResistance;
     }
 
     /// <summary>
