@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using Game.Core;
 
@@ -35,6 +36,10 @@ namespace Game.Runtime
 
         // 状況ボーナス設定（外部から注入可能）
         private SituationalBonusConfig _bonusConfig = SituationalBonusConfig.Default;
+
+        // クリティカル判定用の乱数プロバイダ。デフォルトは UnityEngine.Random.value。
+        // テストで SetRandomValueProviderForTest により決定論的に差し替え可能。
+        private Func<float> _randomValueProvider = () => UnityEngine.Random.value;
 
         public int ObjectHash => _character != null ? _character.ObjectHash : 0;
         public bool IsAlive => _character != null && _character.IsAlive;
@@ -114,6 +119,19 @@ namespace Game.Runtime
         public void SetStatusEffectManager(StatusEffectManager manager)
         {
             _statusEffectManager = manager;
+        }
+
+        /// <summary>
+        /// クリティカル判定の乱数プロバイダを差し替える。テストで決定論的な
+        /// 値を返したいケース向け。プロダクションでは呼ぶ必要はなく、
+        /// デフォルトで <see cref="UnityEngine.Random.value"/> を使用する。
+        /// </summary>
+        public void SetRandomValueProviderForTest(Func<float> provider)
+        {
+            if (provider != null)
+            {
+                _randomValueProvider = provider;
+            }
         }
 
         private void Update()
@@ -350,7 +368,7 @@ namespace Game.Runtime
             // 挟まるため実数上は 1〜2 ポイントの差が出る。現状は攻撃側に有利な配置。
             if (!guardSucceeded && combat.criticalRate > 0f)
             {
-                isCritical = DamageCalculator.IsCritical(combat.criticalRate, UnityEngine.Random.value);
+                isCritical = DamageCalculator.IsCritical(combat.criticalRate, _randomValueProvider());
                 if (isCritical)
                 {
                     rawDamage = DamageCalculator.ApplyCritical(rawDamage, combat.criticalMultiplier, true);
