@@ -52,19 +52,22 @@ namespace Game.Tests.PlayMode
         public IEnumerator BaseCharacter_GroundCheck_DetectsGround()
         {
             CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo();
-            // 地面(y=-1, height=2 → top=0)に近い高さから落とす
-            GameObject charObj = TestSceneHelper.CreateBaseCharacterObject(info, new Vector3(0, 2, 0));
+            // 地面(y=-1, height=2 → top=0) のすぐ上から落とす
+            GameObject charObj = TestSceneHelper.CreateBaseCharacterObject(info, new Vector3(0, 0.6f, 0));
 
-            // 物理演算で落下させる
+            // 物理演算で落下させる。Physics2D 設定や FixedDeltaTime の環境差に耐えるため、
+            // 固定回数 FixedUpdate を回して確実に接地完了させる。
             yield return null; // Start
-            yield return new WaitForFixedUpdate();
-            yield return new WaitForSeconds(1.5f); // 十分な落下時間を確保
-            yield return new WaitForFixedUpdate();
+            for (int i = 0; i < 120; i++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
 
             BaseCharacter bc = charObj.GetComponent<BaseCharacter>();
             bc.UpdateGroundCheck();
 
-            Assert.IsTrue(bc.IsGrounded, "Character should be grounded after falling");
+            Assert.IsTrue(bc.IsGrounded,
+                $"Character should be grounded after falling. position.y={charObj.transform.position.y}");
 
             Object.Destroy(charObj);
         }
