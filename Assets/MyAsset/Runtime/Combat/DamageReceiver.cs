@@ -342,7 +342,12 @@ namespace Game.Runtime
                 }
             }
 
-            // クリティカル判定（ガード成功時は発動しない = 安定したガード挙動維持）
+            // クリティカル判定（ガード成功時は発動しない = 安定したガード挙動維持）。
+            // 適用順は 状況ボーナス → クリティカル → ActionEffect.damageReduction。
+            // damageReduction (ガードポイント / 無敵系行動) は「自発的軽減」であり
+            // クリティカル倍率もまとめて軽減されるべき、という設計。
+            // 掛け算の結合則で連続乗算の結果は順序によらず等しいが、整数化 (Mathf.FloorToInt) が
+            // 挟まるため実数上は 1〜2 ポイントの差が出る。現状は攻撃側に有利な配置。
             if (!guardSucceeded && combat.criticalRate > 0f)
             {
                 isCritical = DamageCalculator.IsCritical(combat.criticalRate, UnityEngine.Random.value);
