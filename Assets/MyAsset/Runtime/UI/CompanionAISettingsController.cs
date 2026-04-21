@@ -99,6 +99,10 @@ namespace Game.Runtime
         private const int k_ToastVisibleDurationMs = 2200;
         // 保存ボタンのフラッシュ持続時間（ミリ秒）。transition-duration(--dur-base=0.15s)×2〜3 くらいが自然。
         private const int k_SaveFlashDurationMs = 380;
+        // ダイアログ表示後に初期フォーカスを遷移させるまでの遅延（ミリ秒）。
+        // VisualElement が表示完了→レイアウト確定→フォーカス可能になるまでの猶予。
+        // 短すぎると Focus() が no-op になる、長すぎるとユーザーが先に入力してしまう。
+        private const long k_DialogFocusDelayMs = 50;
 
         /// <summary>
         /// トースト通知の種別。色アクセント（success=緑/error=赤/info=青）の切替に使う。
@@ -1267,7 +1271,7 @@ namespace Game.Runtime
             ShowDialog(dialog);
 
             // デフォルトフォーカスは「キャンセル」
-            cancel.schedule.Execute(() => cancel.Focus()).ExecuteLater(50);
+            cancel.schedule.Execute(() => cancel.Focus()).ExecuteLater(k_DialogFocusDelayMs);
         }
 
         // --- Dialog 6: 削除確認 ---
@@ -1285,7 +1289,7 @@ namespace Game.Runtime
             dialog.Add(buttons);
             ShowDialog(dialog);
 
-            cancel.schedule.Execute(() => cancel.Focus()).ExecuteLater(50);
+            cancel.schedule.Execute(() => cancel.Focus()).ExecuteLater(k_DialogFocusDelayMs);
         }
 
         // --- 汎用: 命名入力ダイアログ ---
@@ -1309,7 +1313,7 @@ namespace Game.Runtime
             dialog.Add(buttons);
             ShowDialog(dialog);
 
-            input.schedule.Execute(() => input.Focus()).ExecuteLater(50);
+            input.schedule.Execute(() => input.Focus()).ExecuteLater(k_DialogFocusDelayMs);
         }
 
         // --- 汎用: モード選択ダイアログ ---
@@ -1352,7 +1356,7 @@ namespace Game.Runtime
             buttons.Add(ok);
             dialog.Add(buttons);
             ShowDialog(dialog);
-            ok.schedule.Execute(() => ok.Focus()).ExecuteLater(50);
+            ok.schedule.Execute(() => ok.Focus()).ExecuteLater(k_DialogFocusDelayMs);
         }
 
         // =========================================================================
