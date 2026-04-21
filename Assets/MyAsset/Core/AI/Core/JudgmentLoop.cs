@@ -45,6 +45,20 @@ namespace Game.Core
         }
 
         /// <summary>
+        /// ターゲットと行動の判定タイマーを強制的に満了状態にする。
+        /// 次の Tick で即座に target/action 再評価が走る。
+        /// 混乱解除 / 強制ターゲットクリア / イベント完了等、
+        /// AI が保持している target/action が即座に陳腐化するケースで呼ぶ。
+        /// 現在実行中のアクションもキャンセルする。
+        /// </summary>
+        public void ForceEvaluate()
+        {
+            _targetJudgeTimer = 0f;
+            _actionJudgeTimer = 0f;
+            _executor.CancelCurrent();
+        }
+
+        /// <summary>
         /// Ticks timers and triggers target/action evaluation when intervals expire.
         /// </summary>
         public void Tick(float deltaTime, List<int> candidates, float currentTime)

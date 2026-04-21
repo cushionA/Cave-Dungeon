@@ -347,6 +347,12 @@ namespace Game.Core
         Stealth,
         Orbit,
         MpRecover,
+
+        /// <summary>
+        /// 何もしないデフォルト行動。AIMode.defaultActionIndex が指すべき値で、
+        /// 「全条件に該当しなかった」時に停止して次判定を待つ。SustainedActionHandler 側で no-op。
+        /// </summary>
+        Idle,
     }
 
     public enum BroadcastAction : byte

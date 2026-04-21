@@ -46,6 +46,7 @@ namespace Game.Core
                 case SustainedAction.Stealth:       return "潜伏";
                 case SustainedAction.Orbit:         return "周回";
                 case SustainedAction.MpRecover:     return "MP回復専念";
+                case SustainedAction.Idle:          return "何もしない";
                 default:                            return "不明(Sustained)";
             }
         }

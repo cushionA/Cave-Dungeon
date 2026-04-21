@@ -33,10 +33,16 @@ namespace Game.Core
         private readonly Subject<(int deadHash, int killerHash)> _onCharacterDeath = new();
         private readonly Subject<(int defenderHash, int attackerHash, GuardResult result)> _onGuardEvent = new();
         private readonly Subject<(int targetHash, StatusEffectId effectId)> _onStatusEffectApplied = new();
+        private readonly Subject<int> _onConfusionCleared = new();
         public Observable<(DamageResult result, int attackerHash, int defenderHash)> OnDamageDealt => _onDamageDealt;
         public Observable<(int deadHash, int killerHash)> OnCharacterDeath => _onCharacterDeath;
         public Observable<(int defenderHash, int attackerHash, GuardResult result)> OnGuardEvent => _onGuardEvent;
         public Observable<(int targetHash, StatusEffectId effectId)> OnStatusEffectApplied => _onStatusEffectApplied;
+        /// <summary>
+        /// 混乱状態が解除された時。AI が保持しているターゲットが無効化されるため、
+        /// 受け手は JudgmentLoop.ForceEvaluate() でターゲット再選択を促すべき。
+        /// </summary>
+        public Observable<int> OnConfusionCleared => _onConfusionCleared;
 
         // ===== 成長・経済 =====
         private readonly Subject<(int characterHash, int amount)> _onExpGained = new();
@@ -114,6 +120,8 @@ namespace Game.Core
             => _onGuardEvent.OnNext((defenderHash, attackerHash, result));
         public void FireStatusEffectApplied(int targetHash, StatusEffectId effectId)
             => _onStatusEffectApplied.OnNext((targetHash, effectId));
+        public void FireConfusionCleared(int targetHash)
+            => _onConfusionCleared.OnNext(targetHash);
 
         public void FireExpGained(int characterHash, int amount) => _onExpGained.OnNext((characterHash, amount));
         public void FireLevelUp(int characterHash, int newLevel) => _onLevelUp.OnNext((characterHash, newLevel));
@@ -151,6 +159,7 @@ namespace Game.Core
             _onCharacterDeath.Dispose();
             _onGuardEvent.Dispose();
             _onStatusEffectApplied.Dispose();
+            _onConfusionCleared.Dispose();
             _onExpGained.Dispose();
             _onLevelUp.Dispose();
             _onCurrencyChanged.Dispose();

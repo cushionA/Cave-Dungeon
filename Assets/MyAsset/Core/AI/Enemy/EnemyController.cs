@@ -33,6 +33,7 @@ namespace Game.Core
             _executor.Register(new CastActionHandler());
             _executor.Register(new InstantActionHandler());
             _executor.Register(new SustainedActionHandler());
+            _executor.Register(new BroadcastActionHandler());
 
             _judgmentLoop = new JudgmentLoop(_executor, data, enemyHash);
             _modeController = new ModeController(_judgmentLoop);
