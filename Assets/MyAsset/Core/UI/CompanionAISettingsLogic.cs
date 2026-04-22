@@ -677,10 +677,13 @@ namespace Game.Core
 
             if (slotCount == 0)
             {
-                // actions 配列が空なら defaultActionIndex と actionRules は意味を持たない
+                // actions 配列が空なら default も意味を持たないので、
+                // 「何もしない」Idle スロットを 1 個だけ差し込み default を 0 に固定する。
+                // 保存後のモードが必ず 1 スロット以上持つことで、ランタイムの EvaluateAction が
+                // defaultActionIndex を辿る時に棒立ちせず no-op Sustained を発行できる。
+                mode.actions = new ActionSlot[] { CreateDefaultIdleSlot() };
                 mode.defaultActionIndex = 0;
                 mode.actionRules = mode.actionRules ?? new AIRule[0];
-                mode.actions = mode.actions ?? new ActionSlot[0];
                 return mode;
             }
 
@@ -734,6 +737,13 @@ namespace Game.Core
                 }
             }
 
+            // 全スロットが未使用で compact が空になった場合（default が範囲外 + actionRules も参照ゼロ）、
+            // Idle スロットを差し込み default を指し直す。
+            if (compact.Count == 0)
+            {
+                compact.Add(CreateDefaultIdleSlot());
+            }
+
             // actionRules の actionIndex を詰め後の index にリマップ
             if (mode.actionRules != null)
             {
@@ -755,11 +765,54 @@ namespace Game.Core
             }
             else
             {
+                // default が元々範囲外だった場合は、Idle に向ける
+                // （compact の先頭は使用済み既存スロット or 上で差し込んだ Idle のいずれか。
+                //  どちらであっても 0 は「安全に実行できるスロット」を指すことになる）
                 mode.defaultActionIndex = 0;
             }
 
             mode.actions = compact.ToArray();
             return mode;
+        }
+
+        /// <summary>
+        /// 「何もしない」デフォルト行動（Idle）を表す ActionSlot を生成する。
+        /// <see cref="GcOrphanActionSlots"/> や新規 AIMode 生成時に default 行動として差し込む。
+        ///
+        /// execType = Sustained + paramId = (int)SustainedAction.Idle。
+        /// SustainedActionHandler は paramId を保持するだけで副作用はなく、
+        /// paramValue = 0 は <see cref="SustainedActionMetadata.IsUnlimited"/> 扱いで
+        /// 「モード切替まで継続」となるため棒立ち防止の no-op として機能する。
+        /// </summary>
+        public static ActionSlot CreateDefaultIdleSlot()
+        {
+            return new ActionSlot
+            {
+                execType = ActionExecType.Sustained,
+                paramId = (int)SustainedAction.Idle,
+                paramValue = 0f,
+                displayName = "何もしない",
+            };
+        }
+
+        /// <summary>
+        /// UI の「+ モード追加」等で新規作成する AIMode の初期値を返す。
+        /// defaultActionIndex は常に Idle スロット（index 0）を指すため、
+        /// ルールが 1 件も追加されていない状態でもランタイムは no-op で安全に回る。
+        /// </summary>
+        public static AIMode CreateDefaultMode(string modeName = "")
+        {
+            return new AIMode
+            {
+                modeName = modeName ?? "",
+                modeId = "",
+                targetRules = new AIRule[0],
+                actionRules = new AIRule[0],
+                targetSelects = new AITargetSelect[0],
+                actions = new ActionSlot[] { CreateDefaultIdleSlot() },
+                defaultActionIndex = 0,
+                judgeInterval = new UnityEngine.Vector2(1f, 1f),
+            };
         }
 
         /// <summary>
