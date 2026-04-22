@@ -241,6 +241,27 @@ namespace Game.Runtime
         {
             fallbackSceneName = sceneName;
         }
+
+        /// <summary>
+        /// テスト専用: シーン IO コールバックを差し替えて Orchestrator を再構築する。
+        /// SceneManager を叩かないダミーコールバックでイベントフローのみ検証する目的。
+        /// 既存 Orchestrator の OnAreaUnloadCompleted 購読を外し、新 Orchestrator に再購読する。
+        /// </summary>
+        public void SetSceneIOCallbacksForTest(
+            System.Action<string> loadCallback, System.Action<string> unloadCallback)
+        {
+            if (_orchestrator != null)
+            {
+                _orchestrator.OnAreaUnloadCompleted -= HandleAreaUnloadCompleted;
+            }
+
+            _orchestrator = new LevelStreamingOrchestrator(
+                persistentSceneName,
+                GameManager.Events,
+                loadCallback,
+                unloadCallback);
+            _orchestrator.OnAreaUnloadCompleted += HandleAreaUnloadCompleted;
+        }
 #endif
     }
 }

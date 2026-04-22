@@ -60,11 +60,10 @@ namespace Game.Tests.PlayMode
             };
 
             // JustGuard 窓を外した状態（連続JG窓も無し）になるよう、十分な時間ガードを続ける。
+            // バッチモードでは `yield return null` 1 フレームが極短く 30 回でも 0.1s に届かないため、
+            // WaitForSeconds で実時間ベースに k_JustGuardWindow=0.1f を確実に超えさせる。
             receiver.SetGuarding(true);
-            for (int i = 0; i < 30; i++)
-            {
-                yield return null;  // k_JustGuardWindow=0.1f を越えた時間だけ経過させる
-            }
+            yield return new WaitForSeconds(0.2f);
 
             DamageData data = new DamageData
             {

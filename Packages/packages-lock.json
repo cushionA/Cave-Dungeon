@@ -37,27 +37,12 @@
       "dependencies": {},
       "hash": "a9e27c03d411d2fca01cc7410c24c97cd77cb539"
     },
-    "com.febucci.text-animator-unity": {
-      "version": "file:com.febucci.text-animator-unity",
-      "depth": 0,
-      "source": "embedded",
-      "dependencies": {}
-    },
     "com.github-glitchenzo.nugetforunity": {
       "version": "https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity",
       "depth": 0,
       "source": "git",
       "dependencies": {},
       "hash": "c2af83c9d4f8cdaada9d4a0e94de2f195d8e1d01"
-    },
-    "com.singularitygroup.hotreload": {
-      "version": "file:com.singularitygroup.hotreload",
-      "depth": 0,
-      "source": "embedded",
-      "dependencies": {
-        "com.unity.ugui": "1.0.0",
-        "com.unity.modules.unitywebrequest": "1.0.0"
-      }
     },
     "com.unity.2d.animation": {
       "version": "13.0.4",
