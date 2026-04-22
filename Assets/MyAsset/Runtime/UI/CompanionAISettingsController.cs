@@ -754,6 +754,14 @@ namespace Game.Runtime
             return $"[{sourceName}] → [{targetName}] ({condText})";
         }
 
+        /// <summary>
+        /// ショートカット割り当てのドロップダウンを再描画する（読み取り専用）。
+        /// 範囲外 binding のクリーンアップは Logic 側（Switch/Add/Remove 経由の
+        /// <see cref="CompanionAISettingsLogic.ClearInvalidShortcutBindings"/>) が事前に済ませている前提。
+        /// 万一データが範囲外を指していても「未割当として表示する」だけで bindings 配列は書き換えない。
+        /// 描画関数が副作用でデータを変えると、レイアウトパス中の不意な再評価・Dirty 管理の
+        /// 乱れを招くため、データ変更は必ずイベントハンドラ経由に限定する。
+        /// </summary>
         private void RefreshShortcutDropdowns()
         {
             List<string> choices = new List<string>();
@@ -776,22 +784,9 @@ namespace Game.Runtime
                 }
                 dropdown.choices = choices;
                 int boundIndex = bindings != null && i < bindings.Length ? bindings[i] : -1;
-                // モード数が変動して boundIndex が範囲外になった場合は未割当(-1)へフォールバック。
-                // Clamp で画面上だけズレた要素を選ぶと「意図しないモードが割り当たっている」状態になるため。
-                int displayIndex;
-                if (boundIndex < 0 || boundIndex >= modesCount)
-                {
-                    displayIndex = 0;
-                    if (bindings != null && i < bindings.Length && bindings[i] != -1)
-                    {
-                        // データも未割当に合わせて書き戻す（モード削除時の自動クリーンアップ）
-                        bindings[i] = -1;
-                    }
-                }
-                else
-                {
-                    displayIndex = boundIndex + 1;
-                }
+                // 範囲外は「未割当」として表示する（データ側の書き換えはしない）。
+                // Logic.ClearInvalidShortcutBindings が Switch/Add/Remove 時に既に処理済み。
+                int displayIndex = (boundIndex < 0 || boundIndex >= modesCount) ? 0 : boundIndex + 1;
                 dropdown.SetValueWithoutNotify(choices[displayIndex]);
             }
         }
