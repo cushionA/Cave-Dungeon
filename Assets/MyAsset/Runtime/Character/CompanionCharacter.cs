@@ -86,7 +86,7 @@ namespace Game.Runtime
 
             _aiController = new CompanionController(
                 ObjectHash, playerHash, GameManager.Data,
-                maxMp, initialReserveMp, _mpSettings);
+                maxMp, initialReserveMp, _mpSettings, GameManager.Events);
 
             // AIモード設定
             if (_aiInfo != null)
@@ -324,6 +324,9 @@ namespace Game.Runtime
             {
                 _aiController.StanceManager.Dispose();
             }
+
+            // GameEvents 購読解除（MpManager/StanceManager とは別リソース）
+            _aiController?.Dispose();
 
             CharacterRegistry.Unregister(ObjectHash);
             base.OnDestroy();
