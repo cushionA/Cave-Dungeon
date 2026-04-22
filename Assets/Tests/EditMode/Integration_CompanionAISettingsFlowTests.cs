@@ -1037,5 +1037,287 @@ namespace Game.Tests.EditMode
                 Object.DestroyImmediate(go);
             }
         }
+
+        // =========================================================================
+        // ClearInvalidShortcutBindings (E1) — Switch/Add/Remove 時のクリーンアップ検証
+        // =========================================================================
+
+        /// <summary>
+        /// modeCount が現在の binding より大きければ書き換えなし (変更なしなので false)。
+        /// </summary>
+        [Test]
+        public void ClearInvalidShortcutBindings_AllInRange_ReturnsFalseAndKeepsValues()
+        {
+            CompanionAIConfig config = new CompanionAIConfig
+            {
+                shortcutModeBindings = new int[] { 0, 1, -1, 2 },
+            };
+
+            bool changed = CompanionAISettingsLogic.ClearInvalidShortcutBindings(ref config, modeCount: 4);
+
+            Assert.IsFalse(changed, "全て範囲内なので変更なし");
+            Assert.AreEqual(0, config.shortcutModeBindings[0]);
+            Assert.AreEqual(1, config.shortcutModeBindings[1]);
+            Assert.AreEqual(-1, config.shortcutModeBindings[2]);
+            Assert.AreEqual(2, config.shortcutModeBindings[3]);
+        }
+
+        /// <summary>
+        /// modeCount より大きい index を指している binding は -1 に書き換えられる。
+        /// 戻り値は「変更あり = true」。
+        /// </summary>
+        [Test]
+        public void ClearInvalidShortcutBindings_OutOfRange_ReturnsTrueAndClampsToMinusOne()
+        {
+            CompanionAIConfig config = new CompanionAIConfig
+            {
+                shortcutModeBindings = new int[] { 0, 3, 1, 2 },
+            };
+
+            bool changed = CompanionAISettingsLogic.ClearInvalidShortcutBindings(ref config, modeCount: 2);
+
+            Assert.IsTrue(changed, "index=3, index=2 が範囲外なので書き換え発生");
+            Assert.AreEqual(0, config.shortcutModeBindings[0], "範囲内はそのまま");
+            Assert.AreEqual(-1, config.shortcutModeBindings[1], "index=3 は -1 にクランプ");
+            Assert.AreEqual(1, config.shortcutModeBindings[2], "範囲内はそのまま");
+            Assert.AreEqual(-1, config.shortcutModeBindings[3], "index=2 は -1 にクランプ(modeCount=2 = 0,1のみ)");
+        }
+
+        /// <summary>
+        /// modeCount=0 (削除で全モード消失) の場合、正の index は全て -1 に戻る。
+        /// </summary>
+        [Test]
+        public void ClearInvalidShortcutBindings_ZeroModes_ClampsAllPositiveToMinusOne()
+        {
+            CompanionAIConfig config = new CompanionAIConfig
+            {
+                shortcutModeBindings = new int[] { 0, 1, -1, 2 },
+            };
+
+            bool changed = CompanionAISettingsLogic.ClearInvalidShortcutBindings(ref config, modeCount: 0);
+
+            Assert.IsTrue(changed);
+            for (int i = 0; i < 4; i++)
+            {
+                Assert.AreEqual(-1, config.shortcutModeBindings[i],
+                    "modeCount=0 なら全ての正 index は -1 に書き換わる (i=" + i + ")");
+            }
+        }
+
+        /// <summary>
+        /// shortcutModeBindings が null / 長さ不正なら既定配列を再生成し true を返す。
+        /// </summary>
+        [Test]
+        public void ClearInvalidShortcutBindings_NullOrWrongLength_RegeneratesDefaultsAndReturnsTrue()
+        {
+            CompanionAIConfig config = new CompanionAIConfig { shortcutModeBindings = null };
+
+            bool changed = CompanionAISettingsLogic.ClearInvalidShortcutBindings(ref config, modeCount: 2);
+
+            Assert.IsTrue(changed, "null は構造的修正扱い");
+            Assert.IsNotNull(config.shortcutModeBindings);
+            Assert.AreEqual(4, config.shortcutModeBindings.Length, "k_ShortcutSlotCount=4 で再生成");
+            for (int i = 0; i < 4; i++)
+            {
+                Assert.AreEqual(-1, config.shortcutModeBindings[i], "全て未割当で初期化");
+            }
+
+            // 長さ不正 (3) → 再生成
+            CompanionAIConfig shortConfig = new CompanionAIConfig { shortcutModeBindings = new int[] { 0, 1, 2 } };
+            bool changedShort = CompanionAISettingsLogic.ClearInvalidShortcutBindings(ref shortConfig, modeCount: 4);
+            Assert.IsTrue(changedShort);
+            Assert.AreEqual(4, shortConfig.shortcutModeBindings.Length);
+        }
+
+        /// <summary>
+        /// 負値 (-1 以外でも) は触らない。正規化は SetShortcutBinding 側の責務なので、
+        /// ここでは「範囲外」= 0 以上 && >= modeCount を満たすもののみクランプする仕様。
+        /// </summary>
+        [Test]
+        public void ClearInvalidShortcutBindings_NegativeValues_AreLeftAsIs()
+        {
+            CompanionAIConfig config = new CompanionAIConfig
+            {
+                shortcutModeBindings = new int[] { -1, -5, 0, -1 },
+            };
+
+            bool changed = CompanionAISettingsLogic.ClearInvalidShortcutBindings(ref config, modeCount: 3);
+
+            Assert.IsFalse(changed, "負値は触らない。0 は範囲内で OK");
+            Assert.AreEqual(-5, config.shortcutModeBindings[1], "-5 もそのまま");
+        }
+
+        /// <summary>
+        /// Logic.RemoveModeFromBuffer が内部で ClearInvalidShortcutBindings を呼び、
+        /// 削除したモードを指していた shortcut binding が -1 に自動で書き戻されることを
+        /// end-to-end で確認する（描画関数ではなく Logic で処理する新フロー）。
+        /// </summary>
+        [Test]
+        public void RemoveModeFromBuffer_AutomaticallyClearsShortcutBindingsToRemovedMode()
+        {
+            _logic.AddModeToBuffer(new AIMode { modeName = "Mode0" });
+            _logic.AddModeToBuffer(new AIMode { modeName = "Mode1" });
+            _logic.AddModeToBuffer(new AIMode { modeName = "Mode2" });
+            // slot 0 -> mode 2, slot 1 -> mode 1
+            Assert.IsTrue(_logic.SetShortcutBinding(0, 2));
+            Assert.IsTrue(_logic.SetShortcutBinding(1, 1));
+
+            // mode2 を削除する (modes.Length: 3 -> 2 になり index=2 は範囲外)
+            Assert.IsTrue(_logic.RemoveModeFromBuffer(2));
+
+            int[] bindings = _logic.EditingBuffer.shortcutModeBindings;
+            Assert.AreEqual(-1, bindings[0], "削除された mode2 を指していたスロットは -1");
+            Assert.AreEqual(1, bindings[1], "範囲内の binding はそのまま保持");
+        }
+
+        // =========================================================================
+        // RebuildTargetSelectList / RebuildTargetRuleList (E3)
+        // 編集ボタン経路で「新配列生成→setter」 パターンが採用されていること
+        // =========================================================================
+
+        /// <summary>
+        /// 編集ボタン経路が Remove と同じ「新配列生成 → setter」 パターンに揃っているかを
+        /// RebuildTargetSelectList の edit クロージャで模倣して検証する。
+        /// 古い実装: current[idx] = edited だったため setter は呼ばれなかった。
+        /// 新実装: 新しい配列を生成して setSelects を呼ぶ → setter 呼び出しを検出できる。
+        /// </summary>
+        [Test]
+        public void CompanionAISettings_UILike_TargetSelectEdit_GoesThroughSetter()
+        {
+            AITargetSelect[] selects = new AITargetSelect[]
+            {
+                new AITargetSelect { sortKey = TargetSortKey.Distance, isDescending = false },
+                new AITargetSelect { sortKey = TargetSortKey.HpRatio,  isDescending = true },
+                new AITargetSelect { sortKey = TargetSortKey.HpValue,  isDescending = false },
+            };
+
+            // UI と同じ getter/setter closure を再現
+            AITargetSelect[] storage = selects;
+            System.Func<AITargetSelect[]> getSelects = () => storage;
+            int setterCalls = 0;
+            AITargetSelect[] setterLastArg = null;
+            System.Action<AITargetSelect[]> setSelects = arr =>
+            {
+                setterCalls++;
+                setterLastArg = arr;
+                storage = arr;
+            };
+
+            // E3 新実装の編集コールバック: 新配列を作って setter を呼ぶ
+            int idx = 1;
+            AITargetSelect edited = new AITargetSelect
+            {
+                sortKey = TargetSortKey.DamageScore,
+                isDescending = true,
+            };
+
+            AITargetSelect[] current = getSelects();
+            Assert.IsNotNull(current);
+            Assert.GreaterOrEqual(current.Length, idx + 1);
+
+            AITargetSelect[] newArr = new AITargetSelect[current.Length];
+            for (int k = 0; k < current.Length; k++)
+            {
+                newArr[k] = k == idx ? edited : current[k];
+            }
+            setSelects(newArr);
+
+            Assert.AreEqual(1, setterCalls, "編集経路で setter が呼ばれる");
+            Assert.AreNotSame(selects, setterLastArg,
+                "setter に渡る配列は元の配列と別インスタンス (新配列生成パターン)");
+            Assert.AreEqual(3, storage.Length);
+            Assert.AreEqual(TargetSortKey.Distance, storage[0].sortKey, "idx 0 は変更なし");
+            Assert.AreEqual(TargetSortKey.DamageScore, storage[1].sortKey, "idx 1 は編集反映");
+            Assert.IsTrue(storage[1].isDescending);
+            Assert.AreEqual(TargetSortKey.HpValue, storage[2].sortKey, "idx 2 は変更なし");
+        }
+
+        /// <summary>
+        /// AIRule (ターゲット切替ルール) 編集ボタン経路も同じ setter 経路に揃っていること。
+        /// </summary>
+        [Test]
+        public void CompanionAISettings_UILike_TargetRuleEdit_GoesThroughSetter()
+        {
+            AIRule[] rules = new AIRule[]
+            {
+                new AIRule { actionIndex = 0, probability = 100, conditions = new AICondition[0] },
+                new AIRule { actionIndex = 1, probability = 80,  conditions = new AICondition[0] },
+            };
+
+            AIRule[] storage = rules;
+            System.Func<AIRule[]> getRules = () => storage;
+            int setterCalls = 0;
+            AIRule[] setterLastArg = null;
+            System.Action<AIRule[]> setRules = arr =>
+            {
+                setterCalls++;
+                setterLastArg = arr;
+                storage = arr;
+            };
+
+            int idx = 0;
+            AIRule edited = new AIRule { actionIndex = 0, probability = 50, conditions = new AICondition[0] };
+
+            AIRule[] current = getRules();
+            AIRule[] newArr = new AIRule[current.Length];
+            for (int k = 0; k < current.Length; k++)
+            {
+                newArr[k] = k == idx ? edited : current[k];
+            }
+            setRules(newArr);
+
+            Assert.AreEqual(1, setterCalls);
+            Assert.AreNotSame(rules, setterLastArg);
+            Assert.AreEqual((byte)50, storage[0].probability);
+            Assert.AreEqual((byte)80, storage[1].probability);
+        }
+
+        /// <summary>
+        /// 条件チップの編集経路 (RebuildConditionChipList) も setter 経由である。
+        /// </summary>
+        [Test]
+        public void CompanionAISettings_UILike_ConditionChipEdit_GoesThroughSetter()
+        {
+            AICondition[] conditions = new AICondition[]
+            {
+                new AICondition { conditionType = AIConditionType.HpRatio, compareOp = CompareOp.LessEqual, operandA = 30 },
+                new AICondition { conditionType = AIConditionType.Distance, compareOp = CompareOp.Greater, operandA = 5 },
+            };
+
+            AICondition[] storage = conditions;
+            System.Func<AICondition[]> getConditions = () => storage;
+            int setterCalls = 0;
+            AICondition[] setterLastArg = null;
+            System.Action<AICondition[]> setConditions = arr =>
+            {
+                setterCalls++;
+                setterLastArg = arr;
+                storage = arr;
+            };
+
+            int idx = 1;
+            AICondition updated = new AICondition
+            {
+                conditionType = AIConditionType.Distance,
+                compareOp = CompareOp.InRange,
+                operandA = 3,
+                operandB = 15,
+            };
+
+            AICondition[] current = getConditions();
+            AICondition[] newArr = new AICondition[current.Length];
+            for (int k = 0; k < current.Length; k++)
+            {
+                newArr[k] = k == idx ? updated : current[k];
+            }
+            setConditions(newArr);
+
+            Assert.AreEqual(1, setterCalls);
+            Assert.AreNotSame(conditions, setterLastArg, "新配列が setter に渡ること");
+            Assert.AreEqual(CompareOp.LessEqual, storage[0].compareOp, "idx 0 は据え置き");
+            Assert.AreEqual(CompareOp.InRange, storage[1].compareOp, "idx 1 は編集内容で上書き");
+            Assert.AreEqual(3, storage[1].operandA);
+            Assert.AreEqual(15, storage[1].operandB);
+        }
     }
 }
