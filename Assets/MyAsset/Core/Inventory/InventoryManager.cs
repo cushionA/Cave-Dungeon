@@ -107,7 +107,9 @@ namespace Game.Core
 
         /// <summary>
         /// アイテム削除。数量指定。
-        /// 戻り値: 実際に削除された数量。
+        /// 同一itemIdが複数スタックに分割されている場合、先頭から順に跨いで消費する。
+        /// 空になったスタックはエントリごと除去する。
+        /// 戻り値: 実際に削除された数量（総数不足時は削れた分だけ返る）。
         /// </summary>
         public int Remove(int itemId, int count)
         {
@@ -116,28 +118,36 @@ namespace Game.Core
                 return 0;
             }
 
-            for (int i = 0; i < _items.Count; i++)
+            int remaining = count;
+            int removed = 0;
+
+            for (int i = 0; i < _items.Count && remaining > 0;)
             {
-                if (_items[i].itemId == itemId)
+                if (_items[i].itemId != itemId)
                 {
-                    ItemEntry entry = _items[i];
-                    int toRemove = Math.Min(count, entry.count);
-                    entry.count -= toRemove;
+                    i++;
+                    continue;
+                }
 
-                    if (entry.count <= 0)
-                    {
-                        _items.RemoveAt(i);
-                    }
-                    else
-                    {
-                        _items[i] = entry;
-                    }
+                ItemEntry entry = _items[i];
+                int toRemove = Math.Min(remaining, entry.count);
+                entry.count -= toRemove;
+                removed += toRemove;
+                remaining -= toRemove;
 
-                    return toRemove;
+                if (entry.count <= 0)
+                {
+                    _items.RemoveAt(i);
+                    // RemoveAt で後続が詰まるので i は据え置き
+                }
+                else
+                {
+                    _items[i] = entry;
+                    i++;
                 }
             }
 
-            return 0;
+            return removed;
         }
 
         /// <summary>
@@ -157,18 +167,19 @@ namespace Game.Core
         }
 
         /// <summary>
-        /// アイテムID指定で数量取得。なければ0。
+        /// アイテムID指定で数量取得（複数スタック分を合算）。なければ0。
         /// </summary>
         public int GetCount(int itemId)
         {
+            int total = 0;
             for (int i = 0; i < _items.Count; i++)
             {
                 if (_items[i].itemId == itemId)
                 {
-                    return _items[i].count;
+                    total += _items[i].count;
                 }
             }
-            return 0;
+            return total;
         }
 
         /// <summary>

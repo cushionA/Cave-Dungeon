@@ -117,5 +117,37 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(0, added,
                 "スロット上限到達で新規アイテム追加不可");
         }
+
+        [Test]
+        public void InventoryManager_Remove_SpansMultipleStacks()
+        {
+            // Entry1(5) + Entry2(3) の2スタック状態を作る
+            _inventory.Add(1, ItemCategory.Consumable, 8, 5);
+            Assert.AreEqual(2, _inventory.ItemCount);
+
+            // 7個削除 → 先頭スタック(5)が空になり削除、次スタック(3)から2個減って残1
+            int removed = _inventory.Remove(1, 7);
+
+            Assert.AreEqual(7, removed);
+            Assert.AreEqual(1, _inventory.GetCount(1));
+            Assert.AreEqual(1, _inventory.ItemCount,
+                "空になったスタックはエントリごと除去される");
+        }
+
+        [Test]
+        public void InventoryManager_Remove_WhenCountExceedsTotal_ReturnsRemovedAmount()
+        {
+            // 複数スタック合計8個の状態
+            _inventory.Add(1, ItemCategory.Consumable, 8, 5);
+
+            // 総数を超える10個削除要求 → 削れた分だけ返る
+            int removed = _inventory.Remove(1, 10);
+
+            Assert.AreEqual(8, removed,
+                "総数を超えて削除要求された場合、実際に削除できた分のみ返す");
+            Assert.AreEqual(0, _inventory.GetCount(1));
+            Assert.AreEqual(0, _inventory.ItemCount,
+                "全スタックが空になればエントリ全消滅");
+        }
     }
 }
