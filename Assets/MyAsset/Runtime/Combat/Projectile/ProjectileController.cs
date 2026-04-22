@@ -25,6 +25,12 @@ namespace Game.Runtime
         // スポーン遅延中は表示・当たり判定を切る状態。遅延明けに復活させるために保持。
         private bool _isSpawnDelayedLastFrame;
 
+        // scaleTime>0 の弾丸で localScale を操作した直後に true。
+        // Deactivate 時にデザイナー設定スケールへ戻すために利用。
+        private Vector3 _baseLocalScale;
+        private bool _baseLocalScaleCaptured;
+        private bool _localScaleModified;
+
         public Projectile CoreProjectile => _coreProjectile;
         public MagicDefinition Magic => _magic;
         public bool IsActive => _isActive;
@@ -41,6 +47,10 @@ namespace Game.Runtime
 
             _spriteRenderer = GetComponentInChildren<SpriteRenderer>();
             _hitTargets = new HashSet<int>();
+
+            // プレハブ/デザイナー設定のスケールを保持（scaleTime>0 のスケール補間で上書き→戻す際のベース）
+            _baseLocalScale = transform.localScale;
+            _baseLocalScaleCaptured = true;
         }
 
         /// <summary>
@@ -56,9 +66,17 @@ namespace Game.Runtime
 
             transform.position = new Vector3(projectile.Position.x, projectile.Position.y, 0f);
 
-            // 発射時スケールを適用（scaleTime<=0 なら 1f が返る）
-            float initialScale = projectile.GetCurrentScale();
-            transform.localScale = new Vector3(initialScale, initialScale, 1f);
+            // scaleTime>0 のみ startScale を適用。<=0 はデザイナー設定（または Deactivate で復元済みのベース）を維持。
+            if (projectile.Profile.scaleTime > 0f)
+            {
+                float initialScale = projectile.GetCurrentScale();
+                Vector3 baseScale = _baseLocalScaleCaptured ? _baseLocalScale : Vector3.one;
+                transform.localScale = new Vector3(
+                    baseScale.x * initialScale,
+                    baseScale.y * initialScale,
+                    baseScale.z);
+                _localScaleModified = true;
+            }
 
             // スポーン遅延中は当たり判定と可視性を切る
             _isSpawnDelayedLastFrame = projectile.IsSpawnDelayed;
@@ -81,8 +99,15 @@ namespace Game.Runtime
             _coreProjectile = null;
             _manager = null;
             _isSpawnDelayedLastFrame = false;
-            // localScale を 1 に戻しておく（次回 Activate 時に上書きされるが、プール在籍時の予期せぬ見た目を避ける）
-            transform.localScale = Vector3.one;
+
+            // scaleTime>0 で localScale を上書きした弾丸はデザイナー設定のベーススケールに戻す。
+            // 次回この Controller が scaleTime=0 の弾丸に再利用されても前回のスケールが残らない。
+            if (_localScaleModified && _baseLocalScaleCaptured)
+            {
+                transform.localScale = _baseLocalScale;
+            }
+            _localScaleModified = false;
+
             if (_spriteRenderer != null)
             {
                 _spriteRenderer.enabled = true;
@@ -117,9 +142,17 @@ namespace Game.Runtime
             Vector2 pos = _coreProjectile.Position;
             transform.position = new Vector3(pos.x, pos.y, 0f);
 
-            // スケール補間を毎フレーム反映（scaleTime<=0 なら常に 1f）
-            float scale = _coreProjectile.GetCurrentScale();
-            transform.localScale = new Vector3(scale, scale, 1f);
+            // scaleTime>0 のみ毎フレーム補間を反映（ベーススケールに乗算）。<=0 ではベーススケールを維持。
+            if (_coreProjectile.Profile.scaleTime > 0f)
+            {
+                float scale = _coreProjectile.GetCurrentScale();
+                Vector3 baseScale = _baseLocalScaleCaptured ? _baseLocalScale : Vector3.one;
+                transform.localScale = new Vector3(
+                    baseScale.x * scale,
+                    baseScale.y * scale,
+                    baseScale.z);
+                _localScaleModified = true;
+            }
 
             Vector2 vel = _coreProjectile.Velocity;
             if (vel.sqrMagnitude > 0.001f)
