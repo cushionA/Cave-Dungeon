@@ -125,12 +125,21 @@ namespace Game.Editor
     /// <summary>
     /// Editor 起動時に Collision Matrix の期待値との差分を検出する。
     /// 設定自体は変更せず、差分があれば LogError を出して開発者に通知する。
+    /// CLI バッチ実行 (テスト等) では、テストが意図的に設定を破壊する可能性があるため無効化する。
     /// </summary>
     [InitializeOnLoad]
     public static class CollisionMatrixValidator
     {
         static CollisionMatrixValidator()
         {
+            // バッチモード（Unity CLI による自動テスト実行等）では、テストが
+            // IgnoreLayerCollision を意図的に破壊するケースがあるため validator を走らせない。
+            // 手動の Editor 起動時のみ差分を通知する目的。
+            if (Application.isBatchMode)
+            {
+                return;
+            }
+
             // ドメインリロード直後は他の InitializeOnLoad の競合を避けるため delayCall で1フレーム遅延させる
             EditorApplication.delayCall += () =>
             {
