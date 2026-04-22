@@ -134,7 +134,7 @@ namespace Game.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator BaseCharacter_Awake_ObjectHashIsInstanceId()
+        public IEnumerator BaseCharacter_Awake_ObjectHashIsHashCode()
         {
             CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo();
             GameObject charObj = TestSceneHelper.CreateBaseCharacterObject(info, Vector3.zero);
@@ -142,8 +142,8 @@ namespace Game.Tests.PlayMode
 
             // ObjectHashはAwakeで設定されるので、同フレームでアクセス可能
             BaseCharacter bc = charObj.GetComponent<BaseCharacter>();
-            Assert.AreEqual(charObj.GetInstanceID(), bc.ObjectHash,
-                "ObjectHash should equal the GameObject's InstanceID");
+            Assert.AreEqual(charObj.GetHashCode(), bc.ObjectHash,
+                "ObjectHash should equal the GameObject's HashCode");
 
             yield return null;
         }

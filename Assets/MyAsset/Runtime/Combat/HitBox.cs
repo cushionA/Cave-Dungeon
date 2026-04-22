@@ -78,8 +78,8 @@ namespace Game.Runtime
             }
 
             // アーキテクチャ準拠: 毎衝突でのGetComponentを避け、
-            // GameObject.GetInstanceID → GameManager.Data.GetManaged で IDamageable 逆引き。
-            int targetHash = other.gameObject.GetInstanceID();
+            // GameObject.GetHashCode → GameManager.Data.GetManaged で IDamageable 逆引き。
+            int targetHash = other.gameObject.GetHashCode();
 
             // 自分自身にはダメージを与えない
             if (targetHash == _ownerHash)

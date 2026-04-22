@@ -61,7 +61,7 @@ namespace Game.Runtime
             _collider = GetComponent<BoxCollider2D>();
             _damageReceiver = GetComponent<DamageReceiver>();
             _animationController = GetComponent<CharacterAnimationController>();
-            _objectHash = gameObject.GetInstanceID();
+            _objectHash = gameObject.GetHashCode();
 
             // 物理設定
             _rb.gravityScale = GameConstants.k_GravityScale;

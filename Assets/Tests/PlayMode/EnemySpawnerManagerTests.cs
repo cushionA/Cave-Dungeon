@@ -301,7 +301,7 @@ namespace Game.Tests.PlayMode
 
             int spawnerHash = manager.CoreSpawner.SpawnEnemy(0);
             GameObject enemyGo = manager.GetActiveEnemyObject(spawnerHash);
-            int characterHash = enemyGo.GetInstanceID();
+            int characterHash = enemyGo.GetHashCode();
 
             Assert.AreEqual(1, manager.ActiveCount);
 
