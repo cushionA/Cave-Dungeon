@@ -15,6 +15,12 @@ namespace Game.Core
         public const float k_DodgeSpeedMultiplier = 2.5f;
         public const float k_SprintSpeedMultiplier = 1.6f;
 
+        /// <summary>
+        /// Coyote Time: 接地から離れた後でもこの秒数以内はジャンプ入力を許容する猶予時間。
+        /// プラットフォーマ系の定番ゲームフィール補正。
+        /// </summary>
+        public const float k_CoyoteTimeSeconds = 0.1f;
+
         // テスト互換用デフォルト値
         public const float k_DodgeStaminaCost = 15f;
 
@@ -23,6 +29,11 @@ namespace Game.Core
         private bool _isDodging;
         private float _dodgeTimer;
         private bool _isSprinting;
+
+        // Coyote Time: 直近接地からの経過秒数（常時累積。接地中は 0 に保たれる）。
+        // 初期値 float.MaxValue は「未だ一度も接地していない」状態（空中スポーン等）で
+        // Coyote ジャンプが誤発動しないようにするためのガード。
+        private float _timeSinceLeftGround = float.MaxValue;
 
         public bool IsJumping => _isJumping;
         public bool IsDodging => _isDodging;
@@ -38,8 +49,33 @@ namespace Game.Core
             _isDodging = false;
             _dodgeTimer = 0f;
             _isSprinting = false;
+            _timeSinceLeftGround = float.MaxValue;
         }
 #endif
+
+        /// <summary>
+        /// 接地状態を毎フレーム通知する。接地中は _timeSinceLeftGround を 0 に保ち、
+        /// 離れた後は deltaTime ごとに加算することで Coyote Time 判定用の経過時間を維持する。
+        /// 呼び出し側は FixedUpdate 等で TryStartJump の前に必ず呼ぶこと。
+        /// </summary>
+        public void UpdateGroundedState(bool isGrounded, float deltaTime)
+        {
+            if (isGrounded)
+            {
+                _timeSinceLeftGround = 0f;
+                return;
+            }
+
+            if (_timeSinceLeftGround == float.MaxValue)
+            {
+                return;
+            }
+
+            _timeSinceLeftGround += deltaTime;
+        }
+
+        /// <summary>現在 Coyote Time 窓内か。テスト用途にも使える。</summary>
+        public bool IsInCoyoteWindow => _timeSinceLeftGround < k_CoyoteTimeSeconds;
 
         /// <summary>水平移動速度を計算する。facingDir は回避時の方向（1=右, -1=左）。</summary>
         public float CalculateHorizontalSpeed(float inputX, MoveParams moveParams, float facingDir = 1f)
@@ -57,11 +93,21 @@ namespace Game.Core
             return inputX * speed;
         }
 
-        /// <summary>ジャンプ開始判定。スタミナ消費あり。</summary>
+        /// <summary>
+        /// ジャンプ開始判定。スタミナ消費あり。
+        /// 接地中、または接地を離れてから k_CoyoteTimeSeconds 秒以内なら許容する (Coyote Time)。
+        /// ジャンプ成立時に Coyote 窓を消費する (空中で 2 回目のジャンプは不可)。
+        /// </summary>
         public float TryStartJump(bool jumpPressed, bool isGrounded, MoveParams moveParams,
             ref float currentStamina)
         {
-            if (!jumpPressed || !isGrounded)
+            if (!jumpPressed)
+            {
+                return 0f;
+            }
+
+            bool allowed = isGrounded || IsInCoyoteWindow;
+            if (!allowed)
             {
                 return 0f;
             }
@@ -74,6 +120,8 @@ namespace Game.Core
             currentStamina -= moveParams.jumpStaminaCost;
             _isJumping = true;
             _jumpHoldTimer = 0f;
+            // Coyote 窓を消費して空中連打を防ぐ
+            _timeSinceLeftGround = float.MaxValue;
             return moveParams.jumpForce;
         }
 
