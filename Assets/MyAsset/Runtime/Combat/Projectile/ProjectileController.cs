@@ -72,7 +72,15 @@ namespace Game.Runtime
             {
                 _hitCounts.Clear();
             }
-            _triggerCollider.enabled = true;
+            // テスト等で Awake 未実行または Collider が未取得のケースに備えたフォールバック
+            if (_triggerCollider == null)
+            {
+                _triggerCollider = GetComponent<CircleCollider2D>();
+            }
+            if (_triggerCollider != null)
+            {
+                _triggerCollider.enabled = true;
+            }
 
             transform.position = new Vector3(projectile.Position.x, projectile.Position.y, 0f);
 
