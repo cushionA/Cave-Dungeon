@@ -257,8 +257,9 @@ namespace Game.Runtime
         /// <summary>
         /// 「行動」統合リストを描画する。AIMode(struct) の丸ごと再構築が必要なので
         /// getter/setter の closure を受ける。
+        /// internal にしてあるのは EditMode 結合テスト用途（InternalsVisibleTo で公開）。
         /// </summary>
-        private void RebuildUnifiedActionList(
+        internal void RebuildUnifiedActionList(
             VisualElement container,
             Func<AIMode> getMode,
             Action<AIMode> setMode,
