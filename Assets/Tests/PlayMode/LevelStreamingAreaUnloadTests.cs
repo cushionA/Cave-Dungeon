@@ -82,6 +82,14 @@ namespace Game.Tests.PlayMode
             Assert.IsNotNull(lsc, "LevelStreamingController が子から取得できているべき");
             Assert.IsNotNull(lsc.Orchestrator, "Orchestrator が Initialize されているべき");
 
+            // ProcessQueue が SceneManager.LoadSceneAsync を呼ぶ。テストシーン "Area_Forest"/"Area_Cave"
+            // は Build Settings 未登録のため Unity が LogError を出す。本テストは SceneManager を
+            // モックせず Orchestrator のイベントフローのみ検証するので、ログは期待値として登録する。
+            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex(
+                "Scene 'Area_Forest' couldn't be loaded"));
+            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex(
+                "Scene 'Area_Cave' couldn't be loaded"));
+
             // Orchestrator を直接叩いて AreaUnload 完了を再現
             lsc.Orchestrator.RequestAreaLoad("Area_Forest");
             lsc.Orchestrator.ProcessQueue();
@@ -129,6 +137,12 @@ namespace Game.Tests.PlayMode
 
             LevelStreamingController lsc = GameManager.LevelStreaming;
             Assert.IsNotNull(lsc);
+
+            // Build Settings 未登録シーン由来の LogError は想定内
+            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex(
+                "Scene 'Area_Forest' couldn't be loaded"));
+            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex(
+                "Scene 'Area_Cave' couldn't be loaded"));
 
             // Projectiles/EnemySpawner が null でも例外にならないこと
             Assert.DoesNotThrow(() =>

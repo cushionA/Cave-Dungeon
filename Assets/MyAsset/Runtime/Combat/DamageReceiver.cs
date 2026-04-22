@@ -57,6 +57,16 @@ namespace Game.Runtime
             _rb = GetComponent<Rigidbody2D>();
         }
 
+        private void Start()
+        {
+            // テスト環境等で AddComponent の順序により Awake 時点で BaseCharacter がまだ
+            // 追加されていなかった場合に備えて、Start で再取得する（本番プレハブでは既に取得済みで no-op）。
+            if (_character == null)
+            {
+                _character = GetComponent<BaseCharacter>();
+            }
+        }
+
         /// <summary>
         /// ガード状態を設定する。GuardAbilityから呼ばれる。
         /// </summary>
