@@ -26,6 +26,13 @@ namespace Game.Runtime
         // 行動アーマー消費量（被弾ごとに累積し、行動終了/切替時にリセット）。
         // ActionEffectProcessor.Evaluate は毎回フル値を返すため、
         // 過去被弾で削られた量をここで差し引いて正味の残量を算出する。
+        //
+        // ⚠ 前提: 1 行動内の ActionEffect.Armor は「単一の Armor 値」を想定している。
+        //   ActionEffect が時間差で切り替わる場合（例: 0-1s Armor50 → 1-2s Armor30）、
+        //   切替時点で累積消費量が新しい Effect にも繰り越されるため、残量計算が誤る可能性がある。
+        //   Section 2 までの仕様では 1 行動 = 1 Armor Effect のみを採用しており、
+        //   時間差で複数 Armor Effect を重ねる要件が出た際は
+        //   切替タイミングで _actionArmorConsumed をリセットする仕組みの追加が必要。
         private float _actionArmorConsumed;
 
         // アーマー回復管理
