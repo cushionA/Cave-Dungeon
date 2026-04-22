@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using Game.Core;
 using CharacterInfo = Game.Core.CharacterInfo;
@@ -60,22 +61,42 @@ namespace Game.Runtime
             _core = new GameManagerCore();
             _core.Initialize(k_InitialContainerCapacity);
 
-            _projectileManager = GetComponentInChildren<ProjectileManager>();
-            if (_projectileManager != null)
-            {
-                _projectileManager.Initialize();
-            }
+            InitializeSubManagers();
+        }
 
-            _enemySpawnerManager = GetComponentInChildren<EnemySpawnerManager>();
-            if (_enemySpawnerManager != null)
-            {
-                _enemySpawnerManager.Initialize();
-            }
+        /// <summary>
+        /// 子オブジェクトの IGameSubManager 実装を一括取得し、InitOrder 昇順で初期化する。
+        /// Priority 設計: Streaming(100) → Enemy(200) → Projectile(300) の順。
+        /// 既存の公開プロパティ（Projectiles/EnemySpawner/LevelStreaming）は維持するため、
+        /// 取得したインスタンスを型別にキャッシュする。
+        /// </summary>
+        private void InitializeSubManagers()
+        {
+            // 1回の走査で全 IGameSubManager を取得
+            IGameSubManager[] subManagers = GetComponentsInChildren<IGameSubManager>(true);
 
-            _levelStreamingController = GetComponentInChildren<LevelStreamingController>();
-            if (_levelStreamingController != null)
+            // InitOrder 昇順ソート
+            Array.Sort(subManagers, (a, b) => a.InitOrder.CompareTo(b.InitOrder));
+
+            for (int i = 0; i < subManagers.Length; i++)
             {
-                _levelStreamingController.Initialize();
+                IGameSubManager mgr = subManagers[i];
+
+                // 既存公開プロパティ維持のため型別にキャッシュ
+                if (mgr is ProjectileManager pm)
+                {
+                    _projectileManager = pm;
+                }
+                else if (mgr is EnemySpawnerManager esm)
+                {
+                    _enemySpawnerManager = esm;
+                }
+                else if (mgr is LevelStreamingController lsc)
+                {
+                    _levelStreamingController = lsc;
+                }
+
+                mgr.Initialize(_core.Data, _core.Events);
             }
         }
 

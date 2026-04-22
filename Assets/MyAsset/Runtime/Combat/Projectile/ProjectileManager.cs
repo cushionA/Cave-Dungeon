@@ -8,9 +8,13 @@ namespace Game.Runtime
     /// 全飛翔体のライフサイクルを管理するマネージャー。
     /// Core ProjectilePool + Unity GameObjectプールの二重プール同期。
     /// ProjectileMovement.UpdateAllで一括移動→各ControllerのSyncTransformで表示同期。
+    /// IGameSubManager を実装し、GameManager から Priority 順に初期化される。
     /// </summary>
-    public class ProjectileManager : MonoBehaviour
+    public class ProjectileManager : MonoBehaviour, IGameSubManager
     {
+        /// <summary>InitOrder: 飛翔体は Enemy スポナーより後に初期化する。</summary>
+        private const int k_InitOrder = 300;
+
         [SerializeField] private GameObject _defaultProjectilePrefab;
         [SerializeField] private int _preWarmCount = 32;
 
@@ -26,6 +30,26 @@ namespace Game.Runtime
         private List<int> _allHashesBuffer;
 
         public int ActiveCount => _activeControllers != null ? _activeControllers.Count : 0;
+
+        /// <summary>IGameSubManager 初期化順。数値が小さいほど先。</summary>
+        public int InitOrder => k_InitOrder;
+
+        /// <summary>
+        /// IGameSubManager 実装。パラメータは未使用だが、
+        /// 将来 SoA/GameEvents 参照時に差し替え可能なよう保持。
+        /// </summary>
+        void IGameSubManager.Initialize(SoACharaDataDic data, GameEvents events)
+        {
+            Initialize();
+        }
+
+        /// <summary>
+        /// IGameSubManager 実装。MonoBehaviour の OnDestroy との重複解放を避けるため No-op。
+        /// </summary>
+        void IGameSubManager.Dispose()
+        {
+            // OnDestroy 側で ClearAll を呼ぶため、ここでは何もしない
+        }
 
         /// <summary>
         /// マネージャーを初期化する。GameManagerから呼ばれる。

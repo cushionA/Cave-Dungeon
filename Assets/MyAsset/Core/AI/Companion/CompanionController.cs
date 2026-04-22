@@ -9,8 +9,15 @@ namespace Game.Core
     /// </summary>
     public class CompanionController
     {
+        /// <summary>
+        /// 手動モード切替中に自動遷移を抑制する時間（秒）。
+        /// タイムアウト経過後は自動モード遷移評価を再開する。
+        /// </summary>
+        private const float k_ManualOverrideTimeoutSeconds = 5f;
+
         private JudgmentLoop _judgmentLoop;
         private ModeController _modeController;
+        private ModeTransitionEditor _modeTransitionEditor;
         private FollowBehavior _followBehavior;
         private StanceManager _stanceManager;
         private CompanionMpManager _mpManager;
@@ -18,13 +25,21 @@ namespace Game.Core
         private SoACharaDataDic _data;
         private int _companionHash;
         private int _playerHash;
+        private float _manualOverrideTimer;
 
         public JudgmentLoop JudgmentLoop => _judgmentLoop;
         public ModeController ModeController => _modeController;
+        public ModeTransitionEditor ModeTransitionEditor => _modeTransitionEditor;
         public FollowBehavior FollowBehavior => _followBehavior;
         public StanceManager StanceManager => _stanceManager;
         public CompanionMpManager MpManager => _mpManager;
         public int CompanionHash => _companionHash;
+
+        /// <summary>手動切替中か。タイマー > 0 の間は true。</summary>
+        public bool IsManualOverrideActive => _manualOverrideTimer > 0f;
+
+        /// <summary>手動切替の残り時間（秒）。</summary>
+        public float ManualOverrideRemaining => _manualOverrideTimer;
 
         public CompanionController(
             int companionHash,
@@ -47,9 +62,26 @@ namespace Game.Core
 
             _judgmentLoop = new JudgmentLoop(_executor, data, companionHash);
             _modeController = new ModeController(_judgmentLoop);
+            _modeTransitionEditor = new ModeTransitionEditor(
+                _modeController, k_ManualOverrideTimeoutSeconds);
             _followBehavior = new FollowBehavior();
             _stanceManager = new StanceManager();
             _mpManager = new CompanionMpManager(maxMp, initialReserveMp, mpSettings);
+        }
+
+        /// <summary>
+        /// 手動でモードを切り替える。タイムアウト（k_ManualOverrideTimeoutSeconds）経過までは
+        /// 自動モード遷移評価を抑制する。UI/ショートカット/連携アクションから呼び出し想定。
+        /// </summary>
+        public void RequestModeSwitch(int modeIndex)
+        {
+            if (_modeController == null)
+            {
+                return;
+            }
+
+            _modeController.SwitchMode(modeIndex);
+            _manualOverrideTimer = k_ManualOverrideTimeoutSeconds;
         }
 
         /// <summary>
@@ -93,8 +125,21 @@ namespace Game.Core
                 companionVitals.position = playerVitals.position;
             }
 
-            _modeController.EvaluateTransitions(
-                _companionHash, _judgmentLoop.CurrentTargetHash, _data, currentTime);
+            // 手動オーバーライドタイマーを消化。タイマー中は自動遷移を抑制する。
+            if (_manualOverrideTimer > 0f)
+            {
+                _manualOverrideTimer -= deltaTime;
+                if (_manualOverrideTimer < 0f)
+                {
+                    _manualOverrideTimer = 0f;
+                }
+            }
+            else
+            {
+                _modeController.EvaluateTransitions(
+                    _companionHash, _judgmentLoop.CurrentTargetHash, _data, currentTime);
+            }
+
             _judgmentLoop.Tick(deltaTime, candidates, currentTime);
         }
 
