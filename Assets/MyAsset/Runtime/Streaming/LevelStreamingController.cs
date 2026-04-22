@@ -13,12 +13,6 @@ namespace Game.Runtime
     /// </summary>
     public class LevelStreamingController : MonoBehaviour, IGameSubManager
     {
-        /// <summary>
-        /// シーンロード失敗時にフォールバックするシーン名。
-        /// Build Settings に登録済みである必要がある。
-        /// </summary>
-        private const string k_FallbackSceneName = "GameScene";
-
         /// <summary>InitOrder: Streaming は他のマネージャーより先に初期化する（シーン土台）。</summary>
         private const int k_InitOrder = 100;
 
@@ -26,6 +20,10 @@ namespace Game.Runtime
         [Header("Streaming Settings")]
         [Tooltip("永続シーン名（このコントローラーが属するシーン）")]
         private string persistentSceneName = "GameScene";
+
+        [SerializeField]
+        [Tooltip("シーンロード失敗時のフォールバックシーン名。空ならフォールバック処理をスキップして LogError のみ出す。指定する場合は Build Settings に登録必須。")]
+        private string fallbackSceneName = "";
 
         private LevelStreamingOrchestrator _orchestrator;
         private AsyncOperation _loadOperation;
@@ -132,8 +130,9 @@ namespace Game.Runtime
         }
 
         /// <summary>
-        /// AsyncOperation 完了後のシーン有効性チェック。無効ならエラーログ + フォールバック。
-        /// 有効なら通常通り NotifyLoadComplete。
+        /// AsyncOperation 完了後のシーン有効性チェック。
+        /// 無効なら必ず LogError を出し、<see cref="fallbackSceneName"/> が設定されていれば
+        /// そのシーンをフォールバックロードする。未設定時はエラー通知のみ。
         /// </summary>
         private void HandleLoadComplete(string sceneName)
         {
@@ -143,7 +142,13 @@ namespace Game.Runtime
                 return;
             }
 
-            Debug.LogError($"[LevelStreamingController] Scene load failed for '{sceneName}'. Falling back to '{k_FallbackSceneName}'.");
+            if (string.IsNullOrEmpty(fallbackSceneName))
+            {
+                Debug.LogError($"[LevelStreamingController] Scene load failed for '{sceneName}'. No fallback scene configured.");
+                return;
+            }
+
+            Debug.LogError($"[LevelStreamingController] Scene load failed for '{sceneName}'. Falling back to '{fallbackSceneName}'.");
             InvokeFallbackLoad();
         }
 
@@ -159,16 +164,19 @@ namespace Game.Runtime
             return scene.IsValid() && scene.isLoaded;
         }
 
-        /// <summary>フォールバックシーンをロードする。注入フックがあれば優先。</summary>
+        /// <summary>
+        /// フォールバックシーンをロードする。注入フックがあれば優先。
+        /// 呼び出し元 (<see cref="HandleLoadComplete"/>) が事前に fallbackSceneName の空判定を行っている前提。
+        /// </summary>
         private void InvokeFallbackLoad()
         {
             if (_fallbackLoader != null)
             {
-                _fallbackLoader(k_FallbackSceneName);
+                _fallbackLoader(fallbackSceneName);
                 return;
             }
 
-            SceneManager.LoadSceneAsync(k_FallbackSceneName, LoadSceneMode.Additive);
+            SceneManager.LoadSceneAsync(fallbackSceneName, LoadSceneMode.Additive);
         }
 
         /// <summary>外部からエリアロードを要求する。AreaBoundaryTriggerから呼ばれる。</summary>
@@ -225,8 +233,14 @@ namespace Game.Runtime
             HandleLoadComplete(sceneName);
         }
 
-        /// <summary>テスト専用: k_FallbackSceneName を取得。</summary>
-        public static string FallbackSceneNameForTest => k_FallbackSceneName;
+        /// <summary>テスト専用: 現在の fallbackSceneName を取得。</summary>
+        public string FallbackSceneNameForTest => fallbackSceneName;
+
+        /// <summary>テスト専用: fallbackSceneName を差し替える。</summary>
+        public void SetFallbackSceneNameForTest(string sceneName)
+        {
+            fallbackSceneName = sceneName;
+        }
 #endif
     }
 }

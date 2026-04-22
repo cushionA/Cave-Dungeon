@@ -57,9 +57,11 @@ namespace Game.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator HandleLoadComplete_InvalidScene_LogsErrorAndInvokesFallback()
+        public IEnumerator HandleLoadComplete_InvalidScene_WithFallbackConfigured_LogsErrorAndInvokesFallback()
         {
             LevelStreamingController controller = CreateController();
+            const string k_TestFallback = "Area_SafetyHub";
+            controller.SetFallbackSceneNameForTest(k_TestFallback);
 
             bool fallbackCalled = false;
             string fallbackScene = null;
@@ -73,13 +75,35 @@ namespace Game.Tests.PlayMode
 
             // Unity の LogError を検知するため LogAssert で期待ログを登録
             LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex(
-                "Scene load failed"));
+                "Scene load failed.*Falling back"));
 
             controller.InvokeHandleLoadCompleteForTest("Area_Broken");
 
-            Assert.IsTrue(fallbackCalled, "失敗時はフォールバックローダーが呼ばれるべき");
-            Assert.AreEqual(LevelStreamingController.FallbackSceneNameForTest, fallbackScene,
-                "フォールバックは k_FallbackSceneName を渡すべき");
+            Assert.IsTrue(fallbackCalled, "fallbackSceneName 設定時はフォールバックローダーが呼ばれるべき");
+            Assert.AreEqual(k_TestFallback, fallbackScene,
+                "フォールバックは設定済みの fallbackSceneName を渡すべき");
+
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator HandleLoadComplete_InvalidScene_WithoutFallback_LogsErrorOnly()
+        {
+            LevelStreamingController controller = CreateController();
+            // fallbackSceneName はデフォルト ("") のまま
+
+            bool fallbackCalled = false;
+            controller.SetTestHooks(
+                sceneValidityChecker: (sceneName) => false,
+                fallbackLoader: (sceneName) => fallbackCalled = true);
+
+            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex(
+                "Scene load failed.*No fallback scene configured"));
+
+            controller.InvokeHandleLoadCompleteForTest("Area_Broken");
+
+            Assert.IsFalse(fallbackCalled,
+                "fallbackSceneName 未設定時はフォールバックローダーを呼ばない");
 
             yield return null;
         }
