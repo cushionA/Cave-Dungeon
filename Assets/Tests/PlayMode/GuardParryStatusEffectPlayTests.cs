@@ -51,8 +51,8 @@ namespace Game.Tests.PlayMode
             // - guardStrength を十分大きくしてスタミナ削りを 0 に
             // - slashCut = 0.5 で斬属性ダメージを半減
             // - guardDirection = Both で前後どちらからの攻撃もガード成立
-            ref CombatStats combat = ref GameManager.Data.GetCombatStats(targetHash);
-            combat.guardStats = new GuardStats
+            // iterator 内の ref ローカル制約回避: ref return への直接代入
+            GameManager.Data.GetCombatStats(targetHash).guardStats = new GuardStats
             {
                 guardStrength = 9999f,
                 slashCut = 0.5f,
@@ -111,13 +111,13 @@ namespace Game.Tests.PlayMode
             int targetHash = targetObj.GetComponent<BaseCharacter>().ObjectHash;
 
             // スタミナ・アーマーを中間値に設定して回復余地を確保
-            ref CharacterVitals v = ref GameManager.Data.GetVitals(targetHash);
-            v.currentStamina = 50f;
-            v.maxStamina = 100f;
-            v.currentArmor = 50f;
-            v.maxArmor = 100f;
+            // iterator 内の ref ローカル制約回避: ref return への直接代入
+            GameManager.Data.GetVitals(targetHash).currentStamina = 50f;
+            GameManager.Data.GetVitals(targetHash).maxStamina = 100f;
+            GameManager.Data.GetVitals(targetHash).currentArmor = 50f;
+            GameManager.Data.GetVitals(targetHash).maxArmor = 100f;
 
-            int hpBefore = v.currentHp;
+            int hpBefore = GameManager.Data.GetVitals(targetHash).currentHp;
 
             // ガード開始直後 (guardTimeSinceStart=0) → JustGuard 窓内
             receiver.SetGuarding(true);
@@ -138,7 +138,8 @@ namespace Game.Tests.PlayMode
             Assert.AreEqual(GuardResult.JustGuard, result.guardResult, "JustGuard 成立");
             Assert.AreEqual(0, result.totalDamage, "JustGuard はダメージ 0");
 
-            ref CharacterVitals vAfter = ref GameManager.Data.GetVitals(targetHash);
+            // iterator 内の ref ローカル制約回避: 読み取りのみなので値コピーで十分
+            CharacterVitals vAfter = GameManager.Data.GetVitals(targetHash);
             Assert.AreEqual(hpBefore, vAfter.currentHp, "HP は減らない");
             Assert.Greater(vAfter.currentStamina, 50f,
                 "ジャストガード時のスタミナ回復（+k_JustGuardStaminaRecovery）");

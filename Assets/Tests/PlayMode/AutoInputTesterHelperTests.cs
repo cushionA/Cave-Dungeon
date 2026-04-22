@@ -66,8 +66,8 @@ namespace Game.Tests.PlayMode
             BaseCharacter bc = charObj.GetComponent<BaseCharacter>();
             int hash = bc.ObjectHash;
 
-            // 元データを直接取得した場合の値
-            ref CharacterVitals expected = ref GameManager.Data.GetVitals(hash);
+            // iterator (UnityTest) 内では ref ローカルが使えないため値コピーで取得（読み取りのみ）
+            CharacterVitals expected = GameManager.Data.GetVitals(hash);
             int expectedHp = expected.currentHp;
             int expectedMaxHp = expected.maxHp;
             float expectedStamina = expected.currentStamina;
@@ -95,10 +95,9 @@ namespace Game.Tests.PlayMode
 
             int hash = charObj.GetComponent<BaseCharacter>().ObjectHash;
 
-            // vitals を書き換え
-            ref CharacterVitals vitals = ref GameManager.Data.GetVitals(hash);
-            vitals.currentHp = 42;
-            vitals.currentStamina = 37.5f;
+            // iterator 内の ref ローカル制約回避: ref return への直接代入で SoA に書き戻す
+            GameManager.Data.GetVitals(hash).currentHp = 42;
+            GameManager.Data.GetVitals(hash).currentStamina = 37.5f;
 
             AutoInputTester.VitalsSnapshot snap = AutoInputTester.GetVitalsSnapshotForTest(hash);
 

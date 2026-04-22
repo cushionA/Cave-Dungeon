@@ -93,8 +93,8 @@ namespace Game.Tests.EditMode
             int speedHash = Animator.StringToHash("Speed");
             int moveXHash = Animator.StringToHash("MoveX");
 
-            Assert.That(_bridge.DirtyFloats, Does.Contain(speedHash));
-            Assert.That(_bridge.DirtyFloats, Does.Contain(moveXHash));
+            Assert.IsTrue(_bridge.DirtyFloats.Contains(speedHash), "Speed が dirty 集合に含まれる");
+            Assert.IsTrue(_bridge.DirtyFloats.Contains(moveXHash), "MoveX が dirty 集合に含まれる");
             Assert.AreEqual(2, _bridge.DirtyFloats.Count);
         }
 
@@ -169,8 +169,8 @@ namespace Game.Tests.EditMode
             int moveXHash = Animator.StringToHash("MoveX");
 
             Assert.AreEqual(1, _bridge.DirtyFloats.Count, "変更があったパラメータだけがDirty対象になる");
-            Assert.That(_bridge.DirtyFloats, Does.Contain(speedHash));
-            Assert.That(_bridge.DirtyFloats, Does.Not.Contain(moveXHash));
+            Assert.IsTrue(_bridge.DirtyFloats.Contains(speedHash), "Speed は dirty に含まれる");
+            Assert.IsFalse(_bridge.DirtyFloats.Contains(moveXHash), "MoveX は同じ値再書き込みなので dirty に含まれない");
         }
 
         [Test]
