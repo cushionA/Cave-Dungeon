@@ -22,6 +22,9 @@ namespace Game.Runtime
         private bool _isActive;
         private ProjectileManager _manager;
 
+        // スポーン遅延中は表示・当たり判定を切る状態。遅延明けに復活させるために保持。
+        private bool _isSpawnDelayedLastFrame;
+
         public Projectile CoreProjectile => _coreProjectile;
         public MagicDefinition Magic => _magic;
         public bool IsActive => _isActive;
@@ -50,9 +53,21 @@ namespace Game.Runtime
             _manager = manager;
             _isActive = true;
             _hitTargets.Clear();
-            _triggerCollider.enabled = true;
 
             transform.position = new Vector3(projectile.Position.x, projectile.Position.y, 0f);
+
+            // 発射時スケールを適用（scaleTime<=0 なら 1f が返る）
+            float initialScale = projectile.GetCurrentScale();
+            transform.localScale = new Vector3(initialScale, initialScale, 1f);
+
+            // スポーン遅延中は当たり判定と可視性を切る
+            _isSpawnDelayedLastFrame = projectile.IsSpawnDelayed;
+            _triggerCollider.enabled = !_isSpawnDelayedLastFrame;
+            if (_spriteRenderer != null)
+            {
+                _spriteRenderer.enabled = !_isSpawnDelayedLastFrame;
+            }
+
             gameObject.SetActive(true);
         }
 
@@ -65,11 +80,19 @@ namespace Game.Runtime
             _triggerCollider.enabled = false;
             _coreProjectile = null;
             _manager = null;
+            _isSpawnDelayedLastFrame = false;
+            // localScale を 1 に戻しておく（次回 Activate 時に上書きされるが、プール在籍時の予期せぬ見た目を避ける）
+            transform.localScale = Vector3.one;
+            if (_spriteRenderer != null)
+            {
+                _spriteRenderer.enabled = true;
+            }
             gameObject.SetActive(false);
         }
 
         /// <summary>
         /// CoreのPositionをTransformに同期し、速度方向にスプライトを回転する。
+        /// スポーン遅延の状態遷移と、現在スケール(startScale→endScale Lerp)も反映する。
         /// ProjectileManagerから毎フレーム呼ばれる。
         /// </summary>
         public void SyncTransform()
@@ -79,8 +102,24 @@ namespace Game.Runtime
                 return;
             }
 
+            // スポーン遅延の遷移: 遅延→終了フレームで当たり判定と可視性を復帰
+            bool isDelayedNow = _coreProjectile.IsSpawnDelayed;
+            if (_isSpawnDelayedLastFrame && !isDelayedNow)
+            {
+                _triggerCollider.enabled = true;
+                if (_spriteRenderer != null)
+                {
+                    _spriteRenderer.enabled = true;
+                }
+            }
+            _isSpawnDelayedLastFrame = isDelayedNow;
+
             Vector2 pos = _coreProjectile.Position;
             transform.position = new Vector3(pos.x, pos.y, 0f);
+
+            // スケール補間を毎フレーム反映（scaleTime<=0 なら常に 1f）
+            float scale = _coreProjectile.GetCurrentScale();
+            transform.localScale = new Vector3(scale, scale, 1f);
 
             Vector2 vel = _coreProjectile.Velocity;
             if (vel.sqrMagnitude > 0.001f)
@@ -93,6 +132,12 @@ namespace Game.Runtime
         private void OnTriggerEnter2D(Collider2D other)
         {
             if (!_isActive)
+            {
+                return;
+            }
+
+            // スポーン遅延中は当たり判定を無効化（念のため二重チェック）
+            if (_coreProjectile != null && _coreProjectile.IsSpawnDelayed)
             {
                 return;
             }
