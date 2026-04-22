@@ -32,8 +32,8 @@ namespace Game.Tests.PlayMode
             // ターゲットキャラ作成
             CharacterInfo targetInfo = TestSceneHelper.CreateTestCharacterInfo(
                 belong: CharacterBelong.Enemy, feature: CharacterFeature.Minion, maxHp: 100);
-            GameObject targetObj = TestSceneHelper.CreateBaseCharacterObject(targetInfo, new Vector3(3, 2, 0));
-            DamageReceiver receiver = targetObj.AddComponent<DamageReceiver>();
+            GameObject targetObj = TestSceneHelper.CreateBaseCharacterObjectWithDamageReceiver(targetInfo, new Vector3(3, 2, 0));
+            DamageReceiver receiver = targetObj.GetComponent<DamageReceiver>();
             yield return null; // Start
 
             BaseCharacter targetChar = targetObj.GetComponent<BaseCharacter>();
@@ -64,8 +64,8 @@ namespace Game.Tests.PlayMode
         {
             CharacterInfo targetInfo = TestSceneHelper.CreateTestCharacterInfo(
                 belong: CharacterBelong.Enemy, feature: CharacterFeature.Minion, maxHp: 1);
-            GameObject targetObj = TestSceneHelper.CreateBaseCharacterObject(targetInfo, new Vector3(3, 2, 0));
-            DamageReceiver receiver = targetObj.AddComponent<DamageReceiver>();
+            GameObject targetObj = TestSceneHelper.CreateBaseCharacterObjectWithDamageReceiver(targetInfo, new Vector3(3, 2, 0));
+            DamageReceiver receiver = targetObj.GetComponent<DamageReceiver>();
             yield return null;
 
             bool deathFired = false;
@@ -95,8 +95,8 @@ namespace Game.Tests.PlayMode
         {
             CharacterInfo targetInfo = TestSceneHelper.CreateTestCharacterInfo(
                 belong: CharacterBelong.Ally, feature: CharacterFeature.Player, maxHp: 100);
-            GameObject targetObj = TestSceneHelper.CreateBaseCharacterObject(targetInfo, new Vector3(3, 2, 0));
-            DamageReceiver receiver = targetObj.AddComponent<DamageReceiver>();
+            GameObject targetObj = TestSceneHelper.CreateBaseCharacterObjectWithDamageReceiver(targetInfo, new Vector3(3, 2, 0));
+            DamageReceiver receiver = targetObj.GetComponent<DamageReceiver>();
             yield return null;
 
             int targetHash = targetObj.GetComponent<BaseCharacter>().ObjectHash;
@@ -149,8 +149,8 @@ namespace Game.Tests.PlayMode
             targetInfo.maxArmor = 50f;
             targetInfo.armorRecoveryRate = 0f;
             targetInfo.armorRecoveryDelay = 10f;
-            GameObject targetObj = TestSceneHelper.CreateBaseCharacterObject(targetInfo, new Vector3(3, 2, 0));
-            DamageReceiver receiver = targetObj.AddComponent<DamageReceiver>();
+            GameObject targetObj = TestSceneHelper.CreateBaseCharacterObjectWithDamageReceiver(targetInfo, new Vector3(3, 2, 0));
+            DamageReceiver receiver = targetObj.GetComponent<DamageReceiver>();
             yield return null;
 
             int targetHash = targetObj.GetComponent<BaseCharacter>().ObjectHash;
@@ -192,8 +192,8 @@ namespace Game.Tests.PlayMode
         {
             CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo(
                 belong: CharacterBelong.Enemy, feature: CharacterFeature.Minion, maxHp: 100);
-            GameObject obj = TestSceneHelper.CreateBaseCharacterObject(info, new Vector3(3, 2, 0));
-            DamageReceiver receiver = obj.AddComponent<DamageReceiver>();
+            GameObject obj = TestSceneHelper.CreateBaseCharacterObjectWithDamageReceiver(info, new Vector3(3, 2, 0));
+            DamageReceiver receiver = obj.GetComponent<DamageReceiver>();
             yield return null;
 
             int hash = obj.GetComponent<BaseCharacter>().ObjectHash;
