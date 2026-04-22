@@ -141,6 +141,13 @@ namespace Game.Tests.PlayMode
             return GameManager.Data.GetVitals(hash).currentArmor;
         }
 
+        /// <summary>ref locals はイテレータ内で使えないので外部ヘルパーで書き込む。</summary>
+        private static void SetActState(int hash, ActState state)
+        {
+            ref CharacterFlags f = ref GameManager.Data.GetFlags(hash);
+            f.ActState = state;
+        }
+
         [UnityTest]
         public IEnumerator DamageReceiver_ProjectileJustGuard_DoesNotBreakArmor()
         {
@@ -402,9 +409,8 @@ namespace Game.Tests.PlayMode
             // 1フレーム進めて guardTimeSinceStart を加算
             for (int i = 0; i < 30; i++) { yield return null; }
 
-            // 予め ActState を Guarding に明示設定
-            ref CharacterFlags preFlags = ref GameManager.Data.GetFlags(hash);
-            preFlags.ActState = ActState.Guarding;
+            // 予め ActState を Guarding に明示設定 (ref locals はイテレータ内で使えないのでヘルパー経由)
+            SetActState(hash, ActState.Guarding);
 
             DamageData data = new DamageData
             {
