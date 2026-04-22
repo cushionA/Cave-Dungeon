@@ -74,9 +74,10 @@ namespace Game.Runtime
 
             VisualElement belongFlags = new VisualElement();
             belongFlags.AddToClassList("condition-row__flags");
-            foreach (object v in Enum.GetValues(typeof(CharacterBelong)))
+            CharacterBelong[] belongValues = s_CachedCharacterBelongValues;
+            for (int bi = 0; bi < belongValues.Length; bi++)
             {
-                CharacterBelong belong = (CharacterBelong)v;
+                CharacterBelong belong = belongValues[bi];
                 if ((int)belong == 0)
                 {
                     continue;
@@ -130,9 +131,10 @@ namespace Game.Runtime
 
             VisualElement featureFlags = new VisualElement();
             featureFlags.AddToClassList("condition-row__flags");
-            foreach (object v in Enum.GetValues(typeof(CharacterFeature)))
+            CharacterFeature[] featureValues = s_CachedCharacterFeatureValues;
+            for (int fi = 0; fi < featureValues.Length; fi++)
             {
-                CharacterFeature feat = (CharacterFeature)v;
+                CharacterFeature feat = featureValues[fi];
                 if ((int)feat == 0)
                 {
                     continue;
@@ -186,9 +188,10 @@ namespace Game.Runtime
 
             VisualElement weakFlags = new VisualElement();
             weakFlags.AddToClassList("condition-row__flags");
-            foreach (object v in Enum.GetValues(typeof(Element)))
+            Element[] elementValues = s_CachedElementValues;
+            for (int ei = 0; ei < elementValues.Length; ei++)
             {
-                Element elem = (Element)v;
+                Element elem = elementValues[ei];
                 if ((int)elem == 0)
                 {
                     continue;
@@ -618,8 +621,8 @@ namespace Game.Runtime
             VisualElement sortSection = BuildDetailSection("並び順");
             scroll.Add(sortSection);
 
-            TargetSortKey[] allSortKeys = (TargetSortKey[])Enum.GetValues(typeof(TargetSortKey));
-            List<string> sortChoices = new List<string>();
+            TargetSortKey[] allSortKeys = s_CachedTargetSortKeyValues;
+            List<string> sortChoices = new List<string>(allSortKeys.Length);
             for (int i = 0; i < allSortKeys.Length; i++)
             {
                 sortChoices.Add(GetSortKeyLabel(allSortKeys[i]));
@@ -651,9 +654,10 @@ namespace Game.Runtime
 
             VisualElement elemFlags = new VisualElement();
             elemFlags.AddToClassList("condition-row__flags");
-            foreach (object v in Enum.GetValues(typeof(Element)))
+            Element[] elementValuesForSort = s_CachedElementValues;
+            for (int ei = 0; ei < elementValuesForSort.Length; ei++)
             {
-                Element elem = (Element)v;
+                Element elem = elementValuesForSort[ei];
                 if ((int)elem == 0)
                 {
                     continue;

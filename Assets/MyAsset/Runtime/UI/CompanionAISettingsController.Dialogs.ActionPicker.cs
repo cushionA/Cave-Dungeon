@@ -174,9 +174,10 @@ namespace Game.Runtime
         /// </summary>
         private void BuildInstantPickerContent(VisualElement container, Action<ActionSlot> onPicked)
         {
-            foreach (object v in Enum.GetValues(typeof(InstantAction)))
+            InstantAction[] values = s_CachedInstantActionValues;
+            for (int vi = 0; vi < values.Length; vi++)
             {
-                InstantAction action = (InstantAction)v;
+                InstantAction action = values[vi];
                 if (action == InstantAction.UseItem)
                 {
                     continue;
@@ -378,10 +379,10 @@ namespace Game.Runtime
         /// </summary>
         private void BuildSustainedPickerContent(VisualElement container, Action<ActionSlot> onPicked)
         {
-            Array values = Enum.GetValues(typeof(SustainedAction));
-            foreach (object v in values)
+            SustainedAction[] values = s_CachedSustainedActionValues;
+            for (int vi = 0; vi < values.Length; vi++)
             {
-                SustainedAction action = (SustainedAction)v;
+                SustainedAction action = values[vi];
                 int paramId = (int)action;
                 string label = ActionSlotLabelTable.GetSustainedActionLabel(action);
                 string endCondition = SustainedActionMetadata.GetNaturalEndCondition(action);

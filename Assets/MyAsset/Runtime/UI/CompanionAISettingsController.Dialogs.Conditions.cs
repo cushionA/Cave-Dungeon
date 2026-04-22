@@ -225,9 +225,9 @@ namespace Game.Runtime
             row.AddToClassList("mode-detail-row");
             row.AddToClassList("condition-row");
 
-            // 条件タイプ
-            List<string> typeChoices = new List<string>();
-            AIConditionType[] allTypes = (AIConditionType[])Enum.GetValues(typeof(AIConditionType));
+            // 条件タイプ（enum 値配列は static キャッシュを参照してアロケ回避）
+            AIConditionType[] allTypes = s_CachedAIConditionTypes;
+            List<string> typeChoices = new List<string>(allTypes.Length);
             for (int i = 0; i < allTypes.Length; i++)
             {
                 typeChoices.Add(ConditionTypeMetadata.GetLabel(allTypes[i]));
@@ -486,13 +486,13 @@ namespace Game.Runtime
                 }
                 case ConditionTypeMetadata.WidgetKind.FactionFlags:
                 {
-                    // CharacterBelong ビットフラグ選択
+                    // CharacterBelong ビットフラグ選択 (static キャッシュを使用)
                     VisualElement flagsRow = new VisualElement();
                     flagsRow.AddToClassList("condition-row__flags");
-                    Array belongValues = Enum.GetValues(typeof(CharacterBelong));
-                    foreach (object v in belongValues)
+                    CharacterBelong[] belongValues = s_CachedCharacterBelongValues;
+                    for (int vi = 0; vi < belongValues.Length; vi++)
                     {
-                        CharacterBelong belong = (CharacterBelong)v;
+                        CharacterBelong belong = belongValues[vi];
                         if ((int)belong == 0)
                         {
                             continue;
