@@ -124,6 +124,8 @@ namespace Game.Tests.PlayMode
             Collider2D playerLeft = CreatePlayerCollider(new Vector2(-5f, 0f));
 
             trigger.InvokeOnTriggerEnter2DForTest(playerLeft);
+            // LSC.Update が走る前に ProcessQueue を手動フラッシュして loadCallback を発火させる
+            lsc.Orchestrator.ProcessQueue();
 
             Assert.AreEqual(1, loadRequests.Count,
                 "direction=zero では方向に関係なく RequestAreaLoad が呼ばれるべき");
@@ -141,6 +143,7 @@ namespace Game.Tests.PlayMode
             Collider2D playerMovingRight = CreatePlayerCollider(new Vector2(5f, 0f));
 
             trigger.InvokeOnTriggerEnter2DForTest(playerMovingRight);
+            lsc.Orchestrator.ProcessQueue();
 
             Assert.AreEqual(1, loadRequests.Count,
                 "正方向進入では RequestAreaLoad が呼ばれるべき");
@@ -158,6 +161,7 @@ namespace Game.Tests.PlayMode
             Collider2D playerMovingLeft = CreatePlayerCollider(new Vector2(-5f, 0f));
 
             trigger.InvokeOnTriggerEnter2DForTest(playerMovingLeft);
+            lsc.Orchestrator.ProcessQueue();
 
             Assert.AreEqual(0, loadRequests.Count,
                 "逆方向進入では RequestAreaLoad を呼ばないべき");
@@ -174,6 +178,7 @@ namespace Game.Tests.PlayMode
             Collider2D playerStopped = CreatePlayerCollider(Vector2.zero);
 
             trigger.InvokeOnTriggerEnter2DForTest(playerStopped);
+            lsc.Orchestrator.ProcessQueue();
 
             Assert.AreEqual(1, loadRequests.Count,
                 "速度が極小の場合は方向判定不能として RequestAreaLoad を発火させるべき");
