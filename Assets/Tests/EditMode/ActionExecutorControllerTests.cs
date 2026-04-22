@@ -170,7 +170,7 @@ namespace Game.Tests.EditMode
         {
             bool canExecute = ActionCostValidator.CanAfford(
                 currentStamina: 5f, currentMp: 100,
-                staminaCost: 10f, mpCost: 0f);
+                staminaCost: 10f, mpCost: 0);
             Assert.IsFalse(canExecute);
         }
 
@@ -179,7 +179,7 @@ namespace Game.Tests.EditMode
         {
             bool canExecute = ActionCostValidator.CanAfford(
                 currentStamina: 100f, currentMp: 5,
-                staminaCost: 0f, mpCost: 10f);
+                staminaCost: 0f, mpCost: 10);
             Assert.IsFalse(canExecute);
         }
 
@@ -188,7 +188,7 @@ namespace Game.Tests.EditMode
         {
             bool canExecute = ActionCostValidator.CanAfford(
                 currentStamina: 50f, currentMp: 50,
-                staminaCost: 10f, mpCost: 20f);
+                staminaCost: 10f, mpCost: 20);
             Assert.IsTrue(canExecute);
         }
 
@@ -197,7 +197,7 @@ namespace Game.Tests.EditMode
         {
             bool canExecute = ActionCostValidator.CanAfford(
                 currentStamina: 0f, currentMp: 0,
-                staminaCost: 0f, mpCost: 0f);
+                staminaCost: 0f, mpCost: 0);
             Assert.IsTrue(canExecute);
         }
 
@@ -206,10 +206,39 @@ namespace Game.Tests.EditMode
         {
             float stamina = 50f;
             int mp = 30;
-            ActionCostValidator.DeductCost(ref stamina, ref mp, 10f, 5f);
+            ActionCostValidator.DeductCost(ref stamina, ref mp, 10f, 5);
 
             Assert.AreEqual(40f, stamina, 0.001f);
             Assert.AreEqual(25, mp);
+        }
+
+        // ─── int 型一本化後の境界値 ───
+
+        [Test]
+        public void ActionCostValidator_CanAfford_MP等しい_実行可能()
+        {
+            bool canExecute = ActionCostValidator.CanAfford(
+                currentStamina: 100f, currentMp: 10,
+                staminaCost: 0f, mpCost: 10);
+            Assert.IsTrue(canExecute, "currentMp == mpCost で実行可能 (>= 判定)");
+        }
+
+        [Test]
+        public void ActionCostValidator_DeductCost_MPジャスト消費_残高ゼロ()
+        {
+            float stamina = 20f;
+            int mp = 10;
+            ActionCostValidator.DeductCost(ref stamina, ref mp, 0f, 10);
+            Assert.AreEqual(0, mp, "MP ぴったり消費で残高 0");
+        }
+
+        [Test]
+        public void ActionCostValidator_DeductCost_MP不足時はゼロにクランプ()
+        {
+            float stamina = 20f;
+            int mp = 5;
+            ActionCostValidator.DeductCost(ref stamina, ref mp, 0f, 100);
+            Assert.AreEqual(0, mp, "超過消費時は 0 にクランプ (負値にならない)");
         }
     }
 }

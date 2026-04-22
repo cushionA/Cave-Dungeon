@@ -213,7 +213,7 @@ namespace Game.Core
         [FoldoutGroup("コスト")]
         [MinValue(0)] public float staminaCost;
         [FoldoutGroup("コスト")]
-        [MinValue(0)] public float mpCost;
+        [MinValue(0)] public int mpCost;
 
         [FoldoutGroup("ヒット")]
         [MinValue(1)] public int maxHitCount;

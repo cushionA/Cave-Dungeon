@@ -23,6 +23,18 @@ namespace Game.Runtime
         private ActionEffect[] _currentActionEffects;
         private float _actionElapsedTime;
 
+        // 行動アーマー消費量（被弾ごとに累積し、行動終了/切替時にリセット）。
+        // ActionEffectProcessor.Evaluate は毎回フル値を返すため、
+        // 過去被弾で削られた量をここで差し引いて正味の残量を算出する。
+        //
+        // ⚠ 前提: 1 行動内の ActionEffect.Armor は「単一の Armor 値」を想定している。
+        //   ActionEffect が時間差で切り替わる場合（例: 0-1s Armor50 → 1-2s Armor30）、
+        //   切替時点で累積消費量が新しい Effect にも繰り越されるため、残量計算が誤る可能性がある。
+        //   Section 2 までの仕様では 1 行動 = 1 Armor Effect のみを採用しており、
+        //   時間差で複数 Armor Effect を重ねる要件が出た際は
+        //   切替タイミングで _actionArmorConsumed をリセットする仕組みの追加が必要。
+        private float _actionArmorConsumed;
+
         // アーマー回復管理
         private float _armorRecoveryTimer;
         private float _armorRecoveryDelay;
@@ -45,6 +57,16 @@ namespace Game.Runtime
             _rb = GetComponent<Rigidbody2D>();
         }
 
+        private void Start()
+        {
+            // テスト環境等で AddComponent の順序により Awake 時点で BaseCharacter がまだ
+            // 追加されていなかった場合に備えて、Start で再取得する（本番プレハブでは既に取得済みで no-op）。
+            if (_character == null)
+            {
+                _character = GetComponent<BaseCharacter>();
+            }
+        }
+
         /// <summary>
         /// ガード状態を設定する。GuardAbilityから呼ばれる。
         /// </summary>
@@ -59,20 +81,24 @@ namespace Game.Runtime
 
         /// <summary>
         /// 現在の行動特殊効果を設定する。ActionExecutorから呼ばれる。
+        /// 行動開始時はアーマー消費量もリセットする。
         /// </summary>
         public void SetActionEffects(ActionEffect[] effects)
         {
             _currentActionEffects = effects;
             _actionElapsedTime = 0f;
+            _actionArmorConsumed = 0f;
         }
 
         /// <summary>
         /// 行動特殊効果をクリアする。行動終了時に呼ばれる。
+        /// アーマー消費量も0に戻すことで、次の行動開始まで残骸が残らないようにする。
         /// </summary>
         public void ClearActionEffects()
         {
             _currentActionEffects = null;
             _actionElapsedTime = 0f;
+            _actionArmorConsumed = 0f;
         }
 
         /// <summary>
@@ -96,6 +122,7 @@ namespace Game.Runtime
             _guardTimeSinceStart = 0f;
             _currentActionEffects = null;
             _actionElapsedTime = 0f;
+            _actionArmorConsumed = 0f;
             _armorRecoveryTimer = 0f;
             _continuousJustGuardExpireTime = -1f;
         }
@@ -211,11 +238,11 @@ namespace Game.Runtime
                 out SituationalBonus situationalBonus);
 
             // Step 5: アーマー削り + HP適用
-            (int actualDamage, bool isKill, float armorBefore) = ApplyDamageToVitals(
+            (int actualDamage, bool isKill, float armorBefore, float actionArmorBefore) = ApplyDamageToVitals(
                 data, guardResult, effectState, reducedDamage, ref vitals);
 
             // Step 6: 被弾リアクション判定
-            float totalArmorBefore = armorBefore + effectState.actionArmorValue;
+            float totalArmorBefore = armorBefore + actionArmorBefore;
             bool hasKnockbackForce = data.knockbackForce.sqrMagnitude > 0.01f;
             HitReaction hitReaction = HitReactionLogic.Determine(
                 effectState.hasSuperArmor,
@@ -224,6 +251,11 @@ namespace Game.Runtime
                 hasKnockbackForce,
                 guardResult,
                 currentActState);
+
+            // Step 6.1: 被弾リアクション結果を ActState に反映
+            // HitReactionLogic.Determine が Flinch/Knockback/GuardBreak を返した場合、
+            // 次ヒット判定で isInHitstun が正しく評価されるよう SoA に書き戻す。
+            ApplyHitReactionToActState(hitReaction, isKill, hash);
 
             // Step 6.5: 状態異常蓄積
             StatusEffectId appliedEffect = ApplyStatusEffect(
@@ -348,12 +380,15 @@ namespace Game.Runtime
             return reducedDamage;
         }
 
-        private (int actualDamage, bool isKill, float armorBefore) ApplyDamageToVitals(
+        private (int actualDamage, bool isKill, float armorBefore, float actionArmorBefore) ApplyDamageToVitals(
             DamageData data, GuardResult guardResult,
             ActionEffectProcessor.EffectState effectState,
             int reducedDamage, ref CharacterVitals vitals)
         {
-            float actionArmor = effectState.actionArmorValue;
+            // ActionEffectProcessor.Evaluate は「現在アクティブな Armor 効果の合計」を返す。
+            // 過去被弾で削られた分 (_actionArmorConsumed) を差し引いた正味の残量を使う。
+            float actionArmor = Mathf.Max(0f, effectState.actionArmorValue - _actionArmorConsumed);
+            float actionArmorBefore = actionArmor;
             float armorBefore = vitals.currentArmor;
 
             // ジャストガード時のアーマー削り: 飛翔体は削り0固定、近接は justGuardResistance で軽減
@@ -375,6 +410,14 @@ namespace Game.Runtime
                     ref vitals.currentHp, ref vitals.currentArmor,
                     reducedDamage, effectiveArmorBreak, ref actionArmor);
 
+            // ref 経由で削られた分を累積消費量に書き戻す。
+            // 次ヒット時に effectState.actionArmorValue - _actionArmorConsumed が正しい残量になる。
+            float consumedThisHit = actionArmorBefore - actionArmor;
+            if (consumedThisHit > 0f)
+            {
+                _actionArmorConsumed += consumedThisHit;
+            }
+
             // 被弾したらアーマー回復タイマーリセット
             if (reducedDamage > 0)
             {
@@ -386,7 +429,51 @@ namespace Game.Runtime
                 ? (byte)(100 * vitals.currentHp / vitals.maxHp)
                 : (byte)0;
 
-            return (hpResult.actualDamage, hpResult.isKill, armorBefore);
+            return (hpResult.actualDamage, hpResult.isKill, armorBefore, actionArmorBefore);
+        }
+
+        /// <summary>
+        /// HitReaction の結果を SoA の ActState に書き戻す。
+        /// - Knockback → ActState.Knockbacked（着地→起き上がり完了まで持続）
+        /// - Flinch    → ActState.Flinch（HitReactionLogic.k_FlinchDuration 相当の短い硬直）
+        /// - GuardBreak → ActState.GuardBroken（k_GuardBreakStunDuration の硬直）
+        /// - None      → 現状維持（SuperArmor やガード成功時は上書きしない）
+        ///
+        /// Death 判定時は ActState.Dead を優先する。
+        /// ActState の自動復帰（硬直時間経過後 Neutral へ）は呼び出し側の ActState ティッカーで行う前提。
+        /// </summary>
+        private static void ApplyHitReactionToActState(HitReaction hitReaction, bool isKill, int hash)
+        {
+            if (!GameManager.IsCharacterValid(hash))
+            {
+                return;
+            }
+
+            ref CharacterFlags flags = ref GameManager.Data.GetFlags(hash);
+
+            // 死亡時は必ず Dead に遷移（HitReaction より優先）
+            if (isKill)
+            {
+                flags.ActState = ActState.Dead;
+                return;
+            }
+
+            switch (hitReaction)
+            {
+                case HitReaction.Knockback:
+                    flags.ActState = ActState.Knockbacked;
+                    break;
+                case HitReaction.Flinch:
+                    flags.ActState = ActState.Flinch;
+                    break;
+                case HitReaction.GuardBreak:
+                    flags.ActState = ActState.GuardBroken;
+                    break;
+                case HitReaction.None:
+                default:
+                    // ガード成功/SuperArmor/アーマー残り時は現状の ActState を維持
+                    break;
+            }
         }
 
         private static DamageResult BuildResult(

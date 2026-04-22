@@ -273,6 +273,27 @@ namespace Game.Runtime
         // Tooltip Handling
         // =========================================================================
 
+        /// <summary>
+        /// 要素の userData にセットする「tooltip ハンドラ登録済み」マーカー。
+        /// 静的インスタンスを1つだけ使い、Reference Equality で判定する。
+        /// 他用途の userData と衝突しないよう専用クラスを使う。
+        /// </summary>
+        private sealed class TooltipHandlerAttachedMarker
+        {
+            public static readonly TooltipHandlerAttachedMarker Instance = new TooltipHandlerAttachedMarker();
+        }
+
+        /// <summary>
+        /// ツールチップ表示用のコールバックを、tooltip 属性を持つ各要素に登録する。
+        /// ダイアログ開閉や動的リスト再構築ごとに何度も呼ばれるため、同一要素への
+        /// 多重登録を防ぐ必要がある（_unsubscribeActions が単調増加する問題の修正）。
+        ///
+        /// 対策として element.userData に <see cref="TooltipHandlerAttachedMarker"/>
+        /// 専用フラグを格納し、2 回目以降は登録をスキップする。OnDisable 時の一括解放は
+        /// 従来通り <see cref="_unsubscribeActions"/> で行うため、閉じるまでに1回登録された
+        /// 分は画面終了時にまとめて解放される。動的に破棄された要素分は UIToolkit 側で
+        /// 到達不能になり GC されるため問題なし。
+        /// </summary>
         private void AttachTooltipHandlers(VisualElement root)
         {
             root.Query<VisualElement>().ForEach(element =>
@@ -281,6 +302,20 @@ namespace Game.Runtime
                 {
                     return;
                 }
+
+                // 既に登録済みならスキップ（同一要素への多重登録防止）。
+                // 他用途の userData を上書きしないよう、現在セットされていない場合のみ自分のマーカーで占有する。
+                if (element.userData is TooltipHandlerAttachedMarker)
+                {
+                    return;
+                }
+                if (element.userData != null)
+                {
+                    // 他のコードが userData を使っている要素は tooltip 登録を諦める
+                    // （現状 userData は他で使っていないが、将来の衝突を避ける保険）。
+                    return;
+                }
+                element.userData = TooltipHandlerAttachedMarker.Instance;
 
                 EventCallback<MouseEnterEvent> onMouseEnter = evt => ShowTooltip(element, element.tooltip);
                 EventCallback<MouseLeaveEvent> onMouseLeave = evt => HideTooltip();
@@ -298,6 +333,11 @@ namespace Game.Runtime
                     element.UnregisterCallback(onMouseLeave);
                     element.UnregisterCallback(onFocusIn);
                     element.UnregisterCallback(onFocusOut);
+                    // マーカーも解除して、次回 OnEnable で再登録できるようにする
+                    if (element.userData is TooltipHandlerAttachedMarker)
+                    {
+                        element.userData = null;
+                    }
                 });
             });
         }
@@ -754,6 +794,14 @@ namespace Game.Runtime
             return $"[{sourceName}] → [{targetName}] ({condText})";
         }
 
+        /// <summary>
+        /// ショートカット割り当てのドロップダウンを再描画する（読み取り専用）。
+        /// 範囲外 binding のクリーンアップは Logic 側（Switch/Add/Remove 経由の
+        /// <see cref="CompanionAISettingsLogic.ClearInvalidShortcutBindings"/>) が事前に済ませている前提。
+        /// 万一データが範囲外を指していても「未割当として表示する」だけで bindings 配列は書き換えない。
+        /// 描画関数が副作用でデータを変えると、レイアウトパス中の不意な再評価・Dirty 管理の
+        /// 乱れを招くため、データ変更は必ずイベントハンドラ経由に限定する。
+        /// </summary>
         private void RefreshShortcutDropdowns()
         {
             List<string> choices = new List<string>();
@@ -776,22 +824,9 @@ namespace Game.Runtime
                 }
                 dropdown.choices = choices;
                 int boundIndex = bindings != null && i < bindings.Length ? bindings[i] : -1;
-                // モード数が変動して boundIndex が範囲外になった場合は未割当(-1)へフォールバック。
-                // Clamp で画面上だけズレた要素を選ぶと「意図しないモードが割り当たっている」状態になるため。
-                int displayIndex;
-                if (boundIndex < 0 || boundIndex >= modesCount)
-                {
-                    displayIndex = 0;
-                    if (bindings != null && i < bindings.Length && bindings[i] != -1)
-                    {
-                        // データも未割当に合わせて書き戻す（モード削除時の自動クリーンアップ）
-                        bindings[i] = -1;
-                    }
-                }
-                else
-                {
-                    displayIndex = boundIndex + 1;
-                }
+                // 範囲外は「未割当」として表示する（データ側の書き換えはしない）。
+                // Logic.ClearInvalidShortcutBindings が Switch/Add/Remove 時に既に処理済み。
+                int displayIndex = (boundIndex < 0 || boundIndex >= modesCount) ? 0 : boundIndex + 1;
                 dropdown.SetValueWithoutNotify(choices[displayIndex]);
             }
         }

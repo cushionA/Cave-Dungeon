@@ -180,7 +180,7 @@ namespace Game.Tests.EditMode
             float stamina = 5f;
             int mp = 100;
             float staminaCost = 20f;
-            float mpCost = 0f;
+            int mpCost = 0;
 
             bool canAfford = ActionCostValidator.CanAfford(stamina, mp, staminaCost, mpCost);
             Assert.IsFalse(canAfford);
@@ -196,13 +196,13 @@ namespace Game.Tests.EditMode
             float stamina = 50f;
             int mp = 30;
 
-            ActionCostValidator.DeductCost(ref stamina, ref mp, 15f, 10f);
+            ActionCostValidator.DeductCost(ref stamina, ref mp, 15f, 10);
 
             Assert.AreEqual(35f, stamina, 0.001f);
             Assert.AreEqual(20, mp);
 
             // 消費後もまだ別の行動が実行可能
-            Assert.IsTrue(ActionCostValidator.CanAfford(stamina, mp, 10f, 5f));
+            Assert.IsTrue(ActionCostValidator.CanAfford(stamina, mp, 10f, 5));
         }
 
         // ─── Sustained行動のTick完了 ───

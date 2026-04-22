@@ -61,7 +61,7 @@ namespace Game.Runtime
             _collider = GetComponent<BoxCollider2D>();
             _damageReceiver = GetComponent<DamageReceiver>();
             _animationController = GetComponent<CharacterAnimationController>();
-            _objectHash = gameObject.GetInstanceID();
+            _objectHash = gameObject.GetHashCode();
 
             // 物理設定
             _rb.gravityScale = GameConstants.k_GravityScale;
@@ -93,16 +93,6 @@ namespace Game.Runtime
 
             // 名前→ハッシュのマッピングを登録（DialogueSystem等の外部連携用）
             CharacterRegistry.RegisterName(_characterInfo.name, _objectHash);
-
-            // Awake 後に DamageReceiver / AnimationController が動的に追加されたケース (テスト等) にもフォールバック
-            if (_damageReceiver == null)
-            {
-                _damageReceiver = GetComponent<DamageReceiver>();
-            }
-            if (_animationController == null)
-            {
-                _animationController = GetComponent<CharacterAnimationController>();
-            }
 
             if (_damageReceiver != null)
             {
@@ -154,12 +144,6 @@ namespace Game.Runtime
             _isRegistered = true;
 
             CharacterRegistry.RegisterName(_characterInfo.name, _objectHash);
-
-            // Awake 後に DamageReceiver が動的に追加されたケース (テスト等) にもフォールバック
-            if (_damageReceiver == null)
-            {
-                _damageReceiver = GetComponent<DamageReceiver>();
-            }
 
             if (_damageReceiver != null)
             {

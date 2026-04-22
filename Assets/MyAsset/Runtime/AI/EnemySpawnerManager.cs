@@ -13,17 +13,21 @@ namespace Game.Runtime
         public GameObject gameObject;
         public BaseCharacter character; // GetComponent回避用キャッシュ
         public SpawnPointData spawnPoint;
-        public int characterHash; // GameObject.GetInstanceID
+        public int characterHash; // GameObject.GetHashCode
     }
 
     /// <summary>
     /// Core EnemySpawnerのMonoBehaviourラッパー。
     /// スポーンポイント評価 → GameObjectプール管理 → SoA登録を橋渡しする。
     /// GameManagerの子として配置し、Initialize()で起動する。
+    /// IGameSubManager を実装し、GameManager から Priority 順に初期化される。
     /// </summary>
-    public class EnemySpawnerManager : MonoBehaviour
+    public class EnemySpawnerManager : MonoBehaviour, IGameSubManager
     {
         private const int k_DespawnCheckInterval = 30;
+
+        /// <summary>InitOrder: 敵スポナーは Streaming の後、飛翔体より前に初期化する。</summary>
+        private const int k_InitOrder = 200;
 
         [Header("Prefab")]
         [SerializeField] private GameObject _defaultEnemyPrefab;
@@ -73,6 +77,26 @@ namespace Game.Runtime
             }
         }
 #endif
+
+        /// <summary>IGameSubManager 初期化順。数値が小さいほど先。</summary>
+        public int InitOrder => k_InitOrder;
+
+        /// <summary>
+        /// IGameSubManager 実装。パラメータは GameManager 経由で取得可能なため未使用。
+        /// 既存の no-arg Initialize() に委譲する。
+        /// </summary>
+        void IGameSubManager.Initialize(SoACharaDataDic data, GameEvents events)
+        {
+            Initialize();
+        }
+
+        /// <summary>
+        /// IGameSubManager 実装。MonoBehaviour の OnDestroy 側で購読解除するため No-op。
+        /// </summary>
+        void IGameSubManager.Dispose()
+        {
+            // OnDestroy 側でイベント購読解除するため、ここでは何もしない
+        }
 
         /// <summary>
         /// マネージャーを初期化する。GameManagerから呼ばれる。
@@ -282,7 +306,7 @@ namespace Game.Runtime
                 character.OnPoolAcquire();
             }
 
-            int characterHash = enemyGo.GetInstanceID();
+            int characterHash = enemyGo.GetHashCode();
             ActiveEnemyData data = new ActiveEnemyData
             {
                 gameObject = enemyGo,

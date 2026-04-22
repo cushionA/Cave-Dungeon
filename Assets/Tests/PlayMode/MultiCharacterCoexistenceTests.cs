@@ -184,14 +184,13 @@ namespace Game.Tests.PlayMode
         {
             CharacterInfo info1 = TestSceneHelper.CreateTestCharacterInfo(
                 belong: CharacterBelong.Enemy, feature: CharacterFeature.Minion, maxHp: 100);
-            GameObject char1 = TestSceneHelper.CreateBaseCharacterObject(info1, Vector3.zero);
-            DamageReceiver receiver1 = char1.AddComponent<DamageReceiver>();
+            GameObject char1 = TestSceneHelper.CreateBaseCharacterObjectWithDamageReceiver(info1, Vector3.zero);
+            DamageReceiver receiver1 = char1.GetComponent<DamageReceiver>();
             _spawnedObjects.Add(char1);
 
             CharacterInfo info2 = TestSceneHelper.CreateTestCharacterInfo(
                 belong: CharacterBelong.Enemy, feature: CharacterFeature.Minion, maxHp: 100);
-            GameObject char2 = TestSceneHelper.CreateBaseCharacterObject(info2, new Vector3(3, 0, 0));
-            char2.AddComponent<DamageReceiver>();
+            GameObject char2 = TestSceneHelper.CreateBaseCharacterObjectWithDamageReceiver(info2, new Vector3(3, 0, 0));
             _spawnedObjects.Add(char2);
 
             yield return null; // Start

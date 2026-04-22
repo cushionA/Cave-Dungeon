@@ -90,6 +90,36 @@ namespace Game.Tests.PlayMode
         }
 
         /// <summary>
+        /// テスト用BaseCharacter + DamageReceiver + CharacterAnimationController を持つGameObjectを生成する。
+        /// BaseCharacter の Awake で GetComponent キャッシュが成功するよう、
+        /// DamageReceiver / AnimationController を先に追加してから BaseCharacter を追加する。
+        /// </summary>
+        public static GameObject CreateBaseCharacterObjectWithDamageReceiver(CharacterInfo info, Vector3 position)
+        {
+            GameObject go = new GameObject("TestCharacter");
+            go.transform.position = position;
+
+            Rigidbody2D rb = go.AddComponent<Rigidbody2D>();
+            rb.gravityScale = 3.0f;
+            rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+
+            BoxCollider2D col = go.AddComponent<BoxCollider2D>();
+            col.size = new Vector2(0.6f, 0.9f);
+
+            // BaseCharacter.Awake が GetComponent でキャッシュする順序を守るため、
+            // BaseCharacter より前に DamageReceiver / CharacterAnimationController を追加する。
+            // CharacterAnimationController は [RequireComponent(Animator)] により Animator も自動付与。
+            go.AddComponent<DamageReceiver>();
+            go.AddComponent<CharacterAnimationController>();
+
+            // BaseCharacterのCharacterInfoフィールドをリフレクションで設定
+            BaseCharacter bc = go.AddComponent<BaseCharacter>();
+            SetCharacterInfo(bc, info);
+
+            return go;
+        }
+
+        /// <summary>
         /// CharacterInfoを設定する。
         /// UNITY_INCLUDE_TESTS定義時はBaseCharacterの公開メソッドを使用。
         /// </summary>

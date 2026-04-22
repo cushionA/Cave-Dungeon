@@ -71,6 +71,48 @@ namespace Game.Core
             return arr;
         }
 
+        /// <summary>
+        /// shortcutModeBindings の範囲外参照を一括で未割当(-1)に書き戻す純関数。
+        /// モード削除/追加や戦術切替に伴い、modes.Length が変動したあとで呼び出し、
+        /// 旧 binding が modes 配列の範囲外を指していた場合に -1 へクランプする。
+        ///
+        /// UI 描画中に「表示しながら書き換える」という副作用を排除するため、
+        /// Controller.RefreshShortcutDropdowns ではなく Switch/Add/Remove 系の操作で
+        /// 明示的に呼ぶ設計にしている。戻り値は「変更があったか」で、呼び出し側は
+        /// Dirty 判定に利用できる (config.shortcutModeBindings が null の場合は
+        /// デフォルトを再生成する必要があるが、その場合も true を返す)。
+        /// </summary>
+        public static bool ClearInvalidShortcutBindings(ref CompanionAIConfig config, int modeCount)
+        {
+            int safeModeCount = modeCount < 0 ? 0 : modeCount;
+
+            if (config.shortcutModeBindings == null || config.shortcutModeBindings.Length != k_ShortcutSlotCount)
+            {
+                // スロット数不整合はデフォルト再生成。modes が空なら全 -1 なので実質差分なしだが、
+                // 既存データが不正構造なら「構造的に修正した」とみなして true を返す。
+                config.shortcutModeBindings = CreateDefaultShortcutBindings();
+                return true;
+            }
+
+            bool changed = false;
+            int[] bindings = config.shortcutModeBindings;
+            for (int i = 0; i < bindings.Length; i++)
+            {
+                int bound = bindings[i];
+                if (bound < 0)
+                {
+                    // 既に未割当なら何もしない（負値の正規化は SetShortcutBinding 側の責務）
+                    continue;
+                }
+                if (bound >= safeModeCount)
+                {
+                    bindings[i] = -1;
+                    changed = true;
+                }
+            }
+            return changed;
+        }
+
         /// <summary>現在アクティブなタブ。</summary>
         public TabId ActiveTab => _activeTab;
 
@@ -116,6 +158,11 @@ namespace Game.Core
             {
                 _editingConfigId = null;
                 _editingBuffer = CloneConfig(_currentTactic);
+                // 切替元で modes 数が変動している可能性があるのでショートカットを正規化。
+                // Switch 直後は Dirty=false が期待値なので戻り値は読み捨てる（書き換えは
+                // 「切替元データの自動修復」であってユーザー編集ではない）。
+                int modeCount = _editingBuffer.modes != null ? _editingBuffer.modes.Length : 0;
+                ClearInvalidShortcutBindings(ref _editingBuffer, modeCount);
                 _isDirty = false;
                 return SwitchResult.Succeeded;
             }
@@ -128,6 +175,8 @@ namespace Game.Core
 
             _editingConfigId = configId;
             _editingBuffer = CloneConfig(found.Value);
+            int loadedModeCount = _editingBuffer.modes != null ? _editingBuffer.modes.Length : 0;
+            ClearInvalidShortcutBindings(ref _editingBuffer, loadedModeCount);
             _isDirty = false;
             return SwitchResult.Succeeded;
         }
@@ -163,6 +212,10 @@ namespace Game.Core
             }
             newModes[currentCount] = mode;
             _editingBuffer.modes = newModes;
+            // modes 数が増えた場合、既存 binding が新たに範囲内に収まる可能性はあるが、
+            // 逆に範囲外が発生することはない。ただし shortcutModeBindings が null や
+            // 不正長さの場合はここでデフォルト再生成されるので常に呼ぶ。
+            ClearInvalidShortcutBindings(ref _editingBuffer, newModes.Length);
             _isDirty = true;
             return true;
         }
@@ -190,6 +243,11 @@ namespace Game.Core
                 dst++;
             }
             _editingBuffer.modes = newModes;
+            // 削除で modes 数が減ったので、削除された index を指していた binding を -1 に戻す。
+            // なお「index より大きい binding を decrement する」運用は採用しない
+            // （ショートカットは "このスロット番号のモード" を割り当てる UI 指向で、
+            //  削除後はユーザーに再割り当てを促す方が誤爆が少ない）。
+            ClearInvalidShortcutBindings(ref _editingBuffer, newModes.Length);
             _isDirty = true;
             return true;
         }

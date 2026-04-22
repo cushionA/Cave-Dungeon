@@ -35,7 +35,7 @@ namespace Game.Runtime
 
         private void OnEnable()
         {
-            _ownerHash = gameObject.GetInstanceID();
+            _ownerHash = gameObject.GetHashCode();
             s_controllerMap[_ownerHash] = this;
             gameObject.layer = GameConstants.k_LayerCharaPassThrough;
         }
@@ -191,7 +191,7 @@ namespace Game.Runtime
                 return;
             }
 
-            int otherInstanceId = collision.gameObject.GetInstanceID();
+            int otherInstanceId = collision.gameObject.GetHashCode();
             if (s_controllerMap.ContainsKey(otherInstanceId))
             {
                 TryStartCarry(otherInstanceId);
