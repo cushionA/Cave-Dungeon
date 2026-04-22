@@ -22,6 +22,15 @@ namespace Game.Runtime
         private bool _isActive;
         private ProjectileManager _manager;
 
+        // スポーン遅延中は表示・当たり判定を切る状態。遅延明けに復活させるために保持。
+        private bool _isSpawnDelayedLastFrame;
+
+        // scaleTime>0 の弾丸で localScale を操作した直後に true。
+        // Deactivate 時にデザイナー設定スケールへ戻すために利用。
+        private Vector3 _baseLocalScale;
+        private bool _baseLocalScaleCaptured;
+        private bool _localScaleModified;
+
         public Projectile CoreProjectile => _coreProjectile;
         public MagicDefinition Magic => _magic;
         public bool IsActive => _isActive;
@@ -38,6 +47,10 @@ namespace Game.Runtime
 
             _spriteRenderer = GetComponentInChildren<SpriteRenderer>();
             _hitTargets = new HashSet<int>();
+
+            // プレハブ/デザイナー設定のスケールを保持（scaleTime>0 のスケール補間で上書き→戻す際のベース）
+            _baseLocalScale = transform.localScale;
+            _baseLocalScaleCaptured = true;
         }
 
         /// <summary>
@@ -50,9 +63,29 @@ namespace Game.Runtime
             _manager = manager;
             _isActive = true;
             _hitTargets.Clear();
-            _triggerCollider.enabled = true;
 
             transform.position = new Vector3(projectile.Position.x, projectile.Position.y, 0f);
+
+            // scaleTime>0 のみ startScale を適用。<=0 はデザイナー設定（または Deactivate で復元済みのベース）を維持。
+            if (projectile.Profile.scaleTime > 0f)
+            {
+                float initialScale = projectile.GetCurrentScale();
+                Vector3 baseScale = _baseLocalScaleCaptured ? _baseLocalScale : Vector3.one;
+                transform.localScale = new Vector3(
+                    baseScale.x * initialScale,
+                    baseScale.y * initialScale,
+                    baseScale.z);
+                _localScaleModified = true;
+            }
+
+            // スポーン遅延中は当たり判定と可視性を切る
+            _isSpawnDelayedLastFrame = projectile.IsSpawnDelayed;
+            _triggerCollider.enabled = !_isSpawnDelayedLastFrame;
+            if (_spriteRenderer != null)
+            {
+                _spriteRenderer.enabled = !_isSpawnDelayedLastFrame;
+            }
+
             gameObject.SetActive(true);
         }
 
@@ -65,11 +98,26 @@ namespace Game.Runtime
             _triggerCollider.enabled = false;
             _coreProjectile = null;
             _manager = null;
+            _isSpawnDelayedLastFrame = false;
+
+            // scaleTime>0 で localScale を上書きした弾丸はデザイナー設定のベーススケールに戻す。
+            // 次回この Controller が scaleTime=0 の弾丸に再利用されても前回のスケールが残らない。
+            if (_localScaleModified && _baseLocalScaleCaptured)
+            {
+                transform.localScale = _baseLocalScale;
+            }
+            _localScaleModified = false;
+
+            if (_spriteRenderer != null)
+            {
+                _spriteRenderer.enabled = true;
+            }
             gameObject.SetActive(false);
         }
 
         /// <summary>
         /// CoreのPositionをTransformに同期し、速度方向にスプライトを回転する。
+        /// スポーン遅延の状態遷移と、現在スケール(startScale→endScale Lerp)も反映する。
         /// ProjectileManagerから毎フレーム呼ばれる。
         /// </summary>
         public void SyncTransform()
@@ -79,8 +127,32 @@ namespace Game.Runtime
                 return;
             }
 
+            // スポーン遅延の遷移: 遅延→終了フレームで当たり判定と可視性を復帰
+            bool isDelayedNow = _coreProjectile.IsSpawnDelayed;
+            if (_isSpawnDelayedLastFrame && !isDelayedNow)
+            {
+                _triggerCollider.enabled = true;
+                if (_spriteRenderer != null)
+                {
+                    _spriteRenderer.enabled = true;
+                }
+            }
+            _isSpawnDelayedLastFrame = isDelayedNow;
+
             Vector2 pos = _coreProjectile.Position;
             transform.position = new Vector3(pos.x, pos.y, 0f);
+
+            // scaleTime>0 のみ毎フレーム補間を反映（ベーススケールに乗算）。<=0 ではベーススケールを維持。
+            if (_coreProjectile.Profile.scaleTime > 0f)
+            {
+                float scale = _coreProjectile.GetCurrentScale();
+                Vector3 baseScale = _baseLocalScaleCaptured ? _baseLocalScale : Vector3.one;
+                transform.localScale = new Vector3(
+                    baseScale.x * scale,
+                    baseScale.y * scale,
+                    baseScale.z);
+                _localScaleModified = true;
+            }
 
             Vector2 vel = _coreProjectile.Velocity;
             if (vel.sqrMagnitude > 0.001f)
@@ -93,6 +165,12 @@ namespace Game.Runtime
         private void OnTriggerEnter2D(Collider2D other)
         {
             if (!_isActive)
+            {
+                return;
+            }
+
+            // スポーン遅延中は当たり判定を無効化（念のため二重チェック）
+            if (_coreProjectile != null && _coreProjectile.IsSpawnDelayed)
             {
                 return;
             }
