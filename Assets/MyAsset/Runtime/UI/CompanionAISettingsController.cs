@@ -940,12 +940,13 @@ namespace Game.Runtime
             AIMode[] available = _modeRegistry.GetAll();
             if (available.Length == 0)
             {
-                // UI単独で即動作する最小構成: Enemy を近距離順に狙う targetSelect 1件 + 無条件ルール 1件
+                // UI単独で即動作する最小構成: Enemy を近距離順に狙う targetSelect 1件 + 無条件ルール 1件。
+                // actions は Idle スロットを先頭に入れて default が指す先を保証する（棒立ち防止）。
                 AIMode emptyMode = new AIMode
                 {
                     modeName = "新規モード",
                     modeId = "",
-                    actions = new ActionSlot[0],
+                    actions = new ActionSlot[] { CompanionAISettingsLogic.CreateDefaultIdleSlot() },
                     actionRules = new AIRule[0],
                     targetSelects = new AITargetSelect[]
                     {
