@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Game.Core;
@@ -8,9 +9,19 @@ namespace Game.Runtime
     /// LevelStreamingOrchestratorのMonoBehaviourラッパー。
     /// Additiveシーンのロード/アンロードをUnity SceneManager経由で実行する。
     /// GameScene（永続シーン）に配置する。
+    /// IGameSubManager を実装し、GameManager から Priority 順に初期化される。
     /// </summary>
-    public class LevelStreamingController : MonoBehaviour
+    public class LevelStreamingController : MonoBehaviour, IGameSubManager
     {
+        /// <summary>
+        /// シーンロード失敗時にフォールバックするシーン名。
+        /// Build Settings に登録済みである必要がある。
+        /// </summary>
+        private const string k_FallbackSceneName = "GameScene";
+
+        /// <summary>InitOrder: Streaming は他のマネージャーより先に初期化する（シーン土台）。</summary>
+        private const int k_InitOrder = 100;
+
         [SerializeField]
         [Header("Streaming Settings")]
         [Tooltip("永続シーン名（このコントローラーが属するシーン）")]
@@ -22,7 +33,33 @@ namespace Game.Runtime
         private AsyncOperation _unloadOperation;
         private string _unloadOperationScene;
 
+        // シーン有効性チェックの注入フック（テスト用）。null時は SceneManager.GetSceneByName を使用。
+        private Func<string, bool> _sceneValidityChecker;
+
+        // フォールバックロード発動フック（テスト用）。null時は SceneManager.LoadSceneAsync を実行。
+        private Action<string> _fallbackLoader;
+
         public LevelStreamingOrchestrator Orchestrator => _orchestrator;
+
+        /// <summary>IGameSubManager 初期化順。数値が小さいほど先。</summary>
+        public int InitOrder => k_InitOrder;
+
+        /// <summary>
+        /// IGameSubManager 実装。パラメータは GameManager.Events 経由で取得済のため未使用。
+        /// 既存の no-arg Initialize() に委譲する。
+        /// </summary>
+        void IGameSubManager.Initialize(SoACharaDataDic data, GameEvents events)
+        {
+            Initialize();
+        }
+
+        /// <summary>
+        /// IGameSubManager 実装。MonoBehaviour の OnDestroy 側で購読解除するため No-op。
+        /// </summary>
+        void IGameSubManager.Dispose()
+        {
+            // OnDestroy 側で購読解除するため、ここでは何もしない
+        }
 
         public void Initialize()
         {
@@ -38,6 +75,36 @@ namespace Game.Runtime
                 OnLoadSceneRequested,
                 OnUnloadSceneRequested
             );
+
+            // エリアアンロード完了時に Enemy/Projectile プールを解放（ゾンビオブジェクト残留防止）
+            _orchestrator.OnAreaUnloadCompleted += HandleAreaUnloadCompleted;
+        }
+
+        private void OnDestroy()
+        {
+            if (_orchestrator != null)
+            {
+                _orchestrator.OnAreaUnloadCompleted -= HandleAreaUnloadCompleted;
+            }
+        }
+
+        /// <summary>
+        /// エリアアンロード完了時: 残留した Enemy/Projectile を全プールに戻す。
+        /// シーン遷移後のゾンビオブジェクト残留による SoA 不整合を防止する。
+        /// </summary>
+        private void HandleAreaUnloadCompleted(string sceneName)
+        {
+            EnemySpawnerManager enemies = GameManager.EnemySpawner;
+            if (enemies != null)
+            {
+                enemies.ClearAll();
+            }
+
+            ProjectileManager projectiles = GameManager.Projectiles;
+            if (projectiles != null)
+            {
+                projectiles.ClearAll();
+            }
         }
 
         private void Update()
@@ -49,7 +116,7 @@ namespace Game.Runtime
 
             if (_loadOperation != null && _loadOperation.isDone)
             {
-                _orchestrator.NotifyLoadComplete(_loadOperationScene);
+                HandleLoadComplete(_loadOperationScene);
                 _loadOperation = null;
                 _loadOperationScene = null;
             }
@@ -62,6 +129,46 @@ namespace Game.Runtime
             }
 
             _orchestrator.ProcessQueue();
+        }
+
+        /// <summary>
+        /// AsyncOperation 完了後のシーン有効性チェック。無効ならエラーログ + フォールバック。
+        /// 有効なら通常通り NotifyLoadComplete。
+        /// </summary>
+        private void HandleLoadComplete(string sceneName)
+        {
+            if (IsSceneValid(sceneName))
+            {
+                _orchestrator.NotifyLoadComplete(sceneName);
+                return;
+            }
+
+            Debug.LogError($"[LevelStreamingController] Scene load failed for '{sceneName}'. Falling back to '{k_FallbackSceneName}'.");
+            InvokeFallbackLoad();
+        }
+
+        /// <summary>シーンがロード済みかつ有効か検証する。注入フックがあれば優先。</summary>
+        private bool IsSceneValid(string sceneName)
+        {
+            if (_sceneValidityChecker != null)
+            {
+                return _sceneValidityChecker(sceneName);
+            }
+
+            Scene scene = SceneManager.GetSceneByName(sceneName);
+            return scene.IsValid() && scene.isLoaded;
+        }
+
+        /// <summary>フォールバックシーンをロードする。注入フックがあれば優先。</summary>
+        private void InvokeFallbackLoad()
+        {
+            if (_fallbackLoader != null)
+            {
+                _fallbackLoader(k_FallbackSceneName);
+                return;
+            }
+
+            SceneManager.LoadSceneAsync(k_FallbackSceneName, LoadSceneMode.Additive);
         }
 
         /// <summary>外部からエリアロードを要求する。AreaBoundaryTriggerから呼ばれる。</summary>
@@ -97,5 +204,29 @@ namespace Game.Runtime
             _unloadOperation = SceneManager.UnloadSceneAsync(sceneName);
             _unloadOperationScene = sceneName;
         }
+
+#if UNITY_INCLUDE_TESTS
+        /// <summary>テスト専用: シーン有効性チェックとフォールバックロードを差し替える。</summary>
+        public void SetTestHooks(Func<string, bool> sceneValidityChecker, Action<string> fallbackLoader)
+        {
+            _sceneValidityChecker = sceneValidityChecker;
+            _fallbackLoader = fallbackLoader;
+        }
+
+        /// <summary>テスト専用: 外部から Orchestrator を注入する（PlayMode 不要にする）。</summary>
+        public void InjectOrchestratorForTest(LevelStreamingOrchestrator orchestrator)
+        {
+            _orchestrator = orchestrator;
+        }
+
+        /// <summary>テスト専用: HandleLoadComplete を直接呼び出し、失敗シミュレーションを実行する。</summary>
+        public void InvokeHandleLoadCompleteForTest(string sceneName)
+        {
+            HandleLoadComplete(sceneName);
+        }
+
+        /// <summary>テスト専用: k_FallbackSceneName を取得。</summary>
+        public static string FallbackSceneNameForTest => k_FallbackSceneName;
+#endif
     }
 }
