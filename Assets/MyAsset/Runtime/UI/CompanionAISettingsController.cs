@@ -273,6 +273,27 @@ namespace Game.Runtime
         // Tooltip Handling
         // =========================================================================
 
+        /// <summary>
+        /// 要素の userData にセットする「tooltip ハンドラ登録済み」マーカー。
+        /// 静的インスタンスを1つだけ使い、Reference Equality で判定する。
+        /// 他用途の userData と衝突しないよう専用クラスを使う。
+        /// </summary>
+        private sealed class TooltipHandlerAttachedMarker
+        {
+            public static readonly TooltipHandlerAttachedMarker Instance = new TooltipHandlerAttachedMarker();
+        }
+
+        /// <summary>
+        /// ツールチップ表示用のコールバックを、tooltip 属性を持つ各要素に登録する。
+        /// ダイアログ開閉や動的リスト再構築ごとに何度も呼ばれるため、同一要素への
+        /// 多重登録を防ぐ必要がある（_unsubscribeActions が単調増加する問題の修正）。
+        ///
+        /// 対策として element.userData に <see cref="TooltipHandlerAttachedMarker"/>
+        /// 専用フラグを格納し、2 回目以降は登録をスキップする。OnDisable 時の一括解放は
+        /// 従来通り <see cref="_unsubscribeActions"/> で行うため、閉じるまでに1回登録された
+        /// 分は画面終了時にまとめて解放される。動的に破棄された要素分は UIToolkit 側で
+        /// 到達不能になり GC されるため問題なし。
+        /// </summary>
         private void AttachTooltipHandlers(VisualElement root)
         {
             root.Query<VisualElement>().ForEach(element =>
@@ -281,6 +302,20 @@ namespace Game.Runtime
                 {
                     return;
                 }
+
+                // 既に登録済みならスキップ（同一要素への多重登録防止）。
+                // 他用途の userData を上書きしないよう、現在セットされていない場合のみ自分のマーカーで占有する。
+                if (element.userData is TooltipHandlerAttachedMarker)
+                {
+                    return;
+                }
+                if (element.userData != null)
+                {
+                    // 他のコードが userData を使っている要素は tooltip 登録を諦める
+                    // （現状 userData は他で使っていないが、将来の衝突を避ける保険）。
+                    return;
+                }
+                element.userData = TooltipHandlerAttachedMarker.Instance;
 
                 EventCallback<MouseEnterEvent> onMouseEnter = evt => ShowTooltip(element, element.tooltip);
                 EventCallback<MouseLeaveEvent> onMouseLeave = evt => HideTooltip();
@@ -298,6 +333,11 @@ namespace Game.Runtime
                     element.UnregisterCallback(onMouseLeave);
                     element.UnregisterCallback(onFocusIn);
                     element.UnregisterCallback(onFocusOut);
+                    // マーカーも解除して、次回 OnEnable で再登録できるようにする
+                    if (element.userData is TooltipHandlerAttachedMarker)
+                    {
+                        element.userData = null;
+                    }
                 });
             });
         }
