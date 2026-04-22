@@ -13,7 +13,7 @@ namespace Game.Runtime
         public GameObject gameObject;
         public BaseCharacter character; // GetComponent回避用キャッシュ
         public SpawnPointData spawnPoint;
-        public int characterHash; // GameObject.GetInstanceID
+        public int characterHash; // GameObject.GetHashCode
     }
 
     /// <summary>
@@ -282,7 +282,7 @@ namespace Game.Runtime
                 character.OnPoolAcquire();
             }
 
-            int characterHash = enemyGo.GetInstanceID();
+            int characterHash = enemyGo.GetHashCode();
             ActiveEnemyData data = new ActiveEnemyData
             {
                 gameObject = enemyGo,

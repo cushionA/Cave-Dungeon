@@ -97,9 +97,9 @@ namespace Game.Runtime
                 return;
             }
 
-            // アーキテクチャ準拠: 毎衝突でのGetComponentを避け、GameObject.GetInstanceID から
+            // アーキテクチャ準拠: 毎衝突でのGetComponentを避け、GameObject.GetHashCode から
             // SoA逆引き(GameManager.Data.GetManaged)で IDamageable を取得する。
-            int targetHash = other.gameObject.GetInstanceID();
+            int targetHash = other.gameObject.GetHashCode();
 
             // 自分自身にはダメージを与えない
             if (targetHash == _coreProjectile.CasterHash)

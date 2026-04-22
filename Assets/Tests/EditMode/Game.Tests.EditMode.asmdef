@@ -4,6 +4,7 @@
     "references": [
         "Game.Core",
         "GameCode",
+        "GameCode.Editor",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "UniTask",
