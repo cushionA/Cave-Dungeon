@@ -51,7 +51,7 @@ namespace Game.Core
 
         [TitleGroup("コスト")]
         [MinValue(0)]
-        public float mpCost;
+        public int mpCost;
 
         [TitleGroup("コスト")]
         [MinValue(0)]
