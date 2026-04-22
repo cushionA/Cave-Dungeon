@@ -716,11 +716,18 @@ namespace Game.Runtime
                     }
                     ShowConditionEditorDialog(arr[idx], updated =>
                     {
+                        // Remove 経路と同じ「新配列生成→setter」パターンに揃える。
                         AICondition[] arr2 = getConditions();
-                        if (arr2 != null && idx < arr2.Length)
+                        if (arr2 == null || idx >= arr2.Length)
                         {
-                            arr2[idx] = updated;
+                            return;
                         }
+                        AICondition[] newArr = new AICondition[arr2.Length];
+                        for (int k = 0; k < arr2.Length; k++)
+                        {
+                            newArr[k] = k == idx ? updated : arr2[k];
+                        }
+                        setConditions(newArr);
                         rebuild();
                     });
                 });
@@ -2434,11 +2441,20 @@ namespace Game.Runtime
                     }
                     ShowTargetSelectEditDialog(arr[idx], edited =>
                     {
+                        // Remove 経路と同じ「新配列生成→setter」パターンに揃える。
+                        // in-place 書き換え（current[idx] = edited）だと setter が呼ばれないため、
+                        // 親スコープが配列参照を差し替えて監視している場合に検出漏れする。
                         AITargetSelect[] current = getSelects();
-                        if (current != null && idx < current.Length)
+                        if (current == null || idx >= current.Length)
                         {
-                            current[idx] = edited;
+                            return;
                         }
+                        AITargetSelect[] newArr = new AITargetSelect[current.Length];
+                        for (int k = 0; k < current.Length; k++)
+                        {
+                            newArr[k] = k == idx ? edited : current[k];
+                        }
+                        setSelects(newArr);
                         rebuild();
                     });
                 });
@@ -2544,11 +2560,19 @@ namespace Game.Runtime
                     }
                     ShowTargetRuleEditDialog(arr[idx], getParentMode(), edited =>
                     {
+                        // Remove 経路と同じ「新配列生成→setter」パターンに揃える。
+                        // setter 経由にすることで親 closure の再代入・Dirty 通知経路が一貫する。
                         AIRule[] current = getRules();
-                        if (current != null && idx < current.Length)
+                        if (current == null || idx >= current.Length)
                         {
-                            current[idx] = edited;
+                            return;
                         }
+                        AIRule[] newArr = new AIRule[current.Length];
+                        for (int k = 0; k < current.Length; k++)
+                        {
+                            newArr[k] = k == idx ? edited : current[k];
+                        }
+                        setRules(newArr);
                         rebuild();
                     });
                 });
