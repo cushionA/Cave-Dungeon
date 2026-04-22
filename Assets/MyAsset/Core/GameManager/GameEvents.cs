@@ -66,6 +66,15 @@ namespace Game.Core
         public Observable<string> OnSavePointUsed => _onSavePointUsed;
         public Observable<(int characterHash, string itemId, int count)> OnItemAcquired => _onItemAcquired;
 
+        // ===== カメラ・演出フィードバック =====
+        private readonly Subject<CameraShakeParams> _onCameraShakeRequested = new();
+        /// <summary>
+        /// カメラシェイク要求。被弾・爆発・着地強調などで発火。
+        /// Runtime 側の <c>CameraShakeController</c> が購読し、Main Camera の
+        /// localPosition に Perlin ノイズベースの揺れを加算する。
+        /// </summary>
+        public Observable<CameraShakeParams> OnCameraShakeRequested => _onCameraShakeRequested;
+
         // ===== Section 2: 敵・仲間・連携 =====
         private readonly Subject<(int enemyHash, int killerHash)> _onEnemyDefeated = new();
         private readonly Subject<Unit> _onCustomRulesChanged = new();
@@ -136,6 +145,9 @@ namespace Game.Core
         public void FireItemAcquired(int characterHash, string itemId, int count)
             => _onItemAcquired.OnNext((characterHash, itemId, count));
 
+        public void FireCameraShakeRequested(CameraShakeParams shakeParams)
+            => _onCameraShakeRequested.OnNext(shakeParams);
+
         public void FireEnemyDefeated(int enemyHash, int killerHash) => _onEnemyDefeated.OnNext((enemyHash, killerHash));
         public void FireCustomRulesChanged() => _onCustomRulesChanged.OnNext(Unit.Default);
         public void FireCoopActivated(int companionHash) => _onCoopActivated.OnNext(companionHash);
@@ -178,6 +190,7 @@ namespace Game.Core
             _onCompanionVanish.Dispose();
             _onCompanionReturn.Dispose();
             _onCompanionStanceChanged.Dispose();
+            _onCameraShakeRequested.Dispose();
         }
     }
 }
