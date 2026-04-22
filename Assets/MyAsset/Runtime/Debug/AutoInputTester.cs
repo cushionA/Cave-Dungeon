@@ -324,6 +324,48 @@ namespace Game.Runtime
             }
         }
 
+        /// <summary>
+        /// vitals スナップショット DTO。TakeSnapshot / LogResetState で共通利用する。
+        /// </summary>
+        public struct VitalsSnapshot
+        {
+            public bool isValid;
+            public int currentHp;
+            public int maxHp;
+            public float currentStamina;
+            public float maxStamina;
+        }
+
+        /// <summary>
+        /// 指定ハッシュの vitals を読み取る共通ヘルパー。
+        /// GameManager.IsCharacterValid チェックを内包し、無効なら isValid=false の構造体を返す。
+        /// </summary>
+        private static VitalsSnapshot GetVitalsSnapshot(int hash)
+        {
+            if (!GameManager.IsCharacterValid(hash))
+            {
+                return default;
+            }
+
+            ref CharacterVitals vitals = ref GameManager.Data.GetVitals(hash);
+            return new VitalsSnapshot
+            {
+                isValid = true,
+                currentHp = vitals.currentHp,
+                maxHp = vitals.maxHp,
+                currentStamina = vitals.currentStamina,
+                maxStamina = vitals.maxStamina
+            };
+        }
+
+#if UNITY_INCLUDE_TESTS
+        /// <summary>テスト専用: GetVitalsSnapshot を公開して入出力を検証する。</summary>
+        public static VitalsSnapshot GetVitalsSnapshotForTest(int hash)
+        {
+            return GetVitalsSnapshot(hash);
+        }
+#endif
+
         private void TakeSnapshot()
         {
             if (_player == null)
@@ -331,11 +373,10 @@ namespace Game.Runtime
                 return;
             }
 
-            int hash = _baseCharacter.ObjectHash;
-            if (GameManager.IsCharacterValid(hash))
+            VitalsSnapshot snap = GetVitalsSnapshot(_baseCharacter.ObjectHash);
+            if (snap.isValid)
             {
-                ref CharacterVitals vitals = ref GameManager.Data.GetVitals(hash);
-                _snapshotStamina = vitals.currentStamina;
+                _snapshotStamina = snap.currentStamina;
             }
 
             _snapshotPosition = _player.transform.position;
@@ -344,13 +385,8 @@ namespace Game.Runtime
 
         private float GetCurrentStamina()
         {
-            int hash = _baseCharacter.ObjectHash;
-            if (GameManager.IsCharacterValid(hash))
-            {
-                ref CharacterVitals vitals = ref GameManager.Data.GetVitals(hash);
-                return vitals.currentStamina;
-            }
-            return -1f;
+            VitalsSnapshot snap = GetVitalsSnapshot(_baseCharacter.ObjectHash);
+            return snap.isValid ? snap.currentStamina : -1f;
         }
 
         private void WriteLog(string msg)
@@ -370,13 +406,12 @@ namespace Game.Runtime
 
         private void LogResetState()
         {
-            int hash = _baseCharacter.ObjectHash;
-            if (GameManager.IsCharacterValid(hash))
+            VitalsSnapshot snap = GetVitalsSnapshot(_baseCharacter.ObjectHash);
+            if (snap.isValid)
             {
-                ref CharacterVitals vitals = ref GameManager.Data.GetVitals(hash);
                 WriteLog($"[AutoInputTester] 周回リセット確認: pos={_player.transform.position} " +
-                         $"grounded={_baseCharacter.IsGrounded} hp={vitals.currentHp}/{vitals.maxHp} " +
-                         $"stamina={vitals.currentStamina:F1}/{vitals.maxStamina:F1} " +
+                         $"grounded={_baseCharacter.IsGrounded} hp={snap.currentHp}/{snap.maxHp} " +
+                         $"stamina={snap.currentStamina:F1}/{snap.maxStamina:F1} " +
                          $"vel={_rb.linearVelocity}");
             }
         }
