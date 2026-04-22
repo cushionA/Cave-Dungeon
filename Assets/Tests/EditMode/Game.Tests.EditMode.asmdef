@@ -3,6 +3,7 @@
     "rootNamespace": "Game.Tests.EditMode",
     "references": [
         "Game.Core",
+        "GameCode",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "UniTask",
