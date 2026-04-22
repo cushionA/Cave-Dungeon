@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Game.Core
 {
@@ -7,18 +8,32 @@ namespace Game.Core
     /// アニメーション制御の純ロジック層。
     /// Animatorパラメータの蓄積、アクションフェーズ（Anticipation/Active/Recovery）の管理、
     /// AnimationStateDataの生成を担う。MonoBehaviour非依存。
+    /// パラメータキーは int hash で保持し、string 版 API は内部で一度だけ StringToHash してキャッシュする。
+    /// ダーティ判定はパラメータ単位で行い、Flush 時に変更があった分だけ送信する。
     /// </summary>
     public class AnimationBridge
     {
         /// <summary>フェーズ遷移時に発火。Runtime層がクリップ切り替えに使用。</summary>
         public event Action<AnimationPhase> OnPhaseChanged;
-        private readonly Dictionary<string, float> _floats = new Dictionary<string, float>();
-        private readonly Dictionary<string, bool> _bools = new Dictionary<string, bool>();
-        private readonly Dictionary<string, int> _ints = new Dictionary<string, int>();
-        private readonly HashSet<string> _triggers = new HashSet<string>();
+
+        // パラメータ本体（キーは Animator.StringToHash による int hash）
+        private readonly Dictionary<int, float> _floats = new Dictionary<int, float>();
+        private readonly Dictionary<int, bool> _bools = new Dictionary<int, bool>();
+        private readonly Dictionary<int, int> _ints = new Dictionary<int, int>();
+        private readonly HashSet<int> _triggers = new HashSet<int>();
+
+        // パラメータ単位のダーティ集合（Flush で空にする）
+        private readonly HashSet<int> _dirtyFloats = new HashSet<int>();
+        private readonly HashSet<int> _dirtyBools = new HashSet<int>();
+        private readonly HashSet<int> _dirtyInts = new HashSet<int>();
+
+        // string → int hash ルックアップキャッシュ（同じ文字列を毎回ハッシュ化しない）
+        private readonly Dictionary<string, int> _nameHashCache = new Dictionary<string, int>();
+
+        // フェーズ状態の変化を示す独立ダーティフラグ（パラメータ送信には使わない）
+        private bool _phaseDirty;
 
         private AnimationStateData _currentState;
-        private bool _isDirty;
 
         // アクションフェーズ管理
         private float _phaseElapsed;
@@ -30,64 +45,114 @@ namespace Game.Core
         private const float k_FixedDeltaTime = 0.02f; // 50fps想定のフレーム時間
 
         public AnimationStateData CurrentState => _currentState;
-        public bool IsDirty => _isDirty;
 
-        // ─── パラメータ設定 ───
+        /// <summary>
+        /// いずれかのパラメータまたはフェーズ状態に変更があるか。
+        /// パラメータ単位 dirty 集合が空でない、未消費トリガーがある、または
+        /// フェーズ状態が更新されている場合に true。
+        /// </summary>
+        public bool IsDirty =>
+            _dirtyFloats.Count > 0
+            || _dirtyBools.Count > 0
+            || _dirtyInts.Count > 0
+            || _triggers.Count > 0
+            || _phaseDirty;
+
+        // ─── パラメータ設定（string 版：内部で一度 StringToHash してキャッシュ） ───
 
         public void SetFloat(string name, float value)
         {
-            if (_floats.TryGetValue(name, out float current) && current == value)
+            SetFloat(GetOrAddHash(name), value);
+        }
+
+        public void SetFloat(int nameHash, float value)
+        {
+            if (_floats.TryGetValue(nameHash, out float current) && current == value)
             {
                 return;
             }
-            _floats[name] = value;
-            _isDirty = true;
+            _floats[nameHash] = value;
+            _dirtyFloats.Add(nameHash);
         }
 
         public float GetFloat(string name)
         {
-            return _floats.TryGetValue(name, out float value) ? value : 0f;
+            return GetFloat(GetOrAddHash(name));
+        }
+
+        public float GetFloat(int nameHash)
+        {
+            return _floats.TryGetValue(nameHash, out float value) ? value : 0f;
         }
 
         public void SetBool(string name, bool value)
         {
-            if (_bools.TryGetValue(name, out bool current) && current == value)
+            SetBool(GetOrAddHash(name), value);
+        }
+
+        public void SetBool(int nameHash, bool value)
+        {
+            if (_bools.TryGetValue(nameHash, out bool current) && current == value)
             {
                 return;
             }
-            _bools[name] = value;
-            _isDirty = true;
+            _bools[nameHash] = value;
+            _dirtyBools.Add(nameHash);
         }
 
         public bool GetBool(string name)
         {
-            return _bools.TryGetValue(name, out bool value) && value;
+            return GetBool(GetOrAddHash(name));
+        }
+
+        public bool GetBool(int nameHash)
+        {
+            return _bools.TryGetValue(nameHash, out bool value) && value;
         }
 
         public void SetInt(string name, int value)
         {
-            if (_ints.TryGetValue(name, out int current) && current == value)
+            SetInt(GetOrAddHash(name), value);
+        }
+
+        public void SetInt(int nameHash, int value)
+        {
+            if (_ints.TryGetValue(nameHash, out int current) && current == value)
             {
                 return;
             }
-            _ints[name] = value;
-            _isDirty = true;
+            _ints[nameHash] = value;
+            _dirtyInts.Add(nameHash);
         }
 
         public int GetInt(string name)
         {
-            return _ints.TryGetValue(name, out int value) ? value : 0;
+            return GetInt(GetOrAddHash(name));
+        }
+
+        public int GetInt(int nameHash)
+        {
+            return _ints.TryGetValue(nameHash, out int value) ? value : 0;
         }
 
         public void SetTrigger(string name)
         {
-            _triggers.Add(name);
-            _isDirty = true;
+            SetTrigger(GetOrAddHash(name));
+        }
+
+        public void SetTrigger(int nameHash)
+        {
+            _triggers.Add(nameHash);
         }
 
         public void ResetTrigger(string name)
         {
-            _triggers.Remove(name);
+            ResetTrigger(GetOrAddHash(name));
+        }
+
+        public void ResetTrigger(int nameHash)
+        {
+            _triggers.Remove(nameHash);
         }
 
         /// <summary>
@@ -95,25 +160,44 @@ namespace Game.Core
         /// </summary>
         public bool ConsumeTrigger(string name)
         {
-            return _triggers.Remove(name);
+            return ConsumeTrigger(GetOrAddHash(name));
         }
 
+        public bool ConsumeTrigger(int nameHash)
+        {
+            return _triggers.Remove(nameHash);
+        }
+
+        /// <summary>
+        /// ダーティ集合と phaseDirty を全てクリアする。Flush 完了後に呼ぶ。
+        /// トリガーは ConsumeAllTriggers で別途管理する。
+        /// </summary>
         public void ClearDirty()
         {
-            _isDirty = false;
+            _dirtyFloats.Clear();
+            _dirtyBools.Clear();
+            _dirtyInts.Clear();
+            _phaseDirty = false;
         }
 
         /// <summary>
-        /// 蓄積されたパラメータを列挙する。Runtime層がAnimatorに反映するために使う。
+        /// 変更があったパラメータキーのみを列挙する。Runtime 層はこれを使って差分送信する。
         /// </summary>
-        public IReadOnlyDictionary<string, float> Floats => _floats;
-        public IReadOnlyDictionary<string, bool> Bools => _bools;
-        public IReadOnlyDictionary<string, int> Ints => _ints;
+        public IReadOnlyCollection<int> DirtyFloats => _dirtyFloats;
+        public IReadOnlyCollection<int> DirtyBools => _dirtyBools;
+        public IReadOnlyCollection<int> DirtyInts => _dirtyInts;
 
         /// <summary>
-        /// 未消費のトリガー名を列挙する。
+        /// 蓄積されたパラメータを列挙する。キーは Animator.StringToHash で得た int hash。
         /// </summary>
-        public IReadOnlyCollection<string> PendingTriggers => _triggers;
+        public IReadOnlyDictionary<int, float> Floats => _floats;
+        public IReadOnlyDictionary<int, bool> Bools => _bools;
+        public IReadOnlyDictionary<int, int> Ints => _ints;
+
+        /// <summary>
+        /// 未消費のトリガー hash を列挙する。
+        /// </summary>
+        public IReadOnlyCollection<int> PendingTriggers => _triggers;
 
         /// <summary>
         /// 全トリガーを消費済みとしてクリアする。
@@ -122,6 +206,16 @@ namespace Game.Core
         public void ConsumeAllTriggers()
         {
             _triggers.Clear();
+        }
+
+        private int GetOrAddHash(string name)
+        {
+            if (!_nameHashCache.TryGetValue(name, out int hash))
+            {
+                hash = Animator.StringToHash(name);
+                _nameHashCache[name] = hash;
+            }
+            return hash;
         }
 
         // ─── アクションフェーズ管理 ───
@@ -161,7 +255,7 @@ namespace Game.Core
                 _currentState.normalizedTime = 0f;
             }
 
-            _isDirty = true;
+            _phaseDirty = true;
         }
 
         /// <summary>
@@ -226,7 +320,7 @@ namespace Game.Core
                                 && _currentState.normalizedTime >= _cancelPoint)
                             {
                                 _currentState.isCancelable = true;
-                                _isDirty = true;
+                                _phaseDirty = true;
                             }
                         }
                         break;
@@ -280,7 +374,7 @@ namespace Game.Core
             _currentState.currentPhase = AnimationPhase.Active;
             _currentState.isCancelable = false;
             _currentState.normalizedTime = 0f;
-            _isDirty = true;
+            _phaseDirty = true;
             OnPhaseChanged?.Invoke(AnimationPhase.Active);
         }
 
@@ -289,7 +383,7 @@ namespace Game.Core
             _currentState.currentPhase = AnimationPhase.Recovery;
             _currentState.isCancelable = false;
             _currentState.normalizedTime = 0f;
-            _isDirty = true;
+            _phaseDirty = true;
             OnPhaseChanged?.Invoke(AnimationPhase.Recovery);
         }
 
@@ -302,7 +396,7 @@ namespace Game.Core
             _currentState.isCommitted = false;
             _currentState.framesUntilActionable = 0;
             _phaseElapsed = 0f;
-            _isDirty = true;
+            _phaseDirty = true;
             OnPhaseChanged?.Invoke(AnimationPhase.Neutral);
         }
     }

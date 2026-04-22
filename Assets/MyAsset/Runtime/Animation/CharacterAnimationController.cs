@@ -106,23 +106,24 @@ namespace Game.Runtime
 
         private void ApplyToAnimator()
         {
-            foreach (System.Collections.Generic.KeyValuePair<string, float> pair in _bridge.Floats)
+            // 変更のあったパラメータのみ差分送信する（int hash 版オーバーロードを使用）。
+            foreach (int hash in _bridge.DirtyFloats)
             {
-                _animator.SetFloat(pair.Key, pair.Value);
+                _animator.SetFloat(hash, _bridge.GetFloat(hash));
             }
 
-            foreach (System.Collections.Generic.KeyValuePair<string, bool> pair in _bridge.Bools)
+            foreach (int hash in _bridge.DirtyBools)
             {
-                _animator.SetBool(pair.Key, pair.Value);
+                _animator.SetBool(hash, _bridge.GetBool(hash));
             }
 
-            foreach (System.Collections.Generic.KeyValuePair<string, int> pair in _bridge.Ints)
+            foreach (int hash in _bridge.DirtyInts)
             {
-                _animator.SetInteger(pair.Key, pair.Value);
+                _animator.SetInteger(hash, _bridge.GetInt(hash));
             }
 
             // トリガーは消費してAnimatorに送る
-            foreach (string trigger in _bridge.PendingTriggers)
+            foreach (int trigger in _bridge.PendingTriggers)
             {
                 _animator.SetTrigger(trigger);
             }
