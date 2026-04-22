@@ -18,7 +18,7 @@ namespace Game.Tests.EditMode
             info.feature = AttackFeature.Heavy;
             info.armorBreakValue = 20f;
             info.staminaCost = 10f;
-            info.mpCost = 5f;
+            info.mpCost = 5;
             info.attackMoveDistance = 2f;
             info.attackMoveDuration = 0.3f;
             info.contactType = AttackContactType.StopOnHit;
@@ -68,7 +68,7 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(20f, motion.armorBreakValue, 0.001f);
             Assert.AreEqual(3, motion.maxHitCount);
             Assert.AreEqual(10f, motion.staminaCost, 0.001f);
-            Assert.AreEqual(5f, motion.mpCost, 0.001f);
+            Assert.AreEqual(5, motion.mpCost);
             Assert.AreEqual(2f, motion.attackMoveDistance, 0.001f);
             Assert.AreEqual(0.3f, motion.attackMoveDuration, 0.001f);
             Assert.AreEqual(AttackContactType.StopOnHit, motion.contactType);

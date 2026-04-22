@@ -192,7 +192,7 @@ namespace Game.Runtime
             return _attackInfos[paramId];
         }
 
-        private bool CheckAndDeductCost(int ownerHash, float staminaCost, float mpCost)
+        private bool CheckAndDeductCost(int ownerHash, float staminaCost, int mpCost)
         {
             if (!GameManager.IsCharacterValid(ownerHash))
             {

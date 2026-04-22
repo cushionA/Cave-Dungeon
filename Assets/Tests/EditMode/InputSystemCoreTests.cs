@@ -51,33 +51,7 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(AttackInputType.AerialHeavy, aerialHeavy);
         }
 
-        // ===== InputBuffer Tests =====
-
-        [Test]
-        public void InputBuffer_Buffer_WhenWithinTime_HasInputTrue()
-        {
-            // Arrange
-            InputBuffer buffer = new InputBuffer(0.2f);
-
-            // Act: 入力をバッファに追加
-            buffer.Buffer(AttackInputType.LightAttack);
-
-            // Assert: 有効時間内なのでHasInput == true
-            Assert.IsTrue(buffer.HasInput);
-        }
-
-        [Test]
-        public void InputBuffer_Tick_WhenTimeExpires_HasInputFalse()
-        {
-            // Arrange
-            InputBuffer buffer = new InputBuffer(0.2f);
-            buffer.Buffer(AttackInputType.LightAttack);
-
-            // Act: 有効時間を超過させる
-            buffer.Tick(0.3f);
-
-            // Assert: 期限切れでHasInput == false
-            Assert.IsFalse(buffer.HasInput);
-        }
+        // InputBuffer クラス自体をデッドコードとして削除したため、関連テストも撤去。
+        // 先行入力を導入する場合は PlayerInputHandler に統合した上で再度テストを書く。
     }
 }

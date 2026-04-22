@@ -6,6 +6,7 @@ namespace Game.Core
     /// 行動実行のスタミナ・MPコスト検証。MonoBehaviour非依存。
     /// SkillConditionLogic.CanUseSkill と同等の判定を SoA型 (int MP) で提供する。
     /// 将来的に SkillConditionLogic をこちらに統合予定。
+    /// MPコストは int 型で扱う（小数MPは仕様外。小数切捨てによる不整合を避ける）。
     /// </summary>
     public static class ActionCostValidator
     {
@@ -13,13 +14,13 @@ namespace Game.Core
         /// 現在のリソースで行動を実行可能か判定する。
         /// </summary>
         public static bool CanAfford(float currentStamina, int currentMp,
-            float staminaCost, float mpCost)
+            float staminaCost, int mpCost)
         {
             if (staminaCost > 0f && currentStamina < staminaCost)
             {
                 return false;
             }
-            if (mpCost > 0f && currentMp < (int)mpCost)
+            if (mpCost > 0 && currentMp < mpCost)
             {
                 return false;
             }
@@ -31,10 +32,10 @@ namespace Game.Core
         /// 念のため0以下にならないようクランプする。
         /// </summary>
         public static void DeductCost(ref float currentStamina, ref int currentMp,
-            float staminaCost, float mpCost)
+            float staminaCost, int mpCost)
         {
             currentStamina = Math.Max(0f, currentStamina - staminaCost);
-            currentMp = Math.Max(0, currentMp - (int)mpCost);
+            currentMp = Math.Max(0, currentMp - mpCost);
         }
     }
 }
