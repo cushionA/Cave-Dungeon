@@ -18,7 +18,9 @@ namespace Game.Runtime
         private CircleCollider2D _triggerCollider;
         private SpriteRenderer _spriteRenderer;
         private Rigidbody2D _rb;
-        private HashSet<int> _hitTargets;
+        // キャラクター毎のヒット回数を記録 (targetHash → hitCount)。
+        // BulletProfile.hitLimit までキャラ毎に多段ヒット可能。
+        private Dictionary<int, int> _hitCounts;
         private bool _isActive;
         private ProjectileManager _manager;
 
@@ -46,7 +48,7 @@ namespace Game.Runtime
             _rb.gravityScale = 0f;
 
             _spriteRenderer = GetComponentInChildren<SpriteRenderer>();
-            _hitTargets = new HashSet<int>();
+            _hitCounts = new Dictionary<int, int>();
 
             // プレハブ/デザイナー設定のスケールを保持（scaleTime>0 のスケール補間で上書き→戻す際のベース）
             _baseLocalScale = transform.localScale;
@@ -62,7 +64,15 @@ namespace Game.Runtime
             _magic = magic;
             _manager = manager;
             _isActive = true;
-            _hitTargets.Clear();
+            if (_hitCounts == null)
+            {
+                _hitCounts = new Dictionary<int, int>();
+            }
+            else
+            {
+                _hitCounts.Clear();
+            }
+            _triggerCollider.enabled = true;
 
             transform.position = new Vector3(projectile.Position.x, projectile.Position.y, 0f);
 
@@ -185,7 +195,7 @@ namespace Game.Runtime
                 return;
             }
 
-            // 非キャラクター(地形等)との接触は _hitTargets 登録前にスキップして汚染を防ぐ
+            // 非キャラクター(地形等)との接触は _hitCounts 登録前にスキップして汚染を防ぐ
             IDamageable receiver = GameManager.Data != null
                 ? GameManager.Data.GetManaged(targetHash)?.Damageable
                 : null;
@@ -194,8 +204,8 @@ namespace Game.Runtime
                 return;
             }
 
-            // 同一飛翔体で同じターゲットに多重ヒットしない (キャラ衝突のみ登録)
-            if (!_hitTargets.Add(targetHash))
+            // キャラ別ヒット回数ゲート: hitLimit 到達キャラはスキップ
+            if (!TryRegisterHit(targetHash, out bool shouldDespawnFromHitLimit))
             {
                 return;
             }
@@ -218,11 +228,78 @@ namespace Game.Runtime
                 _manager.SpawnChildProjectiles(_coreProjectile, _magic);
             }
 
+            // 非Pierce は hitLimit 到達で明示Kill (Core側の RegisterHit が未Killなら補完)
+            if (shouldDespawnFromHitLimit && _coreProjectile.IsAlive)
+            {
+                _coreProjectile.Kill();
+            }
+
             // 死亡チェック — Managerに返却を通知
             if (!_coreProjectile.IsAlive)
             {
                 _manager.ReturnProjectile(this);
             }
+        }
+
+        /// <summary>
+        /// 指定ターゲットへのヒットを記録する。
+        /// キャラ毎 <see cref="BulletProfile.hitLimit"/> までヒット可能。
+        /// </summary>
+        /// <param name="targetHash">ターゲットキャラクターのハッシュ。</param>
+        /// <param name="shouldDespawn">
+        /// 非Pierce でこのヒットにより hitLimit 到達した場合 true (飛翔体を消滅させる)。
+        /// Pierce 弾丸または上限未到達なら false。
+        /// </param>
+        /// <returns>ヒットを受理した場合 true。上限既到達でスキップした場合 false。</returns>
+        internal bool TryRegisterHit(int targetHash, out bool shouldDespawn)
+        {
+            shouldDespawn = false;
+
+            if (_coreProjectile == null)
+            {
+                return false;
+            }
+
+            int limit = GetEffectiveHitLimit(_coreProjectile.Profile.hitLimit);
+            _hitCounts.TryGetValue(targetHash, out int current);
+            if (current >= limit)
+            {
+                // 当該ターゲットは既に上限到達
+                return false;
+            }
+
+            current++;
+            _hitCounts[targetHash] = current;
+
+            // 上限到達 + 非Pierce → 消滅
+            bool hasPierce = (_coreProjectile.Profile.features & BulletFeature.Pierce) != 0;
+            if (current >= limit && !hasPierce)
+            {
+                shouldDespawn = true;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// 指定ターゲットへの現時点のヒット回数を返す。テスト用途。
+        /// </summary>
+        internal int GetHitCountForTarget(int targetHash)
+        {
+            if (_hitCounts == null)
+            {
+                return 0;
+            }
+            return _hitCounts.TryGetValue(targetHash, out int count) ? count : 0;
+        }
+
+        /// <summary>
+        /// BulletProfile.hitLimit = 0 (未設定) を 1 に正規化する。
+        /// Core <see cref="Projectile.Initialize"/> と同じ既定値ポリシー。
+        /// </summary>
+        private static int GetEffectiveHitLimit(int rawHitLimit)
+        {
+            return rawHitLimit > 0 ? rawHitLimit : 1;
         }
     }
 }
