@@ -13,6 +13,13 @@ namespace Game.Core
     /// JSON変換にはNewtonsoft.Jsonを使用。
     /// entries の Dictionary&lt;string, object&gt; を型情報付きで保存・復元する。
     ///
+    /// 書き込み (3 段アトミック方式):
+    /// 1. 一時ファイル (filePath + ".tmp") へ本体を書き込み。
+    /// 2. 既存 filePath を backupPath (".bak") へ File.Move で退避 (初回は skip)。
+    /// 3. 一時ファイルを filePath へ File.Move で昇格。
+    /// これにより電源断や異常終了時でも filePath と backupPath のどちらかは
+    /// 整合した状態で残る (filePath 破損時は .bak フォールバックで復旧可)。
+    ///
     /// 破損対策:
     /// - 保存前に既存ファイルを .bak にコピーして一世代バックアップを残す。
     /// - 読み込みでJSONパース失敗 / 必須フィールド欠落を検知した場合は .bak からフォールバック読み込みする。
@@ -22,6 +29,7 @@ namespace Game.Core
     {
         public const int k_CurrentVersion = 1;
         public const string k_BackupExtension = ".bak";
+        public const string k_TempExtension = ".tmp";
 
         private readonly string _basePath;
         private readonly string _savesDir;
@@ -36,7 +44,8 @@ namespace Game.Core
         }
 
         /// <summary>SaveSlotDataをJSONファイルとしてディスクに書き出す。
-        /// 既存ファイルがあれば .bak にコピーしてから上書きする。</summary>
+        /// 3 段アトミック書き込み: .tmp に本体を書く → 既存ファイルを .bak へ Move → .tmp を filePath へ Move。
+        /// 途中で電源断しても filePath または .bak のどちらかは整合した状態で残る。</summary>
         public void WriteToDisk(SaveSlotData slotData)
         {
             if (slotData == null)
@@ -71,28 +80,75 @@ namespace Game.Core
 
             string fileJson = JsonConvert.SerializeObject(fileData, Formatting.Indented);
             string filePath = GetSlotFilePath(slotData.slotIndex);
+            string backupPath = GetBackupFilePath(slotData.slotIndex);
+            string tempPath = GetTempFilePath(slotData.slotIndex);
 
-            // 既存ファイルがある場合は .bak を作成してから上書きする
+            // 3 段アトミック書き込み:
+            //   1. 一時ファイルに本体を書く (ここで失敗しても filePath と .bak は無傷)
+            //   2. 既存 filePath を .bak へ Move (.bak は前世代の内容で上書きされる / 初回は skip)
+            //   3. 一時ファイルを filePath へ Move (この瞬間に本体が切り替わる)
+            //
+            // 途中で異常終了しても:
+            //   - Step 1 中: filePath/.bak 無傷。.tmp 残骸は次回書き込みで自動的に上書きされる
+            //     (起動時の明示的な残骸検知はしない。読み込み経路は filePath/.bak のみ参照する)
+            //   - Step 2 後 / Step 3 前: filePath 不在、.bak に直前世代あり、.tmp に新バージョンあり
+            //       → 読み込み時に filePath が無ければ .bak フォールバック経路で復旧
+            //   - Step 3 後: 新 filePath + 直前 .bak が揃う (理想形)
+
+            // Step 1: 一時ファイルへ書き込み (前回残骸があれば上書きされる)
+            try
+            {
+                File.WriteAllText(tempPath, fileJson);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[SaveDataStore] 一時ファイル書き込みに失敗しました (slot={slotData.slotIndex}, path='{tempPath}'): {ex.Message}");
+                return;
+            }
+
+            // Step 2: 既存 filePath を .bak へ退避 (初回書き込み時は filePath が存在しないので skip)
             if (File.Exists(filePath))
             {
-                string backupPath = GetBackupFilePath(slotData.slotIndex);
                 try
                 {
-                    File.Copy(filePath, backupPath, true);
+                    File.Move(filePath, backupPath, true);
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"[SaveDataStore] バックアップ作成に失敗しました (slot={slotData.slotIndex}): {ex.Message}");
+                    Debug.LogError($"[SaveDataStore] 既存ファイルの .bak 退避に失敗しました (slot={slotData.slotIndex}): {ex.Message}");
+                    // filePath は無傷 (前世代データが残る)。.tmp はこのタイミングで明示削除し残骸を残さない
+                    TryDeleteTemp(tempPath);
+                    return;
                 }
             }
 
-            // TODO (R6): 書き込み中の電源断で filePath が破損するリスクあり。
-            //   アトミック書き込みは以下の 3 段で実現できるが、実装優先度は低いため後続 PR。
-            //   1. temp パス (filePath + ".tmp") に書き込み
-            //   2. File.Move(filePath, backupPath) で現行ファイルを bak へ移動
-            //   3. File.Move(tempPath, filePath) で temp を正ファイル名へ確定
-            //   現状の .bak フォールバックで前回成功状態へ復旧可能なため致命的ではない。
-            File.WriteAllText(filePath, fileJson);
+            // Step 3: 一時ファイルを filePath へ昇格
+            try
+            {
+                File.Move(tempPath, filePath, true);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[SaveDataStore] 一時ファイルの本体昇格に失敗しました (slot={slotData.slotIndex}, temp='{tempPath}', dest='{filePath}'): {ex.Message}");
+                // このとき filePath は存在しない (Step 2 で .bak へ移動済み)。.bak から復旧可能。
+                TryDeleteTemp(tempPath);
+            }
+        }
+
+        /// <summary>書き込み失敗後の .tmp 残骸を best-effort で削除する。</summary>
+        private static void TryDeleteTemp(string tempPath)
+        {
+            try
+            {
+                if (File.Exists(tempPath))
+                {
+                    File.Delete(tempPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[SaveDataStore] 一時ファイルの削除にも失敗しました (path='{tempPath}'): {ex.Message}");
+            }
         }
 
         /// <summary>ディスクからJSONファイルを読み込みSaveSlotDataに復元する。
@@ -299,6 +355,11 @@ namespace Game.Core
         private string GetBackupFilePath(int slotIndex)
         {
             return GetSlotFilePath(slotIndex) + k_BackupExtension;
+        }
+
+        private string GetTempFilePath(int slotIndex)
+        {
+            return GetSlotFilePath(slotIndex) + k_TempExtension;
         }
 
         // ===== 内部データ構造 =====
