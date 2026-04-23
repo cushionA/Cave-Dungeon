@@ -86,6 +86,15 @@ namespace Game.Runtime
         // --- 回避無敵追跡 ---
         private bool _wasDodging;
 
+        // --- Drop-through (一方通行プラットフォームすり抜け) ---
+        // 発動中はプレイヤーのレイヤーを CharaInvincible (Ground とは衝突するため足場貫通には別途 PlatformEffector2D が必要) へ切替え、
+        // タイマー経過後に CharaPassThrough に戻す。
+        private float _dropThroughTimer;
+        private int _dropThroughOriginalLayer = -1;
+
+        /// <summary>drop-through 発動中か（外部参照・テスト用）。</summary>
+        public bool IsDropThrough => _dropThroughTimer > 0f;
+
 #if UNITY_INCLUDE_TESTS
         public void SetLightAttacksForTest(AttackInfo[] attacks) { _lightAttacks = attacks; }
 #endif
@@ -124,6 +133,13 @@ namespace Game.Runtime
             if (_collisionController != null)
             {
                 _collisionController.SetInvincible(false);
+            }
+
+            // Drop-through
+            if (_dropThroughTimer > 0f)
+            {
+                _dropThroughTimer = 0f;
+                EndDropThrough();
             }
 
             // MovementLogicの状態リセット（ジャンプ・回避・スプリント）
@@ -201,6 +217,12 @@ namespace Game.Runtime
             MovementInfo input = _inputHandler != null ? _inputHandler.CurrentInput : default;
             ref MoveParams moveParams = ref GameManager.Data.GetMoveParams(ObjectHash);
             ref CharacterVitals vitals = ref GameManager.Data.GetVitals(ObjectHash);
+
+            // Drop-through タイマー更新 (接地より先に行い、発動判定時にはタイマー 0 で正しく評価する)
+            UpdateDropThroughTimer(Time.fixedDeltaTime);
+
+            // 下入力 + ジャンプ入力 + 接地 + 真下が DropThroughPlatform → 発動
+            TryStartDropThrough(input);
 
             // 着地時に空中攻撃制限をリセット
             if (IsGrounded)
@@ -632,6 +654,113 @@ namespace Game.Runtime
         private bool IsActionExecutorBusy()
         {
             return _actionExecutor != null && _actionExecutor.IsExecuting;
+        }
+
+        // ============================================================
+        //  Drop-through (一方通行プラットフォームすり抜け)
+        // ============================================================
+
+        /// <summary>
+        /// 下入力 + ジャンプ入力 + 接地中 + 真下に DropThroughPlatform あり → drop-through 発動。
+        /// プレイヤーのレイヤーを CharaInvincible に一時切替し、
+        /// 一定時間後に CharaPassThrough へ復帰させる。
+        /// </summary>
+        private void TryStartDropThrough(MovementInfo input)
+        {
+            // 既に drop-through 中なら再発動しない (二重呼びガード)
+            if (_dropThroughTimer > 0f)
+            {
+                return;
+            }
+
+            bool downPressed = DropThroughLogic.IsDownInput(input.moveDirection.y);
+            bool jumpPressed = input.jumpPressed;
+
+            float duration;
+            if (!DropThroughLogic.TryDropThrough(downPressed, jumpPressed, IsGrounded, out duration))
+            {
+                return;
+            }
+
+            // 真下の Collider に DropThroughPlatform が付いているか確認
+            DropThroughPlatform platform = FindDropThroughPlatformBelow();
+            if (platform == null)
+            {
+                return;
+            }
+
+            // Inspector で個別時間指定があれば優先
+            float durationOverride = platform.DropThroughDurationOverride;
+            if (durationOverride > 0f)
+            {
+                duration = durationOverride;
+            }
+
+            BeginDropThrough(duration);
+
+            // ジャンプ入力はすり抜けに消費したとみなしバッファをクリア (誤ジャンプ防止)
+            _jumpBufferTimer = 0f;
+        }
+
+        /// <summary>
+        /// プレイヤーの足元にある DropThroughPlatform を探す。
+        /// 接地判定用と同等の BoxCast を下方向に飛ばし、命中した Collider から取得する。
+        /// </summary>
+        private DropThroughPlatform FindDropThroughPlatformBelow()
+        {
+            if (_collider == null)
+            {
+                return null;
+            }
+
+            Bounds bounds = _collider.bounds;
+            Vector2 origin = new Vector2(bounds.center.x, bounds.min.y);
+            // 接地時の ground check より少し長めに飛ばして真下をしっかり拾う
+            const float k_DropThroughCastDistance = 0.2f;
+            Vector2 size = new Vector2(bounds.size.x * 0.9f, 0.05f);
+
+            RaycastHit2D hit = Physics2D.BoxCast(
+                origin, size, 0f, Vector2.down, k_DropThroughCastDistance, _groundLayer);
+            if (hit.collider == null)
+            {
+                return null;
+            }
+
+            return hit.collider.GetComponent<DropThroughPlatform>();
+        }
+
+        /// <summary>drop-through を開始してレイヤー切替とタイマー開始を行う。</summary>
+        private void BeginDropThrough(float duration)
+        {
+            _dropThroughOriginalLayer = gameObject.layer;
+            gameObject.layer = GameConstants.k_LayerCharaInvincible;
+            _dropThroughTimer = duration;
+        }
+
+        /// <summary>drop-through 中ならタイマーを消化し、0 になったらレイヤーを元に戻す。</summary>
+        private void UpdateDropThroughTimer(float deltaTime)
+        {
+            if (_dropThroughTimer <= 0f)
+            {
+                return;
+            }
+
+            _dropThroughTimer -= deltaTime;
+            if (_dropThroughTimer <= 0f)
+            {
+                _dropThroughTimer = 0f;
+                EndDropThrough();
+            }
+        }
+
+        /// <summary>drop-through を終了してレイヤーを復帰させる。</summary>
+        private void EndDropThrough()
+        {
+            int restore = _dropThroughOriginalLayer >= 0
+                ? _dropThroughOriginalLayer
+                : GameConstants.k_LayerCharaPassThrough;
+            gameObject.layer = restore;
+            _dropThroughOriginalLayer = -1;
         }
 
         /// <summary>

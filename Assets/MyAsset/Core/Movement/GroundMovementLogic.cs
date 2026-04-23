@@ -11,6 +11,10 @@ namespace Game.Core
     {
         public const float k_MinJumpHoldTime = 0.05f;
         public const float k_MaxJumpHoldTime = 0.3f;
+
+        // デフォルト値（MoveParams に値が設定されていない場合のフォールバック）。
+        // データ駆動化: キャラ別調整値は MoveParams.dodgeDuration / dodgeSpeedMultiplier /
+        // sprintSpeedMultiplier を使用する (GameManager.RegisterCharacter で CharacterInfo から転記)。
         public const float k_DodgeDuration = 0.25f;
         public const float k_DodgeSpeedMultiplier = 2.5f;
         public const float k_SprintSpeedMultiplier = 1.6f;
@@ -84,13 +88,38 @@ namespace Game.Core
             {
                 // 入力方向が無い場合は向いている方向に回避
                 float dodgeDir = Mathf.Abs(inputX) > 0.1f ? Mathf.Sign(inputX) : facingDir;
-                return dodgeDir * moveParams.dashSpeed;
+
+                // dashSpeed が設定されていればそれを使い、それが 0 の場合は
+                // moveSpeed * dodgeSpeedMultiplier (キャラ別データ駆動、未設定なら定数フォールバック) を使う。
+                if (moveParams.dashSpeed > 0f)
+                {
+                    return dodgeDir * moveParams.dashSpeed;
+                }
+                return dodgeDir * moveParams.moveSpeed * GetEffectiveDodgeSpeedMultiplier(moveParams);
             }
 
             float speed = _isSprinting
-                ? moveParams.moveSpeed * k_SprintSpeedMultiplier
+                ? moveParams.moveSpeed * GetEffectiveSprintSpeedMultiplier(moveParams)
                 : moveParams.moveSpeed;
             return inputX * speed;
+        }
+
+        /// <summary>MoveParams.dodgeDuration の有効値 (0 以下なら定数フォールバック)。</summary>
+        private static float GetEffectiveDodgeDuration(MoveParams p)
+        {
+            return p.dodgeDuration > 0f ? p.dodgeDuration : k_DodgeDuration;
+        }
+
+        /// <summary>MoveParams.dodgeSpeedMultiplier の有効値 (0 以下なら定数フォールバック)。</summary>
+        private static float GetEffectiveDodgeSpeedMultiplier(MoveParams p)
+        {
+            return p.dodgeSpeedMultiplier > 0f ? p.dodgeSpeedMultiplier : k_DodgeSpeedMultiplier;
+        }
+
+        /// <summary>MoveParams.sprintSpeedMultiplier の有効値 (0 以下なら定数フォールバック)。</summary>
+        private static float GetEffectiveSprintSpeedMultiplier(MoveParams p)
+        {
+            return p.sprintSpeedMultiplier > 0f ? p.sprintSpeedMultiplier : k_SprintSpeedMultiplier;
         }
 
         /// <summary>
@@ -185,7 +214,7 @@ namespace Game.Core
 
             _dodgeTimer += deltaTime;
 
-            if (_dodgeTimer >= k_DodgeDuration)
+            if (_dodgeTimer >= GetEffectiveDodgeDuration(moveParams))
             {
                 _isDodging = false;
                 return false;
