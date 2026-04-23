@@ -111,7 +111,13 @@ namespace Game.Core
             {
                 try
                 {
-                    File.Move(filePath, backupPath, true);
+                    // .NET Standard 2.0 互換: File.Move(src, dest, overwrite: true) が無いため
+                    // 既存 .bak を明示削除してから Move する (前世代 .bak を上書きする意図を維持)
+                    if (File.Exists(backupPath))
+                    {
+                        File.Delete(backupPath);
+                    }
+                    File.Move(filePath, backupPath);
                 }
                 catch (Exception ex)
                 {
@@ -125,7 +131,12 @@ namespace Game.Core
             // Step 3: 一時ファイルを filePath へ昇格
             try
             {
-                File.Move(tempPath, filePath, true);
+                // Step 2 後の filePath は不在のはずだが、念のため明示削除で冪等性を確保 (NS2.0 互換)
+                if (File.Exists(filePath))
+                {
+                    File.Delete(filePath);
+                }
+                File.Move(tempPath, filePath);
             }
             catch (Exception ex)
             {
