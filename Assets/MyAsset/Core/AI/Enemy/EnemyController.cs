@@ -25,6 +25,11 @@ namespace Game.Core
         public JudgmentLoop JudgmentLoop => _judgmentLoop;
         public ModeController ModeController => _modeController;
 
+        /// <summary>
+        /// 互換コンストラクタ（GameEvents 未注入）。混乱解除時の AI 再評価が配線されない点に注意。
+        /// 新規コードでは必ず GameEvents を渡す方のオーバーロードを使うこと。
+        /// </summary>
+        [System.Obsolete("GameEvents を注入する3引数版コンストラクタを使用してください。将来的に削除予定。")]
         public EnemyController(int enemyHash, SoACharaDataDic data)
             : this(enemyHash, data, null)
         {

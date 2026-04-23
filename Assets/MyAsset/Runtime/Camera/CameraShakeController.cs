@@ -33,6 +33,9 @@ namespace Game.Runtime
         private float _remainingDuration;
         private float _totalDuration;
         private float _currentFrequency;
+        // Perlin サンプリング用の経過時間。Time.time を直接使うと長時間プレイで値が巨大化し
+        // Perlin の周期性で擬似的な繰り返しや精度低下が起きるため、シェイクごとに 0 から積み上げる。
+        private float _shakeElapsed;
         private bool _isShaking;
         private IDisposable _subscription;
 
@@ -61,6 +64,7 @@ namespace Game.Runtime
                 _currentMagnitude = 0f;
                 _remainingDuration = 0f;
                 _totalDuration = 0f;
+                _shakeElapsed = 0f;
             }
         }
 
@@ -99,6 +103,7 @@ namespace Game.Runtime
             _remainingDuration = duration;
             _totalDuration = duration;
             _currentFrequency = frequency;
+            _shakeElapsed = 0f;
             _isShaking = true;
         }
 
@@ -112,6 +117,7 @@ namespace Game.Runtime
             // TODO: ポーズ中でもシェイクさせたい場合は Time.unscaledDeltaTime に切替
             float dt = Time.deltaTime;
             _remainingDuration -= dt;
+            _shakeElapsed += dt;
 
             if (_remainingDuration <= 0f)
             {
@@ -120,6 +126,7 @@ namespace Game.Runtime
                 _currentMagnitude = 0f;
                 _remainingDuration = 0f;
                 _totalDuration = 0f;
+                _shakeElapsed = 0f;
                 return;
             }
 
@@ -127,8 +134,9 @@ namespace Game.Runtime
             float decay = _totalDuration > 0f ? _remainingDuration / _totalDuration : 0f;
             float currentMag = _currentMagnitude * decay;
 
-            // x/y を独立したノイズ seed でサンプリング。Perlin は [0,1] を返すので [-1,1] に変換
-            float t = Time.time * _currentFrequency;
+            // x/y を独立したノイズ seed でサンプリング。Perlin は [0,1] を返すので [-1,1] に変換。
+            // _shakeElapsed ベースのため長時間プレイでも数値が肥大化しない。
+            float t = _shakeElapsed * _currentFrequency;
             float offsetX = (Mathf.PerlinNoise(t, k_NoiseSeedX) * 2f - 1f) * currentMag;
             float offsetY = (Mathf.PerlinNoise(t, k_NoiseSeedY) * 2f - 1f) * currentMag;
 

@@ -44,6 +44,11 @@ namespace Game.Core
         /// <summary>手動切替の残り時間（秒）。</summary>
         public float ManualOverrideRemaining => _manualOverrideTimer;
 
+        /// <summary>
+        /// 互換コンストラクタ（GameEvents 未注入）。混乱解除時の AI 再評価が配線されない点に注意。
+        /// 新規コードでは必ず GameEvents を渡すオーバーロードを使うこと。
+        /// </summary>
+        [System.Obsolete("GameEvents を注入する版のコンストラクタを使用してください。将来的に削除予定。")]
         public CompanionController(
             int companionHash,
             int playerHash,
