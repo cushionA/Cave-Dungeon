@@ -109,8 +109,7 @@ namespace Game.Tests.PlayMode
             rb.linearVelocity = Vector2.zero;
 
             // WallKick Ability を付与
-            ref CharacterFlags flags = ref GameManager.Data.GetFlags(pc.ObjectHash);
-            flags.AbilityFlags = AbilityFlag.WallKick;
+            SetAbilityFlags(pc.ObjectHash, AbilityFlag.WallKick);
 
             // プレイヤーの向きは右 (デフォルト _isFacingRight = true) → IsTouchingWall(+1) が右壁を検出
             // TryWallKick は facingRight=true で +k_WallKickForceX を返す (facingDir と同符号)
@@ -151,8 +150,7 @@ namespace Game.Tests.PlayMode
             // プレイヤーを左向きに変更 → IsTouchingWall(-1) が左壁を検出できる
             SetFacingLeft(pc);
 
-            ref CharacterFlags flags = ref GameManager.Data.GetFlags(pc.ObjectHash);
-            flags.AbilityFlags = AbilityFlag.WallKick;
+            SetAbilityFlags(pc.ObjectHash, AbilityFlag.WallKick);
 
             SetJumpBufferTimer(pc, 0.1f);
 
@@ -185,8 +183,7 @@ namespace Game.Tests.PlayMode
             rb.linearVelocity = Vector2.zero;
 
             // WallKick Ability を**付与しない** (AbilityFlag.None のまま)
-            ref CharacterFlags flags = ref GameManager.Data.GetFlags(pc.ObjectHash);
-            flags.AbilityFlags = AbilityFlag.None;
+            SetAbilityFlags(pc.ObjectHash, AbilityFlag.None);
 
             SetJumpBufferTimer(pc, 0.1f);
 
@@ -216,8 +213,7 @@ namespace Game.Tests.PlayMode
             rb.gravityScale = 0f;
             rb.linearVelocity = Vector2.zero;
 
-            ref CharacterFlags flags = ref GameManager.Data.GetFlags(pc.ObjectHash);
-            flags.AbilityFlags = AbilityFlag.WallKick;
+            SetAbilityFlags(pc.ObjectHash, AbilityFlag.WallKick);
 
             SetJumpBufferTimer(pc, 0.1f);
 
@@ -263,6 +259,20 @@ namespace Game.Tests.PlayMode
                 BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.IsNotNull(field, "PlayerCharacter._jumpBufferTimer が存在する");
             field.SetValue(pc, value);
+        }
+
+        /// <summary>
+        /// SoA の CharacterFlags.AbilityFlags をテストから設定するヘルパー。
+        /// <para>
+        /// UnityTest (IEnumerator) 内で <c>ref CharacterFlags = ref GameManager.Data.GetFlags(...)</c>
+        /// を直接使うと CS8176 (Iterators cannot have by-reference locals) になるため、
+        /// ref ローカル宣言を非イテレータメソッドに閉じ込める。
+        /// </para>
+        /// </summary>
+        private static void SetAbilityFlags(int hash, AbilityFlag abilityFlags)
+        {
+            ref CharacterFlags flags = ref GameManager.Data.GetFlags(hash);
+            flags.AbilityFlags = abilityFlags;
         }
 
         /// <summary>
