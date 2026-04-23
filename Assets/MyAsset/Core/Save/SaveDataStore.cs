@@ -4,6 +4,7 @@ using System.IO;
 using System.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using UnityEngine;
 
 namespace Game.Core
 {
@@ -11,10 +12,16 @@ namespace Game.Core
     /// SaveSlotDataのディスク永続化を担当する純ロジッククラス。
     /// JSON変換にはNewtonsoft.Jsonを使用。
     /// entries の Dictionary&lt;string, object&gt; を型情報付きで保存・復元する。
+    ///
+    /// 破損対策:
+    /// - 保存前に既存ファイルを .bak にコピーして一世代バックアップを残す。
+    /// - 読み込みでJSONパース失敗 / 必須フィールド欠落を検知した場合は .bak からフォールバック読み込みする。
+    /// - .bak も壊れていれば null を返す（呼び出し側が空データとして扱う従来動作）。
     /// </summary>
     public class SaveDataStore
     {
         public const int k_CurrentVersion = 1;
+        public const string k_BackupExtension = ".bak";
 
         private readonly string _basePath;
         private readonly string _savesDir;
@@ -28,7 +35,8 @@ namespace Game.Core
             _savesDir = Path.Combine(_basePath, "saves");
         }
 
-        /// <summary>SaveSlotDataをJSONファイルとしてディスクに書き出す。</summary>
+        /// <summary>SaveSlotDataをJSONファイルとしてディスクに書き出す。
+        /// 既存ファイルがあれば .bak にコピーしてから上書きする。</summary>
         public void WriteToDisk(SaveSlotData slotData)
         {
             if (slotData == null)
@@ -63,59 +71,66 @@ namespace Game.Core
 
             string fileJson = JsonConvert.SerializeObject(fileData, Formatting.Indented);
             string filePath = GetSlotFilePath(slotData.slotIndex);
-            File.WriteAllText(filePath, fileJson);
-        }
 
-        /// <summary>ディスクからJSONファイルを読み込みSaveSlotDataに復元する。</summary>
-        public SaveSlotData ReadFromDisk(int slotIndex)
-        {
-            string filePath = GetSlotFilePath(slotIndex);
-
-            if (!File.Exists(filePath))
+            // 既存ファイルがある場合は .bak を作成してから上書きする
+            if (File.Exists(filePath))
             {
-                return null;
-            }
-
-            string fileJson = File.ReadAllText(filePath);
-            SaveFileData fileData = JsonConvert.DeserializeObject<SaveFileData>(fileJson);
-
-            if (fileData == null)
-            {
-                return null;
-            }
-
-            SaveSlotData slotData = new SaveSlotData(fileData.slotIndex);
-            slotData.timestamp = fileData.timestamp;
-
-            if (fileData.entries != null)
-            {
-                foreach (KeyValuePair<string, SaveEntryData> kvp in fileData.entries)
+                string backupPath = GetBackupFilePath(slotData.slotIndex);
+                try
                 {
-                    SaveEntryData entryData = kvp.Value;
-                    if (entryData.typeName == "null")
-                    {
-                        slotData.entries[kvp.Key] = null;
-                        continue;
-                    }
-
-                    Type type = ResolveType(entryData.typeName);
-                    if (type != null)
-                    {
-                        object value = JsonConvert.DeserializeObject(entryData.json, type);
-                        slotData.entries[kvp.Key] = value;
-                    }
-                    else
-                    {
-                        // 型が見つからない場合はJToken(JObject/JArray/JValue)のまま保持
-                        slotData.entries[kvp.Key] = JsonConvert.DeserializeObject(entryData.json);
-                    }
+                    File.Copy(filePath, backupPath, true);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[SaveDataStore] バックアップ作成に失敗しました (slot={slotData.slotIndex}): {ex.Message}");
                 }
             }
 
-            return slotData;
+            File.WriteAllText(filePath, fileJson);
         }
 
-        /// <summary>スロットファイルを削除する。</summary>
+        /// <summary>ディスクからJSONファイルを読み込みSaveSlotDataに復元する。
+        /// メインファイルのパース/検証に失敗したら .bak からフォールバック読み込みする。
+        /// 両方とも失敗した場合は null を返す。</summary>
+        public SaveSlotData ReadFromDisk(int slotIndex)
+        {
+            string filePath = GetSlotFilePath(slotIndex);
+            string backupPath = GetBackupFilePath(slotIndex);
+
+            // まずメインファイルから読み込みを試みる
+            if (File.Exists(filePath))
+            {
+                SaveSlotData mainData = TryReadSlotFile(filePath, out string mainError);
+                if (mainData != null)
+                {
+                    return mainData;
+                }
+
+                Debug.LogError($"[SaveDataStore] セーブデータの読み込みに失敗しました (slot={slotIndex}, path='{filePath}'): {mainError}");
+            }
+            else if (!File.Exists(backupPath))
+            {
+                // メインも .bak もなければ「セーブ未存在」なので null (エラーではない)
+                return null;
+            }
+
+            // メインが壊れている/存在しないので .bak からフォールバック
+            if (File.Exists(backupPath))
+            {
+                SaveSlotData backupData = TryReadSlotFile(backupPath, out string backupError);
+                if (backupData != null)
+                {
+                    Debug.LogError($"[SaveDataStore] .bak からフォールバック復元しました (slot={slotIndex}, path='{backupPath}')");
+                    return backupData;
+                }
+
+                Debug.LogError($"[SaveDataStore] .bak も読み込みに失敗しました (slot={slotIndex}, path='{backupPath}'): {backupError}");
+            }
+
+            return null;
+        }
+
+        /// <summary>スロットファイルを削除する。.bak も同時に削除する。</summary>
         public void DeleteSlot(int slotIndex)
         {
             string filePath = GetSlotFilePath(slotIndex);
@@ -123,12 +138,116 @@ namespace Game.Core
             {
                 File.Delete(filePath);
             }
+
+            string backupPath = GetBackupFilePath(slotIndex);
+            if (File.Exists(backupPath))
+            {
+                File.Delete(backupPath);
+            }
         }
 
         /// <summary>スロットファイルが存在するか。</summary>
         public bool HasSlotFile(int slotIndex)
         {
             return File.Exists(GetSlotFilePath(slotIndex));
+        }
+
+        /// <summary>
+        /// 指定パスのJSONファイルを読み込んで SaveSlotData に復元する。
+        /// 成功時は SaveSlotData、失敗時は null を返し errorMessage にエラー内容を格納する。
+        /// </summary>
+        private static SaveSlotData TryReadSlotFile(string filePath, out string errorMessage)
+        {
+            errorMessage = null;
+
+            string fileJson;
+            try
+            {
+                fileJson = File.ReadAllText(filePath);
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"ファイル読み込み例外: {ex.Message}";
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(fileJson))
+            {
+                errorMessage = "ファイルが空です";
+                return null;
+            }
+
+            SaveFileData fileData;
+            try
+            {
+                fileData = JsonConvert.DeserializeObject<SaveFileData>(fileJson);
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"JSONパース例外: {ex.Message}";
+                return null;
+            }
+
+            if (fileData == null)
+            {
+                errorMessage = "JSONパース結果がnull";
+                return null;
+            }
+
+            // 必須フィールド検証 (entriesがnullなら壊れていると判断)
+            if (fileData.entries == null)
+            {
+                errorMessage = "必須フィールド 'entries' がnull";
+                return null;
+            }
+
+            SaveSlotData slotData = new SaveSlotData(fileData.slotIndex);
+            slotData.timestamp = fileData.timestamp;
+
+            foreach (KeyValuePair<string, SaveEntryData> kvp in fileData.entries)
+            {
+                SaveEntryData entryData = kvp.Value;
+                if (entryData == null)
+                {
+                    continue;
+                }
+
+                if (entryData.typeName == "null")
+                {
+                    slotData.entries[kvp.Key] = null;
+                    continue;
+                }
+
+                Type type = ResolveType(entryData.typeName);
+                if (type != null)
+                {
+                    try
+                    {
+                        object value = JsonConvert.DeserializeObject(entryData.json, type);
+                        slotData.entries[kvp.Key] = value;
+                    }
+                    catch (Exception ex)
+                    {
+                        errorMessage = $"エントリー'{kvp.Key}'のデシリアライズに失敗: {ex.Message}";
+                        return null;
+                    }
+                }
+                else
+                {
+                    // 型が見つからない場合はJToken(JObject/JArray/JValue)のまま保持
+                    try
+                    {
+                        slotData.entries[kvp.Key] = JsonConvert.DeserializeObject(entryData.json);
+                    }
+                    catch (Exception ex)
+                    {
+                        errorMessage = $"エントリー'{kvp.Key}'のJToken変換に失敗: {ex.Message}";
+                        return null;
+                    }
+                }
+            }
+
+            return slotData;
         }
 
         /// <summary>
@@ -160,6 +279,11 @@ namespace Game.Core
         private string GetSlotFilePath(int slotIndex)
         {
             return Path.Combine(_savesDir, $"slot_{slotIndex}.json");
+        }
+
+        private string GetBackupFilePath(int slotIndex)
+        {
+            return GetSlotFilePath(slotIndex) + k_BackupExtension;
         }
 
         // ===== 内部データ構造 =====
