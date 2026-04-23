@@ -221,5 +221,13 @@ namespace Game.Core
         // ─────────────────────────────────────────────
         [TitleGroup("初期状態")]
         public ActState initialActState;
+
+        // ─────────────────────────────────────────────
+        //  ステータス上限値（Str/Dex/Intel/Vit/Mnd/End の順）
+        // ─────────────────────────────────────────────
+        [TitleGroup("ステータス上限値")]
+        [Tooltip("各ステータス (Str/Dex/Intel/Vit/Mnd/End) の個別上限値。動的最大レベル算出にも使用。要素数は 6 固定。")]
+        [MinValue(0)]
+        public int[] statCaps = new int[] { 99, 99, 99, 99, 99, 99 };
     }
 }
