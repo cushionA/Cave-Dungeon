@@ -162,7 +162,10 @@ namespace Game.Runtime
                 weightRatio = 0f,
                 jumpStaminaCost = info.jumpStaminaCost,
                 dodgeStaminaCost = info.dodgeStaminaCost,
-                sprintStaminaPerSecond = info.sprintStaminaPerSecond
+                sprintStaminaPerSecond = info.sprintStaminaPerSecond,
+                dodgeDuration = info.dodgeDuration,
+                dodgeSpeedMultiplier = info.dodgeSpeedMultiplier,
+                sprintSpeedMultiplier = info.sprintSpeedMultiplier
             };
 
             int result = _core.RegisterCharacter(hash, vitals, combat, flags, move, chara);

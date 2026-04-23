@@ -116,6 +116,24 @@ namespace Game.Core
         public float sprintStaminaPerSecond = 10f;
 
         // ─────────────────────────────────────────────
+        //  移動パラメータ（キャラ別チューニング値）
+        // ─────────────────────────────────────────────
+        [TitleGroup("移動パラメータ")]
+        [Tooltip("回避（ドッジ）の持続時間（秒）")]
+        [MinValue(0)]
+        public float dodgeDuration = 0.25f;
+
+        [TitleGroup("移動パラメータ")]
+        [Tooltip("回避中の移動速度倍率（moveSpeed に対する倍率）。MoveParams.dashSpeed が設定されている場合はそちらを優先")]
+        [MinValue(0)]
+        public float dodgeSpeedMultiplier = 2.5f;
+
+        [TitleGroup("移動パラメータ")]
+        [Tooltip("スプリント時の移動速度倍率（moveSpeed に対する倍率）")]
+        [MinValue(0)]
+        public float sprintSpeedMultiplier = 1.6f;
+
+        // ─────────────────────────────────────────────
         //  アーマー
         // ─────────────────────────────────────────────
         [TitleGroup("アーマー")]
