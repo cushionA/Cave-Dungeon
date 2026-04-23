@@ -81,21 +81,27 @@ namespace Game.Core
         }
 
         /// <summary>
-        /// 現在 Coyote Time 窓内か (定数フォールバック版)。テスト用途にも使える。
-        /// データ駆動版が必要な場合は <see cref="IsInCoyoteWindowFor(MoveParams)"/> を使用する。
+        /// 現在 Coyote Time 窓内か (定数フォールバック版)。既存テスト互換用に残置。
+        /// 本体 (TryStartJump) はデータ駆動版 <see cref="IsInCoyoteWindowFor(MoveParams)"/> を使用しており、
+        /// 本プロパティはプロダクションコードから呼ばれていない。
+        /// 既存テスト (CoyoteTimeTests) が全て IsInCoyoteWindowFor 側へ移行した段階で削除予定。
         /// </summary>
         public bool IsInCoyoteWindow => _timeSinceLeftGround < k_CoyoteTimeSeconds;
 
         /// <summary>
         /// 指定の MoveParams で Coyote Time 窓内か判定する (データ駆動版)。
-        /// moveParams.coyoteTime > 0 ならその値、それ以外は定数 k_CoyoteTimeSeconds にフォールバック。
+        /// moveParams.coyoteTime &gt; 0 ならその値、それ以外は定数 <see cref="k_CoyoteTimeSeconds"/> にフォールバック。
         /// </summary>
         public bool IsInCoyoteWindowFor(MoveParams moveParams)
         {
             return _timeSinceLeftGround < GetEffectiveCoyoteTime(moveParams);
         }
 
-        /// <summary>MoveParams.coyoteTime の有効値 (0 以下なら定数フォールバック)。</summary>
+        /// <summary>
+        /// MoveParams.coyoteTime の有効値を返す。
+        /// 0 以下 (未設定) の場合は定数 <see cref="k_CoyoteTimeSeconds"/> にフォールバックし、
+        /// 既存 CharacterInfo アセットで coyoteTime が未設定でも従来通りの挙動を保つ。
+        /// </summary>
         private static float GetEffectiveCoyoteTime(MoveParams p)
         {
             return p.coyoteTime > 0f ? p.coyoteTime : k_CoyoteTimeSeconds;

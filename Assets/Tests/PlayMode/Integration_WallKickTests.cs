@@ -16,11 +16,14 @@ namespace Game.Tests.PlayMode
     /// 観点:
     /// - 壁 GameObject (Ground レイヤー) + Player 配置 + AbilityFlag.WallKick 付与
     /// - 空中ジャンプ入力 (jumpBufferTimer) を発行
-    /// - Rigidbody2D.linearVelocity が壁から離れる方向にキックされる
+    /// - Rigidbody2D.linearVelocity が TryWallKick の返却値 (facingDir と同符号の k_WallKickForceX) で更新される
     ///
     /// 純ロジック単体テストは PlayerMovementAdvancedTests.cs に 5 本あるが、
     /// 本ファイルは PlayerCharacter.FixedUpdate の実経路 (壁接触の OverlapBox 検知 +
     /// SoA の AbilityFlags 取得 + Rigidbody2D への反映) が破壊されないことを保証する。
+    ///
+    /// 注意: PlayerCharacter._jumpBufferTimer は private のためリフレクションで設定する。
+    /// PlayerInputHandler を介さない分テストは軽量だが、フィールド名変更時に壊れるリスクあり。
     /// </summary>
     public class Integration_WallKickTests
     {
@@ -69,12 +72,25 @@ namespace Game.Tests.PlayMode
             return wall;
         }
 
+        /// <summary>左側に立つ壁 (Ground レイヤー) を作成する。</summary>
+        private GameObject CreateWallLeft(float x, float width = 0.4f, float height = 6f)
+        {
+            GameObject wall = new GameObject("TestWallLeft");
+            wall.layer = k_GroundLayer;
+            BoxCollider2D col = wall.AddComponent<BoxCollider2D>();
+            col.size = new Vector2(width, height);
+            wall.transform.position = new Vector3(x, 2f, 0f);
+            return wall;
+        }
+
         /// <summary>
-        /// 壁接触 + WallKick + 空中ジャンプ入力 → Rigidbody2D.linearVelocity が壁から離れる方向
-        /// (x 成分が左向き負値) かつ上方向 (y 成分が正値) に更新されることを検証。
+        /// 壁接触 (右壁) + WallKick + 空中ジャンプ入力 → Rigidbody2D.linearVelocity が
+        /// TryWallKick の返却値 (facingRight=true → +k_WallKickForceX, +k_WallKickForceY) で更新される。
+        /// PlayerCharacter.IsTouchingWall は facingDir 方向の壁を検出するため、
+        /// 右壁を検出するには右向き (デフォルト) である必要がある。
         /// </summary>
         [UnityTest]
-        public IEnumerator PlayerCharacter_TouchingWallWithWallKickFlag_JumpPushesAwayFromWall()
+        public IEnumerator PlayerCharacter_TouchingRightWallWithWallKickFlag_JumpKicksInFacingDirection()
         {
             // Arrange: 壁を右側に配置
             _wallObject = CreateWallRight(x: 0.6f);
@@ -96,25 +112,57 @@ namespace Game.Tests.PlayMode
             ref CharacterFlags flags = ref GameManager.Data.GetFlags(pc.ObjectHash);
             flags.AbilityFlags = AbilityFlag.WallKick;
 
-            // プレイヤーの向きは右 (デフォルト _isFacingRight = true) → 右側の壁に接触中
-            // 壁から離れる方向キック = X 左向き (負値)
+            // プレイヤーの向きは右 (デフォルト _isFacingRight = true) → IsTouchingWall(+1) が右壁を検出
+            // TryWallKick は facingRight=true で +k_WallKickForceX を返す (facingDir と同符号)
             // _jumpBufferTimer をリフレクションで直接セットして「空中ジャンプ入力」を再現
             SetJumpBufferTimer(pc, 0.1f);
 
             // FixedUpdate を 1 回回す
             yield return new WaitForFixedUpdate();
 
-            // Assert: 壁から離れる方向 (-X) にキック、上方向 (+Y) も付与
+            // Assert: TryWallKick(..., isFacingRight=true) が返した値がそのまま velocity に反映されている
             Vector2 velocity = rb.linearVelocity;
-            Assert.Less(velocity.x, 0f,
-                $"右の壁を蹴った場合 X 速度は負 (左向き) のはず。actual={velocity.x}");
-            Assert.Greater(velocity.y, 0f,
-                $"壁蹴りは上方向にも力を与えるはず。actual={velocity.y}");
-            // AdvancedMovementLogic の k_WallKickForceX / k_WallKickForceY と一致することも確認
-            Assert.AreEqual(-AdvancedMovementLogic.k_WallKickForceX, velocity.x, 0.01f,
-                "X 速度は k_WallKickForceX の符号反転値 (壁から離れる方向)");
+            Assert.AreEqual(AdvancedMovementLogic.k_WallKickForceX, velocity.x, 0.01f,
+                $"facingRight=true の壁蹴り X 速度は +k_WallKickForceX (AdvancedMovementLogic.TryWallKick の返却値) と一致。actual={velocity.x}");
             Assert.AreEqual(AdvancedMovementLogic.k_WallKickForceY, velocity.y, 0.01f,
-                "Y 速度は k_WallKickForceY");
+                $"壁蹴り Y 速度は k_WallKickForceY と一致。actual={velocity.y}");
+        }
+
+        /// <summary>
+        /// 左向き (_isFacingRight=false) + 左壁接触 + WallKick + 空中ジャンプ入力 →
+        /// TryWallKick が facingRight=false で -k_WallKickForceX を返し、velocity.x が負になる。
+        /// 右壁版との対称性を保証し、facingDir 分岐の両経路がカバーされる。
+        /// </summary>
+        [UnityTest]
+        public IEnumerator PlayerCharacter_TouchingLeftWallWithWallKickFlag_JumpKicksInFacingDirection()
+        {
+            _wallObject = CreateWallLeft(x: -0.6f);
+
+            CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo();
+            _playerObject = SpawnPlayer(info, new Vector3(-0.05f, 2f, 0f));
+            yield return null;
+
+            PlayerCharacter pc = _playerObject.GetComponent<PlayerCharacter>();
+            Rigidbody2D rb = _playerObject.GetComponent<Rigidbody2D>();
+
+            rb.gravityScale = 0f;
+            rb.linearVelocity = Vector2.zero;
+
+            // プレイヤーを左向きに変更 → IsTouchingWall(-1) が左壁を検出できる
+            SetFacingLeft(pc);
+
+            ref CharacterFlags flags = ref GameManager.Data.GetFlags(pc.ObjectHash);
+            flags.AbilityFlags = AbilityFlag.WallKick;
+
+            SetJumpBufferTimer(pc, 0.1f);
+
+            yield return new WaitForFixedUpdate();
+
+            Vector2 velocity = rb.linearVelocity;
+            Assert.AreEqual(-AdvancedMovementLogic.k_WallKickForceX, velocity.x, 0.01f,
+                $"facingRight=false の壁蹴り X 速度は -k_WallKickForceX と一致。actual={velocity.x}");
+            Assert.AreEqual(AdvancedMovementLogic.k_WallKickForceY, velocity.y, 0.01f,
+                $"壁蹴り Y 速度は k_WallKickForceY と一致。actual={velocity.y}");
         }
 
         /// <summary>
@@ -215,6 +263,20 @@ namespace Game.Tests.PlayMode
                 BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.IsNotNull(field, "PlayerCharacter._jumpBufferTimer が存在する");
             field.SetValue(pc, value);
+        }
+
+        /// <summary>
+        /// BaseCharacter._isFacingRight を false にする (protected フィールド)。
+        /// IsTouchingWall(facingDir) が左側 (-X) の壁を検出できるように設定。
+        /// </summary>
+        private static void SetFacingLeft(PlayerCharacter pc)
+        {
+            // _isFacingRight は BaseCharacter で protected 定義されている
+            FieldInfo field = typeof(PlayerCharacter).BaseType.GetField(
+                "_isFacingRight",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(field, "BaseCharacter._isFacingRight が存在する");
+            field.SetValue(pc, false);
         }
     }
 }
