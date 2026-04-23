@@ -19,7 +19,8 @@ namespace Game.Runtime
         private SpriteRenderer _spriteRenderer;
         private Rigidbody2D _rb;
         // キャラクター毎のヒット回数を記録 (targetHash → hitCount)。
-        // BulletProfile.hitLimit までキャラ毎に多段ヒット可能。
+        // BulletProfile.perTargetHitLimit までキャラ毎に多段ヒット可能。
+        // 総ヒット数 (hitLimit) は Projectile.RegisterHit 側で別途管理 (二段管理)。
         private Dictionary<int, int> _hitCounts;
         private bool _isActive;
         private ProjectileManager _manager;
@@ -212,7 +213,7 @@ namespace Game.Runtime
                 return;
             }
 
-            // キャラ別ヒット回数ゲート: hitLimit 到達キャラはスキップ
+            // キャラ別ヒット回数ゲート: perTargetHitLimit 到達キャラはスキップし、総数にもカウントしない
             if (!TryRegisterHit(targetHash, out bool shouldDespawnFromHitLimit))
             {
                 return;
@@ -236,7 +237,7 @@ namespace Game.Runtime
                 _manager.SpawnChildProjectiles(_coreProjectile, _magic);
             }
 
-            // 非Pierce は hitLimit 到達で明示Kill (Core側の RegisterHit が未Killなら補完)
+            // 非Pierce は総数到達で明示Kill (TryRegisterHit の RegisterHit 経由で既に Kill 済みの想定、念のため補完)
             if (shouldDespawnFromHitLimit && _coreProjectile.IsAlive)
             {
                 _coreProjectile.Kill();
@@ -251,41 +252,45 @@ namespace Game.Runtime
 
         /// <summary>
         /// 指定ターゲットへのヒットを記録する。
-        /// キャラ毎 <see cref="BulletProfile.hitLimit"/> までヒット可能。
+        /// 二段管理: ターゲット別上限 (<see cref="BulletProfile.perTargetHitLimit"/>) で重複ヒットを抑制し、
+        /// 総ヒット数 (<see cref="BulletProfile.hitLimit"/>) は <see cref="Projectile.RegisterHit"/> 経由で消費する。
+        /// ターゲット別上限に達したターゲットは総数にもカウントされない (加算スキップ)。
         /// </summary>
         /// <param name="targetHash">ターゲットキャラクターのハッシュ。</param>
         /// <param name="shouldDespawn">
-        /// 非Pierce でこのヒットにより hitLimit 到達した場合 true (飛翔体を消滅させる)。
-        /// Pierce 弾丸または上限未到達なら false。
+        /// 非 Pierce でこのヒットにより総ヒット数が尽きた場合 true (飛翔体を消滅させる)。
+        /// Pierce 弾丸、または総数未到達なら false。
         /// </param>
-        /// <returns>ヒットを受理した場合 true。上限既到達でスキップした場合 false。</returns>
+        /// <returns>ヒットを受理した場合 true。ターゲット別上限到達でスキップした場合 false。</returns>
         internal bool TryRegisterHit(int targetHash, out bool shouldDespawn)
         {
             shouldDespawn = false;
 
-            if (_coreProjectile == null)
+            if (_coreProjectile == null || !_coreProjectile.IsAlive)
             {
                 return false;
             }
 
-            int limit = GetEffectiveHitLimit(_coreProjectile.Profile.hitLimit);
-            _hitCounts.TryGetValue(targetHash, out int current);
-            if (current >= limit)
+            if (_hitCounts == null)
             {
-                // 当該ターゲットは既に上限到達
+                _hitCounts = new Dictionary<int, int>();
+            }
+
+            // ターゲット別上限ゲート: 到達済みは総数にもカウントせずスキップ
+            int perTargetLimit = _coreProjectile.Profile.GetEffectivePerTargetHitLimit();
+            _hitCounts.TryGetValue(targetHash, out int current);
+            if (current >= perTargetLimit)
+            {
                 return false;
             }
 
             current++;
             _hitCounts[targetHash] = current;
 
-            // 上限到達 + 非Pierce → 消滅
-            bool hasPierce = (_coreProjectile.Profile.features & BulletFeature.Pierce) != 0;
-            if (current >= limit && !hasPierce)
-            {
-                shouldDespawn = true;
-            }
-
+            // 総ヒット数を Projectile 側で消費 (既存経路)。
+            // RegisterHit は非 Pierce で RemainingHits<=0 になった際に内部で Kill() する。
+            _coreProjectile.RegisterHit();
+            shouldDespawn = !_coreProjectile.IsAlive;
             return true;
         }
 
@@ -299,15 +304,6 @@ namespace Game.Runtime
                 return 0;
             }
             return _hitCounts.TryGetValue(targetHash, out int count) ? count : 0;
-        }
-
-        /// <summary>
-        /// BulletProfile.hitLimit = 0 (未設定) を 1 に正規化する。
-        /// Core <see cref="Projectile.Initialize"/> と同じ既定値ポリシー。
-        /// </summary>
-        private static int GetEffectiveHitLimit(int rawHitLimit)
-        {
-            return rawHitLimit > 0 ? rawHitLimit : 1;
         }
     }
 }

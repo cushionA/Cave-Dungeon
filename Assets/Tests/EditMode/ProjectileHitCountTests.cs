@@ -37,6 +37,11 @@ namespace Game.Tests.EditMode
             }
         }
 
+        /// <summary>
+        /// 旧セマンティクス互換の弾丸生成ヘルパ: hitLimit と perTargetHitLimit を揃えて設定する。
+        /// 旧実装では hitLimit 単独でターゲット別上限を表現していたため、二段管理導入後もこのヘルパ経由で
+        /// 既存テストの期待値が保たれる。
+        /// </summary>
         private static Projectile CreateProjectile(int hitLimit, BulletFeature features = BulletFeature.None)
         {
             Projectile p = new Projectile();
@@ -45,6 +50,7 @@ namespace Game.Tests.EditMode
                 moveType = BulletMoveType.Straight,
                 speed = 10f,
                 hitLimit = hitLimit,
+                perTargetHitLimit = hitLimit,
                 lifeTime = 5f,
                 features = features
             };
