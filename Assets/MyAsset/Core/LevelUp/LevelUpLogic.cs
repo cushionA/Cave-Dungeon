@@ -93,13 +93,30 @@ namespace Game.Core
 
         /// <summary>
         /// Allocates one stat point to the specified stat.
-        /// Returns true if allocation succeeded, false if no points available.
+        /// Returns true if allocation succeeded, false if no points available
+        /// or the stat has reached its cap.
         /// </summary>
-        public bool AllocatePoint(StatType stat)
+        /// <param name="stat">振るステータスの種類。</param>
+        /// <param name="statCaps">
+        /// 各ステータスの上限値（Str/Dex/Intel/Vit/Mnd/End の順、要素数 6）。
+        /// null または要素数不足なら上限チェックをスキップする。
+        /// </param>
+        public bool AllocatePoint(StatType stat, int[] statCaps = null)
         {
             if (_availablePoints <= 0)
             {
                 return false;
+            }
+
+            // 上限チェック（statCaps が与えられた場合のみ）
+            if (statCaps != null && statCaps.Length >= 6)
+            {
+                int currentValue = GetAllocatedValue(stat);
+                int capIndex = (int)stat;
+                if (capIndex >= 0 && capIndex < statCaps.Length && currentValue >= statCaps[capIndex])
+                {
+                    return false;
+                }
             }
 
             _availablePoints--;
@@ -130,6 +147,111 @@ namespace Game.Core
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// 振り直し: 全てのステータスを 0 に戻し、
+        /// 振れるポイントを `_level * k_PointsPerLevel` に復元する。
+        /// 特殊アイテム消費トリガーを想定しているため、コスト処理は呼び出し元の責任。
+        /// </summary>
+        public void RefundAllStatusPoints()
+        {
+            _allocatedStats = default;
+            _availablePoints = _level * k_PointsPerLevel;
+        }
+
+        /// <summary>
+        /// 指定ステータスを指定ポイント分減らし、振れるポイントを増やす。
+        /// 負の points または現在値を超える points が渡された場合は false を返し、状態を変更しない。
+        /// </summary>
+        public bool RefundStatus(StatType stat, int points)
+        {
+            if (points < 0)
+            {
+                return false;
+            }
+            if (points == 0)
+            {
+                return true;
+            }
+
+            int currentValue = GetAllocatedValue(stat);
+            if (points > currentValue)
+            {
+                return false;
+            }
+
+            switch (stat)
+            {
+                case StatType.Str:
+                    _allocatedStats.str -= points;
+                    break;
+                case StatType.Dex:
+                    _allocatedStats.dex -= points;
+                    break;
+                case StatType.Intel:
+                    _allocatedStats.intel -= points;
+                    break;
+                case StatType.Vit:
+                    _allocatedStats.vit -= points;
+                    break;
+                case StatType.Mnd:
+                    _allocatedStats.mnd -= points;
+                    break;
+                case StatType.End:
+                    _allocatedStats.end -= points;
+                    break;
+                default:
+                    return false;
+            }
+
+            _availablePoints += points;
+            return true;
+        }
+
+        /// <summary>
+        /// 指定ステータスの現在の割り振り値を返す。
+        /// </summary>
+        private int GetAllocatedValue(StatType stat)
+        {
+            switch (stat)
+            {
+                case StatType.Str: return _allocatedStats.str;
+                case StatType.Dex: return _allocatedStats.dex;
+                case StatType.Intel: return _allocatedStats.intel;
+                case StatType.Vit: return _allocatedStats.vit;
+                case StatType.Mnd: return _allocatedStats.mnd;
+                case StatType.End: return _allocatedStats.end;
+                default: return 0;
+            }
+        }
+
+        /// <summary>
+        /// statCaps から動的最大レベルを算出し、ハードキャップ k_MaxLevel との min を返す。
+        /// 動的最大レベル = sum(statCaps) / k_PointsPerLevel
+        /// 実効最大レベル = Min(dynamicMaxLevel, k_MaxLevel)
+        /// statCaps が null または要素数不足の場合は k_MaxLevel を返す。
+        /// </summary>
+        public static int GetEffectiveMaxLevel(int[] statCaps)
+        {
+            if (statCaps == null || statCaps.Length < 6)
+            {
+                return k_MaxLevel;
+            }
+
+            int sum = 0;
+            for (int i = 0; i < 6; i++)
+            {
+                int cap = statCaps[i];
+                if (cap < 0)
+                {
+                    cap = 0;
+                }
+                sum += cap;
+            }
+
+            int dynamicMaxLevel = sum / k_PointsPerLevel;
+            return Math.Min(dynamicMaxLevel, k_MaxLevel);
         }
 
         /// <summary>
