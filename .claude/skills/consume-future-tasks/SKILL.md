@@ -125,11 +125,12 @@ git worktree add .claude/worktrees/consume-${BATCH_NAME} -b ${BRANCH_NAME} main
 - このスキルの目的 (FUTURE_TASKS.md の消化)
 - そのbatchに含まれるタスクの一覧と詳細（FUTURE_TASKS.md から抽出した内容）
 - 実行すべき手順:
-  1. 各タスクについて TDD: テスト追加 → 実装 → テスト追加確認 (CLI テストは不要、コンパイル通過まで)
-  2. コンパイル確認: `python tools/unicli.py compile` 相当または Bash で検証
+  1. 各タスクについて TDD: テスト追加 → 実装 → 整合性確認 (コンパイル通過まで)
+  2. コンパイル確認: `python tools/unicli.py compile` 相当または Grep/Read で変更ファイルと呼び出し元の整合検証
   3. FUTURE_TASKS.md の該当タスクに `- [x]` チェック + `✅` 完了メモ追記
   4. 小さな論理単位でコミット (`feat(scope): 日本語タイトル` + `Co-Authored-By`)
-  5. **worktree 上でブランチにコミットまで**。Unity テスト・PR 作成はしない
+  5. **worktree 上でブランチにコミットまで**。Unity テスト実行・PR 作成はしない
+- **Unity CLI テスト実行の扱い**: Agent 側では実行しない。理由は Library フォルダが worktree ごとに独立しており、worktree で初回起動すると数十分のフル再インポートが走るため。テスト実行はステップ 7 で親 Claude がメイン worktree の Library を使い回して行う
 - 準拠すべき規約: `.claude/rules/unity-conventions.md`、`.claude/rules/test-driven.md`、`CLAUDE.md`
 - worktree パスと対象ブランチ名
 - 完了時に報告: 成功タスク一覧、失敗タスク一覧 + 失敗要因
@@ -141,22 +142,39 @@ git worktree add .claude/worktrees/consume-${BATCH_NAME} -b ${BRANCH_NAME} main
 
 メインworktree (プロジェクトルート) で batch ごとに順次処理する。
 
+### Library フォルダの前提
+Unity の `Library/` はキャッシュ本体でプロジェクトディレクトリごとに独立する。worktree は**独自の `Library/` を持つ** (空の状態) ため、worktree で Unity CLI を起動するとフル再インポートが走る (10-30 分 × worktree 数 × ディスク数 GB)。
+
+**対策**: メイン worktree の既存 `Library/` を使い回すため、以下の順でテストする:
+1. 成功した実装 worktree を**削除** (`git worktree remove`) してブランチ占有を解除
+2. メイン worktree で `git checkout ${BRANCH_NAME}` してブランチ切替 (Library は共有)
+3. Unity CLI でテスト実行
+4. 完了後に `git checkout main` で戻す
+
+失敗 batch の worktree はこの時点では削除しない (次回再実行材料のため)。
+
 ### 各 batch の処理フロー
 
 ```bash
-# 1. main をクリーン状態に戻す
+# 1. 実装 worktree を削除してブランチ占有を解除 (成功 batch のみ)
+git worktree remove .claude/worktrees/consume-${BATCH_NAME}
+
+# 2. main をクリーン状態に戻す (既に main なら skip)
 git checkout main
 
-# 2. batch ブランチをチェックアウト
+# 3. batch ブランチをチェックアウト (メイン worktree の Library を使い回す)
 git checkout ${BRANCH_NAME}
 
-# 3. Unity CLI で EditMode テスト実行 (-quit なし)
+# 4. Unity CLI で EditMode テスト実行 (-quit なし)
 "C:\Program Files\Unity\Hub\Editor\6000.3.9f1\Editor\Unity.exe" \
   -batchmode -nographics \
   -projectPath "C:\Users\tatuk\Desktop\GameDev\SisterGame" \
   -runTests -testPlatform EditMode \
   -testResults "TestResults/batch-${BATCH_NAME}.xml" \
   -logFile "TestResults/batch-${BATCH_NAME}.log"
+
+# 5. テスト完了後、次の batch へ行く前に main に戻す
+git checkout main
 ```
 
 ### テスト結果判定
@@ -227,6 +245,7 @@ done
   6. `gh pr review ${PR} --comment --body "${観点別コメント}"` で投稿
      - **自己 PR は `--approve` 不可** (GitHub API エラー `Can not approve your own pull request`)。必ず `--comment` を使う
      - Critical 未対応があれば `--request-changes`、対応済み or 軽微指摘のみなら `--comment`
+- **Unity CLI テスト実行の扱い**: Agent 側では実行しない。レビュー worktree も独自の空 `Library/` を持ち、ここで CLI を起動するとフル再インポートが走るため。テスト実行は Agent 完了後に親 Claude がメイン worktree の Library を使い回して行う (ステップ 7 と同じ戦略)
 - **レビュー観点** (`.claude/rules/git-workflow.md` のプルリクエストルール準拠):
   - **Code Reuse**: 重複パターン、既存ユーティリティ・既存命名スタイル未使用、類似フィールド命名の統一
   - **Code Quality**:
@@ -310,6 +329,7 @@ done
 
 ### 実装フェーズ (ステップ 6-7)
 - **Unity CLI テスト時 `-quit` は絶対に付けない** (メモリ: Unity CLIバッチテスト注意点)
+- **Library フォルダは worktree ごとに独立**。worktree で Unity CLI を起動するとフル再インポートで 10-30 分 × ディスク数 GB 消費するため、テスト実行はメイン worktree でブランチ切替 (成功 batch の worktree を先に削除してブランチ占有を解除してから) して Library を共有する
 - **失敗 batch のブランチ・worktree は削除しない** — 次回再実行の材料
 - **FUTURE_TASKS.md の編集は各 Agent に委ねる** — 本スキルは orchestration 専任
 - **PR の base は常に main** — batch 間は独立前提
@@ -320,6 +340,7 @@ done
 ### レビューフェーズ (ステップ 8)
 - **自己 PR は `--approve` 不可** — GitHub API が `Can not approve your own pull request` を返す。必ず `gh pr review <PR> --comment` を使用する
 - **レビュー worktree は実装 worktree とは別に切る** (`.claude/worktrees/pr-review-<PR>`)。実装 worktree を流用しない理由: head commit の検証を最新状態で行うため、かつ実装 worktree は既に削除されている可能性あり
+- **レビュー Agent は Unity CLI テスト実行しない** — レビュー worktree も独自の空 `Library/` を持つためフル再インポートコストが発生する。テスト実行は Agent 完了後に親 Claude がメイン worktree でブランチ切替して行う (修正コミット push 済みの状態で)
 - **Critical 指摘は必ず修正コミットを push してから review 投稿**（対応漏れで PR がマージされる事故を避ける）
 - **修正コミットのタイトル形式**: `fix(review): PR #${PR} レビュー R1/R2 対応 — ${要約}` で識別しやすくする
 - **rate limit 対策**: 各 Agent は diff + 周辺コードだけ読ませる。全ファイル走査は避ける
