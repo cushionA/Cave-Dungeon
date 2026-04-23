@@ -145,5 +145,65 @@ namespace Game.Tests.PlayMode
 
             yield return null;
         }
+
+        [UnityTest]
+        public IEnumerator GameManager_GetSubManager_ReturnsSameInstanceAsLegacyProperties()
+        {
+            // Dictionary化後、新しい GetSubManager<T>() API が既存プロパティと同じインスタンスを返すことを検証する。
+            if (GameManager.Instance != null)
+            {
+                Object.DestroyImmediate(GameManager.Instance.gameObject);
+            }
+
+            GameObject gmGo = new GameObject("TestGM_GetSubManager");
+            _spawnedObjects.Add(gmGo);
+
+            GameObject projGo = new GameObject("Projectiles");
+            projGo.transform.SetParent(gmGo.transform);
+            ProjectileManager pm = projGo.AddComponent<ProjectileManager>();
+
+            GameObject enemyGo = new GameObject("EnemySpawner");
+            enemyGo.transform.SetParent(gmGo.transform);
+            EnemySpawnerManager esm = enemyGo.AddComponent<EnemySpawnerManager>();
+
+            GameObject lsGo = new GameObject("LevelStreaming");
+            lsGo.transform.SetParent(gmGo.transform);
+            LevelStreamingController lsc = lsGo.AddComponent<LevelStreamingController>();
+
+            gmGo.AddComponent<GameManager>();
+            yield return null;
+
+            // GetSubManager<T>() が期待型でインスタンスを返すこと
+            Assert.AreSame(pm, GameManager.GetSubManager<ProjectileManager>(),
+                "GetSubManager<ProjectileManager>() は登録された ProjectileManager を返すべき");
+            Assert.AreSame(esm, GameManager.GetSubManager<EnemySpawnerManager>(),
+                "GetSubManager<EnemySpawnerManager>() は登録された EnemySpawnerManager を返すべき");
+            Assert.AreSame(lsc, GameManager.GetSubManager<LevelStreamingController>(),
+                "GetSubManager<LevelStreamingController>() は登録された LevelStreamingController を返すべき");
+
+            // 既存プロパティと同一インスタンスであること (プロキシ経路の整合)
+            Assert.AreSame(GameManager.Projectiles, GameManager.GetSubManager<ProjectileManager>(),
+                "Projectiles プロパティと GetSubManager<ProjectileManager>() は同一インスタンスを返すべき");
+            Assert.AreSame(GameManager.EnemySpawner, GameManager.GetSubManager<EnemySpawnerManager>(),
+                "EnemySpawner プロパティと GetSubManager<EnemySpawnerManager>() は同一インスタンスを返すべき");
+            Assert.AreSame(GameManager.LevelStreaming, GameManager.GetSubManager<LevelStreamingController>(),
+                "LevelStreaming プロパティと GetSubManager<LevelStreamingController>() は同一インスタンスを返すべき");
+        }
+
+        [UnityTest]
+        public IEnumerator GameManager_GetSubManager_WhenInstanceNull_ReturnsNull()
+        {
+            // Instance が未初期化の間に GetSubManager<T>() を呼んでも null 安全であること。
+            if (GameManager.Instance != null)
+            {
+                Object.DestroyImmediate(GameManager.Instance.gameObject);
+            }
+            yield return null;
+
+            Assert.IsNull(GameManager.GetSubManager<ProjectileManager>(),
+                "Instance 未初期化時は GetSubManager<ProjectileManager>() が null を返すべき");
+            Assert.IsNull(GameManager.Projectiles,
+                "Instance 未初期化時は Projectiles も null を返すべき");
+        }
     }
 }
