@@ -255,13 +255,17 @@ namespace Game.Runtime
         /// 二段管理: ターゲット別上限 (<see cref="BulletProfile.perTargetHitLimit"/>) で重複ヒットを抑制し、
         /// 総ヒット数 (<see cref="BulletProfile.hitLimit"/>) は <see cref="Projectile.RegisterHit"/> 経由で消費する。
         /// ターゲット別上限に達したターゲットは総数にもカウントされない (加算スキップ)。
+        /// NOTE: AoE 爆発経路 (<c>ProjectileManager.ProcessExplosion</c>) はこのメソッドを経由しないため
+        /// perTargetHitLimit は適用されず、範囲内の全キャラクターが 1 回ずつ被弾する。
         /// </summary>
         /// <param name="targetHash">ターゲットキャラクターのハッシュ。</param>
         /// <param name="shouldDespawn">
         /// 非 Pierce でこのヒットにより総ヒット数が尽きた場合 true (飛翔体を消滅させる)。
-        /// Pierce 弾丸、または総数未到達なら false。
+        /// Pierce 弾丸は <see cref="Projectile.RegisterHit"/> 内で Kill されないため常に false。
+        /// 総数未到達の非 Pierce 弾も false。
         /// </param>
-        /// <returns>ヒットを受理した場合 true。ターゲット別上限到達でスキップした場合 false。</returns>
+        /// <returns>ヒットを受理した場合 true。ターゲット別上限到達でスキップした場合 false。
+        /// Projectile が既に死亡している場合も false を返す。</returns>
         internal bool TryRegisterHit(int targetHash, out bool shouldDespawn)
         {
             shouldDespawn = false;

@@ -38,9 +38,12 @@ namespace Game.Tests.EditMode
         }
 
         /// <summary>
-        /// 旧セマンティクス互換の弾丸生成ヘルパ: hitLimit と perTargetHitLimit を揃えて設定する。
-        /// 旧実装では hitLimit 単独でターゲット別上限を表現していたため、二段管理導入後もこのヘルパ経由で
-        /// 既存テストの期待値が保たれる。
+        /// 単一ヒット上限互換の弾丸生成ヘルパ: hitLimit と perTargetHitLimit を同値で設定する。
+        /// 二段管理導入前 (hitLimit 単独運用時代) と同じ挙動でカウントされるため、
+        /// このファイル内の既存テスト (hitLimit ベースで期待値を書いていた) がそのまま通る。
+        /// 本ヘルパを使うテストでは「総数到達 == 個別ターゲット到達」が一致する点に注意。
+        /// 総数とターゲット別を独立に検証したい場合は
+        /// <see cref="CreateProjectileWithPerTargetLimit"/> を使う。
         /// </summary>
         private static Projectile CreateProjectile(int hitLimit, BulletFeature features = BulletFeature.None)
         {
