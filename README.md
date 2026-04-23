@@ -112,8 +112,7 @@ Claude Codeによる対話型開発パイプラインを採用。
 
 ```bash
 /design-game        # GDD作成
-/design-systems     # システム設計
-/plan-sprint        # スプリント計画 + feature-db登録
+/design-systems     # システム設計 + 機能分解 + feature-db登録（旧 plan-sprint 統合）
 /create-feature     # 1機能ずつTDD実装
 /run-tests          # テスト実行
 ```

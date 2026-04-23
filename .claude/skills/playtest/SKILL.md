@@ -10,6 +10,13 @@ argument-hint: [full|fix] [--feature FeatureName] [--combat-only] [--movement-on
 feature-dbに登録された機能をエディタ実行で検証するSkill Graphワークフロー。
 エディタ操作は `/unicli` スキル経由で実行する（コマンド詳細は `/unicli` を参照）。
 
+## このスキルの使い所
+
+- **エディタ実行検証のオーケストレーション**スキル。単純なテスト実行ではない
+- T1-T9 のテストタイプ設計・実行、シーン環境構築、バグ発見→修正ループ、レポート生成までを一気通貫
+- 典型例: feature-db 機能群の一括検証、リリース前の総合テスト、バグ調査
+- **Unity Test Runner を回すだけで十分**なら `/run-tests` を使う（本スキルは T1 実行時にそちらを呼ばず直接 Unity CLI/MCP を叩く）
+
 ## Skill Graph
 
 ```

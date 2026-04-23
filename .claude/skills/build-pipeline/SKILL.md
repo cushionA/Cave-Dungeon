@@ -26,9 +26,10 @@ argument-hint: <game concept or "continue">
 ## 進行状態の管理
 
 `designs/pipeline-state.json` で全体の進行状態を追跡する:
+
 ```json
 {
-  "phase": "design|planning|implementation|code-review|review",
+  "phase": "idle|design|planning|implementation|code-review|review",
   "currentSection": 1,
   "totalSections": null,
   "currentBranch": "feature/pipeline-xxx",
@@ -41,11 +42,53 @@ argument-hint: <game concept or "continue">
 }
 ```
 
+- `phase: "idle"` はパイプライン待機中（初期値）。`/build-pipeline <コンセプト>` 開始時に `"design"` に遷移する
+- `phase: "planning"` は旧仕様で `/plan-sprint` のフェーズだったが、現在は `design-systems` が機能分解まで担当するため**実装フェーズと接続する中間状態**として使用する
+
+### 状態の読み書き手順
+
+**読み込み**（パイプライン開始時・`continue` 時）:
+```bash
+python - <<'PY'
+import json, pathlib
+p = pathlib.Path("designs/pipeline-state.json")
+state = json.loads(p.read_text(encoding="utf-8"))
+print(state["phase"], state.get("currentSection"))
+PY
+```
+
+**更新**（各フェーズ遷移時）:
+```bash
+python - <<'PY'
+import json, pathlib, datetime
+p = pathlib.Path("designs/pipeline-state.json")
+state = json.loads(p.read_text(encoding="utf-8"))
+state["phase"] = "implementation"  # 適宜変更
+state["lastAction"] = "section-1 の機能分解完了"
+state["lastUpdated"] = datetime.datetime.utcnow().isoformat() + "Z"
+p.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+PY
+```
+
+### 書き込みタイミング（必須）
+
+| タイミング | 更新するフィールド |
+|-----------|------------------|
+| パイプライン開始 | `phase`, `currentBranch`, `lastAction`, `lastUpdated` |
+| GDD 確定 | `totalSections`, `phase` → `"design"` 継続 |
+| セクション設計完了 | `phase` → `"implementation"`, `pendingFeatures` を feature-db から取得して設定 |
+| 機能完了 | `completedFeatures` に追記、`pendingFeatures` から削除、`lastAction`, `lastUpdated` |
+| 機能失敗 3 回 | `skippedFeatures` に移動、`failedAttempts[name]` = 3 |
+| セクション完了 | `currentSection` インクリメント、`phase` → 次セクションの `"design"` |
+| パイプライン完了 | `phase` → `"idle"`, `currentBranch` → null |
+
 ## データ整合ルール
 
 - **feature-db がSource of Truth**: 機能の状態はfeature-dbが正
 - **pipeline-state.json はキャッシュ**: 進行位置を追跡するためのもの
 - **整合チェック**: 各フェーズ遷移時にfeature-dbと照合
+  - `python tools/feature-db.py list --status complete` の結果と `completedFeatures` を突合
+  - 乖離があれば feature-db を正として state を補正し、警告を表示する
 
 ## パイプライン全体フロー
 
@@ -66,11 +109,16 @@ argument-hint: <game concept or "continue">
 
 ### Phase 2: 計画 (planning)
 
-1. `/plan-sprint section-{currentSection}` を実行
-   - 既存機能との重複チェック
-   - 機能リスト生成・依存順序決定
-2. ユーザーに実装順序を提示し確認 → **承認待ち**
-3. `pipeline-state.json` を更新: `phase: "implementation"`
+旧 `/plan-sprint` は `/design-systems` に統合済み（2026-04-24）。
+Phase 1 step 3 の `/design-systems` 実行内で以下が完了している:
+
+- 既存機能との重複チェック
+- 機能のカテゴリ分類（system/content）
+- 依存解決・実装順序決定
+- feature-db 登録
+- スプリント計画出力（`designs/sprints/[セクション名].md`）
+
+ユーザー承認後、`pipeline-state.json` を更新: `phase: "implementation"`
 
 ### Phase 3: 実装 (implementation)
 
@@ -102,7 +150,7 @@ argument-hint: <game concept or "continue">
 2. コンソールエラーを確認（MCP経由 `read_console`）
 3. 結果をユーザーに報告
 4. 人間作業のリストアップ:
-   - 未配置アセット: `/list-assets pending`
+   - 未配置アセット: `python tools/feature-db.py assets --status pending`
    - アニメーション設定
    - ビジュアル調整
    - ゲームフィール調整（ScriptableObjectの値）
@@ -135,8 +183,7 @@ argument-hint: <game concept or "continue">
 - 新しいfeatureブランチを作成: `feature/pipeline-{コンセプト短縮名}`
 
 ### 各フェーズでのコミット
-- **設計完了時**: `docs(設計): GDD作成` / `docs(設計): セクションNのシステム設計完了`
-- **計画完了時**: `docs(計画): セクションNのスプリント計画作成`
+- **設計完了時**: `docs(設計): GDD作成` / `docs(設計): セクションNのシステム設計・機能分解完了`
 - **機能実装時**: create-featureが各機能ごとにコミット+プッシュ
 
 ### コミット後の文脈クリーン
