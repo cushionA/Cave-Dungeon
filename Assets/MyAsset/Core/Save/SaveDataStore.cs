@@ -86,6 +86,12 @@ namespace Game.Core
                 }
             }
 
+            // TODO (R6): 書き込み中の電源断で filePath が破損するリスクあり。
+            //   アトミック書き込みは以下の 3 段で実現できるが、実装優先度は低いため後続 PR。
+            //   1. temp パス (filePath + ".tmp") に書き込み
+            //   2. File.Move(filePath, backupPath) で現行ファイルを bak へ移動
+            //   3. File.Move(tempPath, filePath) で temp を正ファイル名へ確定
+            //   現状の .bak フォールバックで前回成功状態へ復旧可能なため致命的ではない。
             File.WriteAllText(filePath, fileJson);
         }
 
@@ -253,6 +259,15 @@ namespace Game.Core
         /// <summary>
         /// FullNameから型を解決する。Type.GetTypeで見つからない場合は
         /// 全アセンブリを検索するフォールバックを行う。
+        ///
+        /// ⚠ セキュリティ (R2): 任意の typeName を受け入れて全アセンブリから型を検索するため、
+        ///   save ファイルを偽造されれば任意型のインスタンス化経路が作れる (Newtonsoft.Json
+        ///   TypeNameHandling.All 相当のリスク)。
+        ///   現状はローカルセーブ前提で現実的リスクは低いが、以下の場面では許可リスト制へ移行すること:
+        ///     - クラウドセーブ導入 (他クライアント由来の save を読む)
+        ///     - MOD 導入 (ユーザー提供 dll から型を解決可能にする必要がある場合)
+        ///   実装案: ISaveable 実装型または [Serializable] 付き特定型のみ許可する SaveTypeRegistry。
+        ///   詳細は docs/FUTURE_TASKS.md を参照。
         /// </summary>
         private static Type ResolveType(string typeName)
         {

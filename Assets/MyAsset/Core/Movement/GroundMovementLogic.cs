@@ -95,19 +95,31 @@ namespace Game.Core
                 {
                     return dodgeDir * moveParams.dashSpeed;
                 }
-                float dodgeMult = moveParams.dodgeSpeedMultiplier > 0f
-                    ? moveParams.dodgeSpeedMultiplier
-                    : k_DodgeSpeedMultiplier;
-                return dodgeDir * moveParams.moveSpeed * dodgeMult;
+                return dodgeDir * moveParams.moveSpeed * GetEffectiveDodgeSpeedMultiplier(moveParams);
             }
 
-            float sprintMult = moveParams.sprintSpeedMultiplier > 0f
-                ? moveParams.sprintSpeedMultiplier
-                : k_SprintSpeedMultiplier;
             float speed = _isSprinting
-                ? moveParams.moveSpeed * sprintMult
+                ? moveParams.moveSpeed * GetEffectiveSprintSpeedMultiplier(moveParams)
                 : moveParams.moveSpeed;
             return inputX * speed;
+        }
+
+        /// <summary>MoveParams.dodgeDuration の有効値 (0 以下なら定数フォールバック)。</summary>
+        private static float GetEffectiveDodgeDuration(MoveParams p)
+        {
+            return p.dodgeDuration > 0f ? p.dodgeDuration : k_DodgeDuration;
+        }
+
+        /// <summary>MoveParams.dodgeSpeedMultiplier の有効値 (0 以下なら定数フォールバック)。</summary>
+        private static float GetEffectiveDodgeSpeedMultiplier(MoveParams p)
+        {
+            return p.dodgeSpeedMultiplier > 0f ? p.dodgeSpeedMultiplier : k_DodgeSpeedMultiplier;
+        }
+
+        /// <summary>MoveParams.sprintSpeedMultiplier の有効値 (0 以下なら定数フォールバック)。</summary>
+        private static float GetEffectiveSprintSpeedMultiplier(MoveParams p)
+        {
+            return p.sprintSpeedMultiplier > 0f ? p.sprintSpeedMultiplier : k_SprintSpeedMultiplier;
         }
 
         /// <summary>
@@ -202,9 +214,7 @@ namespace Game.Core
 
             _dodgeTimer += deltaTime;
 
-            // MoveParams.dodgeDuration が設定されていればキャラ別値を使用。未設定 (<=0) なら定数フォールバック。
-            float duration = moveParams.dodgeDuration > 0f ? moveParams.dodgeDuration : k_DodgeDuration;
-            if (_dodgeTimer >= duration)
+            if (_dodgeTimer >= GetEffectiveDodgeDuration(moveParams))
             {
                 _isDodging = false;
                 return false;

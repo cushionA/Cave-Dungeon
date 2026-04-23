@@ -269,16 +269,23 @@ namespace Game.Core
         }
 
         /// <summary>
-        /// statCaps から動的最大レベルを算出し、ハードキャップ k_MaxLevel との min を返す。
+        /// statCaps から動的最大レベルを算出し、ハードキャップ (LevelUpConfig.maxLevel) との min を返す。
         /// 動的最大レベル = sum(statCaps) / k_PointsPerLevel
-        /// 実効最大レベル = Min(dynamicMaxLevel, k_MaxLevel)
-        /// statCaps が null または要素数不足の場合は k_MaxLevel を返す。
+        /// 実効最大レベル = Min(dynamicMaxLevel, hardCap)
+        /// statCaps が null または要素数不足の場合は hardCap を返す。
+        ///
+        /// ハードキャップは B3 で導入された <see cref="LevelUpConfig"/> SO (静的デフォルト) を優先参照し、
+        /// SO 未設定時は <see cref="k_DefaultMaxLevel"/> にフォールバックする。これにより SO で
+        /// maxLevel を差し替えれば動的最大レベル算出も自動連動する。
         /// </summary>
         public static int GetEffectiveMaxLevel(int[] statCaps)
         {
+            LevelUpConfig config = GetDefaultConfig();
+            int hardCap = config != null ? config.maxLevel : k_DefaultMaxLevel;
+
             if (statCaps == null || statCaps.Length < 6)
             {
-                return k_MaxLevel;
+                return hardCap;
             }
 
             int sum = 0;
@@ -293,7 +300,7 @@ namespace Game.Core
             }
 
             int dynamicMaxLevel = sum / k_PointsPerLevel;
-            return Math.Min(dynamicMaxLevel, k_MaxLevel);
+            return Math.Min(dynamicMaxLevel, hardCap);
         }
 
         /// <summary>

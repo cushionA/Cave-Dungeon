@@ -231,15 +231,7 @@ namespace Game.Runtime
             ref CombatStats combat = ref GameManager.Data.GetCombatStats(hash);
 
             // Task B: Flinch 中は完全に無防備 → アーマーを強制的に 0 にする。
-            // actionArmor は effectState をコピーで書き換え、currentArmor は SoA に直接書き込む。
-            // これにより、Flinch中の被弾は軽減なしで reducedDamage が通る。
-            bool wasInFlinch = currentActState == ActState.Flinch;
-            if (wasInFlinch)
-            {
-                effectState.actionArmorValue = 0f;
-                _actionArmorConsumed = 0f;  // 以後の残量計算も 0 になるよう累積もリセット
-                vitals.currentArmor = 0f;
-            }
+            bool wasInFlinch = ForceZeroArmorIfInFlinch(currentActState, ref effectState, ref vitals);
 
             // Step 2: ガード判定（連続JG窓・スタミナ削り判定を含む）
             bool isAttackFromFront = IsAttackFromFront(data);
@@ -334,6 +326,34 @@ namespace Game.Runtime
         }
 
         // ===== ステップ別メソッド =====
+
+        /// <summary>
+        /// Flinch 中の被弾は完全無防備扱いにするため、effectState.actionArmorValue と
+        /// SoA の currentArmor、累積消費量 _actionArmorConsumed をすべて 0 にクランプする。
+        /// これで Step 5 (ApplyDamageToVitals) のアーマー減衰経路が無効化され、
+        /// reducedDamage がそのまま HP に通る。
+        ///
+        /// ⚠ 副作用: <paramref name="vitals"/>.currentArmor = 0 は Flinch 解除後もそのまま残る。
+        ///   既存の <see cref="UpdateArmorRecovery"/> が armorRecoveryDelay 経過後に自然回復させるが、
+        ///   「Flinch 解除直後に元の残量まで即時復元する」仕様が必要になった場合は、
+        ///   Flinch 遷移時に前値を保存して解除時に復元する機構を別途追加すること (docs/FUTURE_TASKS.md 参照)。
+        /// </summary>
+        /// <returns>呼び出し時点で Flinch 状態であったかどうか。ApplyHitReactionToActState で上書き抑制に使用。</returns>
+        private bool ForceZeroArmorIfInFlinch(
+            ActState currentActState,
+            ref ActionEffectProcessor.EffectState effectState,
+            ref CharacterVitals vitals)
+        {
+            if (currentActState != ActState.Flinch)
+            {
+                return false;
+            }
+
+            effectState.actionArmorValue = 0f;
+            _actionArmorConsumed = 0f;
+            vitals.currentArmor = 0f;
+            return true;
+        }
 
         private static DamageResult CreateInvincibleResult()
         {

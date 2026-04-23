@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using UnityEngine;
 using Game.Core;
 
 namespace Game.Tests.EditMode
@@ -273,6 +274,46 @@ namespace Game.Tests.EditMode
 
             // 0 + 50 = 50 / 3 = 16
             Assert.AreEqual(50 / LevelUpLogic.k_PointsPerLevel, effective);
+        }
+
+        // ─────────────────────────────────────────────
+        //  B3 LevelUpConfig SO との統合 (R1 対応)
+        //  GetEffectiveMaxLevel が SO 経路の maxLevel を読み取ることを検証。
+        // ─────────────────────────────────────────────
+
+        [TearDown]
+        public void ResetLevelUpConfig()
+        {
+            // 他テストへ影響しないよう SO デフォルトをクリア
+            LevelUpLogic.SetDefaultConfig(null);
+        }
+
+        [Test]
+        public void LevelUpLogic_GetEffectiveMaxLevel_RespectsLevelUpConfigHardCap()
+        {
+            // LevelUpConfig SO で maxLevel=50 を設定 → ハードキャップ 50 として動作
+            LevelUpConfig config = ScriptableObject.CreateInstance<LevelUpConfig>();
+            config.maxLevel = 50;
+            LevelUpLogic.SetDefaultConfig(config);
+
+            // 動的最大 = 594 / 3 = 198 だが SO のハードキャップ 50 でクランプ
+            int[] caps = new int[] { 99, 99, 99, 99, 99, 99 };
+            int effective = LevelUpLogic.GetEffectiveMaxLevel(caps);
+
+            Assert.AreEqual(50, effective,
+                "GetEffectiveMaxLevel は LevelUpConfig.maxLevel を読んでハードキャップ適用する");
+
+            UnityEngine.Object.DestroyImmediate(config);
+        }
+
+        [Test]
+        public void LevelUpLogic_GetEffectiveMaxLevel_FallsBackToDefaultWhenConfigNull()
+        {
+            LevelUpLogic.SetDefaultConfig(null);
+
+            int effective = LevelUpLogic.GetEffectiveMaxLevel(null);
+            Assert.AreEqual(LevelUpLogic.k_MaxLevel, effective,
+                "SO 未設定時は k_DefaultMaxLevel (= k_MaxLevel) フォールバック");
         }
 
         // ─────────────────────────────────────────────
