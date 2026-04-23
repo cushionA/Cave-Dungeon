@@ -12,10 +12,11 @@ namespace Game.Core
     public class CompanionController : IDisposable
     {
         /// <summary>
-        /// 手動モード切替中に自動遷移を抑制する時間（秒）。
-        /// タイムアウト経過後は自動モード遷移評価を再開する。
+        /// 手動モード切替中に自動遷移を抑制する時間（秒）のデフォルト値。
+        /// <see cref="CompanionAIConfig.manualOverrideTimeoutSeconds"/> が
+        /// 0 以下の場合や、コンストラクタで明示指定されなかった場合のフォールバック。
         /// </summary>
-        private const float k_ManualOverrideTimeoutSeconds = 5f;
+        public const float k_DefaultManualOverrideTimeoutSeconds = 5f;
 
         private JudgmentLoop _judgmentLoop;
         private ModeController _modeController;
@@ -28,6 +29,7 @@ namespace Game.Core
         private int _companionHash;
         private int _playerHash;
         private float _manualOverrideTimer;
+        private float _manualOverrideTimeoutSeconds;
         private IDisposable _confusionClearedSubscription;
 
         public JudgmentLoop JudgmentLoop => _judgmentLoop;
@@ -45,24 +47,10 @@ namespace Game.Core
         public float ManualOverrideRemaining => _manualOverrideTimer;
 
         /// <summary>
-        /// 互換コンストラクタ（GameEvents 未注入）。混乱解除時の AI 再評価が配線されない点に注意。
-        /// 新規コードでは必ず GameEvents を渡すオーバーロードを使うこと。
-        /// </summary>
-        [System.Obsolete("GameEvents を注入する版のコンストラクタを使用してください。将来的に削除予定。")]
-        public CompanionController(
-            int companionHash,
-            int playerHash,
-            SoACharaDataDic data,
-            float maxMp,
-            int initialReserveMp,
-            CompanionMpSettings mpSettings)
-            : this(companionHash, playerHash, data, maxMp, initialReserveMp, mpSettings, null)
-        {
-        }
-
-        /// <summary>
         /// GameEvents を注入して混乱解除時の即時 AI 再評価を有効化する。
         /// events が null の場合は従来どおり外部からの <see cref="JudgmentLoop.ForceEvaluate"/> に任せる。
+        /// <paramref name="manualOverrideTimeoutSeconds"/> に 0 以下を指定した場合は
+        /// <see cref="k_DefaultManualOverrideTimeoutSeconds"/> が使用される。
         /// </summary>
         public CompanionController(
             int companionHash,
@@ -71,11 +59,15 @@ namespace Game.Core
             float maxMp,
             int initialReserveMp,
             CompanionMpSettings mpSettings,
-            GameEvents events)
+            GameEvents events,
+            float manualOverrideTimeoutSeconds = k_DefaultManualOverrideTimeoutSeconds)
         {
             _companionHash = companionHash;
             _playerHash = playerHash;
             _data = data;
+            _manualOverrideTimeoutSeconds = manualOverrideTimeoutSeconds > 0f
+                ? manualOverrideTimeoutSeconds
+                : k_DefaultManualOverrideTimeoutSeconds;
 
             _executor = new ActionExecutor();
             _executor.Register(new AttackActionHandler());
@@ -87,7 +79,7 @@ namespace Game.Core
             _judgmentLoop = new JudgmentLoop(_executor, data, companionHash);
             _modeController = new ModeController(_judgmentLoop);
             _modeTransitionEditor = new ModeTransitionEditor(
-                _modeController, k_ManualOverrideTimeoutSeconds);
+                _modeController, _manualOverrideTimeoutSeconds);
             _followBehavior = new FollowBehavior();
             _stanceManager = new StanceManager();
             _mpManager = new CompanionMpManager(maxMp, initialReserveMp, mpSettings);
@@ -123,7 +115,8 @@ namespace Game.Core
         }
 
         /// <summary>
-        /// 手動でモードを切り替える。タイムアウト（k_ManualOverrideTimeoutSeconds）経過までは
+        /// 手動でモードを切り替える。タイムアウト（コンストラクタ注入値 or
+        /// <see cref="k_DefaultManualOverrideTimeoutSeconds"/>）経過までは
         /// 自動モード遷移評価を抑制する。UI/ショートカット/連携アクションから呼び出し想定。
         /// </summary>
         public void RequestModeSwitch(int modeIndex)
@@ -134,7 +127,7 @@ namespace Game.Core
             }
 
             _modeController.SwitchMode(modeIndex);
-            _manualOverrideTimer = k_ManualOverrideTimeoutSeconds;
+            _manualOverrideTimer = _manualOverrideTimeoutSeconds;
         }
 
         /// <summary>

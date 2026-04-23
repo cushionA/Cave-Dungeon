@@ -73,5 +73,22 @@ namespace Game.Tests.EditMode
             Assert.IsTrue(editor.IsActionAvailable(available));
             Assert.IsFalse(editor.IsActionAvailable(unavailable));
         }
+
+        /// <summary>
+        /// BuildConfig は manualOverrideTimeoutSeconds を 0 初期化して返し、
+        /// 呼び出し元が上書きしない場合は CompanionController 側のデフォルトフォールバックに委ねる契約を検証する。
+        /// </summary>
+        [Test]
+        public void ModeEditor_BuildConfig_InitializesManualOverrideTimeoutToZero()
+        {
+            ActionTypeRegistry registry = new ActionTypeRegistry();
+            RuleEditorLogic editor = new RuleEditorLogic(registry);
+            editor.AddMode(new AIMode { modeName = "Combat", judgeInterval = Vector2.one });
+
+            CompanionAIConfig config = editor.BuildConfig();
+
+            Assert.AreEqual(0f, config.manualOverrideTimeoutSeconds,
+                "BuildConfig は manualOverrideTimeoutSeconds を 0（未指定）で返し、Controller 側のフォールバックに委ねる");
+        }
     }
 }

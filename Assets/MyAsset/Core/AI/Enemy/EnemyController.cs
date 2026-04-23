@@ -26,16 +26,6 @@ namespace Game.Core
         public ModeController ModeController => _modeController;
 
         /// <summary>
-        /// 互換コンストラクタ（GameEvents 未注入）。混乱解除時の AI 再評価が配線されない点に注意。
-        /// 新規コードでは必ず GameEvents を渡す方のオーバーロードを使うこと。
-        /// </summary>
-        [System.Obsolete("GameEvents を注入する3引数版コンストラクタを使用してください。将来的に削除予定。")]
-        public EnemyController(int enemyHash, SoACharaDataDic data)
-            : this(enemyHash, data, null)
-        {
-        }
-
-        /// <summary>
         /// GameEvents を注入して混乱解除時の即時 AI 再評価を有効化する。
         /// events が null の場合は従来どおり外部からの <see cref="JudgmentLoop.ForceEvaluate"/> に任せる。
         /// </summary>
