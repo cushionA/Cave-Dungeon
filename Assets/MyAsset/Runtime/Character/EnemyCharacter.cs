@@ -53,7 +53,7 @@ namespace Game.Runtime
                 return;
             }
 
-            _enemyController = new EnemyController(ObjectHash, GameManager.Data);
+            _enemyController = new EnemyController(ObjectHash, GameManager.Data, GameManager.Events);
 
             AIMode[] modes = AIInfoConverter.ConvertModes(_aiInfo);
             ModeTransitionRule[] transitions = AIInfoConverter.ConvertTransitions(_aiInfo);
@@ -192,6 +192,11 @@ namespace Game.Runtime
 
         protected override void OnDestroy()
         {
+            if (_enemyController != null)
+            {
+                _enemyController.Dispose();
+                _enemyController = null;
+            }
             CharacterRegistry.Unregister(ObjectHash);
             base.OnDestroy();
         }

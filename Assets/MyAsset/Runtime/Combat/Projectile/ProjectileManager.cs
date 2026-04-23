@@ -81,12 +81,16 @@ namespace Game.Runtime
 
         /// <summary>
         /// 飛翔体を1発生成する。targetHashでホーミング対象を指定可能（0で自動検索）。
+        /// BulletProfile.spawnOffset は発射方向ローカル(x=forward, y=up)に変換して position に加算する。
         /// </summary>
         public ProjectileController SpawnProjectile(int casterHash, MagicDefinition magic,
             Vector2 position, Vector2 direction, int targetHash = 0)
         {
+            // spawnOffset をローカル座標(forward/up)で解釈してワールド座標にオフセット
+            Vector2 spawnPosition = ApplyLocalSpawnOffset(position, direction, magic.bulletProfile.spawnOffset);
+
             Projectile core = _corePool.Get();
-            core.Initialize(casterHash, magic.bulletProfile, position, direction);
+            core.Initialize(casterHash, magic.bulletProfile, spawnPosition, direction);
             core.TargetHash = targetHash;
 
             ProjectileController controller = GetOrCreateController();
@@ -101,6 +105,26 @@ namespace Game.Runtime
             }
 
             return controller;
+        }
+
+        /// <summary>
+        /// spawnOffset を発射方向ローカル座標で解釈してワールド座標のスポーン位置を算出する。
+        /// x = forward (発射方向), y = up (forward を 90度反時計回りに回転した方向)。
+        /// たとえば direction=(1,0) のとき localOffset=(1,0.5) → worldPosition+(1, 0.5)。
+        /// offset==zero または direction==zero の場合は元の位置を返す。
+        /// </summary>
+        internal static Vector2 ApplyLocalSpawnOffset(Vector2 worldPosition, Vector2 direction, Vector2 localOffset)
+        {
+            if (localOffset.sqrMagnitude < 0.0000001f)
+            {
+                return worldPosition;
+            }
+
+            Vector2 forward = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector2.right;
+            // up = forward を +90 度(反時計回り)回転: (x,y) → (-y, x)
+            Vector2 up = new Vector2(-forward.y, forward.x);
+
+            return worldPosition + forward * localOffset.x + up * localOffset.y;
         }
 
         /// <summary>
@@ -150,6 +174,12 @@ namespace Game.Runtime
             {
                 Projectile core = _activeControllers[i].CoreProjectile;
                 if (core == null || !core.IsAlive)
+                {
+                    continue;
+                }
+
+                // スポーン遅延中は特殊効果（重力等）や子弾タイマーを進めない
+                if (core.IsSpawnDelayed)
                 {
                     continue;
                 }

@@ -18,9 +18,20 @@ namespace Game.Runtime
         private CircleCollider2D _triggerCollider;
         private SpriteRenderer _spriteRenderer;
         private Rigidbody2D _rb;
-        private HashSet<int> _hitTargets;
+        // キャラクター毎のヒット回数を記録 (targetHash → hitCount)。
+        // BulletProfile.hitLimit までキャラ毎に多段ヒット可能。
+        private Dictionary<int, int> _hitCounts;
         private bool _isActive;
         private ProjectileManager _manager;
+
+        // スポーン遅延中は表示・当たり判定を切る状態。遅延明けに復活させるために保持。
+        private bool _isSpawnDelayedLastFrame;
+
+        // scaleTime>0 の弾丸で localScale を操作した直後に true。
+        // Deactivate 時にデザイナー設定スケールへ戻すために利用。
+        private Vector3 _baseLocalScale;
+        private bool _baseLocalScaleCaptured;
+        private bool _localScaleModified;
 
         public Projectile CoreProjectile => _coreProjectile;
         public MagicDefinition Magic => _magic;
@@ -37,7 +48,11 @@ namespace Game.Runtime
             _rb.gravityScale = 0f;
 
             _spriteRenderer = GetComponentInChildren<SpriteRenderer>();
-            _hitTargets = new HashSet<int>();
+            _hitCounts = new Dictionary<int, int>();
+
+            // プレハブ/デザイナー設定のスケールを保持（scaleTime>0 のスケール補間で上書き→戻す際のベース）
+            _baseLocalScale = transform.localScale;
+            _baseLocalScaleCaptured = true;
         }
 
         /// <summary>
@@ -49,10 +64,46 @@ namespace Game.Runtime
             _magic = magic;
             _manager = manager;
             _isActive = true;
-            _hitTargets.Clear();
-            _triggerCollider.enabled = true;
+            if (_hitCounts == null)
+            {
+                _hitCounts = new Dictionary<int, int>();
+            }
+            else
+            {
+                _hitCounts.Clear();
+            }
+            // テスト等で Awake 未実行または Collider が未取得のケースに備えたフォールバック
+            if (_triggerCollider == null)
+            {
+                _triggerCollider = GetComponent<CircleCollider2D>();
+            }
+            if (_triggerCollider != null)
+            {
+                _triggerCollider.enabled = true;
+            }
 
             transform.position = new Vector3(projectile.Position.x, projectile.Position.y, 0f);
+
+            // scaleTime>0 のみ startScale を適用。<=0 はデザイナー設定（または Deactivate で復元済みのベース）を維持。
+            if (projectile.Profile.scaleTime > 0f)
+            {
+                float initialScale = projectile.GetCurrentScale();
+                Vector3 baseScale = _baseLocalScaleCaptured ? _baseLocalScale : Vector3.one;
+                transform.localScale = new Vector3(
+                    baseScale.x * initialScale,
+                    baseScale.y * initialScale,
+                    baseScale.z);
+                _localScaleModified = true;
+            }
+
+            // スポーン遅延中は当たり判定と可視性を切る
+            _isSpawnDelayedLastFrame = projectile.IsSpawnDelayed;
+            _triggerCollider.enabled = !_isSpawnDelayedLastFrame;
+            if (_spriteRenderer != null)
+            {
+                _spriteRenderer.enabled = !_isSpawnDelayedLastFrame;
+            }
+
             gameObject.SetActive(true);
         }
 
@@ -65,11 +116,26 @@ namespace Game.Runtime
             _triggerCollider.enabled = false;
             _coreProjectile = null;
             _manager = null;
+            _isSpawnDelayedLastFrame = false;
+
+            // scaleTime>0 で localScale を上書きした弾丸はデザイナー設定のベーススケールに戻す。
+            // 次回この Controller が scaleTime=0 の弾丸に再利用されても前回のスケールが残らない。
+            if (_localScaleModified && _baseLocalScaleCaptured)
+            {
+                transform.localScale = _baseLocalScale;
+            }
+            _localScaleModified = false;
+
+            if (_spriteRenderer != null)
+            {
+                _spriteRenderer.enabled = true;
+            }
             gameObject.SetActive(false);
         }
 
         /// <summary>
         /// CoreのPositionをTransformに同期し、速度方向にスプライトを回転する。
+        /// スポーン遅延の状態遷移と、現在スケール(startScale→endScale Lerp)も反映する。
         /// ProjectileManagerから毎フレーム呼ばれる。
         /// </summary>
         public void SyncTransform()
@@ -79,8 +145,32 @@ namespace Game.Runtime
                 return;
             }
 
+            // スポーン遅延の遷移: 遅延→終了フレームで当たり判定と可視性を復帰
+            bool isDelayedNow = _coreProjectile.IsSpawnDelayed;
+            if (_isSpawnDelayedLastFrame && !isDelayedNow)
+            {
+                _triggerCollider.enabled = true;
+                if (_spriteRenderer != null)
+                {
+                    _spriteRenderer.enabled = true;
+                }
+            }
+            _isSpawnDelayedLastFrame = isDelayedNow;
+
             Vector2 pos = _coreProjectile.Position;
             transform.position = new Vector3(pos.x, pos.y, 0f);
+
+            // scaleTime>0 のみ毎フレーム補間を反映（ベーススケールに乗算）。<=0 ではベーススケールを維持。
+            if (_coreProjectile.Profile.scaleTime > 0f)
+            {
+                float scale = _coreProjectile.GetCurrentScale();
+                Vector3 baseScale = _baseLocalScaleCaptured ? _baseLocalScale : Vector3.one;
+                transform.localScale = new Vector3(
+                    baseScale.x * scale,
+                    baseScale.y * scale,
+                    baseScale.z);
+                _localScaleModified = true;
+            }
 
             Vector2 vel = _coreProjectile.Velocity;
             if (vel.sqrMagnitude > 0.001f)
@@ -97,6 +187,12 @@ namespace Game.Runtime
                 return;
             }
 
+            // スポーン遅延中は当たり判定を無効化（念のため二重チェック）
+            if (_coreProjectile != null && _coreProjectile.IsSpawnDelayed)
+            {
+                return;
+            }
+
             // アーキテクチャ準拠: 毎衝突でのGetComponentを避け、GameObject.GetHashCode から
             // SoA逆引き(GameManager.Data.GetManaged)で IDamageable を取得する。
             int targetHash = other.gameObject.GetHashCode();
@@ -107,7 +203,7 @@ namespace Game.Runtime
                 return;
             }
 
-            // 非キャラクター(地形等)との接触は _hitTargets 登録前にスキップして汚染を防ぐ
+            // 非キャラクター(地形等)との接触は _hitCounts 登録前にスキップして汚染を防ぐ
             IDamageable receiver = GameManager.Data != null
                 ? GameManager.Data.GetManaged(targetHash)?.Damageable
                 : null;
@@ -116,8 +212,8 @@ namespace Game.Runtime
                 return;
             }
 
-            // 同一飛翔体で同じターゲットに多重ヒットしない (キャラ衝突のみ登録)
-            if (!_hitTargets.Add(targetHash))
+            // キャラ別ヒット回数ゲート: hitLimit 到達キャラはスキップ
+            if (!TryRegisterHit(targetHash, out bool shouldDespawnFromHitLimit))
             {
                 return;
             }
@@ -140,11 +236,78 @@ namespace Game.Runtime
                 _manager.SpawnChildProjectiles(_coreProjectile, _magic);
             }
 
+            // 非Pierce は hitLimit 到達で明示Kill (Core側の RegisterHit が未Killなら補完)
+            if (shouldDespawnFromHitLimit && _coreProjectile.IsAlive)
+            {
+                _coreProjectile.Kill();
+            }
+
             // 死亡チェック — Managerに返却を通知
             if (!_coreProjectile.IsAlive)
             {
                 _manager.ReturnProjectile(this);
             }
+        }
+
+        /// <summary>
+        /// 指定ターゲットへのヒットを記録する。
+        /// キャラ毎 <see cref="BulletProfile.hitLimit"/> までヒット可能。
+        /// </summary>
+        /// <param name="targetHash">ターゲットキャラクターのハッシュ。</param>
+        /// <param name="shouldDespawn">
+        /// 非Pierce でこのヒットにより hitLimit 到達した場合 true (飛翔体を消滅させる)。
+        /// Pierce 弾丸または上限未到達なら false。
+        /// </param>
+        /// <returns>ヒットを受理した場合 true。上限既到達でスキップした場合 false。</returns>
+        internal bool TryRegisterHit(int targetHash, out bool shouldDespawn)
+        {
+            shouldDespawn = false;
+
+            if (_coreProjectile == null)
+            {
+                return false;
+            }
+
+            int limit = GetEffectiveHitLimit(_coreProjectile.Profile.hitLimit);
+            _hitCounts.TryGetValue(targetHash, out int current);
+            if (current >= limit)
+            {
+                // 当該ターゲットは既に上限到達
+                return false;
+            }
+
+            current++;
+            _hitCounts[targetHash] = current;
+
+            // 上限到達 + 非Pierce → 消滅
+            bool hasPierce = (_coreProjectile.Profile.features & BulletFeature.Pierce) != 0;
+            if (current >= limit && !hasPierce)
+            {
+                shouldDespawn = true;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// 指定ターゲットへの現時点のヒット回数を返す。テスト用途。
+        /// </summary>
+        internal int GetHitCountForTarget(int targetHash)
+        {
+            if (_hitCounts == null)
+            {
+                return 0;
+            }
+            return _hitCounts.TryGetValue(targetHash, out int count) ? count : 0;
+        }
+
+        /// <summary>
+        /// BulletProfile.hitLimit = 0 (未設定) を 1 に正規化する。
+        /// Core <see cref="Projectile.Initialize"/> と同じ既定値ポリシー。
+        /// </summary>
+        private static int GetEffectiveHitLimit(int rawHitLimit)
+        {
+            return rawHitLimit > 0 ? rawHitLimit : 1;
         }
     }
 }

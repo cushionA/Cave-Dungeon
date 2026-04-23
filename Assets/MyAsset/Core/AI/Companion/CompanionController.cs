@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using R3;
 using UnityEngine;
 
 namespace Game.Core
@@ -7,7 +9,7 @@ namespace Game.Core
     /// Top-level controller for companion AI. Integrates JudgmentLoop, ModeController,
     /// FollowBehavior, StanceManager, and CompanionMpManager into a single update loop.
     /// </summary>
-    public class CompanionController
+    public class CompanionController : IDisposable
     {
         /// <summary>
         /// 手動モード切替中に自動遷移を抑制する時間（秒）。
@@ -26,6 +28,7 @@ namespace Game.Core
         private int _companionHash;
         private int _playerHash;
         private float _manualOverrideTimer;
+        private IDisposable _confusionClearedSubscription;
 
         public JudgmentLoop JudgmentLoop => _judgmentLoop;
         public ModeController ModeController => _modeController;
@@ -41,6 +44,11 @@ namespace Game.Core
         /// <summary>手動切替の残り時間（秒）。</summary>
         public float ManualOverrideRemaining => _manualOverrideTimer;
 
+        /// <summary>
+        /// 互換コンストラクタ（GameEvents 未注入）。混乱解除時の AI 再評価が配線されない点に注意。
+        /// 新規コードでは必ず GameEvents を渡すオーバーロードを使うこと。
+        /// </summary>
+        [System.Obsolete("GameEvents を注入する版のコンストラクタを使用してください。将来的に削除予定。")]
         public CompanionController(
             int companionHash,
             int playerHash,
@@ -48,6 +56,22 @@ namespace Game.Core
             float maxMp,
             int initialReserveMp,
             CompanionMpSettings mpSettings)
+            : this(companionHash, playerHash, data, maxMp, initialReserveMp, mpSettings, null)
+        {
+        }
+
+        /// <summary>
+        /// GameEvents を注入して混乱解除時の即時 AI 再評価を有効化する。
+        /// events が null の場合は従来どおり外部からの <see cref="JudgmentLoop.ForceEvaluate"/> に任せる。
+        /// </summary>
+        public CompanionController(
+            int companionHash,
+            int playerHash,
+            SoACharaDataDic data,
+            float maxMp,
+            int initialReserveMp,
+            CompanionMpSettings mpSettings,
+            GameEvents events)
         {
             _companionHash = companionHash;
             _playerHash = playerHash;
@@ -67,6 +91,35 @@ namespace Game.Core
             _followBehavior = new FollowBehavior();
             _stanceManager = new StanceManager();
             _mpManager = new CompanionMpManager(maxMp, initialReserveMp, mpSettings);
+
+            if (events != null)
+            {
+                _confusionClearedSubscription = events.OnConfusionCleared.Subscribe(OnConfusionClearedBridge);
+            }
+        }
+
+        /// <summary>
+        /// GameEvents.OnConfusionCleared の受け口。自ハッシュと一致した時だけ
+        /// JudgmentLoop.ForceEvaluate() を呼び、ターゲット/行動を即時再評価する。
+        /// </summary>
+        private void OnConfusionClearedBridge(int targetHash)
+        {
+            if (targetHash == _companionHash)
+            {
+                _judgmentLoop.ForceEvaluate();
+            }
+        }
+
+        /// <summary>
+        /// 購読解除 + 保持リソースの後始末。キャラ破棄時に必ず呼ぶ。
+        /// MpManager / StanceManager は CompanionCharacter 側の OnDestroy で別途 Dispose される
+        /// ため、ここでは二重解放を避けて購読解除と ActionExecutor のキャンセルのみ行う。
+        /// </summary>
+        public void Dispose()
+        {
+            _confusionClearedSubscription?.Dispose();
+            _confusionClearedSubscription = null;
+            _executor?.CancelCurrent();
         }
 
         /// <summary>

@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using R3;
 using UnityEngine;
 
 namespace Game.Core
@@ -8,7 +10,7 @@ namespace Game.Core
     /// Owns a JudgmentLoop, ModeController, and ActionExecutor,
     /// and drives them each frame via Tick().
     /// </summary>
-    public class EnemyController
+    public class EnemyController : IDisposable
     {
         private JudgmentLoop _judgmentLoop;
         private ModeController _modeController;
@@ -16,13 +18,28 @@ namespace Game.Core
         private SoACharaDataDic _data;
         private int _enemyHash;
         private bool _isActive;
+        private IDisposable _confusionClearedSubscription;
 
         public int EnemyHash => _enemyHash;
         public bool IsActive => _isActive;
         public JudgmentLoop JudgmentLoop => _judgmentLoop;
         public ModeController ModeController => _modeController;
 
+        /// <summary>
+        /// 互換コンストラクタ（GameEvents 未注入）。混乱解除時の AI 再評価が配線されない点に注意。
+        /// 新規コードでは必ず GameEvents を渡す方のオーバーロードを使うこと。
+        /// </summary>
+        [System.Obsolete("GameEvents を注入する3引数版コンストラクタを使用してください。将来的に削除予定。")]
         public EnemyController(int enemyHash, SoACharaDataDic data)
+            : this(enemyHash, data, null)
+        {
+        }
+
+        /// <summary>
+        /// GameEvents を注入して混乱解除時の即時 AI 再評価を有効化する。
+        /// events が null の場合は従来どおり外部からの <see cref="JudgmentLoop.ForceEvaluate"/> に任せる。
+        /// </summary>
+        public EnemyController(int enemyHash, SoACharaDataDic data, GameEvents events)
         {
             _enemyHash = enemyHash;
             _data = data;
@@ -37,6 +54,33 @@ namespace Game.Core
 
             _judgmentLoop = new JudgmentLoop(_executor, data, enemyHash);
             _modeController = new ModeController(_judgmentLoop);
+
+            if (events != null)
+            {
+                _confusionClearedSubscription = events.OnConfusionCleared.Subscribe(OnConfusionClearedBridge);
+            }
+        }
+
+        /// <summary>
+        /// GameEvents.OnConfusionCleared の受け口。自ハッシュと一致した時だけ
+        /// JudgmentLoop.ForceEvaluate() を呼び、ターゲット/行動を即時再評価する。
+        /// </summary>
+        private void OnConfusionClearedBridge(int targetHash)
+        {
+            if (targetHash == _enemyHash)
+            {
+                _judgmentLoop.ForceEvaluate();
+            }
+        }
+
+        /// <summary>
+        /// 購読解除 + 実行中アクションキャンセル。キャラ破棄時に必ず呼ぶ。
+        /// </summary>
+        public void Dispose()
+        {
+            _confusionClearedSubscription?.Dispose();
+            _confusionClearedSubscription = null;
+            _executor?.CancelCurrent();
         }
 
         /// <summary>

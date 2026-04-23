@@ -598,7 +598,7 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
-        public void GcOrphanActionSlots_EmptyActions_NormalizesDefault()
+        public void GcOrphanActionSlots_EmptyActions_InsertsIdleDefault()
         {
             AIMode mode = new AIMode
             {
@@ -609,8 +609,13 @@ namespace Game.Tests.EditMode
 
             AIMode result = CompanionAISettingsLogic.GcOrphanActionSlots(mode);
 
+            // default を Idle スロット（"何もしない"）に正規化する。
+            // actions が空のままだと EvaluateAction が defaultActionIndex を辿っても
+            // 棒立ちするため、最低 1 個の Idle を差し込むことで no-op 遷移を保証する。
             Assert.IsNotNull(result.actions);
-            Assert.AreEqual(0, result.actions.Length);
+            Assert.AreEqual(1, result.actions.Length);
+            Assert.AreEqual(ActionExecType.Sustained, result.actions[0].execType);
+            Assert.AreEqual((int)SustainedAction.Idle, result.actions[0].paramId);
             Assert.IsNotNull(result.actionRules);
             Assert.AreEqual(0, result.actionRules.Length);
             Assert.AreEqual(0, result.defaultActionIndex);
@@ -896,6 +901,77 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(2, result.actions.Length);
             Assert.AreEqual("NewDefault", result.actions[1].displayName);
             Assert.AreEqual(1, result.defaultActionIndex);
+        }
+
+        // =====================================================================
+        // Idle デフォルト行動 (SustainedAction.Idle) の正規化 / 生成テスト
+        // =====================================================================
+
+        [Test]
+        public void CreateDefaultIdleSlot_ProducesSustainedIdleNoOpSlot()
+        {
+            ActionSlot idle = CompanionAISettingsLogic.CreateDefaultIdleSlot();
+
+            // SustainedActionHandler は paramId を保持するだけなので
+            // Sustained + Idle + paramValue=0 (= 無制限) で no-op 待機になる
+            Assert.AreEqual(ActionExecType.Sustained, idle.execType);
+            Assert.AreEqual((int)SustainedAction.Idle, idle.paramId);
+            Assert.AreEqual(0f, idle.paramValue);
+            Assert.AreEqual("何もしない", idle.displayName);
+        }
+
+        [Test]
+        public void CreateDefaultMode_HasIdleSlotAsDefault()
+        {
+            AIMode mode = CompanionAISettingsLogic.CreateDefaultMode();
+
+            Assert.IsNotNull(mode.actions);
+            Assert.AreEqual(1, mode.actions.Length,
+                "新規 AIMode は Idle を default として 1 スロット持つべき");
+            Assert.AreEqual(ActionExecType.Sustained, mode.actions[0].execType);
+            Assert.AreEqual((int)SustainedAction.Idle, mode.actions[0].paramId);
+            Assert.AreEqual(0, mode.defaultActionIndex,
+                "defaultActionIndex は Idle スロット (index 0) を指すべき");
+            Assert.IsNotNull(mode.actionRules);
+            Assert.AreEqual(0, mode.actionRules.Length);
+            Assert.IsNotNull(mode.targetRules);
+            Assert.IsNotNull(mode.targetSelects);
+        }
+
+        [Test]
+        public void CreateDefaultMode_WithName_RetainsModeName()
+        {
+            AIMode mode = CompanionAISettingsLogic.CreateDefaultMode("攻撃優先");
+
+            Assert.AreEqual("攻撃優先", mode.modeName);
+            Assert.AreEqual((int)SustainedAction.Idle, mode.actions[0].paramId);
+        }
+
+        [Test]
+        public void GcOrphanActionSlots_AllOrphans_InsertsIdleAndPointsDefault()
+        {
+            // actions があるが actionRules が全て無効 index を指し、default も範囲外 → compact が空
+            AIMode mode = new AIMode
+            {
+                actions = new ActionSlot[]
+                {
+                    new ActionSlot { displayName = "Orphan1", execType = ActionExecType.Attack },
+                    new ActionSlot { displayName = "Orphan2", execType = ActionExecType.Cast },
+                },
+                actionRules = new AIRule[]
+                {
+                    new AIRule { actionIndex = 99, conditions = new AICondition[0], probability = 100 },
+                },
+                defaultActionIndex = 99, // 範囲外
+            };
+
+            AIMode result = CompanionAISettingsLogic.GcOrphanActionSlots(mode);
+
+            // すべて孤児なので Idle が差し込まれる
+            Assert.AreEqual(1, result.actions.Length);
+            Assert.AreEqual(ActionExecType.Sustained, result.actions[0].execType);
+            Assert.AreEqual((int)SustainedAction.Idle, result.actions[0].paramId);
+            Assert.AreEqual(0, result.defaultActionIndex);
         }
     }
 }

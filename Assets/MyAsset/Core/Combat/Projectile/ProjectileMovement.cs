@@ -18,7 +18,8 @@ namespace Game.Core
                 case BulletMoveType.Homing:
                 {
                     Vector2 toTarget = (targetPosition - projectile.Position).normalized;
-                    float homingStrength = 5f;
+                    // homingStrength を BulletProfile から取得し時間経過で加減速（homingAcceleration）
+                    float homingStrength = projectile.GetCurrentHomingStrength();
                     Vector2 desired = toTarget * (currentVelocity.magnitude + profile.acceleration * deltaTime);
                     Vector2 blended = Vector2.Lerp(currentVelocity, desired, homingStrength * deltaTime);
                     float speed = profile.speed + profile.acceleration * projectile.ElapsedTime;
@@ -65,6 +66,13 @@ namespace Game.Core
                 Projectile p = pool.ActiveProjectiles[i];
                 if (!p.IsAlive)
                 {
+                    continue;
+                }
+
+                // スポーン遅延中は移動せず Tick のみ進め、遅延カウントを減らす。
+                if (p.IsSpawnDelayed)
+                {
+                    p.Tick(deltaTime);
                     continue;
                 }
 

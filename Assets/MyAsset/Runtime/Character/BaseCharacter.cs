@@ -53,7 +53,7 @@ namespace Game.Runtime
 #endif
 
         [Header("接地判定")]
-        [SerializeField] private LayerMask _groundLayer = 1 << 6; // Layer 6 = Ground
+        [SerializeField] protected LayerMask _groundLayer = 1 << 6; // Layer 6 = Ground
 
         protected virtual void Awake()
         {
