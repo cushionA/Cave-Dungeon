@@ -104,6 +104,9 @@ namespace Game.Core
 
         /// <summary>
         /// Builds a CompanionAIConfig from the current editor state.
+        /// manualOverrideTimeoutSeconds は呼び出し元が上書きする想定。
+        /// 0 指定のまま渡された場合は <see cref="CompanionController"/> 側で
+        /// <c>k_DefaultManualOverrideTimeoutSeconds</c> にフォールバックされる。
         /// </summary>
         public CompanionAIConfig BuildConfig()
         {
@@ -111,7 +114,8 @@ namespace Game.Core
             {
                 modes = _modes.ToArray(),
                 modeTransitionRules = _transitionRules.ToArray(),
-                shortcutModeBindings = new int[4]
+                shortcutModeBindings = new int[4],
+                manualOverrideTimeoutSeconds = 0f
             };
         }
 

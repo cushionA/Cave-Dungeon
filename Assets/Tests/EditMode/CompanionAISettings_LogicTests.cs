@@ -973,5 +973,28 @@ namespace Game.Tests.EditMode
             Assert.AreEqual((int)SustainedAction.Idle, result.actions[0].paramId);
             Assert.AreEqual(0, result.defaultActionIndex);
         }
+
+        /// <summary>
+        /// CloneConfig 経由（LoadPreset → EditingBuffer 反映）で
+        /// manualOverrideTimeoutSeconds がコピーされることを検証する。
+        /// このテストがなければ CloneConfig の伝搬漏れを検出できない。
+        /// </summary>
+        [Test]
+        public void SwitchEditingTarget_PreservesManualOverrideTimeoutSecondsInEditingBuffer()
+        {
+            CompanionAIConfig source = new CompanionAIConfig
+            {
+                configName = "Tuned",
+                manualOverrideTimeoutSeconds = 8.25f
+            };
+            string id = _tacticalRegistry.Save("Tuned", source);
+
+            CompanionAISettingsLogic.SwitchResult result =
+                _logic.SwitchEditingTarget(id, force: true);
+
+            Assert.AreEqual(CompanionAISettingsLogic.SwitchResult.Succeeded, result);
+            Assert.AreEqual(8.25f, _logic.EditingBuffer.manualOverrideTimeoutSeconds,
+                "CloneConfig が manualOverrideTimeoutSeconds を伝搬していない可能性");
+        }
     }
 }

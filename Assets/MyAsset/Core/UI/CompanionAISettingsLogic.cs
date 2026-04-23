@@ -573,6 +573,7 @@ namespace Game.Core
             {
                 configId = source.configId,
                 configName = source.configName,
+                manualOverrideTimeoutSeconds = source.manualOverrideTimeoutSeconds,
             };
 
             if (source.modes != null)
