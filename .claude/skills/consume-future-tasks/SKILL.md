@@ -163,13 +163,16 @@ git checkout ${BRANCH_NAME}
 
 **OK (全 Pass)**:
 1. PlayMode テストの追加/変更がある場合、MCP `run_tests` で PlayMode も実行
-2. PR 作成
+2. PR 作成（PR 番号を変数 `PR_NUMBER` で保持）
    ```bash
    gh pr create --title "[種類](future-tasks): ${batch名} 消化 (Nタスク)" \
-     --body "## 消化タスク\n- ...\n\n## Test plan\n- [x] EditMode テスト\n- [ ] 人間レビュー"
+     --body "## 消化タスク\n- ...\n\n## Test plan\n- [ ] EditMode テスト\n- [ ] 人間レビュー"
    ```
-3. PR 番号を取得、`/review` スキル実行（または `gh pr review` で自己レビュー）
-4. 指摘を反映してコミット追加、同ブランチに push
+3. **実装 worktree は削除してよい** (ステップ 9 で処理)。レビューはステップ 8 の**専用 worktree** で行う
+
+**テスト環境が無い/Unity CLI 実行不能の場合**:
+1. テスト実行は skip、PR 本文の Test plan に「人間レビュー時に Unity 側で実行」を明記
+2. それ以外は OK と同じフローで PR 作成
 
 **NG (Fail あり)**:
 1. ブランチはそのまま残す (ユーザーが後で調査可能)
@@ -177,6 +180,7 @@ git checkout ${BRANCH_NAME}
 3. **特筆すべき失敗要因があれば** FUTURE_TASKS.md に追記
    - 例: `<!-- 2026-04-23 consume-future-tasks: XXX が XXX に依存するため先行対応必要 -->`
 4. worktree は残置 (次回再実行の材料にする)、ブランチも削除しない
+5. 失敗 batch はステップ 8 のレビュー対象から除外
 
 ### ステップ7 実行中の原則
 - batch 間は独立している前提なので、並列でテストはせず **逐次実行** (Library/ ロック回避)
@@ -184,21 +188,111 @@ git checkout ${BRANCH_NAME}
   - マージはユーザー手動
 - テスト失敗が連続する場合はユーザーに報告して停止判断
 
-## ステップ8: worktree 後処理
+## ステップ8: PR 自己レビュー + 指摘対応（並列）
 
-- **成功 batch の worktree**: `git worktree remove .claude/worktrees/consume-${BATCH_NAME}` で削除 (ブランチは残る)
-- **失敗 batch の worktree**: 残置
+作成済み PR ごとに**専用のレビュー worktree** を作り、並列 Agent で自己レビュー → 指摘対応 → push まで完結させる。
 
-## ステップ9: サマリ表示
+**このフェーズの目的**: PR が main にマージされる前に、配線漏れ・テスト assertion の実挙動乖離・コメント整合性不良などを検出して潰しきる。実績として #39 (新フィールド伝搬漏れ)、#40 (テスト方向 assert バグ) のような Critical 指摘がここで検出できている。
+
+### レビュー worktree 作成（並列）
+ステップ 7 で作成された PR 分だけ、**新規 worktree** を切る。実装 worktree とは別に専用に切り、ブランチの head commit に対して作業する。
+
+```bash
+# PR ごとにレビュー worktree を作成 (並列で)
+for PR in $PR_LIST; do
+  BRANCH=$(gh pr view $PR --json headRefName --jq '.headRefName')
+  git worktree add .claude/worktrees/pr-review-$PR $BRANCH
+done
+```
+
+### Agent 起動 (並列 N=最大5)
+
+各 PR に対して Agent を 1 つ起動する。**全 Agent を 1 メッセージで並列発行**。
+
+各 Agent への指示 (prompt) に含めるもの:
+
+- PR 情報: PR 番号、タイトル、ブランチ名、概要（ステップ 7 で作成した PR 本文のサマリ）
+- 作業ディレクトリ: `.claude/worktrees/pr-review-$PR` の絶対パス
+- 変更内容: コミット単位の変更サマリ（Agent が diff を読む際の導入情報）
+- **レビュー手順（テンプレート）**:
+  1. `git diff main..HEAD` で差分を読む
+  2. 周辺コードを `Read`/`Grep` で確認（呼び出し元、類似パターン、既存テストの前提）
+  3. 下記**レビュー観点** に沿って分析
+  4. 指摘があれば:
+     - 該当ファイルを `Edit` で修正
+     - 必要なら回帰テストを追加
+     - `fix(review): PR #${PR} レビュー R1/R2 対応 — ${要約}` 形式で 1 コミット
+     - `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>` を付与
+  5. `git push origin ${BRANCH}` で修正を反映
+  6. `gh pr review ${PR} --comment --body "${観点別コメント}"` で投稿
+     - **自己 PR は `--approve` 不可** (GitHub API エラー `Can not approve your own pull request`)。必ず `--comment` を使う
+     - Critical 未対応があれば `--request-changes`、対応済み or 軽微指摘のみなら `--comment`
+- **レビュー観点** (`.claude/rules/git-workflow.md` のプルリクエストルール準拠):
+  - **Code Reuse**: 重複パターン、既存ユーティリティ・既存命名スタイル未使用、類似フィールド命名の統一
+  - **Code Quality**:
+    - バグ・例外時のリソース漏れ
+    - 命名規約 (`k_PascalCase` 定数、`_camelCase` private field 等)
+    - イベント購読/解除の対称性
+    - 新フィールド追加時の**配線漏れ** (Clone/Build/Serialize/Migrate 等の周辺経路)
+    - テスト assertion が実装本体の実挙動と整合しているか (**テストバグ検出**)
+  - **Efficiency**: ホットパスのアロケーション、キャッシュ漏れ、不要な sqrt / GetComponent
+  - **TDD 観点**:
+    - 境界値・不変条件検証の網羅
+    - 既存テストが新変更で回帰しないか
+    - 結合テストが「既存ユーティリティ経由で副作用が効いていること」まで検証しているか
+- 準拠規約: `.claude/rules/git-workflow.md`、`.claude/rules/unity-conventions.md`、`.claude/rules/test-driven.md`
+- 完了時の報告フォーマット:
+  ```
+  ## PR #${PR} レビュー + 対応 完了報告
+  ### レビュー結果
+  - Code Reuse: OK/指摘
+  - Code Quality: OK/指摘 (Critical: R1/R2 ...)
+  - Efficiency: OK
+  - TDD: OK/追加テスト
+  ### 修正コミット
+  - {hash}: {タイトル}
+  ### gh pr review 結果
+  - {comment|request-changes}, {state}, 投稿日時
+  ```
+
+### Agent 完了待ち
+全 Agent の完了通知を待つ。各 Agent は独立して worktree 内で完結するため並列衝突なし。
+
+### 失敗対応
+- Agent が `gh pr review` エラーに遭遇した場合（例: 自己 PR で `--approve` を試みた）、`--comment` にフォールバック
+- push が reject された場合は `git fetch origin && git rebase origin/${BRANCH}` を試み、conflict 発生時はユーザーに報告
+
+### ステップ8 実行中の原則
+- レビュー worktree と実装 worktree は**別ディレクトリ**。実装 worktree は既に削除されている想定
+- 各 PR は独立にレビューされる（Agent 間のファイル衝突なし）
+- Critical 指摘があれば必ず修正コミットを push してから review 投稿（「Critical 指摘ありだけど対応済み」が最も安全）
+- レビューで発見した新たな将来タスクは各 Agent が FUTURE_TASKS.md に追記してよい
+
+## ステップ9: worktree 後処理
+
+- **成功 batch の実装 worktree**: `git worktree remove .claude/worktrees/consume-${BATCH_NAME}` で削除 (ブランチは残る)
+- **成功 PR のレビュー worktree**: `git worktree remove .claude/worktrees/pr-review-${PR}` で削除
+- **失敗 batch の worktree**: 残置（次回再実行材料）
+- `git worktree prune` で孤立エントリをクリーンアップ
+
+## ステップ10: サマリ表示
 
 最終報告:
 
 ```
 ## Consume Future Tasks 完了
 
-### PR 作成済み (N件)
+### PR 作成 + レビュー済み (N件)
 - [batch-combat-config](PR URL) — 3 タスク消化
+  - レビュー: R1 コメント整合性、R2 重複登録検知テスト追加
+  - 修正コミット: 1 件
 - [batch-ui-cleanup](PR URL) — 5 タスク消化
+  - レビュー: 指摘なし (COMMENTED で approve 相当)
+  - 修正コミット: 0 件
+
+### レビューで検出した Critical 指摘 (N件)
+- PR #XX — 新フィールド配線漏れ (Clone/Build で dead data) → 修正済
+- PR #YY — テスト assertion が実挙動と乖離 (CI fail 案件) → 修正済
 
 ### テスト失敗 (N件)
 - batch-save-robustness — EditMode テスト 2 件失敗
@@ -214,6 +308,7 @@ git checkout ${BRANCH_NAME}
 
 ## ルール・注意点
 
+### 実装フェーズ (ステップ 6-7)
 - **Unity CLI テスト時 `-quit` は絶対に付けない** (メモリ: Unity CLIバッチテスト注意点)
 - **失敗 batch のブランチ・worktree は削除しない** — 次回再実行の材料
 - **FUTURE_TASKS.md の編集は各 Agent に委ねる** — 本スキルは orchestration 専任
@@ -222,10 +317,19 @@ git checkout ${BRANCH_NAME}
 - コミットメッセージ規約: `[種類](範囲): 日本語タイトル` + `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>` (CLAUDE.md 準拠)
 - 大きめ・高影響度タスクは **create-feature** を案内してスキップ
 
+### レビューフェーズ (ステップ 8)
+- **自己 PR は `--approve` 不可** — GitHub API が `Can not approve your own pull request` を返す。必ず `gh pr review <PR> --comment` を使用する
+- **レビュー worktree は実装 worktree とは別に切る** (`.claude/worktrees/pr-review-<PR>`)。実装 worktree を流用しない理由: head commit の検証を最新状態で行うため、かつ実装 worktree は既に削除されている可能性あり
+- **Critical 指摘は必ず修正コミットを push してから review 投稿**（対応漏れで PR がマージされる事故を避ける）
+- **修正コミットのタイトル形式**: `fix(review): PR #${PR} レビュー R1/R2 対応 — ${要約}` で識別しやすくする
+- **rate limit 対策**: 各 Agent は diff + 周辺コードだけ読ませる。全ファイル走査は避ける
+- **レビュー観点は規約ドキュメントから引用** — `.claude/rules/git-workflow.md` に定義された Code Reuse / Code Quality / Efficiency の 3 観点 + TDD 観点
+- **Critical 指摘の検出実績**: 新フィールド追加時の Clone/Build 配線漏れ、テスト assertion の実挙動乖離、コメント整合性不良 — これらはこのフェーズで潰すべき定番パターン
+
 ## 依存スキル・ツール
 
 - `create-feature` — スキップ対象のタスクを個別消化する際に案内
-- `/review` — PR 自己レビュー
-- `git worktree` — 並列 Agent の隔離環境
+- `git worktree` — 並列 Agent の隔離環境（実装用・レビュー用で別ディレクトリ）
 - Unity CLI — EditMode テスト実行
 - MCP `run_tests` — PlayMode テスト実行
+- `gh pr create` / `gh pr view` / `gh pr review` — PR 作成・情報取得・レビュー投稿
