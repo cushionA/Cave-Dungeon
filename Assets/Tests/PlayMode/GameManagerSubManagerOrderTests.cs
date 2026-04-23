@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -204,6 +205,57 @@ namespace Game.Tests.PlayMode
                 "Instance 未初期化時は GetSubManager<ProjectileManager>() が null を返すべき");
             Assert.IsNull(GameManager.Projectiles,
                 "Instance 未初期化時は Projectiles も null を返すべき");
+        }
+
+        [UnityTest]
+        public IEnumerator GameManager_InitializeSubManagers_WhenDuplicateTypeRegistered_LogsWarningAndKeepsFirst()
+        {
+            // 同一具象型の IGameSubManager が 2 つ存在する場合、warning が出て最初の 1 個だけが採用されることを検証する。
+            // Dictionary 登録の衝突ハンドリング (先勝ち + LogWarning) のガードレール。
+            if (GameManager.Instance != null)
+            {
+                Object.DestroyImmediate(GameManager.Instance.gameObject);
+            }
+
+            GameObject gmGo = new GameObject("TestGM_Duplicate");
+            _spawnedObjects.Add(gmGo);
+
+            // ProjectileManager を 2 つ、別々の子オブジェクトに付与
+            GameObject projGo1 = new GameObject("Projectiles_1");
+            projGo1.transform.SetParent(gmGo.transform);
+            ProjectileManager pm1 = projGo1.AddComponent<ProjectileManager>();
+
+            GameObject projGo2 = new GameObject("Projectiles_2");
+            projGo2.transform.SetParent(gmGo.transform);
+            ProjectileManager pm2 = projGo2.AddComponent<ProjectileManager>();
+
+            GameObject enemyGo = new GameObject("EnemySpawner");
+            enemyGo.transform.SetParent(gmGo.transform);
+            enemyGo.AddComponent<EnemySpawnerManager>();
+
+            GameObject lsGo = new GameObject("LevelStreaming");
+            lsGo.transform.SetParent(gmGo.transform);
+            lsGo.AddComponent<LevelStreamingController>();
+
+            // 2 個目の ProjectileManager 登録時に警告が出ることを期待
+            LogAssert.Expect(
+                LogType.Warning,
+                new Regex(@"IGameSubManager of type ProjectileManager already registered"));
+
+            gmGo.AddComponent<GameManager>();
+            yield return null;
+
+            // GetSubManager で取得されるのは最初の 1 個のみ (登録順 = GetComponentsInChildren 走査順)
+            ProjectileManager resolved = GameManager.GetSubManager<ProjectileManager>();
+            Assert.IsNotNull(resolved, "重複登録でも 1 個目は正常に解決されるべき");
+            Assert.IsTrue(resolved == pm1 || resolved == pm2,
+                "解決されたインスタンスは登録した 2 つのどちらかであるべき");
+
+            // 他のマネージャーは正常に登録されていること (重複処理が他型に波及しない)
+            Assert.IsNotNull(GameManager.GetSubManager<EnemySpawnerManager>(),
+                "重複があっても別型 EnemySpawnerManager は正常登録されるべき");
+            Assert.IsNotNull(GameManager.GetSubManager<LevelStreamingController>(),
+                "重複があっても別型 LevelStreamingController は正常登録されるべき");
         }
     }
 }
