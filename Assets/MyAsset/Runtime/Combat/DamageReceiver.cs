@@ -230,6 +230,17 @@ namespace Game.Runtime
             ref CharacterVitals vitals = ref GameManager.Data.GetVitals(hash);
             ref CombatStats combat = ref GameManager.Data.GetCombatStats(hash);
 
+            // Task B: Flinch 中は完全に無防備 → アーマーを強制的に 0 にする。
+            // actionArmor は effectState をコピーで書き換え、currentArmor は SoA に直接書き込む。
+            // これにより、Flinch中の被弾は軽減なしで reducedDamage が通る。
+            bool wasInFlinch = currentActState == ActState.Flinch;
+            if (wasInFlinch)
+            {
+                effectState.actionArmorValue = 0f;
+                _actionArmorConsumed = 0f;  // 以後の残量計算も 0 になるよう累積もリセット
+                vitals.currentArmor = 0f;
+            }
+
             // Step 2: ガード判定（連続JG窓・スタミナ削り判定を含む）
             bool isAttackFromFront = IsAttackFromFront(data);
             bool inContinuousJustGuardWindow = IsInContinuousJustGuardWindow();
@@ -294,7 +305,9 @@ namespace Game.Runtime
             // Step 6.1: 被弾リアクション結果を ActState に反映
             // HitReactionLogic.Determine が Flinch/Knockback/GuardBreak を返した場合、
             // 次ヒット判定で isInHitstun が正しく評価されるよう SoA に書き戻す。
-            ApplyHitReactionToActState(hitReaction, isKill, hash);
+            // Task B: 既に Flinch 中の場合は Flinch 上書きしない (タイマー延長なし)。
+            //        Knockback / GuardBreak / Dead は許可 (Flinch → Knockback 遷移等)。
+            ApplyHitReactionToActState(hitReaction, isKill, hash, wasInFlinch);
 
             // Task A: アーマー削り切り+非SuperArmorの場合、現在実行中の行動をキャンセル。
             // ApplyHitReactionToActState が ActState を Flinch/Knockback に書き戻した後に呼ぶ
@@ -499,8 +512,13 @@ namespace Game.Runtime
         ///
         /// Death 判定時は ActState.Dead を優先する。
         /// ActState の自動復帰（硬直時間経過後 Neutral へ）は呼び出し側の ActState ティッカーで行う前提。
+        ///
+        /// Task B: <paramref name="wasInFlinch"/> が true の場合、Flinch による上書きは行わない
+        /// (タイマー延長・再発動なし)。ただし Knockback / GuardBreak / Dead は許可する
+        /// (Flinch → Knockback 遷移等、より重いリアクションへの昇格は許容)。
         /// </summary>
-        private static void ApplyHitReactionToActState(HitReaction hitReaction, bool isKill, int hash)
+        private static void ApplyHitReactionToActState(
+            HitReaction hitReaction, bool isKill, int hash, bool wasInFlinch)
         {
             if (!GameManager.IsCharacterValid(hash))
             {
@@ -519,10 +537,15 @@ namespace Game.Runtime
             switch (hitReaction)
             {
                 case HitReaction.Knockback:
+                    // Flinch中でも Knockback は許容 (吹き飛ばし攻撃で Knockbacked へ昇格)
                     flags.ActState = ActState.Knockbacked;
                     break;
                 case HitReaction.Flinch:
-                    flags.ActState = ActState.Flinch;
+                    // Task B: 既に Flinch 中なら上書きしない (タイマー延長なし)
+                    if (!wasInFlinch)
+                    {
+                        flags.ActState = ActState.Flinch;
+                    }
                     break;
                 case HitReaction.GuardBreak:
                     flags.ActState = ActState.GuardBroken;
