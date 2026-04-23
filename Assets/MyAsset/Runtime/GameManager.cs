@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using Game.Core;
 using CharacterInfo = Game.Core.CharacterInfo;
@@ -27,16 +28,52 @@ namespace Game.Runtime
 
         private GameManagerCore _core;
 
-        private ProjectileManager _projectileManager;
-        private EnemySpawnerManager _enemySpawnerManager;
-        private LevelStreamingController _levelStreamingController;
+        /// <summary>
+        /// 登録された IGameSubManager を型別にインデックスする。
+        /// SubManager 追加時に GameManager の編集を不要にするための中央カタログ。
+        /// Key は具象型 (例: <see cref="ProjectileManager"/>)、値は同じインスタンスを IGameSubManager として保持する。
+        /// </summary>
+        private readonly Dictionary<Type, IGameSubManager> _subManagers = new Dictionary<Type, IGameSubManager>();
 
         public static GameManager Instance { get; private set; }
         public static SoACharaDataDic Data => Instance != null ? Instance._core.Data : null;
         public static GameEvents Events => Instance != null ? Instance._core.Events : null;
-        public static ProjectileManager Projectiles => Instance != null ? Instance._projectileManager : null;
-        public static EnemySpawnerManager EnemySpawner => Instance != null ? Instance._enemySpawnerManager : null;
-        public static LevelStreamingController LevelStreaming => Instance != null ? Instance._levelStreamingController : null;
+
+        /// <summary>
+        /// ProjectileManager への薄いプロキシ。型別辞書からの解決を維持しつつ後方互換 API を提供する。
+        /// </summary>
+        public static ProjectileManager Projectiles => GetSubManager<ProjectileManager>();
+
+        /// <summary>
+        /// EnemySpawnerManager への薄いプロキシ。
+        /// </summary>
+        public static EnemySpawnerManager EnemySpawner => GetSubManager<EnemySpawnerManager>();
+
+        /// <summary>
+        /// LevelStreamingController への薄いプロキシ。
+        /// </summary>
+        public static LevelStreamingController LevelStreaming => GetSubManager<LevelStreamingController>();
+
+        /// <summary>
+        /// 登録済み IGameSubManager を型指定で取得する汎用アクセサ。
+        /// Instance 未初期化時、または該当型が未登録の場合は null を返す。
+        /// </summary>
+        /// <typeparam name="T">取得したい IGameSubManager 実装型 (MonoBehaviour 継承想定)</typeparam>
+        /// <returns>登録済みインスタンス、未登録なら null</returns>
+        public static T GetSubManager<T>() where T : class, IGameSubManager
+        {
+            if (Instance == null)
+            {
+                return null;
+            }
+
+            if (Instance._subManagers.TryGetValue(typeof(T), out IGameSubManager mgr))
+            {
+                return mgr as T;
+            }
+
+            return null;
+        }
 
         /// <summary>
         /// SoAコンテナにキャラクターが存在するか検証する共通ヘルパー。
@@ -67,8 +104,9 @@ namespace Game.Runtime
         /// <summary>
         /// 子オブジェクトの IGameSubManager 実装を一括取得し、InitOrder 昇順で初期化する。
         /// Priority 設計: Streaming(100) → Enemy(200) → Projectile(300) の順。
-        /// 既存の公開プロパティ（Projectiles/EnemySpawner/LevelStreaming）は維持するため、
-        /// 取得したインスタンスを型別にキャッシュする。
+        /// 取得したインスタンスは <see cref="_subManagers"/> に具象型をキーとして登録し、
+        /// <see cref="GetSubManager{T}"/> / <see cref="Projectiles"/> / <see cref="EnemySpawner"/> /
+        /// <see cref="LevelStreaming"/> からアクセスできる。SubManager 追加時は IGameSubManager を実装するだけでよい。
         /// </summary>
         private void InitializeSubManagers()
         {
@@ -78,22 +116,23 @@ namespace Game.Runtime
             // InitOrder 昇順ソート
             Array.Sort(subManagers, (a, b) => a.InitOrder.CompareTo(b.InitOrder));
 
+            _subManagers.Clear();
+
             for (int i = 0; i < subManagers.Length; i++)
             {
                 IGameSubManager mgr = subManagers[i];
 
-                // 既存公開プロパティ維持のため型別にキャッシュ
-                if (mgr is ProjectileManager pm)
+                // 具象型をキーとして登録。同一型で複数登録された場合は最初のインスタンスを優先
+                // (GetComponentsInChildren の走査順に依存) し、警告を出す。
+                Type concreteType = mgr.GetType();
+                if (_subManagers.ContainsKey(concreteType))
                 {
-                    _projectileManager = pm;
+                    Debug.LogWarning(
+                        $"[GameManager] IGameSubManager of type {concreteType.Name} already registered. Ignoring duplicate on {((MonoBehaviour)mgr).gameObject.name}.");
                 }
-                else if (mgr is EnemySpawnerManager esm)
+                else
                 {
-                    _enemySpawnerManager = esm;
-                }
-                else if (mgr is LevelStreamingController lsc)
-                {
-                    _levelStreamingController = lsc;
+                    _subManagers.Add(concreteType, mgr);
                 }
 
                 mgr.Initialize(_core.Data, _core.Events);
@@ -217,6 +256,7 @@ namespace Game.Runtime
             if (Instance == this)
             {
                 _core?.Dispose();
+                _subManagers.Clear();
                 Instance = null;
             }
         }
