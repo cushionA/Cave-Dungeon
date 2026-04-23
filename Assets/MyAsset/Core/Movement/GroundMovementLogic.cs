@@ -11,6 +11,10 @@ namespace Game.Core
     {
         public const float k_MinJumpHoldTime = 0.05f;
         public const float k_MaxJumpHoldTime = 0.3f;
+
+        // デフォルト値（MoveParams に値が設定されていない場合のフォールバック）。
+        // データ駆動化: キャラ別調整値は MoveParams.dodgeDuration / dodgeSpeedMultiplier /
+        // sprintSpeedMultiplier を使用する (GameManager.RegisterCharacter で CharacterInfo から転記)。
         public const float k_DodgeDuration = 0.25f;
         public const float k_DodgeSpeedMultiplier = 2.5f;
         public const float k_SprintSpeedMultiplier = 1.6f;
@@ -84,11 +88,24 @@ namespace Game.Core
             {
                 // 入力方向が無い場合は向いている方向に回避
                 float dodgeDir = Mathf.Abs(inputX) > 0.1f ? Mathf.Sign(inputX) : facingDir;
-                return dodgeDir * moveParams.dashSpeed;
+
+                // dashSpeed が設定されていればそれを使い、それが 0 の場合は
+                // moveSpeed * dodgeSpeedMultiplier (キャラ別データ駆動、未設定なら定数フォールバック) を使う。
+                if (moveParams.dashSpeed > 0f)
+                {
+                    return dodgeDir * moveParams.dashSpeed;
+                }
+                float dodgeMult = moveParams.dodgeSpeedMultiplier > 0f
+                    ? moveParams.dodgeSpeedMultiplier
+                    : k_DodgeSpeedMultiplier;
+                return dodgeDir * moveParams.moveSpeed * dodgeMult;
             }
 
+            float sprintMult = moveParams.sprintSpeedMultiplier > 0f
+                ? moveParams.sprintSpeedMultiplier
+                : k_SprintSpeedMultiplier;
             float speed = _isSprinting
-                ? moveParams.moveSpeed * k_SprintSpeedMultiplier
+                ? moveParams.moveSpeed * sprintMult
                 : moveParams.moveSpeed;
             return inputX * speed;
         }
@@ -185,7 +202,9 @@ namespace Game.Core
 
             _dodgeTimer += deltaTime;
 
-            if (_dodgeTimer >= k_DodgeDuration)
+            // MoveParams.dodgeDuration が設定されていればキャラ別値を使用。未設定 (<=0) なら定数フォールバック。
+            float duration = moveParams.dodgeDuration > 0f ? moveParams.dodgeDuration : k_DodgeDuration;
+            if (_dodgeTimer >= duration)
             {
                 _isDodging = false;
                 return false;
