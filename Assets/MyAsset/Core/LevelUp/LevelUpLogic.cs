@@ -25,26 +25,67 @@ namespace Game.Core
         public const int k_HpPerVit = 10;
         public const int k_MpPerMnd = 5;
 
-        /// <summary>最大レベルキャップ。到達後の余剰 exp は破棄する。</summary>
-        public const int k_MaxLevel = 99;
+        /// <summary>
+        /// LevelUpConfig 未注入時のデフォルト最大レベル。
+        /// 本番は GameManager 初期化時または SetDefaultConfig で LevelUpConfig SO を差し替える。
+        /// </summary>
+        public const int k_DefaultMaxLevel = 99;
+
+        /// <summary>
+        /// 後方互換用の最大レベル定数。既存テストやコードからの参照を保持するため残置。
+        /// 新規コードは LevelUpConfig SO の maxLevel を参照すること。
+        /// </summary>
+        public const int k_MaxLevel = k_DefaultMaxLevel;
+
+        /// <summary>
+        /// プロセス全体でのデフォルト LevelUpConfig。GameManager 初期化時にセットされる想定。
+        /// 未セット時はコンストラクタが内部でランタイム default (maxLevel = k_DefaultMaxLevel) を用意する。
+        /// </summary>
+        private static LevelUpConfig s_defaultConfig;
 
         private int _currentExp;
         private int _level;
         private int _availablePoints;
         private StatModifier _allocatedStats;
+        private readonly LevelUpConfig _config;
 
         public int CurrentExp => _currentExp;
         public int Level => _level;
         public int AvailablePoints => _availablePoints;
         public StatModifier AllocatedStats => _allocatedStats;
 
+        /// <summary>このインスタンスが参照する最大レベルキャップ。</summary>
+        public int MaxLevel => _config != null ? _config.maxLevel : k_DefaultMaxLevel;
+
+        /// <summary>
+        /// プロセス全体のデフォルト LevelUpConfig を設定する。
+        /// GameManager 初期化時に呼び出し、以降生成される LevelUpLogic に適用される。
+        /// null を渡すとリセットされ、k_DefaultMaxLevel が使用される。
+        /// </summary>
+        public static void SetDefaultConfig(LevelUpConfig config)
+        {
+            s_defaultConfig = config;
+        }
+
+        /// <summary>現在のデフォルト LevelUpConfig を取得する (null 可)。</summary>
+        public static LevelUpConfig GetDefaultConfig()
+        {
+            return s_defaultConfig;
+        }
+
         public LevelUpLogic(int initialLevel = 1)
+            : this(initialLevel, s_defaultConfig)
+        {
+        }
+
+        public LevelUpLogic(int initialLevel, LevelUpConfig config)
         {
             if (initialLevel < 1)
             {
                 throw new ArgumentOutOfRangeException(nameof(initialLevel), "Level must be at least 1.");
             }
 
+            _config = config;
             _level = initialLevel;
             _currentExp = 0;
             _availablePoints = 0;
@@ -73,8 +114,9 @@ namespace Game.Core
 
             _currentExp += amount;
             int levelsGained = 0;
+            int maxLevel = MaxLevel;
 
-            while (_level < k_MaxLevel && _currentExp >= GetExpForNextLevel())
+            while (_level < maxLevel && _currentExp >= GetExpForNextLevel())
             {
                 _currentExp -= GetExpForNextLevel();
                 _level++;
@@ -83,7 +125,7 @@ namespace Game.Core
             }
 
             // 最大レベル到達時は余剰 exp を破棄（無限蓄積防止）
-            if (_level >= k_MaxLevel)
+            if (_level >= maxLevel)
             {
                 _currentExp = 0;
             }
