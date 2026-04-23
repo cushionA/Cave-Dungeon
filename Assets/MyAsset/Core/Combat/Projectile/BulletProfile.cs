@@ -13,6 +13,7 @@ namespace Game.Core
         public float spreadAngle;
         public float lifeTime;
         public int hitLimit;
+        public int perTargetHitLimit;
         public float emitInterval;
         public BulletFeature features;
         public float explodeRadius;
