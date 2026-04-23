@@ -196,7 +196,7 @@ namespace Game.Tests.EditMode
         public void AIDecisionLoop_FullTick_IntegratesAllSubsystems()
         {
             // Arrange: EnemyController経由で全サブシステム統合
-            EnemyController controller = new EnemyController(k_OwnerHash, _data);
+            EnemyController controller = new EnemyController(k_OwnerHash, _data, _events);
 
             AIMode attackMode = new AIMode
             {

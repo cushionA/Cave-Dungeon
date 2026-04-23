@@ -27,7 +27,7 @@ namespace Game.Tests.EditMode
             _data.Add(1, new CharacterVitals { currentHp = 100, maxHp = 100 },
                 default, default, default);
 
-            EnemyController controller = new EnemyController(1, _data);
+            EnemyController controller = new EnemyController(1, _data, null);
 
             Assert.IsTrue(controller.IsActive);
             Assert.AreEqual(1, controller.EnemyHash);
@@ -40,7 +40,7 @@ namespace Game.Tests.EditMode
                 default, default, default);
             _data.Add(2, default, default, default, default);
 
-            EnemyController controller = new EnemyController(1, _data);
+            EnemyController controller = new EnemyController(1, _data, null);
             controller.SetAIModes(
                 new AIMode[]
                 {
@@ -63,7 +63,7 @@ namespace Game.Tests.EditMode
             _data.Add(1, new CharacterVitals { currentHp = 100, maxHp = 100 },
                 default, default, default);
 
-            EnemyController controller = new EnemyController(1, _data);
+            EnemyController controller = new EnemyController(1, _data, null);
             AIMode[] modes = new AIMode[]
             {
                 new AIMode { modeName = "Normal", judgeInterval = Vector2.one },
@@ -80,7 +80,7 @@ namespace Game.Tests.EditMode
             _data.Add(1, new CharacterVitals { currentHp = 100, maxHp = 100 },
                 default, default, default);
 
-            EnemyController controller = new EnemyController(1, _data);
+            EnemyController controller = new EnemyController(1, _data, null);
             controller.Deactivate();
 
             Assert.IsFalse(controller.IsActive);
@@ -90,7 +90,7 @@ namespace Game.Tests.EditMode
         [Test]
         public void EnemyController_MissingHash_Deactivates()
         {
-            EnemyController controller = new EnemyController(999, _data);
+            EnemyController controller = new EnemyController(999, _data, null);
             controller.SetAIModes(
                 new AIMode[]
                 {

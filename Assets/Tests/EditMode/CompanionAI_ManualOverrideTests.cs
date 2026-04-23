@@ -30,7 +30,7 @@ namespace Game.Tests.EditMode
                 default, default, default);
             data.Add(2, new CharacterVitals { position = new Vector2(1f, 0f) },
                 default, default, default);
-            CompanionController controller = new CompanionController(1, 2, data, 100f, 50, DefaultMpSettings());
+            CompanionController controller = new CompanionController(1, 2, data, 100f, 50, DefaultMpSettings(), null);
             return (data, controller);
         }
 

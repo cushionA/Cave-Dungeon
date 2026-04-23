@@ -56,7 +56,7 @@ namespace Game.Tests.EditMode
         public void EnemyDefeatFlow_HpZero_DeactivatesAndDropsLoot()
         {
             // Arrange
-            EnemyController controller = new EnemyController(k_EnemyHash, _data);
+            EnemyController controller = new EnemyController(k_EnemyHash, _data, _events);
             AIMode defaultMode = new AIMode
             {
                 modeName = "Default",
