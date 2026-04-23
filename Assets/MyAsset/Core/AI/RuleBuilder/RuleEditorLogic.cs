@@ -23,6 +23,14 @@ namespace Game.Core
         public AIMode[] modes;
         public ModeTransitionRule[] modeTransitionRules;
         public int[] shortcutModeBindings;
+
+        /// <summary>
+        /// 手動モード切替中に自動遷移を抑制する時間（秒）。
+        /// 0 以下の場合は <see cref="CompanionController"/> のデフォルト値
+        /// (<c>k_DefaultManualOverrideTimeoutSeconds</c>) が使用される。
+        /// 仲間 AI ごとに Inspector から調整可能。
+        /// </summary>
+        public float manualOverrideTimeoutSeconds;
     }
 
     /// <summary>

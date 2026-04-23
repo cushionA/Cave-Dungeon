@@ -7,7 +7,7 @@ namespace Game.Tests.EditMode
 {
     /// <summary>
     /// A1: CompanionController.RequestModeSwitch の手動切替と
-    /// k_ManualOverrideTimeoutSeconds タイムアウト後の自動遷移再開を検証する。
+    /// k_DefaultManualOverrideTimeoutSeconds タイムアウト後の自動遷移再開を検証する。
     /// </summary>
     public class CompanionAI_ManualOverrideTests
     {
@@ -125,7 +125,7 @@ namespace Game.Tests.EditMode
             // 手動で1に切替
             controller.RequestModeSwitch(1);
 
-            // k_ManualOverrideTimeoutSeconds (5秒) 以上進めてタイマーを消化
+            // k_DefaultManualOverrideTimeoutSeconds (5秒) 以上進めてタイマーを消化
             controller.Tick(6.0f, new List<int>(), 0f);
 
             // タイマー消化完了 → 手動切替解除
@@ -155,6 +155,114 @@ namespace Game.Tests.EditMode
 
             Assert.AreEqual(0, controller.ModeController.CurrentModeIndex,
                 "無効なインデックスではモードが変わらない");
+
+            data.Dispose();
+        }
+
+        [Test]
+        public void RequestModeSwitch_CustomTimeoutViaCtor_AppliesInjectedValue()
+        {
+            SoACharaDataDic data = new SoACharaDataDic();
+            data.Add(1, new CharacterVitals { position = Vector2.zero },
+                default, default, default);
+            data.Add(2, new CharacterVitals { position = new Vector2(1f, 0f) },
+                default, default, default);
+
+            const float customTimeout = 12.5f;
+            CompanionController controller = new CompanionController(
+                1, 2, data, 100f, 50, DefaultMpSettings(), null, customTimeout);
+
+            AIMode[] modes = new AIMode[]
+            {
+                new AIMode { modeName = "Combat",  judgeInterval = Vector2.one },
+                new AIMode { modeName = "Support", judgeInterval = Vector2.one }
+            };
+            controller.SetAIModes(modes, null);
+
+            controller.RequestModeSwitch(1);
+
+            Assert.AreEqual(customTimeout, controller.ManualOverrideRemaining,
+                "コンストラクタで注入したタイムアウト値が RequestModeSwitch 後に反映されるべき");
+            Assert.IsTrue(controller.IsManualOverrideActive);
+
+            data.Dispose();
+        }
+
+        [Test]
+        public void RequestModeSwitch_NonPositiveTimeoutViaCtor_FallsBackToDefault()
+        {
+            SoACharaDataDic data = new SoACharaDataDic();
+            data.Add(1, new CharacterVitals { position = Vector2.zero },
+                default, default, default);
+            data.Add(2, new CharacterVitals { position = new Vector2(1f, 0f) },
+                default, default, default);
+
+            // 0 指定 → デフォルト値フォールバック
+            CompanionController controller = new CompanionController(
+                1, 2, data, 100f, 50, DefaultMpSettings(), null, 0f);
+
+            AIMode[] modes = new AIMode[]
+            {
+                new AIMode { modeName = "Combat",  judgeInterval = Vector2.one },
+                new AIMode { modeName = "Support", judgeInterval = Vector2.one }
+            };
+            controller.SetAIModes(modes, null);
+
+            controller.RequestModeSwitch(1);
+
+            Assert.AreEqual(
+                CompanionController.k_DefaultManualOverrideTimeoutSeconds,
+                controller.ManualOverrideRemaining,
+                "0 以下の timeout 指定はデフォルト値 (5f) にフォールバックするべき");
+
+            data.Dispose();
+        }
+
+        [Test]
+        public void CompanionAIConfig_HasManualOverrideTimeoutSecondsField()
+        {
+            // CompanionAIConfig に Inspector 調整用フィールドが存在し、値を代入可能であることを検証
+            CompanionAIConfig config = new CompanionAIConfig
+            {
+                configName = "test",
+                manualOverrideTimeoutSeconds = 7.5f
+            };
+
+            Assert.AreEqual(7.5f, config.manualOverrideTimeoutSeconds);
+        }
+
+        [Test]
+        public void RequestModeSwitch_ConfigValuePassedToController_PropagatesToRemaining()
+        {
+            // Inspector 由来のタイムアウト値（CompanionAIConfig 経由）を想定したフロー。
+            // 実装では呼び出し元が config.manualOverrideTimeoutSeconds を読み取り、
+            // コンストラクタに渡す想定。ここではその伝搬が機能することを検証する。
+            CompanionAIConfig config = new CompanionAIConfig
+            {
+                manualOverrideTimeoutSeconds = 3.25f
+            };
+
+            SoACharaDataDic data = new SoACharaDataDic();
+            data.Add(1, new CharacterVitals { position = Vector2.zero },
+                default, default, default);
+            data.Add(2, new CharacterVitals { position = new Vector2(1f, 0f) },
+                default, default, default);
+
+            CompanionController controller = new CompanionController(
+                1, 2, data, 100f, 50, DefaultMpSettings(), null,
+                config.manualOverrideTimeoutSeconds);
+
+            AIMode[] modes = new AIMode[]
+            {
+                new AIMode { modeName = "Combat",  judgeInterval = Vector2.one },
+                new AIMode { modeName = "Support", judgeInterval = Vector2.one }
+            };
+            controller.SetAIModes(modes, null);
+
+            controller.RequestModeSwitch(1);
+
+            Assert.AreEqual(3.25f, controller.ManualOverrideRemaining,
+                "CompanionAIConfig の値が CompanionController のタイマーに反映されるべき");
 
             data.Dispose();
         }
