@@ -12,6 +12,11 @@ namespace Game.Runtime
         private BaseCharacter _character;
         private Rigidbody2D _rb;
 
+        // 行動中断用の ActionExecutorController 参照 (任意)。
+        // Task A: 行動アーマーが「削り切った瞬間」に現在の行動をキャンセルして Flinch 遷移させる。
+        // テスト環境等で未設定の場合は CancelAction 呼び出しをスキップする。
+        private ActionExecutorController _actionExecutorController;
+
         // 状態異常管理
         private StatusEffectManager _statusEffectManager;
 
@@ -55,6 +60,7 @@ namespace Game.Runtime
         {
             _character = GetComponent<BaseCharacter>();
             _rb = GetComponent<Rigidbody2D>();
+            _actionExecutorController = GetComponent<ActionExecutorController>();
         }
 
         private void Start()
@@ -65,6 +71,20 @@ namespace Game.Runtime
             {
                 _character = GetComponent<BaseCharacter>();
             }
+            if (_actionExecutorController == null)
+            {
+                _actionExecutorController = GetComponent<ActionExecutorController>();
+            }
+        }
+
+        /// <summary>
+        /// テスト専用: ActionExecutorController を手動注入する。
+        /// 本番は Awake の GetComponent で取得されるが、テストで GameObject に付ける前に
+        /// DamageReceiver のみ単体で生成するケースに備える。
+        /// </summary>
+        public void SetActionExecutorControllerForTest(ActionExecutorController controller)
+        {
+            _actionExecutorController = controller;
         }
 
         /// <summary>
@@ -238,8 +258,17 @@ namespace Game.Runtime
                 out SituationalBonus situationalBonus);
 
             // Step 5: アーマー削り + HP適用
-            (int actualDamage, bool isKill, float armorBefore, float actionArmorBefore) = ApplyDamageToVitals(
+            (int actualDamage, bool isKill, float armorBefore, float actionArmorBefore,
+             bool actionArmorJustBroken) = ApplyDamageToVitals(
                 data, guardResult, effectState, reducedDamage, ref vitals);
+
+            // Step 5.5: Task A — 行動アーマーを今回のヒットで削り切った瞬間の検出。
+            // SuperArmor フラグが立っている間は完全保護するため行動中断もしない。
+            // ガード成功 (Guarded/JustGuard) 時はアーマー消費が発生しても行動中断は発動しない。
+            bool shouldInterruptForArmorBreak =
+                actionArmorJustBroken
+                && !effectState.hasSuperArmor
+                && !GuardJudgmentLogic.IsGuardSucceeded(guardResult);
 
             // Step 6: 被弾リアクション判定
             float totalArmorBefore = armorBefore + actionArmorBefore;
@@ -252,10 +281,29 @@ namespace Game.Runtime
                 guardResult,
                 currentActState);
 
+            // Task A: アーマー削り切りかつ SuperArmor 非適用 → Flinch へ強制遷移 (Knockback は維持)。
+            // HitReactionLogic.Determine は totalArmorBefore > 0 なら None を返すので、
+            // ここでアーマーブレイク瞬間を上書きする必要がある。
+            if (shouldInterruptForArmorBreak && hitReaction == HitReaction.None)
+            {
+                hitReaction = hasKnockbackForce && !effectState.hasKnockbackImmunity
+                    ? HitReaction.Knockback
+                    : HitReaction.Flinch;
+            }
+
             // Step 6.1: 被弾リアクション結果を ActState に反映
             // HitReactionLogic.Determine が Flinch/Knockback/GuardBreak を返した場合、
             // 次ヒット判定で isInHitstun が正しく評価されるよう SoA に書き戻す。
             ApplyHitReactionToActState(hitReaction, isKill, hash);
+
+            // Task A: アーマー削り切り+非SuperArmorの場合、現在実行中の行動をキャンセル。
+            // ApplyHitReactionToActState が ActState を Flinch/Knockback に書き戻した後に呼ぶ
+            // (CancelAction → ClearActionEffects で _currentActionEffects が null 化されるが、
+            //  ActState 書き戻しは既に完了しているので順序は安全)。
+            if (shouldInterruptForArmorBreak && !isKill && _actionExecutorController != null)
+            {
+                _actionExecutorController.CancelAction();
+            }
 
             // Step 6.5: 状態異常蓄積
             StatusEffectId appliedEffect = ApplyStatusEffect(
@@ -380,7 +428,8 @@ namespace Game.Runtime
             return reducedDamage;
         }
 
-        private (int actualDamage, bool isKill, float armorBefore, float actionArmorBefore) ApplyDamageToVitals(
+        private (int actualDamage, bool isKill, float armorBefore, float actionArmorBefore,
+                 bool actionArmorJustBroken) ApplyDamageToVitals(
             DamageData data, GuardResult guardResult,
             ActionEffectProcessor.EffectState effectState,
             int reducedDamage, ref CharacterVitals vitals)
@@ -418,6 +467,15 @@ namespace Game.Runtime
                 _actionArmorConsumed += consumedThisHit;
             }
 
+            // Task A: 今回のヒットで行動アーマーを「削り切った瞬間」かを判定する。
+            // - 削る前 (actionArmorBefore) が残っていた
+            // - 今回のヒットで消費が発生した
+            // - 削った結果 0 以下になった
+            // いずれも満たす場合 true。既に 0 だった状態でのヒットは false (再 Flinch 防止)。
+            bool actionArmorJustBroken = actionArmorBefore > 0f
+                && consumedThisHit > 0f
+                && actionArmor <= 0f;
+
             // 被弾したらアーマー回復タイマーリセット
             if (reducedDamage > 0)
             {
@@ -429,7 +487,7 @@ namespace Game.Runtime
                 ? (byte)(100 * vitals.currentHp / vitals.maxHp)
                 : (byte)0;
 
-            return (hpResult.actualDamage, hpResult.isKill, armorBefore, actionArmorBefore);
+            return (hpResult.actualDamage, hpResult.isKill, armorBefore, actionArmorBefore, actionArmorJustBroken);
         }
 
         /// <summary>
