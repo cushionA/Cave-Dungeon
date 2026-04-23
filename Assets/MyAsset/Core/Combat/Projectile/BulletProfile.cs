@@ -13,6 +13,15 @@ namespace Game.Core
         public float spreadAngle;
         public float lifeTime;
         public int hitLimit;
+
+        /// <summary>各ターゲットに与える最大ヒット数。0 以下の場合は 1 として扱う (既定動作互換)。
+        /// 総ヒット上限 <see cref="hitLimit"/> と組み合わせて二段管理する。
+        /// NOTE: この上限は <see cref="ProjectileController.TryRegisterHit"/> 経路でのみ適用される。
+        /// AoE 爆発 (<c>ProjectileManager.ProcessExplosion</c>) では
+        /// 範囲内の全キャラクターに 1 回ずつヒットするため本値は参照されない。</summary>
+        [Tooltip("各ターゲットに与える最大ヒット数。0/未設定は 1 扱い。爆発処理では適用されない (爆発は範囲内全員が 1 回被弾)")]
+        public int perTargetHitLimit;
+
         public float emitInterval;
         public BulletFeature features;
         public float explodeRadius;
@@ -58,6 +67,12 @@ namespace Game.Core
         public float GetEffectiveHomingStrength()
         {
             return homingStrength == 0f ? 5f : homingStrength;
+        }
+
+        /// <summary>perTargetHitLimit を安全に取得する（0 以下は 1 として扱い、旧 HashSet 互換にフォールバック）。</summary>
+        public int GetEffectivePerTargetHitLimit()
+        {
+            return perTargetHitLimit > 0 ? perTargetHitLimit : 1;
         }
     }
 }

@@ -82,7 +82,10 @@ namespace Game.Core
                 }
             }
 
-            projectile.RegisterHit();
+            // 総ヒット数の消費 (Projectile.RegisterHit) は ProjectileController.TryRegisterHit 側で
+            // ターゲット別上限ゲートと合わせて実行する。ここでは呼ばない (二重消費防止)。
+            // AoE 爆発 (ProjectileManager.ProcessExplosion) は 1 弾丸に対し 1 回の発動なので
+            // 個別被弾者ごとに RemainingHits を消費させる必要はない。
             return result;
         }
 

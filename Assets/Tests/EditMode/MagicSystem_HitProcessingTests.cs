@@ -85,8 +85,13 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
-        public void HitProcessor_Attack_ReducesProjectileHits()
+        public void HitProcessor_Attack_DoesNotConsumeRemainingHits()
         {
+            // 二段管理仕様 (2026-04-23): RemainingHits の消費は
+            // ProjectileController.TryRegisterHit 側に一元化される。
+            // ProjectileHitProcessor.ProcessHit はダメージ処理のみを担当し、
+            // AoE 爆発 (ProjectileManager.ProcessExplosion) から被弾者ごとに呼ばれても
+            // RemainingHits は二重消費されない。
             SoACharaDataDic data = new SoACharaDataDic();
             data.Add(1, default,
                 new CombatStats { attack = new ElementalStatus { fire = 20 } }, default, default);
@@ -105,7 +110,8 @@ namespace Game.Tests.EditMode
             SoABackedMockDamageable receiver = new SoABackedMockDamageable(data, 2);
             ProjectileHitProcessor.ProcessHit(p, receiver, data, magic);
 
-            Assert.AreEqual(1, p.RemainingHits);
+            Assert.AreEqual(2, p.RemainingHits,
+                "ProcessHit は総ヒット数を消費しない (TryRegisterHit 側で一元管理)");
             Assert.IsTrue(p.IsAlive);
             data.Dispose();
         }

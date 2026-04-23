@@ -37,6 +37,14 @@ namespace Game.Tests.EditMode
             }
         }
 
+        /// <summary>
+        /// 単一ヒット上限互換の弾丸生成ヘルパ: hitLimit と perTargetHitLimit を同値で設定する。
+        /// 二段管理導入前 (hitLimit 単独運用時代) と同じ挙動でカウントされるため、
+        /// このファイル内の既存テスト (hitLimit ベースで期待値を書いていた) がそのまま通る。
+        /// 本ヘルパを使うテストでは「総数到達 == 個別ターゲット到達」が一致する点に注意。
+        /// 総数とターゲット別を独立に検証したい場合は
+        /// <see cref="CreateProjectileWithPerTargetLimit"/> を使う。
+        /// </summary>
         private static Projectile CreateProjectile(int hitLimit, BulletFeature features = BulletFeature.None)
         {
             Projectile p = new Projectile();
@@ -45,6 +53,7 @@ namespace Game.Tests.EditMode
                 moveType = BulletMoveType.Straight,
                 speed = 10f,
                 hitLimit = hitLimit,
+                perTargetHitLimit = hitLimit,
                 lifeTime = 5f,
                 features = features
             };
@@ -198,6 +207,161 @@ namespace Game.Tests.EditMode
                 "Activate で前回の hitCount がクリアされる");
             Assert.IsTrue(_controller.TryRegisterHit(targetHash, out _),
                 "リセット後は同じターゲットにも再ヒット可能");
+        }
+
+        // ==================== perTargetHitLimit 二段管理仕様 (2026-04-23 確定) ====================
+        //
+        // 新仕様: `BulletProfile.perTargetHitLimit` 追加。
+        //   - ターゲットごとの上限。0/未設定は 1 として扱う (互換: 旧 HashSet セマンティクス)
+        //   - 到達したターゲットには以降ヒット不成立 (カウント加算スキップ)
+        //   - 総数 `hitLimit` は `Projectile.RegisterHit()` 経由で消費、
+        //     非Pierce かつ総数到達で `shouldDespawn=true`
+
+        private static Projectile CreateProjectileWithPerTargetLimit(
+            int hitLimit, int perTargetHitLimit, BulletFeature features = BulletFeature.None)
+        {
+            Projectile p = new Projectile();
+            BulletProfile profile = new BulletProfile
+            {
+                moveType = BulletMoveType.Straight,
+                speed = 10f,
+                hitLimit = hitLimit,
+                perTargetHitLimit = perTargetHitLimit,
+                lifeTime = 5f,
+                features = features,
+            };
+            p.Initialize(100, profile, Vector2.zero, Vector2.right);
+            return p;
+        }
+
+        [Test]
+        public void PerTargetHitLimit_DefaultOne_BlocksSecondHitToSameTarget()
+        {
+            // perTargetHitLimit 未設定 (=0) は 1 として解釈される。
+            // hitLimit は十分大きいので総数到達は起きない。
+            Projectile p = CreateProjectileWithPerTargetLimit(
+                hitLimit: 5, perTargetHitLimit: 0, features: BulletFeature.Pierce);
+            _controller.Activate(p, default, null);
+
+            const int targetHash = 600;
+
+            Assert.IsTrue(_controller.TryRegisterHit(targetHash, out _),
+                "1回目は成立");
+            Assert.AreEqual(1, _controller.GetHitCountForTarget(targetHash));
+
+            Assert.IsFalse(_controller.TryRegisterHit(targetHash, out _),
+                "perTargetHitLimit デフォルト 1 で同一ターゲットの 2 回目は不成立");
+            Assert.AreEqual(1, _controller.GetHitCountForTarget(targetHash),
+                "スキップ時はカウントも増えない");
+        }
+
+        [Test]
+        public void PerTargetHitLimit_Three_AllowsThreeHitsToSameTarget()
+        {
+            Projectile p = CreateProjectileWithPerTargetLimit(
+                hitLimit: 10, perTargetHitLimit: 3, features: BulletFeature.Pierce);
+            _controller.Activate(p, default, null);
+
+            const int targetHash = 601;
+
+            Assert.IsTrue(_controller.TryRegisterHit(targetHash, out _), "1回目成立");
+            Assert.IsTrue(_controller.TryRegisterHit(targetHash, out _), "2回目成立");
+            Assert.IsTrue(_controller.TryRegisterHit(targetHash, out _), "3回目成立");
+            Assert.AreEqual(3, _controller.GetHitCountForTarget(targetHash));
+
+            Assert.IsFalse(_controller.TryRegisterHit(targetHash, out _),
+                "perTargetHitLimit=3 の上限到達後、4回目は不成立");
+            Assert.AreEqual(3, _controller.GetHitCountForTarget(targetHash),
+                "スキップ時はカウントも増えない");
+        }
+
+        [Test]
+        public void PerTargetHitLimit_DifferentTargets_IndependentCounts()
+        {
+            // A が上限到達しても B は独立したカウントで受け付けられる
+            Projectile p = CreateProjectileWithPerTargetLimit(
+                hitLimit: 10, perTargetHitLimit: 1, features: BulletFeature.Pierce);
+            _controller.Activate(p, default, null);
+
+            const int hashA = 701;
+            const int hashB = 702;
+
+            Assert.IsTrue(_controller.TryRegisterHit(hashA, out _));
+            Assert.IsFalse(_controller.TryRegisterHit(hashA, out _),
+                "A は perTargetHitLimit=1 で上限到達");
+
+            Assert.IsTrue(_controller.TryRegisterHit(hashB, out _),
+                "B は A とは独立しているので受理される");
+            Assert.AreEqual(1, _controller.GetHitCountForTarget(hashA));
+            Assert.AreEqual(1, _controller.GetHitCountForTarget(hashB));
+        }
+
+        [Test]
+        public void ProjectileController_Acquire_ClearsHitCountsForPoolReuse()
+        {
+            // Pool 再利用シナリオ: 使用済み弾丸を再 Activate した際に
+            // _hitCounts が完全クリアされ、以前のターゲットへ再度ヒットできる
+            Projectile first = CreateProjectileWithPerTargetLimit(
+                hitLimit: 5, perTargetHitLimit: 1, features: BulletFeature.Pierce);
+            _controller.Activate(first, default, null);
+
+            const int hashA = 801;
+            const int hashB = 802;
+            _controller.TryRegisterHit(hashA, out _);
+            _controller.TryRegisterHit(hashB, out _);
+            Assert.AreEqual(1, _controller.GetHitCountForTarget(hashA));
+            Assert.AreEqual(1, _controller.GetHitCountForTarget(hashB));
+
+            // Pool が同じ Controller を新しい Projectile で再利用する
+            Projectile reused = CreateProjectileWithPerTargetLimit(
+                hitLimit: 5, perTargetHitLimit: 1, features: BulletFeature.Pierce);
+            _controller.Activate(reused, default, null);
+
+            Assert.AreEqual(0, _controller.GetHitCountForTarget(hashA),
+                "再 Activate 時に前回の hitCount (A) がクリアされる");
+            Assert.AreEqual(0, _controller.GetHitCountForTarget(hashB),
+                "再 Activate 時に前回の hitCount (B) がクリアされる");
+
+            Assert.IsTrue(_controller.TryRegisterHit(hashA, out _),
+                "クリア後は同じターゲット A に再ヒット可能");
+            Assert.IsTrue(_controller.TryRegisterHit(hashB, out _),
+                "クリア後は同じターゲット B に再ヒット可能");
+        }
+
+        [Test]
+        public void PerTargetHitLimit_PierceReachesHitLimit_DoesNotDespawn()
+        {
+            // Pierce 弾は総数 hitLimit 到達でも shouldDespawn は立たない
+            Projectile p = CreateProjectileWithPerTargetLimit(
+                hitLimit: 3, perTargetHitLimit: 3, features: BulletFeature.Pierce);
+            _controller.Activate(p, default, null);
+
+            const int targetHash = 900;
+
+            Assert.IsTrue(_controller.TryRegisterHit(targetHash, out bool d1));
+            Assert.IsFalse(d1);
+            Assert.IsTrue(_controller.TryRegisterHit(targetHash, out bool d2));
+            Assert.IsFalse(d2);
+            Assert.IsTrue(_controller.TryRegisterHit(targetHash, out bool d3));
+            Assert.IsFalse(d3, "Pierce 弾は hitLimit 到達でも shouldDespawn しない");
+        }
+
+        [Test]
+        public void PerTargetHitLimit_NonPierceReachesHitLimit_DespawnsTrue()
+        {
+            // 非 Pierce 弾は総数 hitLimit 到達の瞬間に shouldDespawn=true
+            Projectile p = CreateProjectileWithPerTargetLimit(
+                hitLimit: 3, perTargetHitLimit: 3, features: BulletFeature.None);
+            _controller.Activate(p, default, null);
+
+            const int targetHash = 901;
+
+            Assert.IsTrue(_controller.TryRegisterHit(targetHash, out bool d1));
+            Assert.IsFalse(d1, "1回目は総数未到達");
+            Assert.IsTrue(_controller.TryRegisterHit(targetHash, out bool d2));
+            Assert.IsFalse(d2, "2回目も総数未到達");
+            Assert.IsTrue(_controller.TryRegisterHit(targetHash, out bool d3));
+            Assert.IsTrue(d3, "3回目 (hitLimit=3 到達) で despawn 指示");
         }
     }
 }
