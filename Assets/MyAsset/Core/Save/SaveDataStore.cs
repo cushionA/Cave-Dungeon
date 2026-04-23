@@ -89,7 +89,8 @@ namespace Game.Core
             //   3. 一時ファイルを filePath へ Move (この瞬間に本体が切り替わる)
             //
             // 途中で異常終了しても:
-            //   - Step 1 中: filePath/.bak 無傷。次回起動時 .tmp を残骸として検知 (ログ出力)、次回書き込みで置換
+            //   - Step 1 中: filePath/.bak 無傷。.tmp 残骸は次回書き込みで自動的に上書きされる
+            //     (起動時の明示的な残骸検知はしない。読み込み経路は filePath/.bak のみ参照する)
             //   - Step 2 後 / Step 3 前: filePath 不在、.bak に直前世代あり、.tmp に新バージョンあり
             //       → 読み込み時に filePath が無ければ .bak フォールバック経路で復旧
             //   - Step 3 後: 新 filePath + 直前 .bak が揃う (理想形)
@@ -115,7 +116,7 @@ namespace Game.Core
                 catch (Exception ex)
                 {
                     Debug.LogError($"[SaveDataStore] 既存ファイルの .bak 退避に失敗しました (slot={slotData.slotIndex}): {ex.Message}");
-                    // filePath は無傷のまま、tempPath が残るが次回書き込みで置換される
+                    // filePath は無傷 (前世代データが残る)。.tmp はこのタイミングで明示削除し残骸を残さない
                     TryDeleteTemp(tempPath);
                     return;
                 }
