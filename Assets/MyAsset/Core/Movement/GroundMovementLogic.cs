@@ -22,6 +22,8 @@ namespace Game.Core
         /// <summary>
         /// Coyote Time: 接地から離れた後でもこの秒数以内はジャンプ入力を許容する猶予時間。
         /// プラットフォーマ系の定番ゲームフィール補正。
+        /// データ駆動化: キャラ別値は MoveParams.coyoteTime を使用
+        /// (GameManager.RegisterCharacter で CharacterInfo.coyoteTime から転記)。未設定時は本定数にフォールバック。
         /// </summary>
         public const float k_CoyoteTimeSeconds = 0.1f;
 
@@ -78,8 +80,26 @@ namespace Game.Core
             _timeSinceLeftGround += deltaTime;
         }
 
-        /// <summary>現在 Coyote Time 窓内か。テスト用途にも使える。</summary>
+        /// <summary>
+        /// 現在 Coyote Time 窓内か (定数フォールバック版)。テスト用途にも使える。
+        /// データ駆動版が必要な場合は <see cref="IsInCoyoteWindowFor(MoveParams)"/> を使用する。
+        /// </summary>
         public bool IsInCoyoteWindow => _timeSinceLeftGround < k_CoyoteTimeSeconds;
+
+        /// <summary>
+        /// 指定の MoveParams で Coyote Time 窓内か判定する (データ駆動版)。
+        /// moveParams.coyoteTime > 0 ならその値、それ以外は定数 k_CoyoteTimeSeconds にフォールバック。
+        /// </summary>
+        public bool IsInCoyoteWindowFor(MoveParams moveParams)
+        {
+            return _timeSinceLeftGround < GetEffectiveCoyoteTime(moveParams);
+        }
+
+        /// <summary>MoveParams.coyoteTime の有効値 (0 以下なら定数フォールバック)。</summary>
+        private static float GetEffectiveCoyoteTime(MoveParams p)
+        {
+            return p.coyoteTime > 0f ? p.coyoteTime : k_CoyoteTimeSeconds;
+        }
 
         /// <summary>水平移動速度を計算する。facingDir は回避時の方向（1=右, -1=左）。</summary>
         public float CalculateHorizontalSpeed(float inputX, MoveParams moveParams, float facingDir = 1f)
@@ -135,7 +155,7 @@ namespace Game.Core
                 return 0f;
             }
 
-            bool allowed = isGrounded || IsInCoyoteWindow;
+            bool allowed = isGrounded || IsInCoyoteWindowFor(moveParams);
             if (!allowed)
             {
                 return 0f;
