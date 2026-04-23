@@ -165,7 +165,8 @@ namespace Game.Runtime
                 sprintStaminaPerSecond = info.sprintStaminaPerSecond,
                 dodgeDuration = info.dodgeDuration,
                 dodgeSpeedMultiplier = info.dodgeSpeedMultiplier,
-                sprintSpeedMultiplier = info.sprintSpeedMultiplier
+                sprintSpeedMultiplier = info.sprintSpeedMultiplier,
+                coyoteTime = info.coyoteTime
             };
 
             int result = _core.RegisterCharacter(hash, vitals, combat, flags, move, chara);

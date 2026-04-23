@@ -133,6 +133,11 @@ namespace Game.Core
         [MinValue(0)]
         public float sprintSpeedMultiplier = 1.6f;
 
+        [TitleGroup("移動パラメータ")]
+        [Tooltip("接地から離れた後でもジャンプ入力を許容する猶予時間（秒）。プラットフォーマのゲームフィール補正（Coyote Time）")]
+        [MinValue(0)]
+        public float coyoteTime = 0.1f;
+
         // ─────────────────────────────────────────────
         //  アーマー
         // ─────────────────────────────────────────────

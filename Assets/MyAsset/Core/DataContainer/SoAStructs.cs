@@ -144,6 +144,8 @@ namespace Game.Core
         public float dodgeSpeedMultiplier;
         /// <summary>スプリント時の moveSpeed 倍率。0 以下は GroundMovementLogic のデフォルト値を使用。</summary>
         public float sprintSpeedMultiplier;
+        /// <summary>Coyote Time: 接地を離れた後でもジャンプを許容する秒数。0 以下は GroundMovementLogic のデフォルト値を使用。</summary>
+        public float coyoteTime;
     }
 
     /// <summary>
