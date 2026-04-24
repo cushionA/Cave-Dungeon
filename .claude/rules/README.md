@@ -25,7 +25,20 @@ paths:
 ```
 Assets/MyAsset/CLAUDE.md   → architecture.md + unity-conventions.md + asset-workflow.md
 Assets/Tests/CLAUDE.md     → test-driven.md + unity-conventions.md + architecture.md
+Assets/Scenes/CLAUDE.md    → asset-workflow.md + git-workflow.md（.meta セット / シーン保存）
 ```
+
+### アセット配置時の CLAUDE.md 判断表
+
+| 配置先 | CLAUDE.md 配置 | 根拠 rules |
+|-------|---------------|-----------|
+| `Assets/MyAsset/` | 配置済み | architecture / unity-conventions / asset-workflow |
+| `Assets/Tests/` | 配置済み | test-driven / unity-conventions / architecture |
+| `Assets/Scenes/` | 配置済み | asset-workflow / git-workflow |
+| `Assets/Sprites/`, `Assets/Audio/`, `Assets/Models/`, `Assets/Prefabs/` 等を新設する場合 | **新規配置推奨** | asset-workflow（命名規則、Addressable グループ） |
+| `Assets/Resources/` | 配置非推奨（そもそも新規利用を避ける） | asset-workflow — Addressable 推奨 |
+| `Assets/Plugins/`, `Assets/ThirdParty/`, `Assets/AnyPortrait/` 等の外部ライブラリ | **配置しない**（触らない領域） | - |
+| `Assets/Settings/`, `Assets/Gizmos/`, `Assets/Editor Default Resources/` | 配置不要（Unity 標準、編集機会少） | - |
 
 **両方を併用**する理由: `paths:` frontmatter の公式動作保証が不明なため、公式機能（path-scoped CLAUDE.md + `@` インポート）で補完する二重保険方式。
 
