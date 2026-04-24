@@ -40,6 +40,12 @@
 - 人間用ログ: `Debug.Log()` — 通常のUnityログ
 - `ENABLE_AI_LOGGING` Scripting Define Symbolで切替
 
+## メモリ自動整理（dream-skill 連携）
+- ユーザーグローバルに導入済み: `~/.claude/skills/dream`（Stop hook で 24h 経過時に自動起動）
+- **セッション開始時**: `~/.claude/.dream-pending` が存在する場合、`/dream` をバックグラウンド subagent として実行し、完了後 `rm ~/.claude/.dream-pending` でフラグを削除する
+- 統合対象: `~/.claude/projects/<hash>/memory/` 以下の MEMORY.md + topic files（feedback_*.md 等）
+- 手動実行: `/dream` / 詳細は `~/.claude/skills/dream/SKILL.md`
+
 ## テスト
 - 全機能にEdit Modeテスト必須、ゲームプレイ機能にはPlay Modeテスト追加
 - テスト名: `[機能名]_[条件]_[期待結果]`
