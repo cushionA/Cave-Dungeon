@@ -39,6 +39,7 @@
 
 <!-- 新規 handoff note を作成したら、ここに `- [YYYY-MM-DD タイトル](handoffs/YYYY-MM-DD_slug.md)` を最上部追加 -->
 
+- [2026-04-25 セッション終了 / ブロッカー対応 + 動作確認 + UniCli 実環境検証 完了](handoffs/2026-04-25_session-end-blockers-resolved.md) — resolved / branch: main
 - [2026-04-25 Wave 4 完了 / 最終 handoff](handoffs/2026-04-25_wave4-complete-final.md) — resolved / branch: feature/wave4-phase12-adversarial-review
 - [2026-04-25 Wave 3 完了 / Wave 4 着手前](handoffs/2026-04-25_wave3-complete-wave4-start.md) — in-progress / branch: main
 - [2026-04-25 Wave 2 Phase 17 implementation](handoffs/2026-04-25_wave2-phase17-handoff.md) — in-progress / branch: feature/wave2-phase17-handoff

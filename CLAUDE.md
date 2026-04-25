@@ -119,6 +119,7 @@
 - Wave / Phase ID（Wave 3、Phase 13、P5-T1 等）の **source of truth は `docs/WAVE_PLAN.md`**
 - 「Wave N 実装」「Phase N に着手」と言われたら、まず `docs/WAVE_PLAN.md` の WBS 表を Read してスコープ確定する
 - `docs/FUTURE_TASKS.md` は派生タスク置き場であり Wave 計画ではない（混同注意）
+- **Effective Harnesses 二相運用**（Wave 5 Phase 7〜）: `designs/pipeline-state.json` と `designs/claude-progress.txt` がセッション間の状態を持つ。新規セッション開始時に `bash scripts/init.sh` で 1 画面確認可能。詳細: `.claude/rules/effective-harnesses.md`
 
 ## 将来タスク管理
 - PR レビューや実装中に出た「今ではないが後で対応すべきタスク」は `docs/FUTURE_TASKS.md` に記録
