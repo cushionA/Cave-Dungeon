@@ -72,3 +72,200 @@ python tools/feature-db.py summary
 - Edit Mode: Unity CLI `-runTests -testPlatform EditMode`
 - Play Mode: Unity CLI `-runTests -testPlatform PlayMode`
 - MCP経由: unity-mcp の run_tests ツール使用
+
+---
+
+# Unity Test Framework (UTF) API リファレンス
+
+> Sources: nice-wolf-studio/unity-claude-skills (MIT) — unity-testing
+>
+> 本セクションは「**Unity でどう実装するか**」の技術観点。「何をテストすべきか」のビジネス観点は本ファイル上部の結合テスト 3 観点を参照。
+
+## NUnit / Unity 固有属性
+
+### 標準 NUnit 属性
+
+| 属性 | 用途 |
+|---|---|
+| `[Test]` | 同期テスト |
+| `[TestFixture]` | テストクラスのマーカー（任意、ない場合も認識される）|
+| `[SetUp]` / `[TearDown]` | 各テストの前後に実行 |
+| `[OneTimeSetUp]` / `[OneTimeTearDown]` | クラス全体で 1 回実行 |
+| `[TestCase(args...)]` | パラメタ化テスト |
+| `[Category("Unit")]` | カテゴリ分類（CLI で `-testCategory` で絞込）|
+
+### Unity 固有属性
+
+| 属性 | 用途 |
+|---|---|
+| `[UnityTest]` | Coroutine ベースのテスト（yield 命令対応）|
+| `[UnitySetUp]` / `[UnityTearDown]` | yield 対応の Setup/Teardown |
+| `[RequiresPlayMode(true/false)]` | Play Mode / Edit Mode を強制 |
+| `[UnityPlatform]` | 特定プラットフォームに限定 |
+| `[TestMustExpectAllLogs]` | 全 log がエクスペクト済みであることを要求 |
+| `[ConditionalIgnore]` | 条件付きでテストをスキップ |
+| `[PrebuildSetup]` / `[PostBuildCleanup]` | プレイヤービルド前後に実行 |
+
+## Yield 命令 (Play Mode `[UnityTest]` 内)
+
+| Yield | 効果 |
+|---|---|
+| `yield return null` | 1 フレームスキップ |
+| `yield return new WaitForSeconds(t)` | スケール時間で `t` 秒待機 |
+| `yield return new WaitForSecondsRealtime(t)` | 実時間で `t` 秒待機 |
+| `yield return new WaitForFixedUpdate()` | 次の物理更新まで待機 |
+| `yield return new WaitForEndOfFrame()` | フレーム終端まで（**バッチモードで動かない**ことに注意）|
+| `yield return new WaitUntil(() => cond)` | 条件 true まで待機 |
+| `yield return new WaitWhile(() => cond)` | 条件 true の間待機 |
+
+## MonoBehaviour テストの基本骨格
+
+```csharp
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
+using System.Collections;
+
+public class PlayerControllerTests
+{
+    private GameObject _playerObject;
+    private PlayerController _player;
+
+    [UnitySetUp]
+    public IEnumerator SetUp()
+    {
+        _playerObject = new GameObject("Player");
+        _player = _playerObject.AddComponent<PlayerController>();
+        yield return null; // Awake/Start 待ち
+    }
+
+    [UnityTearDown]
+    public IEnumerator TearDown()
+    {
+        Object.Destroy(_playerObject);
+        yield return null; // Destroy 完了待ち（テスト間汚染防止）
+    }
+
+    [UnityTest]
+    public IEnumerator Player_MovesForward_WhenInputApplied()
+    {
+        var startPos = _player.transform.position;
+        _player.Move(Vector3.forward);
+
+        yield return new WaitForFixedUpdate();
+
+        Assert.Greater(_player.transform.position.z, startPos.z);
+    }
+}
+```
+
+**重要**: `[UnityTearDown]` で `Object.Destroy` を必ず呼ぶ。`yield return null` で破棄完了を待つ。これを怠るとテスト間汚染で **flaky test** の温床になる。
+
+## LogAssert（ログ検証）
+
+`Debug.LogError` と `Debug.LogException` は**自動的にテスト失敗扱い**になる。エクスペクトする場合は `LogAssert.Expect` を使う:
+
+```csharp
+[Test]
+public void DamageNegative_ThrowsAndLogsError()
+{
+    LogAssert.Expect(LogType.Error, "Damage cannot be negative");
+    Assert.Throws<ArgumentException>(() => weapon.TakeDamage(-1));
+}
+```
+
+`LogAssert.NoUnexpectedReceived()` で「予期しないログがないこと」を断言できる。
+
+## パラメタ化テスト
+
+```csharp
+[TestCase(100, 30, 70)]
+[TestCase(100, 100, 0)]
+[TestCase(100, 150, 0)]   // 境界値: HP < 0 にならない
+[TestCase(50, 10, 40)]
+public void TakeDamage_CalculatesCorrectly(int maxHp, int damage, int expectedHp)
+{
+    var health = new HealthSystem(maxHp);
+    health.TakeDamage(damage);
+    Assert.AreEqual(expectedHp, health.CurrentHealth);
+}
+```
+
+## 例外テスト
+
+```csharp
+[Test]
+public void Inventory_AddNull_ThrowsException()
+{
+    var inventory = new Inventory(maxSlots: 10);
+    Assert.Throws<ArgumentNullException>(() => inventory.Add(null));
+}
+```
+
+## Fake / Stub による依存注入
+
+```csharp
+public class FakeAudioService : IAudioService
+{
+    public bool PlaySoundCalled { get; private set; }
+    public void PlaySound(string name) => PlaySoundCalled = true;
+}
+
+[Test]
+public void Attack_PlaysSound()
+{
+    var fakeAudio = new FakeAudioService();
+    var weapon = new Weapon(fakeAudio);
+    weapon.Attack();
+    Assert.IsTrue(fakeAudio.PlaySoundCalled);
+}
+```
+
+## CLI 引数（CI/CD）
+
+```bash
+# Edit Mode
+Unity -runTests -batchmode -projectPath /path \
+  -testPlatform EditMode -testResults /path/results.xml
+
+# カテゴリ絞込
+Unity -runTests -batchmode -projectPath /path \
+  -testFilter "HealthSystemTests" -testCategory "Unit;Integration" \
+  -testResults /path/results.xml
+```
+
+| 引数 | 説明 |
+|---|---|
+| `-runTests` | 必須フラグ |
+| `-testPlatform` | `EditMode` / `PlayMode` / `BuildTarget` |
+| `-testFilter` | 「;」区切り or regex（`!` 接頭辞で否定）|
+| `-testCategory` | 「;」区切り（`!` 接頭辞で否定）|
+
+> **注意**: `-runTests` と `-quit` は併用禁止（メモリ `feedback_unity-cli-batch-test.md` 参照）
+
+## Unity Test Framework Anti-patterns
+
+### ❌ 同期テストで `[UnityTest]` を使う
+`[UnityTest]` は yield instruction が必要なときだけ使う。同期で済むなら `[Test]` を使うこと（実行が高速）。
+
+### ❌ `[UnityTearDown]` で GameObject を破棄しない
+テスト間汚染で flaky test の原因。必ず破棄 + `yield return null` で完了待ち。
+
+### ❌ private メソッドを直接テスト
+public API 経由で動作を確認する。private は実装詳細。
+
+### ❌ `WaitForSeconds` でハードコード待機
+タイミング依存で flaky になりがち。`WaitUntil(() => condition)` で条件待ちに変える。
+
+### ❌ テスト実行順依存
+`[Test]` の順序は不定。`[OneTimeSetUp]` / `SetUp` で都度初期化。
+
+### ❌ ログエラーを無視
+`Debug.LogError` は自動失敗扱い。期待されるならば `LogAssert.Expect` を明示。
+
+### ❌ プロダクションコードと同じ asmdef にテスト配置
+テスト用 asmdef を分離（`Tests/EditMode/*.asmdef`、`Tests/PlayMode/*.asmdef`）。
+
+## 詳細リファレンス
+
+完全版は `@.claude/refs/external/nice-wolf-studio/unity-testing/SKILL.md` を参照。

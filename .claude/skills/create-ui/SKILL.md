@@ -206,3 +206,126 @@ UI機能のテストは Edit Mode で:
 - `Assets/MyAsset/UI/[画面名]/` — UXML + USS
 - `Assets/MyAsset/Runtime/UI/[画面名]Controller.cs` — バッキングスクリプト
 - `designs/ui/[画面名].md` — UI構造定義（テキスト）
+
+---
+
+# UI Toolkit Anti-Patterns（Unity 6 知見）
+
+> Sources: nice-wolf-studio/unity-claude-skills (MIT) — unity-ui
+
+| Anti-Pattern | 問題 | 正しい対応 |
+|---|---|---|
+| inline style を多用 | 要素単位のメモリオーバヘッド | USS ファイルで共通スタイルを定義 |
+| 複雑な universal selector (`A * B`) | スケール時のセレクタ性能劣化 | BEM クラス命名 + 子セレクタ |
+| 多孫要素を持つ要素への重い `:hover` | マウス移動でツリー全体が無効化 | leaf 要素にのみ `:hover` を限定 |
+| `CreateInspectorGUI()` 内で `Bind()` を呼ぶ | 二重バインド（return 後に自動バインドが走る） | 自動バインドに任せる、手動 UI のみ Bind を呼ぶ |
+| 毎フレーム UI 全体をリビルド | retained-mode の利点を消す | 変更要素のみ更新 |
+| 動的コンテンツを持つ複数 Canvas（uGUI） | 子変更で Canvas rebuild がバッチ処理 | 静的 / 動的 UI を別 Canvas に分離 |
+| `UnregisterCallback` 忘れ | メモリリーク・stale reference | `OnDisable` か `OnDestroy` で必ず解除 |
+| 毎フレーム IMGUI でゲーム UI 描画 | 性能低 | UI Toolkit / uGUI を使う |
+| EventSystem を Scene に置き忘れ（uGUI） | 入力イベントが処理されない | Scene に EventSystem が 1 つあること |
+
+## UI Toolkit Event Propagation（必須知識）
+
+UI Toolkit のイベントは 2 段階で伝播する:
+
+1. **Trickle-down**（root → target、親が先に反応）
+2. **Bubble-up**（target → root、子が先に反応、デフォルト）
+
+```csharp
+// デフォルト = Bubble-up
+element.RegisterCallback<PointerDownEvent>(OnPointerDown);
+
+// Trickle-down 指定（親で先取り処理）
+element.RegisterCallback<PointerDownEvent>(OnPointerDown, TrickleDown.TrickleDown);
+
+// コールバックにユーザーデータを渡す
+element.RegisterCallback<ClickEvent, string>(OnClickWithData, "my-data");
+
+// ChangeEvent を発火させずに値設定
+myControl.SetValueWithoutNotify(newValue);
+```
+
+**重要**: `OnDisable` で **必ず `UnregisterCallback`** を呼ぶ。MonoBehaviour 全般の対称性ルール（unity-conventions.md）と同じ理由。
+
+## カスタムコントロール（Unity 6+）
+
+`UxmlFactory` / `UxmlTraits` は非推奨。**`[UxmlElement]` 属性 + `partial class`** を使う:
+
+```csharp
+[UxmlElement]
+public partial class HealthBar : VisualElement
+{
+    [UxmlAttribute]
+    public float MaxHealth { get; set; } = 100f;
+
+    private VisualElement _fillBar;
+    private float _currentHealth;
+
+    public float CurrentHealth
+    {
+        get => _currentHealth;
+        set
+        {
+            _currentHealth = Mathf.Clamp(value, 0, MaxHealth);
+            _fillBar.style.width = Length.Percent(_currentHealth / MaxHealth * 100f);
+        }
+    }
+}
+```
+
+UXML 側:
+```xml
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+  <HealthBar max-health="200" />
+</ui:UXML>
+```
+
+## Manipulator パターン
+
+イベントハンドリングのロジックを UI コードから分離:
+
+```csharp
+public class DragManipulator : PointerManipulator
+{
+    private Vector3 _startPosition;
+    private bool _isDragging;
+
+    public DragManipulator(VisualElement target) { this.target = target; }
+
+    protected override void RegisterCallbacksOnTarget()
+    {
+        target.RegisterCallback<PointerDownEvent>(OnPointerDown);
+        target.RegisterCallback<PointerMoveEvent>(OnPointerMove);
+        target.RegisterCallback<PointerUpEvent>(OnPointerUp);
+    }
+
+    protected override void UnregisterCallbacksFromTarget()
+    {
+        target.UnregisterCallback<PointerDownEvent>(OnPointerDown);
+        target.UnregisterCallback<PointerMoveEvent>(OnPointerMove);
+        target.UnregisterCallback<PointerUpEvent>(OnPointerUp);
+    }
+
+    private void OnPointerDown(PointerDownEvent evt) { /* ... */ }
+    private void OnPointerMove(PointerMoveEvent evt) { /* ... */ }
+    private void OnPointerUp(PointerUpEvent evt) { /* ... */ }
+}
+
+// 使用:
+myElement.AddManipulator(new DragManipulator(myElement));
+```
+
+組込: `Manipulator` (基底), `PointerManipulator`, `MouseManipulator`, `Clickable`, `ContextualMenuManipulator`, `KeyboardNavigationManipulator`
+
+## TextMeshPro（必須）
+
+すべてのテキスト描画は **TextMeshPro (TMP)** を使う。レガシー `UI.Text` 禁止。
+- Canvas UI: `TextMeshProUGUI`
+- 3D ワールドテキスト: `TextMeshPro`
+- ゼロ allocation 更新: `SetText("Score: {0}", value)`（`text = "Score: " + value` は GC alloc 発生）
+
+## 詳細リファレンス
+
+- UI Toolkit / uGUI 完全 API: `@.claude/refs/external/nice-wolf-studio/unity-ui/SKILL.md`
+- USS リファレンス: 既存の `uitoolkit-uss-reference.md`

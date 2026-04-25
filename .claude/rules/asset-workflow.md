@@ -228,3 +228,118 @@ Addressables.Release(handle);
 6. [ ] プロファイル設定（Local / Remote パス）
 7. [ ] ビルドスクリプトにラベル除外ロジックを追加
 8. [ ] `.asmdef` に `Unity.Addressables` と `Unity.ResourceManager` を追加
+
+---
+
+# シーン遷移と Asset Lifecycle
+
+> Sources: nice-wolf-studio/unity-claude-skills (MIT) — unity-scene-assets
+
+## シーンアーキテクチャ戦略の選択
+
+| 戦略 | 用途 | 特徴 |
+|---|---|---|
+| **Single scene** | プロトタイプ・ゲームジャム | 最速。複雑性ゼロ。すぐ限界が来る |
+| **Scene-per-level** | 線形進行（プラットフォーマー、パズル）| `LoadScene(name, Single)` で切替。`DontDestroyOnLoad` なしには共有状態を持てない |
+| **Additive scene composition** | オープンワールド・常駐 HUD・共有システム | 「Boot」or「Persistent」シーンが常駐、gameplay/UI シーンを additive ロード。最も柔軟、最も複雑 |
+
+SisterGame は 2D サイドスクローラなので **Scene-per-level** または **Additive composition** が候補。`/design-stage` で設計時に判定する。
+
+## SceneCoordinator パターン（Additive 構成）
+
+ゲーム全体の永続状態（GameManager 等）を Persistent シーンに置き、各ステージシーンを additive にロード/アンロードする:
+
+```csharp
+public class SceneCoordinator : MonoBehaviour
+{
+    [SerializeField] private string persistentSceneName = "Persistent";
+    private string _currentContentScene;
+
+    public static SceneCoordinator Instance { get; private set; }
+
+    void Awake()
+    {
+        if (Instance != null) { Destroy(gameObject); return; }
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatic() => Instance = null;
+
+    public async Awaitable LoadContentScene(string sceneName)
+    {
+        if (!string.IsNullOrEmpty(_currentContentScene))
+            await SceneManager.UnloadSceneAsync(_currentContentScene);
+
+        await SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
+        _currentContentScene = sceneName;
+
+        // ★ 重要: SetActiveScene を忘れると新規スポーンが Persistent 側に行ってしまう
+        SceneManager.SetActiveScene(SceneManager.GetSceneByName(sceneName));
+    }
+}
+```
+
+**罠**: `SceneManager.SetActiveScene` を忘れると、`Instantiate` した新規オブジェクトが Persistent シーンに置かれ、誤った lightmap / navmesh / unload 挙動になる。Additive ロード後は必ず呼ぶ。
+
+## ローディング画面と AsyncOperation
+
+### `AsyncOperation.progress` は **0.9 で止まる罠**
+
+`allowSceneActivation = false` の状態では `progress` は最大 **0.9** までしか上がらない。100% 表示にしたいなら正規化が必要:
+
+```csharp
+var loadOp = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
+loadOp.allowSceneActivation = false;
+
+while (loadOp.progress < 0.9f)
+{
+    // 0-1 に正規化（0.9 を 1.0 として扱う）
+    float normalizedProgress = Mathf.Clamp01(loadOp.progress / 0.9f);
+    onProgress?.Invoke(normalizedProgress);
+    await Awaitable.NextFrameAsync(destroyCancellationToken);
+}
+
+// アクティベート（即座にシーン切替）
+loadOp.allowSceneActivation = true;
+while (!loadOp.isDone)
+    await Awaitable.NextFrameAsync(destroyCancellationToken);
+```
+
+### 最低表示時間の保証
+ローディング画面のフラッシュ防止には `Time.realtimeSinceStartup` を使う（`Time.time` は `timeScale` 影響を受ける）:
+
+```csharp
+float startTime = Time.realtimeSinceStartup;
+// ... ロード処理 ...
+float elapsed = Time.realtimeSinceStartup - startTime;
+if (elapsed < minimumLoadScreenTime)
+    await Awaitable.WaitForSecondsAsync(minimumLoadScreenTime - elapsed, destroyCancellationToken);
+```
+
+## Addressables ハンドル解放の罠
+
+### Instance がまだ生きているうちに Release しない
+ハンドル `Release` 時に instantiated オブジェクトがまだ参照していると、ピンク マテリアル（best case）or クラッシュ（worst case）になる。
+
+```csharp
+// NG: GameObject 破棄前に Release
+Addressables.Release(handle);
+Destroy(spawnedEnemy); // 既にマテリアルがピンク
+
+// OK: GameObject 破棄を完了してから
+Destroy(spawnedEnemy);
+await Awaitable.NextFrameAsync(); // Destroy 完了待ち
+Addressables.Release(handle);
+
+// または InstantiateAsync を使えば自動追跡される
+var instance = await Addressables.InstantiateAsync(key).Task;
+// ... 使用 ...
+Addressables.ReleaseInstance(instance); // ハンドルも自動解放
+```
+
+## 詳細リファレンス
+
+シーン遷移 / 資産プリロード / Resources → Addressables 移行チェックリストの完全版は:
+`@.claude/refs/external/nice-wolf-studio/unity-scene-assets/SKILL.md`

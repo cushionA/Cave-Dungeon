@@ -372,6 +372,70 @@
       "pattern": "^(feat|fix|test|refactor|style|perf|chore|asset|docs)\\([^)]+\\):\\s+[A-Za-z]",
       "message": "コミットメッセージは日本語タイトル（[種類](範囲): 日本語タイトル）",
       "source": "git-workflow.md L14-25"
+    },
+    {
+      "id": "CS-PERF-NONALLOC-001",
+      "severity": "warning",
+      "language": ["cs"],
+      "scope": ["Assets/MyAsset/**/*.cs"],
+      "exclude": ["Assets/MyAsset/**/Tests/**"],
+      "pattern": "Physics\\.RaycastAll\\s*\\(",
+      "message": "RaycastAll は GC alloc を発生させる。RaycastNonAlloc + 事前確保バッファを推奨",
+      "hint": "private readonly RaycastHit[] _hitBuffer = new RaycastHit[16]; → Physics.RaycastNonAlloc(ray, _hitBuffer, ...)",
+      "source": "unity-conventions.md 物理クエリ規約 / unity-physics-queries"
+    },
+    {
+      "id": "CS-PERF-NONALLOC-002",
+      "severity": "warning",
+      "language": ["cs"],
+      "scope": ["Assets/MyAsset/**/*.cs"],
+      "exclude": ["Assets/MyAsset/**/Tests/**"],
+      "pattern": "Physics\\.OverlapSphere\\s*\\(",
+      "message": "OverlapSphere は GC alloc を発生させる。OverlapSphereNonAlloc + 事前確保バッファを推奨",
+      "hint": "private readonly Collider[] _overlapBuffer = new Collider[32]; → Physics.OverlapSphereNonAlloc(...)",
+      "source": "unity-conventions.md 物理クエリ規約 / unity-physics-queries"
+    },
+    {
+      "id": "CS-LIFECYCLE-FAKENULL-001",
+      "severity": "warning",
+      "language": ["cs"],
+      "scope": ["Assets/MyAsset/**/*.cs"],
+      "exclude": ["Assets/MyAsset/**/Tests/**"],
+      "pattern": "\\b\\w+\\?\\.[A-Za-z]\\w*\\s*\\(",
+      "message": "Unity Object に対する null 条件演算子 (?.) は fake-null を見逃す。== null チェックを使う",
+      "hint": "if (component != null) component.Method(); ※ ただし純 C# オブジェクトには ?. を使って良い",
+      "source": "unity-conventions.md ライフサイクル罠 / unity-lifecycle"
+    },
+    {
+      "id": "CS-LIFECYCLE-DESTROYIMMEDIATE-001",
+      "severity": "error",
+      "language": ["cs"],
+      "scope": ["Assets/MyAsset/Runtime/**/*.cs"],
+      "pattern": "DestroyImmediate\\s*\\(",
+      "message": "DestroyImmediate はランタイム禁止（Editor 専用）。通常の Destroy() を使う",
+      "hint": "Editor スクリプトでのみ使用可。ランタイムでは Destroy(obj) で遅延破棄を受け入れる",
+      "source": "unity-conventions.md ライフサイクル罠 / unity-lifecycle"
+    },
+    {
+      "id": "CS-ASYNC-VOID-001",
+      "severity": "warning",
+      "language": ["cs"],
+      "scope": ["Assets/MyAsset/**/*.cs"],
+      "exclude": ["Assets/MyAsset/**/Tests/**"],
+      "pattern": "\\basync\\s+void\\s+\\w+\\s*\\(",
+      "message": "async void は例外伝播せず crash 原因になる。async Awaitable / async Task を使う",
+      "hint": "async Awaitable Method() { ... } で例外がフレームに伝播される",
+      "source": "unity-conventions.md async/await 致命罠 / unity-async-patterns"
+    },
+    {
+      "id": "CS-FOUND-INSTANTIATE-PARENT-001",
+      "severity": "info",
+      "language": ["cs"],
+      "scope": ["Assets/MyAsset/**/*.cs"],
+      "pattern": "Instantiate\\s*\\([^)]+\\)\\.transform\\.SetParent\\s*\\(",
+      "message": "Instantiate + SetParent の 2 段階よりも、Instantiate 4 引数構文 (prefab, pos, rot, parent) を推奨",
+      "hint": "Instantiate(prefab, position, rotation, parentTransform) で一括設定",
+      "source": "unity-conventions.md 基礎 API 罠 / unity-foundations"
     }
   ]
 }
