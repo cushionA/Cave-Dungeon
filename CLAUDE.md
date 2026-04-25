@@ -92,6 +92,7 @@
 - テスト名: `[機能名]_[条件]_[期待結果]`
 - テスト完了時は `python tools/feature-db.py update` で記録
 - 詳細: `.claude/rules/test-driven.md`
+- **Mutation Testing**（Wave 5 Phase 14、opt-in）: `MUTATION_TESTING=1` でテスト品質を 80% mutation score 閾値で評価。詳細: `.claude/rules/mutation.md`
 
 ## ログ規約
 - AI 用ログ: `AILogger.Log()` — Editor Build のみ有効、LLM が状態把握に使用
