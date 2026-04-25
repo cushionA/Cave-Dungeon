@@ -1,13 +1,15 @@
 ---
 name: generate-assets
-description: ダミーアセット自動生成（画像はKaggle SD 1.5、音声は手持ちライブラリからマッチング）。pendingアセットを一括処理する。
+description: ダミーアセット自動生成（画像はKaggle SD 1.5、音声は手持ちライブラリからマッチング）。pendingアセットを一括処理する。音声インデックスの管理（旧 index-assets）も内包。
 user-invocable: true
-argument-hint: [images|audio|fetch]
+argument-hint: [images|audio|fetch|index <build|update|search|stats>]
 ---
 
 # Generate Assets: $ARGUMENTS
 
-pendingアセットの自動生成・マッチングを行う。
+pendingアセットの自動生成・マッチングと、音声アセットライブラリのインデックス管理を行う。
+
+旧 `/index-assets` スキルは本スキルの `index` サブコマンドに統合された（2026-04-24）。
 
 ## サブコマンド
 
@@ -67,11 +69,47 @@ pendingアセットの自動生成・マッチングを行う。
 2. 完了していれば `python tools/generate-images.py fetch` を実行
 3. 配置結果を報告
 
+### `index <サブコマンド>` — 音声インデックス管理（旧 `/index-assets`）
+
+音声ライブラリ（`config/asset-gen.json` の `audio_libraries`）のインデックスを管理する。
+`audio` サブコマンドで初回インデックス構築は自動だが、差分更新・検索・統計は本サブコマンドで明示実行する。
+
+#### `index build` — フルスキャン
+
+1. `config/asset-gen.json` の `audio_libraries` を確認
+2. パスが存在しない場合はユーザーに修正を案内
+3. `python tools/asset-index.py build` を実行
+4. 結果を報告（ファイル数、ライブラリ数）
+
+#### `index update` — 差分更新
+
+1. `python tools/asset-index.py update` を実行
+2. 追加・削除されたファイル数を報告
+
+#### `index search <query>` — 検索+候補提示
+
+1. `python tools/asset-index.py search "<query>"` を実行
+2. ツール出力のJSON候補リストを評価
+3. feature-dbのpending assetsのDescriptionと照合
+4. 最も適切な候補を理由付きで提示
+5. ユーザーが承認したら、そのファイルをUnityプロジェクトの`Assets/`にコピーする手順を案内
+
+#### `index stats` — 統計表示
+
+1. `python tools/asset-index.py stats` を実行
+2. 結果をそのまま表示
+
+#### 検索のコツ
+
+- 日本語キーワードとファイル名（通常英語）の両方で検索
+- 「ジャンプSE」→ `jump sound effect short` のように英語キーワードも試す
+- フォルダ名でカテゴリを絞り込む: `Action jump`, `UI click`
+
 ## 前提条件
 
 - `config/asset-gen.json` が設定済みであること
 - 画像生成: Kaggle APIが設定済み（`kaggle.json`）
-- 音声マッチング: `config/audio-index.json` が作成済み（`/index-assets build` で作成）
+- 音声マッチング: `config/audio-index.json` が作成済み（`/generate-assets index build` で作成）
 - feature-dbが初期化済みで、pendingアセットが登録されていること
 
 ## 注意事項

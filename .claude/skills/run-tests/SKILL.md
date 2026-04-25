@@ -9,6 +9,13 @@ argument-hint: [EditMode|PlayMode|All] [--feature FeatureName] [--watch]
 
 Unity Test Frameworkでテストを実行し、結果をレポートする。
 
+## このスキルの使い所
+
+- **単純な Unity Test Runner 実行のみ**を担当する。テスト設計やオーケストレーションはしない
+- 典型例: 機能実装後の Pass 確認、CI 的な回帰チェック、feature-db 更新
+- シーン構築・複数機能の一括検証・バグ修正ループが必要なら `/playtest` を使う
+  （`/playtest` は内部的に本スキルを呼ばず、直接 Unity CLI/MCP を叩く）
+
 ## テスト実行方法（優先順位）
 
 ### 方法1: MCP経由（Unityエディタが起動中の場合 — 推奨）

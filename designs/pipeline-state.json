@@ -1,0 +1,14 @@
+{
+  "$schema": "./pipeline-state.schema.json",
+  "phase": "idle",
+  "currentSection": null,
+  "totalSections": null,
+  "currentBranch": null,
+  "completedFeatures": [],
+  "pendingFeatures": [],
+  "skippedFeatures": [],
+  "failedAttempts": {},
+  "lastAction": null,
+  "lastUpdated": null,
+  "notes": "phase=idle の時はパイプライン待機中。/build-pipeline 開始時に design に遷移する。各スキルはこのファイルを必要に応じて読み書きするが、feature-db が Source of Truth。"
+}
