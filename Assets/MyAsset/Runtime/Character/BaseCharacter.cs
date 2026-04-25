@@ -25,10 +25,12 @@ namespace Game.Runtime
 
         private int _objectHash;
         private bool _isGrounded;
+        private GroundInfo _groundInfo;
         private bool _isRegistered;
 
         public override int ObjectHash => _objectHash;
         public bool IsGrounded => _isGrounded;
+        public GroundInfo GroundInfo => _groundInfo;
         public override IDamageable Damageable => _damageReceiver;
         public DamageReceiver DamageReceiver => _damageReceiver;
         public CharacterAnimationController AnimationController => _animationController;
@@ -172,6 +174,9 @@ namespace Game.Runtime
                 origin, size, 0f, Vector2.down, k_GroundCheckDistance, _groundLayer);
 
             _isGrounded = hit.collider != null;
+            _groundInfo = hit.collider != null
+                ? new GroundInfo { isGrounded = true, normal = hit.normal }
+                : GroundInfo.NotGrounded;
         }
 
         /// <summary>
