@@ -26,9 +26,14 @@ namespace Game.Tests.EditMode
         [TearDown]
         public void TearDown()
         {
-            // 後続テストのために primitive 登録のみ復元 (ISaveable 自動登録は呼ばない)
+            // 後続テストへの汚染を防ぐため、起動時状態 (primitive + ISaveable 自動登録) を完全復元する。
+            // PrePopulatePrimitives のみだと、後続テストが SaveDataStore 経由で ISaveable 型のディスク
+            // ラウンドトリップを行った場合に該当型が JToken にフォールバックし、Deserialize 側で
+            // 期待型キャスト失敗 (LeaderboardManager / AITemplateManager 等は JArray/JObject フォールバック
+            // を持たない) → silent data loss を起こす。
             SaveTypeRegistry.Reset();
             SaveTypeRegistry.PrePopulatePrimitives();
+            SaveTypeRegistry.AutoRegisterAllSaveables();
         }
 
         [Test]
