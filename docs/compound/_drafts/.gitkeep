@@ -1,0 +1,2 @@
+# Wave 5 Phase 24 で導入。compound-extract.py の出力先。
+# 中身の .md ファイルは .gitignore で track せず、本 .gitkeep のみコミットしてディレクトリを保持する。
