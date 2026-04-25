@@ -18,10 +18,32 @@ PostToolUse / pre-build / post-build / pre-release の 4 種類の hook を Unit
 
 ## 現状 (2026-04-25)
 
-すべて**スタブ実装**として配置。実有効化には以下が必要:
+すべて**雛形実装**として配置。**UniCli (`.claude/skills/unicli/`) を最優先 backend** として動作する。Editor 起動中なら Named Pipe IPC で最速・最軽量。Editor 未起動・UniCli 未インストール環境では skip / batch mode フォールバック。
 
-1. **`unity-console-check.sh`**: `claude-mcp` CLI 整備後、`read_console` を呼べるようにする
-2. **`pre-build-validate.sh` / `post-build-test.sh` / `pre-release-size-check.sh`**: GitHub Actions / ローカル Make スクリプトから呼び出す
+### Backend 優先順序（UniCli 優先方針）
+
+> **本プロジェクトでは UniCli を最優先で使う。**
+> Named Pipe IPC で起動コストがほぼゼロ、Editor のロックも競合しない。
+> MCP は将来 CLI が整備された時の補助、batch は CI 専用と位置づける。
+
+| 優先度 | backend | 条件 | 特徴 |
+|-------|---------|------|------|
+| **🥇 第一選択** | **unicli** | Unity Editor 起動中 + UniCli インストール済み | **最速・最軽量** (Named Pipe IPC)、ロック競合なし |
+| 🥈 第二（将来） | claude-mcp | MCP CLI 整備後（現状未確立） | unity-mcp サーバー経由 |
+| 🥉 第三（CI） | batch | UNITY_PATH 指定 + Editor 未起動 | 低速（フルロード）、CI 専用 |
+| ⏸ 退避 | skip | いずれも不可 | warning なしで exit（開発を止めない） |
+
+各 hook で `UNITY_CLI_BACKEND=unicli\|mcp\|batch\|auto` (デフォルト `auto` = unicli 最優先) で明示制御可能。
+**ローカル開発では `unicli check` で接続を確認しておく**ことを推奨（接続失敗時は warning なしで skip するため、hook が動いていない事に気付けない）。
+
+### 各 hook の実装状況
+
+| hook | unicli backend | batch backend | mcp backend |
+|------|----------------|---------------|-------------|
+| `unity-console-check.sh` | ✅ `Console.GetLog --json` で error 件数取得 | - | TODO |
+| `pre-build-validate.sh` | TODO (`unicli exec` で asmdef 検証) | shell スタブ実装済 | - |
+| `post-build-test.sh` | ✅ `TestRunner.RunPlayMode --json` | ✅ `Unity -batchmode -runTests` | - |
+| `pre-release-size-check.sh` | - (ファイルシステムのみ) | - | - |
 
 ## 有効化方法 (将来)
 
