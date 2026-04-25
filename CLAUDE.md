@@ -36,6 +36,7 @@
 - `/build-pipeline continue` で中断したパイプラインを再開
 - 進行状態: `designs/pipeline-state.json` で追跡（Claude Code の `--resume` とは独立させた自前 state）
 - 各フェーズでユーザー確認を挟む（自動で全て決めない）
+- **SDD 統合**（Wave 5 Phase 23）: feature-spec.md は Spec/Design/Tasks 3 層に対応。system 規模時は `designs/specs/{system}/` に分離可能。詳細: `.claude/rules/sdd-workflow.md`
 - 個別実行も可能:
   1. `/design-game` → 対話型 GDD 作成 + ワールド設定 + ジャンル調査
   2. `/design-systems section-1` → 共通設計 + asmdef 設計 + システム設計書 + 機能分解 + feature-db 登録
