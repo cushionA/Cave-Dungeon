@@ -15,6 +15,43 @@ namespace Game.Core
         public const float k_WeightPenaltyThreshold = 0.7f;
         private const float k_WeightPenaltyMinimum = 0.5f;
 
+        /// <summary>壁IDなし（未接触 or 不明）を表す定数。</summary>
+        public const int k_NoWallId = 0;
+
+        /// <summary>
+        /// 壁蹴りを試みる（左右交互制約あり）。
+        /// 前回と同一壁ID（currentWallColliderId == lastKickedWallId）の場合は失敗する。
+        /// 成功時は newLastKickedWallId に currentWallColliderId をセットする。
+        /// 着地時は lastKickedWallId を k_NoWallId にリセットすることで再蹴りを許可する。
+        /// </summary>
+        public static Vector2 TryWallKickWithAlternation(
+            AbilityFlag abilityFlags,
+            bool isTouchingWall,
+            bool jumpPressed,
+            bool isFacingRight,
+            int currentWallColliderId,
+            int lastKickedWallId,
+            out int newLastKickedWallId)
+        {
+            newLastKickedWallId = lastKickedWallId;
+
+            bool hasWallKick = (abilityFlags & AbilityFlag.WallKick) != 0;
+            if (!hasWallKick || !isTouchingWall || !jumpPressed)
+            {
+                return Vector2.zero;
+            }
+
+            // 同一壁への連続蹴り禁止（ID 不明の場合は制約なし）
+            if (currentWallColliderId != k_NoWallId && currentWallColliderId == lastKickedWallId)
+            {
+                return Vector2.zero;
+            }
+
+            newLastKickedWallId = currentWallColliderId;
+            float directionX = isFacingRight ? k_WallKickForceX : -k_WallKickForceX;
+            return new Vector2(directionX, k_WallKickForceY);
+        }
+
         /// <summary>
         /// WallKickフラグ所持+壁に接触中+ジャンプ押下 → (横方向, 上方向)のキック力を返す。
         /// 条件未達ならVector2.zeroを返す。

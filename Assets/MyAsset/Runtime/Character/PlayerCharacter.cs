@@ -83,6 +83,9 @@ namespace Game.Runtime
         // --- チャージ中フラグ ---
         private bool _isCharging;
 
+        // --- 壁蹴り左右交互制約 ---
+        private int _lastKickedWallId;
+
         // --- 回避無敵追跡 ---
         private bool _wasDodging;
 
@@ -142,6 +145,9 @@ namespace Game.Runtime
                 EndDropThrough();
             }
 
+            // 壁蹴り交互制約リセット
+            _lastKickedWallId = AdvancedMovementLogic.k_NoWallId;
+
             // MovementLogicの状態リセット（ジャンプ・回避・スプリント）
             _movementLogic?.Reset();
 
@@ -184,27 +190,6 @@ namespace Game.Runtime
 
         private int MaxCombo => _lightAttacks != null ? _lightAttacks.Length : 0;
 
-        /// <summary>
-        /// 壁接触判定。BaseCollider の左右方向に薄いボックスを飛ばし、
-        /// BaseCharacter._groundLayer (壁と地形は同一レイヤー想定) と重なっているか確認する。
-        /// 壁蹴り Ability 発動判定に使用する。
-        /// </summary>
-        private bool IsTouchingWall(float facingDir)
-        {
-            if (_collider == null)
-            {
-                return false;
-            }
-
-            Bounds bounds = _collider.bounds;
-            // コライダー外側 0.05u の薄い検出ボックス (コライダー高さの 90% を使用してフチの誤検知抑制)
-            Vector2 origin = new Vector2(
-                bounds.center.x + facingDir * (bounds.extents.x + 0.05f),
-                bounds.center.y);
-            Vector2 size = new Vector2(0.05f, bounds.size.y * 0.9f);
-            return Physics2D.OverlapBox(origin, size, 0f, _groundLayer) != null;
-        }
-
         private void FixedUpdate()
         {
             if (!IsAlive)
@@ -224,9 +209,11 @@ namespace Game.Runtime
             // 下入力 + ジャンプ入力 + 接地 + 真下が DropThroughPlatform → 発動
             TryStartDropThrough(input);
 
-            // 着地時に空中攻撃制限をリセット
+            // 着地時に空中攻撃制限・壁蹴りIDをリセット
             if (IsGrounded)
             {
+                _lastKickedWallId = AdvancedMovementLogic.k_NoWallId;
+
                 if (_aerialComboUsed)
                 {
                     _aerialComboUsed = false;
@@ -353,17 +340,19 @@ namespace Game.Runtime
             else if (bufferedJump && !IsGrounded)
             {
                 // 壁蹴り: 通常ジャンプが成立しなかった空中ジャンプ入力時、
-                // WallKick Ability 所持 + 壁接触なら AdvancedMovementLogic.TryWallKick を呼ぶ。
+                // WallKick Ability 所持 + 壁接触 + 前回と異なる壁なら蹴れる。
                 AbilityFlag abilities = GameManager.Data.GetFlags(ObjectHash).AbilityFlags;
-                bool touchingWall = IsTouchingWall(facingDir);
-                Vector2 wallKick = AdvancedMovementLogic.TryWallKick(
-                    abilities, touchingWall, jumpPressed: true, _isFacingRight);
+                bool touchingWall = CheckWallContact(facingDir, out int currentWallId);
+                int newLastId;
+                Vector2 wallKick = AdvancedMovementLogic.TryWallKickWithAlternation(
+                    abilities, touchingWall, jumpPressed: true, _isFacingRight,
+                    currentWallId, _lastKickedWallId, out newLastId);
                 if (wallKick.sqrMagnitude > 0.0001f)
                 {
                     velocity.x = wallKick.x;
                     velocity.y = wallKick.y;
                     _jumpBufferTimer = 0f;
-                    // 壁蹴り後は接地から離れた直後として扱い、Coyote 誤発動を防ぐ
+                    _lastKickedWallId = newLastId;
                 }
             }
             else if (_movementLogic.IsJumping && jumpHoldFactor <= 0f && velocity.y > 0f)

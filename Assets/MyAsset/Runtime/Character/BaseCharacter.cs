@@ -15,6 +15,8 @@ namespace Game.Runtime
     {
         private const float k_GroundCheckDistance = 0.1f;
         private const float k_GroundCheckWidthRatio = 0.9f;
+        private const float k_WallCheckExtend = 0.05f;
+        private const float k_WallCheckHeightRatio = 0.9f;
 
         [SerializeField] protected CharacterInfo _characterInfo;
 
@@ -154,6 +156,37 @@ namespace Game.Runtime
                     _characterInfo.armorRecoveryRate,
                     _characterInfo.armorRecoveryDelay);
             }
+        }
+
+        /// <summary>
+        /// 指定方向への壁接触を判定する。接触していればコライダーのハッシュも返す。
+        /// 壁蹴り / 壁張り付き判定の共通モジュール。敵・仲間・プレイヤー全キャラで使用可能。
+        /// </summary>
+        /// <param name="facingDir">1=右、-1=左</param>
+        /// <param name="wallColliderId">接触壁のGetHashCode、未接触時は AdvancedMovementLogic.k_NoWallId</param>
+        /// <returns>壁に接触しているか</returns>
+        protected bool CheckWallContact(float facingDir, out int wallColliderId)
+        {
+            wallColliderId = AdvancedMovementLogic.k_NoWallId;
+            if (_collider == null)
+            {
+                return false;
+            }
+
+            Bounds bounds = _collider.bounds;
+            Vector2 origin = new Vector2(
+                bounds.center.x + facingDir * (bounds.extents.x + k_WallCheckExtend),
+                bounds.center.y);
+            Vector2 size = new Vector2(k_WallCheckExtend, bounds.size.y * k_WallCheckHeightRatio);
+
+            Collider2D hit = Physics2D.OverlapBox(origin, size, 0f, _groundLayer);
+            if (hit == null)
+            {
+                return false;
+            }
+
+            wallColliderId = hit.GetHashCode();
+            return true;
         }
 
         /// <summary>
