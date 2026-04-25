@@ -3,7 +3,11 @@ name: design-systems
 description: Design systems for a specific section of the GDD and break them down into implementable features registered in feature-db. Integrates the former plan-sprint skill.
 user-invocable: true
 argument-hint: <section-name or section-number>
+model: opus
 ---
+
+<!-- Wave 4 Phase 15 P15-T7 (Advisor Strategy): design-systems は Opus 固定。理由: GDD 解釈 + 既存機能との重複検出 + 設計判断が複合する非実行型アドバイザー領域 -->
+
 
 # Design Systems: $ARGUMENTS
 

@@ -3,7 +3,11 @@ name: create-feature
 description: Create a new game feature using TDD workflow (test first, then implement, then record)
 user-invocable: true
 argument-hint: <FeatureName> [description]
+model: sonnet
 ---
+
+<!-- Wave 4 Phase 15 P15-T7 (Advisor Strategy): create-feature は Sonnet 固定。理由: TDD サイクル / Unity 規約適用 / feature-db 操作はパターンマッチ性が高い実行型タスク。Opus は overkill -->
+
 
 # Create Feature: $ARGUMENTS
 
