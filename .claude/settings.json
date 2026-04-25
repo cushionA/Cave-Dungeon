@@ -17,6 +17,14 @@
           {
             "type": "command",
             "command": "bash .claude/hooks/stop-handoff-reminder.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/stop-cost-log.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/stop-compound-extract.sh"
           }
         ]
       }

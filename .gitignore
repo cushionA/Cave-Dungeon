@@ -101,3 +101,7 @@ Assets/UI Toolkit/
 
 # Unity生成ログ・セットアップメモ
 unity-*.txt
+
+# Wave 5 Phase 24: compound auto-extract drafts (人間レビュー前のノイズを ignore、ディレクトリ保持のため .gitkeep のみ track)
+docs/compound/_drafts/*.md
+!docs/compound/_drafts/.gitkeep
