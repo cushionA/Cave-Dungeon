@@ -8,7 +8,9 @@
   "pendingFeatures": [],
   "skippedFeatures": [],
   "failedAttempts": {},
+  "verifiableRequirements": [],
   "lastAction": null,
   "lastUpdated": null,
-  "notes": "phase=idle の時はパイプライン待機中。/build-pipeline 開始時に design に遷移する。各スキルはこのファイルを必要に応じて読み書きするが、feature-db が Source of Truth。"
+  "awaitingHumanReview": false,
+  "notes": "phase=idle はパイプライン待機中。/build-pipeline 開始で design に遷移。verifiableRequirements は Phase 7 拡張 (二相運用で coding-agent に渡す検証可能要件リスト)。各 feature の Source of Truth は依然 feature-db。"
 }

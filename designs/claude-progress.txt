@@ -1,0 +1,53 @@
+═══ claude-progress.txt — Effective Harnesses 進捗集約 ═══
+
+このファイルは Wave 5 Phase 7 で導入した「現在の作業文脈」スナップショット。
+pipeline-state.json が機械可読、本ファイルは人間とエージェント双方が
+1 画面で読める作業ノート。
+
+更新タイミング:
+  - phase-boundary-commit hook が feature 完了検出時
+  - /handoff-note 実行時 (セッション末)
+  - 手動 (機能追加・方針変更・blocker 発見時)
+
+────────────────────────────────────────────────────────────────
+## 現在 Phase
+
+phase             : idle
+currentSection    : -
+currentBranch     : feature/wave5-phase7-effective-harnesses
+lastUpdated       : 2026-04-25 (Wave 5 Phase 7 着手)
+
+## 直前にやったこと
+
+- Wave 4 全 PR (#56 / #57) マージ完了
+- ブロッカー対応 (#58) マージ完了
+- handoff note 「2026-04-25_session-end-blockers-resolved」記録済
+
+## 次にやること (verifiableRequirements)
+
+Wave 5 Phase 7 〜 Phase 24 の 6 PR を順次。Phase 16 のみ 5/2 以降。
+
+  1. [in_progress] Phase 7   Effective Harnesses 二相基盤
+       要件: scripts/init.sh / claude-progress.txt / pipeline-state.schema.json /
+              phase-boundary-commit.sh / .claude/rules/effective-harnesses.md
+  2. [pending] Phase 24   Compound 恒常化 (auto-extract + /compound-learn)
+  3. [pending] Phase 23   SDD 統合 (Spec/Design/Tasks 分離 + 人間 gate)
+  4. [pending] Phase 14   Mutation Testing (Stryker .NET)
+  5. [pending] Phase 19   Harness 二相分離 (init-agent / coding-agent)
+  6. [pending] Phase 18   Ralph ループ (dual-condition exit gate)
+  7. [pending] Phase 16   Cache TTL 対策 (5/2 以降、Phase 15 計測待ち)
+
+## ブロッカー / 注意
+
+- main 直 push 禁止。各 Phase は feature/wave5-phaseN-* ブランチ + PR
+- Phase 16 は Phase 15 P15-T8 (1 週間コスト計測、5/2 完了予定) のデータ待ち
+- ProjectSettings.asset の M 状態は Wave 5 と無関係、コミット対象外
+
+## 重要参照
+
+- docs/WAVE_PLAN.md L848-932           Wave 5 タスク表
+- docs/wave2-4-blockers.md § 3        着手前チェックリスト
+- ~/.claude/plans/wave5-logical-tome.md  本セッションの plan ファイル
+- .claude/rules/effective-harnesses.md  二相運用ルール (本 Phase で新設)
+
+────────────────────────────────────────────────────────────────
