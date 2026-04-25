@@ -269,3 +269,147 @@ paths:
 - LeaderboardManager は ISaveable で記録永続化
 - 新記録時は GameEvents.FireNewRecord() でUI通知
 - ローカルのみ（オンラインランキングは対象外）
+
+---
+
+# データ設計
+
+> Sources: nice-wolf-studio/unity-claude-skills (MIT) — unity-data-driven / unity-foundations
+
+## ゲーム設定データの保存方式選択
+
+| 方式 | 用途 | 特徴 |
+|---|---|---|
+| **ScriptableObject (デフォルト)** | 敵ステータス、アイテム表、ロケール設定等 | Designer が Inspector で編集可、type-safe、refactor-safe、YAML として version control 可 |
+| **JSON / CSV** | スプレッドシート連携、modding、bulk 編集が必要な場合 | 外部ツール生成、ランタイム読込 |
+| **埋め込み定数** | 真に固定の値（物理定数、プロトコルバージョン） | `static readonly` / `const` |
+
+SisterGame の方針:
+- 敵 / アイテム / ステージ設定は **ScriptableObject 第一候補**
+- バランスシート由来の bulk データは `/create-balance-sheet` で CSV/Excel → ScriptableObject 変換
+- 動的 / オンラインデータは Easy Save 3 経由
+
+## ScriptableObject 設計: 継承 vs 構成
+
+### 継承パターン
+親 SO を抽象化、サブタイプで具体化:
+
+```csharp
+public abstract class EnemyConfig : ScriptableObject
+{
+    [Min(1)] public int maxHealth = 100;
+    [Range(0f, 20f)] public float moveSpeed = 5f;
+}
+
+[CreateAssetMenu(menuName = "Game/Enemies/Melee")]
+public class MeleeEnemyConfig : EnemyConfig
+{
+    [Range(0f, 50f)] public float meleeDamage = 15f;
+}
+```
+
+注意: 継承では基底クラスのフィールドが**全て表示**される。`[HideInInspector]` か Custom Editor で制御。
+
+### 構成パターン（推奨）
+`[Serializable]` struct を `[SerializeField]` で組み合わせる:
+
+```csharp
+[System.Serializable]
+public struct MovementConfig { public float speed; public bool canFly; }
+
+[System.Serializable]
+public struct AttackConfig { public AttackType type; public float damage; public float cooldown; }
+
+[CreateAssetMenu(menuName = "Game/Enemy")]
+public class EnemyConfig : ScriptableObject
+{
+    [Header("Movement")] public MovementConfig movement;
+    [Header("Combat")]   public AttackConfig attack;
+    [Min(1)] public int maxHealth = 100;
+}
+```
+
+**SisterGame は構成パターンを推奨**:
+- 機能の組み合わせを柔軟に変えられる（飛ぶ／飛ばない、近接／遠隔の組み合わせ）
+- struct 単位で他の SO に再利用しやすい
+- 継承の「2-3 段以上で分かりにくくなる」問題を回避
+
+## Inspector 属性早見表
+
+| 属性 | 用途 |
+|---|---|
+| `[Header("Section")]` | セクションラベル |
+| `[Tooltip("Help")]` | hover ヒント（非自明な場面に必須）|
+| `[Range(min, max)]` | スライダー（範囲が決まっている数値）|
+| `[Min(value)]` | 下限クランプ（負値禁止フィールド）|
+| `[TextArea(min, max)]` | 複数行テキスト |
+| `[Space(pixels)]` | 縦スペース |
+| `[HideInInspector]` | Inspector から隠す |
+| `[FormerlySerializedAs("oldName")]` | リネーム時の旧名指定（既存アセット保持）|
+| `[ColorUsage(alpha, hdr)]` | カラーピッカー設定 |
+| `[CreateAssetMenu(menuName = ...)]` | Right click → Create メニュー登録 |
+
+## データバージョニング
+
+### 加算的変更（フィールド追加 / 削除）
+Unity が serialize を吸収する範囲なので**特別な対応不要**:
+- フィールド追加 → 既存アセットはデフォルト値を持つ
+- フィールド削除 → 旧データは silent drop
+
+### 破壊的変更（リネーム / 構造変更）
+`[FormerlySerializedAs("oldName")]` で既存 SO アセットを保持:
+
+```csharp
+using UnityEngine.Serialization;
+
+public class EnemyConfig : ScriptableObject
+{
+    [FormerlySerializedAs("hp")]
+    [Min(1)] public int maxHealth = 100;
+}
+```
+
+**注意**: `[FormerlySerializedAs]` は **Unity serialization のみ**（Inspector / .asset / prefab）。**JSON や独自 serialization では機能しない**。JSON 移行時は raw JSON を解析してから deserialize する。
+
+### バージョン番号 + マイグレータ（JSON / Easy Save 3）
+SO 以外の永続データは明示的なバージョン管理:
+
+```csharp
+[System.Serializable]
+public class PlayerData
+{
+    public int version = 2; // 現在のスキーマバージョン
+    public string playerName;
+    public float[] position; // v2: Vector3 から float[] に変更（JSON 互換）
+
+    public static PlayerData MigrateFromV1(string json) { /* v1→v2 変換 */ }
+}
+```
+
+SisterGame は Easy Save 3 を使うため、保存形式の変更時は ES3 の Type Reference や明示マイグレータ関数を使う。
+
+## ランタイム制約（重要）
+
+ScriptableObject はプレイヤービルドでは **read-only** に近い扱い:
+- Editor プレイ中の変更 → ディスクに**保存される**（注意: 誤って変更が保存される）
+- ビルドでの変更 → アプリ終了時に**失われる**（永続化されない）
+
+→ **保存対象データを SO に置かない**。`PlayerData` 等のセーブデータは ScriptableObject ではなく **Easy Save 3 経由のクラスインスタンス**として扱う。
+
+## Transform / GameObject の落とし穴
+
+### 非均等スケール禁止
+`(2, 4, 2)` のような非均等スケールは:
+- Collider / Light / AudioSource の挙動を歪める
+- 子オブジェクトの rotated 表示が skew する
+- Instantiate のパフォーマンス劣化
+
+**アセット側で実寸モデリング**を徹底する。やむを得ず必要な場合は当該 GameObject を「孫」階層に逃がし、親で位置・回転、孫でスケールに分離。
+
+### 親の位置を `(0,0,0)` にする
+スポーン基準点・コンテナとして使う親オブジェクトは原点配置。親の位置がずれていると、子の local 座標が想定と一致せずバグの原因。
+
+## 詳細リファレンス
+
+- `unity-data-driven` 完全版: `@.claude/refs/external/nice-wolf-studio/unity-data-driven/SKILL.md`
+- `unity-foundations` 完全版: `@.claude/refs/external/nice-wolf-studio/unity-foundations/SKILL.md`

@@ -136,3 +136,89 @@
 - [Unity App UI Plugin](https://docs.unity3d.com/Packages/com.unity.dt.app-ui@2.2/manual/claude-plugin.html)
 - [ComposioHQ/awesome-claude-skills](https://github.com/ComposioHQ/awesome-claude-skills)
 - WAVE_PLAN.md L148-158 (Phase 9 ⏸ — 外部スキル組み込み)
+
+---
+
+# 後段更新 (2026-04-25 セッション末)
+
+初版「全候補見送り」結論を**部分覆す追加調査**を実施し、**Nice-Wolf-Studio から 16 skills を ABCD 配分で採用**する決定に至った。本節は更新内容を記録する。
+
+## 1. unity-dev-toolkit の実態調査
+
+WAVE_PLAN.md L157 の「unity-dev-toolkit（66 skills）」は**誤情報**であることが判明:
+
+- 実際のリポジトリ: [Dev-GOM/claude-code-marketplace](https://github.com/Dev-GOM/claude-code-marketplace/blob/main/plugins/unity-dev-toolkit/README.md)
+- 実態: **14 items**（7 skills + 4 agents + 3 commands）
+- **ライセンス**: Apache-2.0 ✅
+- **DI 強制**: なし ✅
+- **判定**: 14 項目中 11 項目が SisterGame 既存資産と重複（`tools/lint_check.py` / `template-registry.json` / `create-ui/SKILL.md` / `script-generator` agent / `tdd-refactorer` agent / `Architect/` 6 文書 / `/run-tests` / `/playtest` 等）。残り 3 項目（unity-scene-optimizer / @unity-performance / /unity:optimize-scene）も「実験段階・動作保証なし」のため**見送り維持**
+
+## 2. wshobson/agents の追加調査
+
+「Unity 特化なし」は不正確。実態は 184 agents 25 カテゴリで、**Unity-developer agent が 1 件存在**（Gaming カテゴリ）。
+ただし汎用 Unity dev で SisterGame の SoA + GameManager + ODCGenerator アーキテクチャと整合させるコスト > 利益のため**見送り維持**。
+**TDD-facilitator** agent も Phase 13 の `tdd-test-writer` / `tdd-implementer` / `tdd-refactorer` 3 段分離と重複のため不採用。
+
+## 3. Nice-Wolf-Studio/unity-claude-skills の精査
+
+初版で「20 skills, MIT」と評価したが、最新 README で **35 skills, 95 files, 44,500 行**であることが判明:
+
+| 観点 | 評価 |
+|---|---|
+| ライセンス | MIT ✅ |
+| DI 強制 | なし ✅ |
+| Unity バージョン | 6.3 LTS（SisterGame の 6000.3.9f1 OK）|
+| メンテ頻度 | 7 commits / Issue 1 件、最終更新「March 2026」推定（低頻度）|
+| 構成 | Core 2 / Domain 18 / Correctness 5 / Architecture 5 / Domain Translation 5 |
+| 売り | Unity 6 公式ドキュメント準拠 + Anti-pattern 比較 + decision framework + Designer→Code 翻訳 |
+
+### 35 skills の SisterGame 適合度評価
+
+各 skill を WebFetch で個別精査した結果:
+
+| 区分 | skills | 判定 |
+|---|---|---|
+| **採用 16** | Correctness 5 (3d-math / physics-queries / lifecycle / input-correctness / async-patterns) + Domain 直結 3 (physics / 2d / animation) + Domain 補強 3 (ui / testing / performance) + Architecture 補強 3 (state-machines / data-driven / scene-assets) + Core 補強 2 (foundations / scripting) | ✅ |
+| **不採用 5（衝突確定）** | unity-cinemachine (ProCamera2D 採用), unity-save-system (Easy Save 3 衝突), unity-game-architecture (Service Locator vs DI が SoA + GameManager と論調ずれ), unity-platforms (Android IL2CPP 深部未カバー), unity-editor-tools (既存 Builder 群で十分) | ❌ |
+| **不採用 9（Out-of-Scope）** | unity-multiplayer / unity-xr / unity-ecs-dots / unity-ai-navigation / unity-packages-services / unity-graphics (URP/HDRP, SisterGame は Built-in) / unity-lighting-vfx / unity-input (correctness 採用済) / unity-audio | ❌ |
+| **継続監視 5（Domain Translation）** | unity-game-loop / unity-npc-behavior / unity-ui-patterns / unity-level-design / unity-procedural-gen | ⏸ |
+
+## 4. ABCD Tier 配分による採用方針
+
+「外部 skill フォルダで配置」と「既存資産に抽出統合」を skill 性質に応じて使い分ける:
+
+| Tier | 形態 | 配置先 | 採用 skills |
+|---|---|---|---|
+| **A** (rules 抽出) | `.claude/rules/*.md` の既存ファイルに追記 | 7 + 3 hybrid = 10 | unity-lifecycle, unity-foundations, unity-scripting, unity-testing, unity-data-driven, unity-scene-assets, unity-ui (anti-patterns), unity-physics-queries (規約部分), unity-async-patterns (規約部分), unity-performance (規約部分) |
+| **B** (静的 ref) | `.claude/refs/external/nice-wolf-studio/<skill>/` で `@` import 時のみ参照 | 3 + 2 hybrid = 5 | unity-3d-math, unity-physics, unity-2d, unity-physics-queries (詳細), unity-performance (Profiler 操作) |
+| **C** (skill auto-trigger) | `.claude/skills/external/nice-wolf-studio/<skill>/` で description マッチで auto-trigger | 1 + 1 hybrid = 2 | unity-input-correctness, unity-async-patterns (詳細) |
+| **D** (リライト統合) | `Architect/` に SisterGame 文脈で再構成 | 2 | unity-animation → `Architect/09_アニメーション規約.md`、unity-state-machines → `Architect/05_AIシステム.md § 11` |
+
+### D を採用する根拠（unity-animation / unity-state-machines）
+
+unity-animation は標準論として **Transitions + Parameters 駆動**を前提に書かれているが、SisterGame は**AnimationBridge + CrossFade 駆動**を採用済み（メモリ feedback_animation-control-approach.md 参照）。
+そのまま B/C で配置すると Claude が標準論に流される再帰的リスクが残るため、**SisterGame 文脈で全面リライト**して `Architect/09_アニメーション規約.md` に正典化した。
+
+unity-state-machines も同様に、SisterGame の MonoBehaviour ベースのルール駆動 AI（`Architect/05_AIシステム.md`）と整合させるため、汎用 FSM/HFSM/BT パターンを「サブシステム / コンボ / UI 遷移などの局所利用」に限定する形でリライトし `§ 11` として統合した。
+
+## 5. 最終結論（2026-04-25 改）
+
+| 候補 | 結果 | 備考 |
+|---|---|---|
+| anthropic-skills:* | ✅ 既導入（Cowork 経由） | 追加作業不要 |
+| **Nice-Wolf-Studio** | ✅ **16 skills 採用** | **ABCD 4 Tier 配分**。詳細: `.claude/rules/_attribution.md` |
+| TheOne Studio | ❌ 見送り維持 | VContainer 等強制で SoA + GameManager と衝突 |
+| Unity App UI Plugin | ⏸ 保留 | UI 戦略見直し時に再評価 |
+| Dev-GOM/unity-dev-toolkit | ❌ 見送り | 14 items、11 項目重複・実験段階 |
+| wshobson/agents | ❌ 見送り | 184 agents、Unity-developer 1 件のみ価値あるが汎用設計 |
+| rohitg00/awesome-toolkit | ❌ 見送り | Web/SaaS 寄り |
+| ComposioHQ/awesome-claude-skills | ❌ 見送り | 外部 SaaS API 寄り |
+| Domain Translation 5 (Nice-Wolf 内) | ⏸ 継続監視 | game-loop/npc-behavior/ui-patterns/level-design/procedural-gen |
+
+## 6. 取り込み実施記録
+
+- **取り込み Commit SHA**: `b954dccac894c53b5fea96c9a9e9150222791ec2` (2026-03-11)
+- **取り込み日**: 2026-04-25
+- **License 帰属**: `.claude/rules/_attribution.md` で一元管理
+- **影響ファイル**: 取り込み記録 README は `.claude/refs/external/nice-wolf-studio/README.md` を参照
+- **PR 計画**: WAVE_PLAN.md v2 の 1 PR で着地（A+B+C+D 全部一括）

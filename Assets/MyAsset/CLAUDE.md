@@ -31,5 +31,15 @@
 - `[SerializeField] private _fieldName` → 正: `[SerializeField] private fieldName`（アンダースコア不要）
 - `Vector3.Distance(a, b) < range` → 正: `(a - b).sqrMagnitude < range * range`
 - イベント購読が OnEnable、解除が OnDisable に対称にない → リーク
+- `?.` / `??` を Unity Object に → fake-null trap で破棄済みオブジェクト操作（`@../../.claude/rules/unity-conventions.md` ライフサイクル罠）
+- `Awaitable` インスタンスの再 await → プール再利用で undefined behavior（同上 async/await 致命罠）
+- `Physics.RaycastAll` で GC alloc → `RaycastNonAlloc` + 事前確保バッファ（同上 物理クエリ規約）
 
 詳細は `@../../.claude/rules/` 配下を参照。
+
+### 領域別の詳細リファレンス（必要時のみ `@` 参照）
+
+- 数学（座標変換 / quaternion 等）: `@../../.claude/refs/external/nice-wolf-studio/unity-3d-math/SKILL.md`
+- 物理（Rigidbody / raycasting 詳細）: `@../../.claude/refs/external/nice-wolf-studio/unity-physics/SKILL.md`
+- 2D（Sprite / Tilemap / SortingLayer 詳細）: `@../../.claude/refs/external/nice-wolf-studio/unity-2d/SKILL.md`
+- Profiler 操作手順: `@../../.claude/refs/external/nice-wolf-studio/unity-performance/references/profiler-guide.md`
