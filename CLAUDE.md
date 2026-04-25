@@ -135,12 +135,13 @@
 - 統合対象: `~/.claude/projects/<hash>/memory/` 以下の MEMORY.md + topic files
 - 手動実行: `/dream` / 詳細は `~/.claude/skills/dream/SKILL.md`
 
-### Compound Engineering 運用（手動版）
+### Compound Engineering 運用（Wave 5 Phase 24 で自動化）
 - 実装・レビュー・運用で得た**再利用可能な教訓**を `docs/compound/YYYY-MM-DD-<slug>.md` に YAML frontmatter 付きで蓄積
 - フォーマット: `docs/compound/_template.md` を参照
-- **タイミング**: PR マージ直後 or 大きな学びを得た時（コンテキスト新鮮なうちに）
-- **月次 review**: 複数エントリで同じパターンが出現したら `.claude/rules/` や `Architect/` に昇格
-- **自動化は Phase 24 で検討**（現状は手動運用）
+- **自動 draft 抽出**: Stop hook (`stop-compound-extract.sh`) が閾値超え session で `tools/compound-extract.py` を起動し `docs/compound/_drafts/` に候補を出力
+- **手動レビュー**: `/compound-learn` で draft を確認 → 正式エントリに昇格 → draft 削除
+- **昇格判定**: 3 件以上同パターン → `.claude/rules/` や `Architect/` 化（基準: `.claude/rules/compound-promotion.md`）
+- **月次整理**: `python tools/consolidate-memory-extension.py` で重複 / stale / archive 候補を検出
 
 ### Registry-based Handoff（Phase 17 で導入）
 - セッション境界を超える知識転送は `docs/reports/_registry.md` を入口とする
