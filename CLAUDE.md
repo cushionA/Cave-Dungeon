@@ -115,6 +115,11 @@
 - `Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>` を付与
 - ブランチ: main / feature / bugfix / hotfix / refactor
 
+## Wave / Phase 計画
+- Wave / Phase ID（Wave 3、Phase 13、P5-T1 等）の **source of truth は `docs/WAVE_PLAN.md`**
+- 「Wave N 実装」「Phase N に着手」と言われたら、まず `docs/WAVE_PLAN.md` の WBS 表を Read してスコープ確定する
+- `docs/FUTURE_TASKS.md` は派生タスク置き場であり Wave 計画ではない（混同注意）
+
 ## 将来タスク管理
 - PR レビューや実装中に出た「今ではないが後で対応すべきタスク」は `docs/FUTURE_TASKS.md` に記録
 - **タグ体系（2026-04-24 制定）**: 優先度（🔴/🟡/🟢）と仕様確定度（✓/⚠/🔶）の 2 タグを必須付与
