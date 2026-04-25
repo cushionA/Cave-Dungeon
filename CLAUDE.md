@@ -142,6 +142,13 @@
 - **月次 review**: 複数エントリで同じパターンが出現したら `.claude/rules/` や `Architect/` に昇格
 - **自動化は Phase 24 で検討**（現状は手動運用）
 
+### Registry-based Handoff（Phase 17 で導入）
+- セッション境界を超える知識転送は `docs/reports/_registry.md` を入口とする
+- `/handoff-note` でセッション末にスナップショットを `docs/reports/handoffs/` に保存
+- `/resume-handoff` で前回 handoff を読み込み state 復元、`/registry-check` で索引確認
+- Stop hook が handoff 推奨を表示、SessionStart hook が直近 3 件の handoff を提示
+- 詳細: `docs/reports/_registry.md` および各 SKILL.md（`.claude/skills/{handoff-note,resume-handoff,registry-check}/`）
+
 ## セキュリティ既知リスク
 - 詳細: `.claude/rules/security-known.md`（CVE、Comment and Control 攻撃、検出パターン一覧）
 - 機械判定用パターン: `.claude/rules/security-patterns.json`（source of truth）
