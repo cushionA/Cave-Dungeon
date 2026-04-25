@@ -116,6 +116,32 @@ def validate_patterns_schema(patterns: list[dict]) -> None:
         sys.exit(2)
 
 
+def normalize_repo_relative(file_path: str) -> str:
+    """
+    Windows / POSIX absolute path をリポジトリルート相対の posix 形式に正規化する。
+
+    - `C:\\Users\\...\\SisterGame\\Assets\\MyAsset\\Foo.cs` → `Assets/MyAsset/Foo.cs`
+    - `C:/Users/.../SisterGame/Assets/MyAsset/Foo.cs` → `Assets/MyAsset/Foo.cs`
+    - `Assets/MyAsset/Foo.cs`（既に相対）→ そのまま
+    - repo root 外の absolute path → backslash → slash 統一のみ
+
+    PostToolUse hook 経由で Claude Code が渡す `tool_input.file_path` は
+    通常 absolute path のため、scope/exclude glob (`Assets/MyAsset/**/*.cs`) と
+    マッチさせる前にリポジトリルート相対へ落とす必要がある。
+    """
+    if not file_path:
+        return file_path
+    fp = file_path.replace("\\", "/")
+    repo_str = str(REPO_ROOT).replace("\\", "/")
+    fp_lower = fp.lower()
+    repo_lower = repo_str.lower()
+    if fp_lower.startswith(repo_lower + "/"):
+        return fp[len(repo_str) + 1:]
+    if fp_lower == repo_lower:
+        return ""
+    return fp
+
+
 def path_matches_globs(file_path: str, globs: list[str]) -> bool:
     """
     fnmatch でパス glob 判定。いずれかにマッチすれば True。
@@ -276,7 +302,9 @@ def handle_hook_stdin(phase: str, patterns: list[dict]) -> int:
 
     tool_name: str = data.get("tool_name", "")
     tool_input: dict = data.get("tool_input", {})
-    file_path: str = tool_input.get("file_path", "")
+    raw_file_path: str = tool_input.get("file_path", "")
+    # Windows absolute path / POSIX absolute path → repo root 相対へ
+    file_path: str = normalize_repo_relative(raw_file_path)
 
     # .cs ファイル以外はスキップ
     if not file_path.endswith(".cs"):
@@ -340,7 +368,9 @@ def handle_file(file_path_str: str, phase: str, patterns: list[dict]) -> int:
         return 3  # 対象外
 
     text = file_path.read_text(encoding="utf-8", errors="replace")
-    findings = scan_text(text, str(file_path), patterns)
+    # scope/exclude 判定用に absolute path を repo root 相対へ正規化
+    scan_path = normalize_repo_relative(str(file_path.resolve()))
+    findings = scan_text(text, scan_path, patterns)
     result = build_result(findings, phase)
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
