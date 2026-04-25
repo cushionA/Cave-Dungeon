@@ -300,5 +300,42 @@ namespace Game.Core
         {
             return positionY <= groundLevel + threshold;
         }
+
+        /// <summary>
+        /// 斜面法線に沿って水平 velocity を射影する。
+        /// maxSlopeAngleDegrees を超える急勾配では Vector2.zero を返す（登坂不可）。
+        /// </summary>
+        /// <param name="velocity">現在の水平速度ベクトル（Y 成分は無視される）。</param>
+        /// <param name="groundNormal">BoxCast で取得した地面法線。正規化済みを想定。</param>
+        /// <param name="maxSlopeAngleDegrees">許容する最大登坂角度（デフォルト 45°）。</param>
+        public static Vector2 ProjectVelocityOnSlope(Vector2 velocity, Vector2 groundNormal,
+            float maxSlopeAngleDegrees = 45f)
+        {
+            if (velocity.sqrMagnitude < 0.0001f)
+            {
+                return Vector2.zero;
+            }
+
+            float slopeAngle = Vector2.Angle(Vector2.up, groundNormal);
+            if (slopeAngle > maxSlopeAngleDegrees)
+            {
+                return Vector2.zero;
+            }
+
+            // 平坦に近い場合はそのまま返す（射影誤差を避ける）
+            if (slopeAngle < 0.5f)
+            {
+                return velocity;
+            }
+
+            // 法線から斜面タンジェント（rightward 方向）を導出し、移動方向に合わせる
+            Vector2 slopeTangent = new Vector2(groundNormal.y, -groundNormal.x);
+            if (velocity.x < 0f)
+            {
+                slopeTangent = -slopeTangent;
+            }
+
+            return slopeTangent * Mathf.Abs(velocity.x);
+        }
     }
 }
