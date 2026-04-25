@@ -39,6 +39,7 @@
 
 <!-- 新規 handoff note を作成したら、ここに `- [YYYY-MM-DD タイトル](handoffs/YYYY-MM-DD_slug.md)` を最上部追加 -->
 
+- [2026-04-25 Wave 5 (高度パターン) 6 PR 完成](handoffs/2026-04-25_wave5-6phases-complete.md) — in-progress / branch: feature/wave5-handoff-2026-04-25
 - [2026-04-25 Wave 4 完了 / 最終 handoff](handoffs/2026-04-25_wave4-complete-final.md) — resolved / branch: feature/wave4-phase12-adversarial-review
 - [2026-04-25 Wave 3 完了 / Wave 4 着手前](handoffs/2026-04-25_wave3-complete-wave4-start.md) — in-progress / branch: main
 - [2026-04-25 Wave 2 Phase 17 implementation](handoffs/2026-04-25_wave2-phase17-handoff.md) — in-progress / branch: feature/wave2-phase17-handoff
