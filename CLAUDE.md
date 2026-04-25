@@ -36,6 +36,7 @@
 - `/build-pipeline continue` で中断したパイプラインを再開
 - 進行状態: `designs/pipeline-state.json` で追跡（Claude Code の `--resume` とは独立させた自前 state）
 - 各フェーズでユーザー確認を挟む（自動で全て決めない）
+- **SDD 統合**（Wave 5 Phase 23）: feature-spec.md は Spec/Design/Tasks 3 層に対応。system 規模時は `designs/specs/{system}/` に分離可能。詳細: `.claude/rules/sdd-workflow.md`
 - 個別実行も可能:
   1. `/design-game` → 対話型 GDD 作成 + ワールド設定 + ジャンル調査
   2. `/design-systems section-1` → 共通設計 + asmdef 設計 + システム設計書 + 機能分解 + feature-db 登録
@@ -91,6 +92,7 @@
 - テスト名: `[機能名]_[条件]_[期待結果]`
 - テスト完了時は `python tools/feature-db.py update` で記録
 - 詳細: `.claude/rules/test-driven.md`
+- **Mutation Testing**（Wave 5 Phase 14、opt-in）: `MUTATION_TESTING=1` でテスト品質を 80% mutation score 閾値で評価。詳細: `.claude/rules/mutation.md`
 
 ## ログ規約
 - AI 用ログ: `AILogger.Log()` — Editor Build のみ有効、LLM が状態把握に使用
@@ -119,6 +121,7 @@
 - Wave / Phase ID（Wave 3、Phase 13、P5-T1 等）の **source of truth は `docs/WAVE_PLAN.md`**
 - 「Wave N 実装」「Phase N に着手」と言われたら、まず `docs/WAVE_PLAN.md` の WBS 表を Read してスコープ確定する
 - `docs/FUTURE_TASKS.md` は派生タスク置き場であり Wave 計画ではない（混同注意）
+- **Effective Harnesses 二相運用**（Wave 5 Phase 7〜）: `designs/pipeline-state.json` と `designs/claude-progress.txt` がセッション間の状態を持つ。新規セッション開始時に `bash scripts/init.sh` で 1 画面確認可能。詳細: `.claude/rules/effective-harnesses.md`
 
 ## 将来タスク管理
 - PR レビューや実装中に出た「今ではないが後で対応すべきタスク」は `docs/FUTURE_TASKS.md` に記録
@@ -135,12 +138,13 @@
 - 統合対象: `~/.claude/projects/<hash>/memory/` 以下の MEMORY.md + topic files
 - 手動実行: `/dream` / 詳細は `~/.claude/skills/dream/SKILL.md`
 
-### Compound Engineering 運用（手動版）
+### Compound Engineering 運用（Wave 5 Phase 24 で自動化）
 - 実装・レビュー・運用で得た**再利用可能な教訓**を `docs/compound/YYYY-MM-DD-<slug>.md` に YAML frontmatter 付きで蓄積
 - フォーマット: `docs/compound/_template.md` を参照
-- **タイミング**: PR マージ直後 or 大きな学びを得た時（コンテキスト新鮮なうちに）
-- **月次 review**: 複数エントリで同じパターンが出現したら `.claude/rules/` や `Architect/` に昇格
-- **自動化は Phase 24 で検討**（現状は手動運用）
+- **自動 draft 抽出**: Stop hook (`stop-compound-extract.sh`) が閾値超え session で `tools/compound-extract.py` を起動し `docs/compound/_drafts/` に候補を出力
+- **手動レビュー**: `/compound-learn` で draft を確認 → 正式エントリに昇格 → draft 削除
+- **昇格判定**: 3 件以上同パターン → `.claude/rules/` や `Architect/` 化（基準: `.claude/rules/compound-promotion.md`）
+- **月次整理**: `python tools/consolidate-memory-extension.py` で重複 / stale / archive 候補を検出
 
 ### Registry-based Handoff（Phase 17 で導入）
 - セッション境界を超える知識転送は `docs/reports/_registry.md` を入口とする
