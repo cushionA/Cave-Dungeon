@@ -39,11 +39,13 @@
 
 <!-- 新規 handoff note を作成したら、ここに `- [YYYY-MM-DD タイトル](handoffs/YYYY-MM-DD_slug.md)` を最上部追加 -->
 
+- [2026-04-25 Wave 4 完了 / 最終 handoff](handoffs/2026-04-25_wave4-complete-final.md) — resolved / branch: feature/wave4-phase12-adversarial-review
+- [2026-04-25 Wave 3 完了 / Wave 4 着手前](handoffs/2026-04-25_wave3-complete-wave4-start.md) — in-progress / branch: main
 - [2026-04-25 Wave 2 Phase 17 implementation](handoffs/2026-04-25_wave2-phase17-handoff.md) — in-progress / branch: feature/wave2-phase17-handoff
 
 ### analysis/
 
-- *エントリなし*
+- [2026-04-25 ccusage 評価メモ](analysis/2026-04-25_ccusage-evaluation.md) — Phase 15 P15-T4
 
 ### arch/
 
@@ -67,7 +69,9 @@
 
 ### research/
 
-- *エントリなし*
+- [2026-04-25 外部 skill 輸入評価](research/2026-04-25_external-skills-evaluation.md) — Phase 22 P22-T5〜T7、結論: 全候補見送り
+- [2026-04-25 claude-mcp CLI 調査](research/2026-04-25_claude-mcp-cli.md) — Phase 22 P22-T1、結論: UniCli backend で代替済
+- [2026-04-25 Claude Code /cost hook 仕様](research/2026-04-25_claude-code-cost-hook.md) — Phase 15 P15-T2 拡張、transcript_path 解析方式
 
 ### reviews/
 
@@ -75,7 +79,8 @@
 
 ### specs/
 
-- *エントリなし*
+- [2026-04-25 settings.json コスト最適化変更案](specs/2026-04-25_settings-cost-optimization.md) — Phase 15 P15-T5/T6、コスト測定 1 週間後に反映
+- [2026-04-25 TDD-Guard 導入手順書](specs/2026-04-25_tdd-guard-installation.md) — Phase 6、ユーザー導入意思確定済
 
 ### surveys/
 

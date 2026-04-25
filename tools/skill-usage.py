@@ -122,7 +122,17 @@ def classify(commit_count: int, last_modified: str, skill: str, deprecated_keywo
 
 
 def is_deprecated(skills_dir: Path, skill: str) -> bool:
-    """SKILL.md の description / 本文から deprecated キーワードを検出"""
+    """SKILL.md の deprecated 判定 (P5-T2 改善版)
+
+    判定優先度:
+    1. frontmatter `deprecated: true` キー (明示宣言、最優先)
+    2. frontmatter `description:` 行に deprecated キーワード
+    3. 本文の見出し (`# Deprecated` 等) 行頭に deprecated キーワード
+
+    本文中で deprecated パターンを「説明」している skill (writing-skills が
+    judgment 区分として deprecated を語る等) を誤判定しないため、
+    本文の自由記述からは検出しない (旧版の単純全文検索を廃止)。
+    """
     skill_path = skills_dir / skill / "SKILL.md"
     if not skill_path.is_file():
         return False
@@ -130,8 +140,33 @@ def is_deprecated(skills_dir: Path, skill: str) -> bool:
         content = skill_path.read_text(encoding="utf-8")
     except OSError:
         return False
-    keywords = ["廃止", "非推奨", "deprecated", "obsolete"]
-    return any(kw in content for kw in keywords)
+
+    # frontmatter 抽出 (先頭の `---` から次の `---` まで)
+    frontmatter_match = re.match(r"^---\n(.*?)\n---\n", content, re.DOTALL)
+    if frontmatter_match:
+        frontmatter = frontmatter_match.group(1)
+
+        # 優先度 1: 明示的な deprecated: true キー
+        if re.search(r"^deprecated\s*:\s*(true|yes)\s*$", frontmatter, re.MULTILINE | re.IGNORECASE):
+            return True
+
+        # 優先度 2: description 行に deprecated キーワード
+        # (description は短い 1 行説明なので、ここに含まれていれば真の宣言)
+        desc_match = re.search(r"^description\s*:\s*(.+)$", frontmatter, re.MULTILINE | re.IGNORECASE)
+        if desc_match:
+            desc = desc_match.group(1).lower()
+            if any(kw in desc for kw in ("deprecated", "obsolete", "廃止", "非推奨")):
+                return True
+
+    # 優先度 3: 本文の H1/H2 見出し行頭に deprecated キーワード
+    # `# Deprecated` / `## 廃止` 等の節タイトルを検出
+    for line in content.splitlines():
+        if re.match(r"^#{1,3}\s+", line):
+            heading = line.lower()
+            if any(kw in heading for kw in ("deprecated", "obsolete", "廃止", "非推奨")):
+                return True
+
+    return False
 
 
 def collect(repo_root: Path, since: str) -> list[dict]:
