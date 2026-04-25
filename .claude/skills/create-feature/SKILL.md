@@ -197,3 +197,28 @@ python tools/feature-db.py add-asset <id> "$0" <type> "<description>" --priority
 - アセット管理: `.claude/rules/asset-workflow.md`
 - **既存機能の重複作成は絶対に避ける**。拡張で済む場合は拡張する
 - 実装が大きくなりすぎた場合は分割を提案する
+
+## 3 段分割モード（Wave 3 Phase 13 で導入、オプション）
+
+機能複雑度が高く「テストが無意識に実装に fit される循環論法」を避けたい場合、**3 つの subagent を別コンテキストで順次起動**するモードに切り替える。
+
+```
+[1] /agent tdd-test-writer <FeatureName>
+    ↓ Red phase: 失敗テストを書く（実装には触れない）
+[2] /agent tdd-implementer <FeatureName>
+    ↓ Green phase: テスト読み込み + 最小実装でパス
+[3] /agent tdd-refactorer <FeatureName>
+    ↓ Refactor phase: DRY/KISS/YAGNI、テスト維持、commit + feature-db 記録
+```
+
+各 agent は別の context で起動するため、test-writer の意図が implementer に漏れず、refactorer は「Green になっただけで満足」を防止する。
+
+### 使い分け
+
+- **通常**: 本 SKILL.md ステップ 0〜9 の単一エージェントモード（小機能、テスト 5 個以内）
+- **3 段分割**: 中〜大機能、Integration テストが必要、または TDD 規律を強化したい時
+- **TDD-Guard 連動**: `.claude/skills/tdd-guard-setup/SKILL.md` で Phase 6 の hook を有効化すると、3 段分割を物理強制できる（Phase 6 はユーザー承認後に別 PR で導入）
+
+### 詳細
+
+各 agent の責務と禁止事項は `.claude/agents/{tdd-test-writer,tdd-implementer,tdd-refactorer}/AGENT.md` を参照。
