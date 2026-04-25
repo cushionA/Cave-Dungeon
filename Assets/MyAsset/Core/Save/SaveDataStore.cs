@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -324,37 +323,20 @@ namespace Game.Core
         }
 
         /// <summary>
-        /// FullNameから型を解決する。Type.GetTypeで見つからない場合は
-        /// 全アセンブリを検索するフォールバックを行う。
+        /// 許可リスト制で typeName を Type に解決する。<see cref="SaveTypeRegistry"/> に委譲する。
         ///
-        /// ⚠ セキュリティ (R2): 任意の typeName を受け入れて全アセンブリから型を検索するため、
-        ///   save ファイルを偽造されれば任意型のインスタンス化経路が作れる (Newtonsoft.Json
-        ///   TypeNameHandling.All 相当のリスク)。
-        ///   現状はローカルセーブ前提で現実的リスクは低いが、以下の場面では許可リスト制へ移行すること:
-        ///     - クラウドセーブ導入 (他クライアント由来の save を読む)
-        ///     - MOD 導入 (ユーザー提供 dll から型を解決可能にする必要がある場合)
-        ///   実装案: ISaveable 実装型または [Serializable] 付き特定型のみ許可する SaveTypeRegistry。
-        ///   詳細は docs/FUTURE_TASKS.md を参照。
+        /// なぜ許可リスト制か:
+        /// 旧実装は全アセンブリから任意型を Assembly.GetType で検索していたため、save ファイルを
+        /// 偽造されれば任意型のインスタンス化経路ができた (Newtonsoft.Json TypeNameHandling.All 相当)。
+        /// SaveTypeRegistry は ISaveable 実装型 + primitive/BCL 型のみ許可することで危険型の
+        /// インスタンス化を遮断する。未許可型は null を返し、呼び出し側で JToken フォールバックに乗せる。
         /// </summary>
         private static Type ResolveType(string typeName)
         {
-            Type type = Type.GetType(typeName);
-            if (type != null)
+            if (SaveTypeRegistry.TryResolve(typeName, out Type type))
             {
                 return type;
             }
-
-            // FullNameの場合Type.GetTypeが失敗することがあるので全アセンブリから検索
-            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            for (int i = 0; i < assemblies.Length; i++)
-            {
-                type = assemblies[i].GetType(typeName);
-                if (type != null)
-                {
-                    return type;
-                }
-            }
-
             return null;
         }
 
