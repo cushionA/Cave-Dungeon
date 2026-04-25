@@ -116,6 +116,24 @@ graph TD
 - 新規 skill 追加時は**他 skill を呼ばない primitive から始め**、必要に応じて composition skill に昇格させる
 - 既存の composition skill（`build-pipeline` / `consume-future-tasks` / `playtest`）が肥大化した場合は、内部ステップを別 skill に抽出するより、**reference ドキュメント**（`references/*.md`）に切り出す（`playtest/references/test-types/t*.md` の方式を踏襲）
 
+## Two-layer skill definition（Wave 2 Phase 10 で導入）
+
+Overstory の base.md（HOW）/ overlay（WHAT）方式を試験導入している。
+- **base.md**: 状態機械・I/O・エラー処理・TDD サイクルなど**プロジェクト非依存**の手順論理
+- **SKILL.md (overlay)**: SisterGame 固有の呼び先 skill / 参照 rules / artifact / コミット規約のバインディング
+
+詳細設計と判定基準は [`_two-layer-design.md`](_two-layer-design.md) を参照。
+
+### 採用 skill
+
+| スキル | base.md | overlay (SKILL.md) | 試験導入日 |
+|--------|---------|---------------------|------------|
+| `build-pipeline` | [base.md](build-pipeline/base.md) — state machine、phase 遷移、整合ルール | [SKILL.md](build-pipeline/SKILL.md) — `/design-game`/`/design-systems`/`/create-feature` 呼び出し、SisterGame の phase 1-4 詳細 | 2026-04-25 |
+| `create-feature` | [base.md](create-feature/base.md) — TDD サイクル、git workflow、自己レビュー観点 | [SKILL.md](create-feature/SKILL.md) — Unity test 配置、feature-db 連携、FUTURE_TASKS.md 連携、Unity 規約参照 | 2026-04-25 |
+
+残 22 skill への適用判定は `_two-layer-design.md` 末尾の判定表を参照。
+**全適用は不要** — 判定基準（規模、HOW/WHAT 比、再利用見込み）に従って個別判定する。
+
 ## 参考
 
 - [Skill Collaboration Pattern](https://www.mindstudio.ai/blog/claude-code-skill-collaboration-pattern)
