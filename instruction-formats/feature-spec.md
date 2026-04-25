@@ -3,6 +3,21 @@
 このフォーマットを使用して、ゲーム機能の仕様をAIに指示する。
 TDDワークフローと連携し、テストケースとアセット要件を含む。
 
+## SDD 3 層との対応 (Wave 5 Phase 23)
+
+本フォーマットは Spec-Driven Development の 3 層 (Spec / Design / Tasks) を
+**1 ファイルに圧縮した形**。1 機能の規模では別ファイルに分割するコストが
+得られる利益に見合わないため、セクション単位で対応関係を明示する。
+
+| SDD 層 | 本フォーマット内のセクション | 役割 |
+|--------|-----------------------------|------|
+| **Spec**  | `Overview` + `Behavior` + `Test Cases` | 何が成立するか (verifiableRequirements の素材) |
+| **Design** | `Components` + `Required Assets` + `Dependencies` | どう実装するか |
+| **Tasks** | (Test Cases 1 個 = 1 task として暗黙) | 実行単位への分解 |
+
+セクション規模が大きい場合 (1 system に 5+ feature) は `designs/specs/{system}/` 以下に
+spec.md / design.md / tasks.md と分離する。詳細: `.claude/rules/sdd-workflow.md`。
+
 ## フォーマット
 
 ```

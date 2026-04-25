@@ -1,0 +1,43 @@
+{
+  "$schema": "https://raw.githubusercontent.com/stryker-mutator/stryker-net/master/docs/stryker-config.schema.json",
+  "stryker-config": {
+    "_comment": "Wave 5 Phase 14 — MVP 設定。実起動は tools/mutation-runner.sh で Unity csproj 生成後に実施 (将来検証)",
+
+    "mutate": [
+      "Assets/MyAsset/Core/Damage/*.cs",
+      "Assets/MyAsset/Core/Combat/*.cs",
+      "!**/Tests/**",
+      "!**/Editor/**",
+      "!**/*.Designer.cs"
+    ],
+
+    "test-projects": [
+      "Assets/Tests/EditMode"
+    ],
+
+    "thresholds": {
+      "high": 80,
+      "low": 60,
+      "break": 0
+    },
+
+    "reporters": [
+      "json",
+      "html",
+      "progress"
+    ],
+
+    "concurrency": 4,
+
+    "ignore-mutations": [
+      "string"
+    ],
+
+    "_unity_notes": {
+      "csproj_generation": "Unity Editor 起動 → -executeMethod CSProjectGen で固定生成が必要",
+      "target_framework": "Unity 6 は .NET Standard 2.1 相当 / Mono profile",
+      "source_generators": "ODCGenerator は <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles> で展開後にテスト",
+      "skip_monobehaviour": "MonoBehaviour 派生クラスは適用範囲外 (Unity ライフサイクル依存)"
+    }
+  }
+}
