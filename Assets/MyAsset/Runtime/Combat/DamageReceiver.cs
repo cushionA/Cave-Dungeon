@@ -46,6 +46,11 @@ namespace Game.Runtime
         private float _armorRecoveryRate;
         private float _maxArmor;
 
+        // Flinch 解除瞬間に currentArmor=maxArmor へ満タン復帰させるための前フレーム ActState 保持。
+        // Flinch 中は ForceZeroArmorIfInFlinch で強制的に 0 にされるが、解除直後に
+        // HitReactionLogic.ShouldResetArmorOnFlinchExit が true を返した瞬間に復帰させる。
+        private ActState _previousActState;
+
         // 連続ジャストガード窓: 直前にJustGuardが成立した場合、
         // k_ContinuousJustGuardWindow 秒以内の次ガードは即ジャスガ扱いになる。
         private float _continuousJustGuardExpireTime = -1f;
@@ -145,6 +150,7 @@ namespace Game.Runtime
             _actionArmorConsumed = 0f;
             _armorRecoveryTimer = 0f;
             _continuousJustGuardExpireTime = -1f;
+            _previousActState = ActState.Neutral;
         }
 
         /// <summary>
@@ -182,6 +188,37 @@ namespace Game.Runtime
             {
                 UpdateArmorRecovery(dt);
             }
+
+            // Flinch 解除瞬間のアーマー満タンリセット
+            UpdateFlinchExitArmorReset();
+        }
+
+        /// <summary>
+        /// 前フレームと現フレームの ActState を比較し、Flinch から非 Flinch への遷移を検出して
+        /// currentArmor を maxArmor へ満タン復帰させる。Flinch 中は ForceZeroArmorIfInFlinch で
+        /// 0 にされるため、解除直後に再び armor 持ちで戦える状態へ戻す仕様。
+        /// </summary>
+        private void UpdateFlinchExitArmorReset()
+        {
+            if (_character == null)
+            {
+                return;
+            }
+
+            int hash = _character.ObjectHash;
+            if (!GameManager.IsCharacterValid(hash))
+            {
+                return;
+            }
+
+            ActState currentActState = GameManager.Data.GetFlags(hash).ActState;
+            if (HitReactionLogic.ShouldResetArmorOnFlinchExit(_previousActState, currentActState))
+            {
+                ref CharacterVitals vitals = ref GameManager.Data.GetVitals(hash);
+                vitals.currentArmor = vitals.maxArmor;
+            }
+
+            _previousActState = currentActState;
         }
 
         private void UpdateArmorRecovery(float deltaTime)

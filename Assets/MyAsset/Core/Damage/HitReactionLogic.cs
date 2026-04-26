@@ -94,5 +94,16 @@ namespace Game.Core
                 || state == ActState.GuardBroken
                 || state == ActState.Stunned;
         }
+
+        /// <summary>
+        /// Flinch 解除瞬間 (前フレームが Flinch、現フレームが非 Flinch) かを判定する。
+        /// true の場合、呼び出し側はキャラクタの currentArmor を maxArmor へ満タン復帰させる。
+        /// Flinch 中は <see cref="DamageReceiver"/> が currentArmor=0 を強制しているため、
+        /// 解除瞬間に元の最大値へ戻すことで「Flinch=完全無防備、解除後は再び armor 持ち」の挙動になる。
+        /// </summary>
+        public static bool ShouldResetArmorOnFlinchExit(ActState previousState, ActState currentState)
+        {
+            return previousState == ActState.Flinch && currentState != ActState.Flinch;
+        }
     }
 }
