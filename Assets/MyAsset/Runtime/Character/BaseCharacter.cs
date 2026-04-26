@@ -33,7 +33,9 @@ namespace Game.Runtime
         public override int ObjectHash => _objectHash;
         public bool IsGrounded => _isGrounded;
         public GroundInfo GroundInfo => _groundInfo;
-        public override IDamageable Damageable => _damageReceiver;
+        // Unity bool 変換で破棄済み DamageReceiver (fake null) を C# native null に変換してから IDamageable に格納する。
+        // 呼び出し側で `if (receiver == null)` が interface 経由でも正しく動作する (Issue #73)。
+        public override IDamageable Damageable => _damageReceiver != null ? (IDamageable)_damageReceiver : null;
         public DamageReceiver DamageReceiver => _damageReceiver;
         public CharacterAnimationController AnimationController => _animationController;
         public CharacterInfo CharacterInfoRef => _characterInfo;

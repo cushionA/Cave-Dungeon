@@ -103,7 +103,10 @@ namespace Game.Core
             ThrowIfDisposed();
             if (TryGetIndexByHash(hash, out int idx))
             {
-                return GetManagedCharacterByIndex(idx);
+                ManagedCharacter mc = GetManagedCharacterByIndex(idx);
+                // Unity bool 変換で破棄済み MonoBehaviour (fake null) を C# native null に変換する。
+                // 呼び出し側は ?. / == null で安全に分岐できる (Issue #73)。
+                return mc ? mc : null;
             }
             return null;
         }
