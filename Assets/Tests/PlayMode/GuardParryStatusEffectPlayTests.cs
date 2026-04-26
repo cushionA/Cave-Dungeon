@@ -149,11 +149,11 @@ namespace Game.Tests.PlayMode
         }
 
         // =========================================================================
-        // Unparriable 攻撃はガード不能 → NoGuard
+        // 完全防御不能攻撃 (Unguardable + JustGuardImmune) はガード押下中でも NoGuard
         // =========================================================================
 
         [UnityTest]
-        public IEnumerator GuardParryStatus_UnparriableAttack_ReturnsNoGuardEvenIfGuarding()
+        public IEnumerator GuardParryStatus_UnguardablePlusJustGuardImmuneAttack_ReturnsNoGuardEvenIfGuarding()
         {
             CharacterInfo targetInfo = TestSceneHelper.CreateTestCharacterInfo(
                 belong: CharacterBelong.Ally, feature: CharacterFeature.Player, maxHp: 1000);
@@ -163,7 +163,7 @@ namespace Game.Tests.PlayMode
 
             int targetHash = targetObj.GetComponent<BaseCharacter>().ObjectHash;
 
-            // ガード押下中 + JustGuard 窓内 でも Unparriable 属性なら NoGuard になる
+            // ガード押下中 + JustGuard 窓内 でも Unguardable + JustGuardImmune は完全防御不能
             receiver.SetGuarding(true);
 
             DamageData data = new DamageData
@@ -174,14 +174,60 @@ namespace Game.Tests.PlayMode
                 motionValue = 1.0f,
                 attackElement = Element.Slash,
                 knockbackForce = new Vector2(-5f, 0f),
-                feature = AttackFeature.Unparriable,
+                feature = AttackFeature.Unguardable | AttackFeature.JustGuardImmune,
             };
 
             DamageResult result = receiver.ReceiveDamage(data);
 
             Assert.AreEqual(GuardResult.NoGuard, result.guardResult,
-                "Unparriable はガード押下中でも NoGuard");
+                "Unguardable + JustGuardImmune はガード押下中でも NoGuard");
             Assert.Greater(result.totalDamage, 0, "NoGuard なのでダメージが通る");
+
+            Object.Destroy(targetObj);
+        }
+
+        // =========================================================================
+        // Unguardable 単独はジャスガ可能 (タイミング窓内なら JustGuard 成立)
+        // =========================================================================
+
+        [UnityTest]
+        public IEnumerator GuardParryStatus_UnguardableAttackInJustGuardWindow_AllowsJustGuard()
+        {
+            CharacterInfo targetInfo = TestSceneHelper.CreateTestCharacterInfo(
+                belong: CharacterBelong.Ally, feature: CharacterFeature.Player, maxHp: 1000);
+            targetInfo.maxStamina = 1000f;
+            GameObject targetObj = TestSceneHelper.CreateBaseCharacterObject(targetInfo, new Vector3(3, 2, 0));
+            DamageReceiver receiver = targetObj.AddComponent<DamageReceiver>();
+            yield return null;
+
+            int targetHash = targetObj.GetComponent<BaseCharacter>().ObjectHash;
+
+            // GuardStats を Both 方向に設定
+            GameManager.Data.GetCombatStats(targetHash).guardStats = new GuardStats
+            {
+                guardStrength = 9999f,
+                slashCut = 0.5f,
+                guardDirection = GuardDirection.Both,
+            };
+
+            // ガード押下直後 (タイミング窓内) で Unguardable 攻撃を受ける → JustGuard 成立
+            receiver.SetGuarding(true);
+
+            DamageData data = new DamageData
+            {
+                attackerHash = 0,
+                defenderHash = targetHash,
+                damage = new ElementalStatus { slash = 100 },
+                motionValue = 1.0f,
+                attackElement = Element.Slash,
+                knockbackForce = new Vector2(-5f, 0f),
+                feature = AttackFeature.Unguardable,
+            };
+
+            DamageResult result = receiver.ReceiveDamage(data);
+
+            Assert.AreEqual(GuardResult.JustGuard, result.guardResult,
+                "Unguardable 単独は JustGuard タイミング窓内ならジャスガ成立");
 
             Object.Destroy(targetObj);
         }
