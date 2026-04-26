@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using Game.Core;
 using CharacterInfo = Game.Core.CharacterInfo;
@@ -33,7 +34,9 @@ namespace Game.Runtime
         public override int ObjectHash => _objectHash;
         public bool IsGrounded => _isGrounded;
         public GroundInfo GroundInfo => _groundInfo;
-        public override IDamageable Damageable => _damageReceiver;
+        // Unity bool 変換で破棄済み DamageReceiver (fake null) を C# native null に変換してから IDamageable に格納する。
+        // 呼び出し側で `if (receiver == null)` が interface 経由でも正しく動作する (Issue #73)。
+        public override IDamageable Damageable => _damageReceiver != null ? (IDamageable)_damageReceiver : null;
         public DamageReceiver DamageReceiver => _damageReceiver;
         public CharacterAnimationController AnimationController => _animationController;
         public CharacterInfo CharacterInfoRef => _characterInfo;
@@ -268,6 +271,72 @@ namespace Game.Runtime
         }
 
         /// <summary>
+        /// JudgmentLoop からターゲット情報を抜き出して BridgeAIActionToExecutor に橋渡しする共通ラッパー。
+        /// EnemyCharacter / CompanionCharacter で重複していた 8 行ロジックを集約 (Issue #79 M7-Reuse)。
+        /// </summary>
+        /// <param name="loop">AI controller の JudgmentLoop。null の場合は no-op。</param>
+        /// <param name="actionExecutorController">派生クラスが保持する MonoBehaviour 側 Executor。null なら no-op。</param>
+        /// <remarks>
+        /// 呼出側で AI controller (EnemyController / CompanionController 等) の null check を済ませること。
+        /// _actionExecutorController は派生クラス固有の private フィールドのため引数で受け取る (BaseCharacter には保持しない)。
+        /// </remarks>
+        protected static void BridgeAIActionForJudgmentLoop(
+            JudgmentLoop loop, ActionExecutorController actionExecutorController)
+        {
+            if (actionExecutorController == null || loop == null)
+            {
+                return;
+            }
+
+            ActionExecutor aiExecutor = loop.Executor;
+            int targetHash = loop.CurrentTargetHash;
+            BridgeAIActionToExecutor(aiExecutor, actionExecutorController, targetHash);
+        }
+
+        /// <summary>
+        /// AI ターゲット候補リストを CharacterRegistry から構築する共通ヘルパー。
+        /// EnemyCharacter / CompanionCharacter の毎 FixedUpdate 重複を集約 (Issue #79 HIGH-Reuse-1)。
+        /// </summary>
+        /// <param name="candidates">出力先リスト。Clear から実行する。</param>
+        /// <param name="targetAllyFaction">true = 敵 AI が味方陣営を狙う場合 (Player + Allies)、false = 仲間 AI が敵陣営を狙う場合 (Enemies)。</param>
+        protected static void PopulateAITargetCandidates(List<int> candidates, bool targetAllyFaction)
+        {
+            candidates.Clear();
+            if (targetAllyFaction)
+            {
+                // 敵 AI 視点: プレイヤー + 味方
+                // 注: CharacterRegistry.RegisterPlayer は AllyHashes にも playerHash を入れるため、
+                // 既存挙動 (PlayerHash 単独 Add → AllyHashes 全 Add) は player を二重に candidates へ入れる場合がある。
+                // 動作変更を避けるためここでは旧ロジックをそのまま再現する。
+                int playerHash = CharacterRegistry.PlayerHash;
+                if (playerHash != 0)
+                {
+                    candidates.Add(playerHash);
+                }
+                List<int> allies = CharacterRegistry.AllyHashes;
+                if (allies != null)
+                {
+                    for (int i = 0; i < allies.Count; i++)
+                    {
+                        candidates.Add(allies[i]);
+                    }
+                }
+            }
+            else
+            {
+                // 仲間 AI 視点: 敵
+                List<int> enemies = CharacterRegistry.EnemyHashes;
+                if (enemies != null)
+                {
+                    for (int i = 0; i < enemies.Count; i++)
+                    {
+                        candidates.Add(enemies[i]);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// キャラクターの向きを設定する。localScale.xの符号で方向を表現。
         /// </summary>
         protected bool _isFacingRight = true;
@@ -280,7 +349,14 @@ namespace Game.Runtime
             }
             _isFacingRight = facingRight;
             Vector3 scale = transform.localScale;
-            scale.x = _isFacingRight ? Mathf.Abs(scale.x) : -Mathf.Abs(scale.x);
+            // Issue #80 L4: scale.x が 0 だと Mathf.Abs(0)=0 で向き情報が恒久消失する。
+            // プレハブの初期 scale ミスで永続化される事故を防ぐため、0 の場合は 1 をデフォルトとして補う。
+            float magnitude = Mathf.Abs(scale.x);
+            if (magnitude <= 0f)
+            {
+                magnitude = 1f;
+            }
+            scale.x = _isFacingRight ? magnitude : -magnitude;
             transform.localScale = scale;
         }
 

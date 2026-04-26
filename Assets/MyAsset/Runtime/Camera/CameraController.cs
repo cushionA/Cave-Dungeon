@@ -10,6 +10,9 @@ namespace Game.Runtime
     [RequireComponent(typeof(Camera))]
     public class CameraController : MonoBehaviour
     {
+        // 2D サイドスクロールにおける既定のカメラ Z 距離 (Issue #80 L6: マジックナンバー定数化)
+        private const float k_CameraZ = -10f;
+
         [SerializeField] private Transform _target;
         [SerializeField] private float _smoothTime = 0.15f;
         [SerializeField] private float _deadZoneRadius = 0.5f;
@@ -23,7 +26,7 @@ namespace Game.Runtime
             _camera = GetComponent<Camera>();
             _camera.orthographic = true;
             _camera.orthographicSize = 7f;
-            transform.position = new Vector3(0, 0, -10f);
+            transform.position = new Vector3(0, 0, k_CameraZ);
 
             _logic = new CameraFollowLogic(_smoothTime, _deadZoneRadius, _bounds);
         }
@@ -34,7 +37,7 @@ namespace Game.Runtime
             if (_target != null)
             {
                 Vector2 snapped = _logic.SnapToTarget((Vector2)_target.position);
-                transform.position = new Vector3(snapped.x, snapped.y, -10f);
+                transform.position = new Vector3(snapped.x, snapped.y, k_CameraZ);
             }
         }
 
@@ -49,7 +52,7 @@ namespace Game.Runtime
             Vector2 targetPos = (Vector2)_target.position;
 
             Vector2 newPos = _logic.CalculatePosition(currentPos, targetPos, Time.deltaTime);
-            transform.position = new Vector3(newPos.x, newPos.y, -10f);
+            transform.position = new Vector3(newPos.x, newPos.y, k_CameraZ);
         }
     }
 }

@@ -53,13 +53,30 @@ namespace Game.Runtime
             base.Start();
             CharacterRegistry.RegisterAlly(ObjectHash);
 
-            // プレイヤーが指定されていなければタグで探す
+            // プレイヤーが指定されていなければハッシュ経由で取得 (GameManager 中央ハブ原則)。
+            // CharacterRegistry.PlayerHash → GameManager.Data.GetManaged で O(1) アクセスし、
+            // FindGameObjectWithTag (内部で全 GameObject 走査 O(n)) を回避する (Issue #75 HIGH-Hub-1)。
             if (_playerTransform == null)
             {
-                GameObject player = GameObject.FindGameObjectWithTag("Player");
-                if (player != null)
+                int playerHash = CharacterRegistry.PlayerHash;
+                if (playerHash != 0 && GameManager.Data != null)
                 {
-                    _playerTransform = player.transform;
+                    ManagedCharacter playerManaged = GameManager.Data.GetManaged(playerHash);
+                    if (playerManaged != null)
+                    {
+                        _playerTransform = playerManaged.transform;
+                    }
+                }
+
+                // PlayerCharacter.Start が未到達 (Unity の Start 実行順は不定) の場合のみ
+                // Tag 検索を一度だけフォールバックとして使う
+                if (_playerTransform == null)
+                {
+                    GameObject player = GameObject.FindGameObjectWithTag("Player");
+                    if (player != null)
+                    {
+                        _playerTransform = player.transform;
+                    }
                 }
             }
 
@@ -119,21 +136,13 @@ namespace Game.Runtime
             if (_aiController != null)
             {
                 // 候補リスト構築（敵ハッシュ）
-                _candidates.Clear();
-                List<int> enemies = CharacterRegistry.EnemyHashes;
-                if (enemies != null)
-                {
-                    for (int i = 0; i < enemies.Count; i++)
-                    {
-                        _candidates.Add(enemies[i]);
-                    }
-                }
+                PopulateAITargetCandidates(_candidates, targetAllyFaction: false);
 
                 // AI Tick（MP回復 → 追従判定 → モード遷移 → 行動判定）
                 _aiController.Tick(Time.fixedDeltaTime, _candidates, Time.time);
 
                 // AI が選択したアクションを ActionExecutorController に橋渡し
-                BridgeAIAction();
+                BridgeAIActionForJudgmentLoop(_aiController.JudgmentLoop, _actionExecutorController);
 
                 // 追従移動
                 ApplyFollowMovement();
@@ -145,18 +154,6 @@ namespace Game.Runtime
             }
 
             SyncPositionToData();
-        }
-
-        private void BridgeAIAction()
-        {
-            if (_actionExecutorController == null || _aiController == null)
-            {
-                return;
-            }
-
-            ActionExecutor aiExecutor = _aiController.JudgmentLoop?.Executor;
-            int targetHash = _aiController.JudgmentLoop?.CurrentTargetHash ?? 0;
-            BridgeAIActionToExecutor(aiExecutor, _actionExecutorController, targetHash);
         }
 
         /// <summary>
@@ -328,13 +325,13 @@ namespace Game.Runtime
             // GameEvents 購読解除（MpManager/StanceManager とは別リソース）
             _aiController?.Dispose();
 
-            CharacterRegistry.Unregister(ObjectHash);
+            CharacterRegistry.Unregister(ObjectHash, this);
             base.OnDestroy();
         }
 
         public override void OnPoolReturn()
         {
-            CharacterRegistry.Unregister(ObjectHash);
+            CharacterRegistry.Unregister(ObjectHash, this);
             base.OnPoolReturn();
         }
 

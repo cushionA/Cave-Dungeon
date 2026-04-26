@@ -189,5 +189,59 @@ namespace Game.Tests.EditMode
             Assert.IsFalse(File.Exists(GetBackupPath(0)), "初回では .bak は作られないはず");
             Assert.IsFalse(File.Exists(GetTempPath(0)), ".tmp も残っていないはず");
         }
+
+        // ---------- Issue #74: filePath 不在 + .bak 残存シナリオでバックアップが破壊されないこと ----------
+
+        [Test]
+        public void SaveDataStore_WriteToDisk_WhenOnlyBackupExists_PreservesBackupContent()
+        {
+            // Issue #74 再現シナリオ:
+            //   前回 WriteToDisk で「Step 3 失敗 → filePath 不在、.bak に直前世代」
+            //   状態のまま次の WriteToDisk が走った時、旧実装は Step 2 で .bak を delete
+            //   してから File.Move(filePath, .bak) → FileNotFoundException で catch し、
+            //   .bak が完全に喪失していた。File.Replace ベースの実装では .bak は
+            //   破壊されず、新しい filePath が作成され、.bak は前世代のまま残るはず。
+
+            // 1) 通常 2 回保存 → filePath=v2, .bak=v1
+            SaveSlotData v1 = new SaveSlotData(0);
+            v1.entries["val"] = 1;
+            _store.WriteToDisk(v1);
+
+            SaveSlotData v2 = new SaveSlotData(0);
+            v2.entries["val"] = 2;
+            _store.WriteToDisk(v2);
+
+            // 2) Step 3 失敗を模擬: filePath を削除 → .bak (v1) だけが残る
+            File.Delete(GetSlotPath(0));
+            string backupBefore = File.ReadAllText(GetBackupPath(0));
+
+            // 3) この状態で新規保存 (v3) を実行
+            SaveSlotData v3 = new SaveSlotData(0);
+            v3.entries["val"] = 3;
+            _store.WriteToDisk(v3);
+
+            // 4) filePath は v3 で作成されているはず
+            Assert.IsTrue(File.Exists(GetSlotPath(0)), "filePath が再作成されているはず");
+            Assert.IsFalse(File.Exists(GetTempPath(0)), ".tmp は残らないはず");
+
+            // 5) .bak は v1 のまま (= 復旧経路として有効) であるべき。
+            //    旧実装ではここで .bak が delete + Move 失敗で消失していた。
+            Assert.IsTrue(File.Exists(GetBackupPath(0)), ".bak は破壊されず残るべき");
+            string backupAfter = File.ReadAllText(GetBackupPath(0));
+            Assert.AreEqual(backupBefore, backupAfter,
+                "filePath 不在状態での再保存は .bak を破壊してはいけない (Issue #74)");
+
+            // 6) filePath を破損させても .bak (v1) からフォールバックできることを確認
+            File.WriteAllText(GetSlotPath(0), "{ corrupt }");
+            LogAssert.Expect(LogType.Error,
+                new Regex(@"\[SaveDataStore\].+読み込みに失敗しました"));
+            LogAssert.Expect(LogType.Error,
+                new Regex(@"\[SaveDataStore\].+\.bak からフォールバック復元しました"));
+
+            SaveSlotData fallback = _store.ReadFromDisk(0);
+            Assert.IsNotNull(fallback, ".bak から復旧できるはず");
+            Assert.AreEqual(1, System.Convert.ToInt32(fallback.entries["val"]),
+                ".bak は v1 のまま保たれているはず");
+        }
     }
 }

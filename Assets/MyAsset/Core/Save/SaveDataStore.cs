@@ -12,12 +12,13 @@ namespace Game.Core
     /// JSON変換にはNewtonsoft.Jsonを使用。
     /// entries の Dictionary&lt;string, object&gt; を型情報付きで保存・復元する。
     ///
-    /// 書き込み (3 段アトミック方式):
+    /// 書き込み (アトミック方式):
     /// 1. 一時ファイル (filePath + ".tmp") へ本体を書き込み。
-    /// 2. 既存 filePath を backupPath (".bak") へ File.Move で退避 (初回は skip)。
-    /// 3. 一時ファイルを filePath へ File.Move で昇格。
-    /// これにより電源断や異常終了時でも filePath と backupPath のどちらかは
-    /// 整合した状態で残る (filePath 破損時は .bak フォールバックで復旧可)。
+    /// 2. filePath が既存なら File.Replace(temp, filePath, backup) で置換 + 旧ファイルを .bak に退避 (単一 OS 命令)。
+    ///    filePath 不在 (初回 / 復旧後) なら .tmp → filePath を File.Move。.bak は既存があれば手付かずで残す。
+    /// これにより電源断や異常終了時でも filePath と backupPath のどちらかは整合した状態で残る。
+    /// File.Replace は OS が提供するアトミック置換であり、旧実装の「Step 2 で .bak を delete してから Move」
+    /// による .bak 自殺シナリオ (Issue #74) を構造的に排除する。
     ///
     /// 破損対策:
     /// - 保存前に既存ファイルを .bak にコピーして一世代バックアップを残す。
@@ -43,7 +44,8 @@ namespace Game.Core
         }
 
         /// <summary>SaveSlotDataをJSONファイルとしてディスクに書き出す。
-        /// 3 段アトミック書き込み: .tmp に本体を書く → 既存ファイルを .bak へ Move → .tmp を filePath へ Move。
+        /// アトミック書き込み: .tmp に本体を書く → File.Replace で filePath を置換 + 旧ファイルを .bak に退避。
+        /// filePath 不在時 (初回 / 復旧後) は .tmp → filePath を File.Move し、既存 .bak は破壊しない。
         /// 途中で電源断しても filePath または .bak のどちらかは整合した状態で残る。</summary>
         public void WriteToDisk(SaveSlotData slotData)
         {
@@ -82,17 +84,20 @@ namespace Game.Core
             string backupPath = GetBackupFilePath(slotData.slotIndex);
             string tempPath = GetTempFilePath(slotData.slotIndex);
 
-            // 3 段アトミック書き込み:
+            // アトミック書き込み:
             //   1. 一時ファイルに本体を書く (ここで失敗しても filePath と .bak は無傷)
-            //   2. 既存 filePath を .bak へ Move (.bak は前世代の内容で上書きされる / 初回は skip)
-            //   3. 一時ファイルを filePath へ Move (この瞬間に本体が切り替わる)
+            //   2. filePath が既存なら File.Replace(temp, file, bak) で 1 命令置換 + バックアップ
+            //      filePath 不在なら File.Move(temp → file) のみ (既存 .bak は手付かずで残す)
+            //
+            // File.Replace は OS が提供するアトミック置換であり、旧実装の「.bak を delete してから Move」
+            // 中間状態を作らない。これにより前回 commit が中途半端に終わって filePath 不在 + .bak だけ
+            // 残った状態でも、次の保存が .bak を破壊することがない (Issue #74)。
             //
             // 途中で異常終了しても:
-            //   - Step 1 中: filePath/.bak 無傷。.tmp 残骸は次回書き込みで自動的に上書きされる
-            //     (起動時の明示的な残骸検知はしない。読み込み経路は filePath/.bak のみ参照する)
-            //   - Step 2 後 / Step 3 前: filePath 不在、.bak に直前世代あり、.tmp に新バージョンあり
-            //       → 読み込み時に filePath が無ければ .bak フォールバック経路で復旧
-            //   - Step 3 後: 新 filePath + 直前 .bak が揃う (理想形)
+            //   - Step 1 中: filePath/.bak 無傷。.tmp 残骸は次回書き込みで上書きされる
+            //   - Step 2 中の crash:
+            //       - File.Replace 中: OS の atomic 性により filePath は旧 or 新のどちらか整合状態
+            //       - File.Move (filePath 不在経路) 中: filePath が一時的に不在だが .bak は残る → 読み込み時に .bak フォールバック
 
             // Step 1: 一時ファイルへ書き込み (前回残骸があれば上書きされる)
             try
@@ -105,42 +110,26 @@ namespace Game.Core
                 return;
             }
 
-            // Step 2: 既存 filePath を .bak へ退避 (初回書き込み時は filePath が存在しないので skip)
-            if (File.Exists(filePath))
-            {
-                try
-                {
-                    // .NET Standard 2.0 互換: File.Move(src, dest, overwrite: true) が無いため
-                    // 既存 .bak を明示削除してから Move する (前世代 .bak を上書きする意図を維持)
-                    if (File.Exists(backupPath))
-                    {
-                        File.Delete(backupPath);
-                    }
-                    File.Move(filePath, backupPath);
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogError($"[SaveDataStore] 既存ファイルの .bak 退避に失敗しました (slot={slotData.slotIndex}): {ex.Message}");
-                    // filePath は無傷 (前世代データが残る)。.tmp はこのタイミングで明示削除し残骸を残さない
-                    TryDeleteTemp(tempPath);
-                    return;
-                }
-            }
-
-            // Step 3: 一時ファイルを filePath へ昇格
+            // Step 2: アトミック置換
             try
             {
-                // Step 2 後の filePath は不在のはずだが、念のため明示削除で冪等性を確保 (NS2.0 互換)
                 if (File.Exists(filePath))
                 {
-                    File.Delete(filePath);
+                    // 既存ファイルあり: File.Replace で「filePath を tempPath で置換 + 旧 filePath を backupPath へ退避」を 1 命令で行う。
+                    // backupPath が既に存在する場合は File.Replace が暗黙的に上書きする (前世代 .bak は最新の前世代に更新される)。
+                    File.Replace(tempPath, filePath, backupPath);
                 }
-                File.Move(tempPath, filePath);
+                else
+                {
+                    // filePath 不在 (初回 / 前回 commit が中途半端に終わった状態) は File.Replace が使えない (FileNotFoundException)。
+                    // .tmp → filePath を Move するのみで、既存 .bak は手付かずで残す。
+                    // これにより「filePath 不在 + .bak 残存」状態での再保存で .bak が破壊されない (Issue #74)。
+                    File.Move(tempPath, filePath);
+                }
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[SaveDataStore] 一時ファイルの本体昇格に失敗しました (slot={slotData.slotIndex}, temp='{tempPath}', dest='{filePath}'): {ex.Message}");
-                // このとき filePath は存在しない (Step 2 で .bak へ移動済み)。.bak から復旧可能。
+                Debug.LogError($"[SaveDataStore] アトミック置換に失敗しました (slot={slotData.slotIndex}, temp='{tempPath}', dest='{filePath}'): {ex.Message}");
                 TryDeleteTemp(tempPath);
             }
         }

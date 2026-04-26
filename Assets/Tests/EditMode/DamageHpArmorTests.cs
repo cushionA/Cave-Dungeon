@@ -166,6 +166,25 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(20, result.actualDamage, "Damage should not have bonus multiplier");
         }
 
+        [Test]
+        public void HpArmorLogic_ApplyDamage_WhenAlreadyBroken_DoesNotApplyBonusAgain()
+        {
+            // Issue #80 L1: 既に armor=0 のキャラに再ヒットした場合、armorBreakValue > 0 だけで
+            // 連続的に 1.3 倍ボーナスが適用されないことを保証する。
+            int currentHp = 100;
+            float currentArmor = 0f;
+            float actionArmor = 0f;
+            int rawDamage = 20;
+            float armorBreakValue = 5f;
+
+            (int actualDamage, bool isKill, bool armorBroken) result =
+                HpArmorLogic.ApplyDamage(ref currentHp, ref currentArmor, rawDamage, armorBreakValue, ref actionArmor);
+
+            Assert.IsFalse(result.armorBroken, "既にブレイク済みのキャラは再ブレイク扱いにならないはず");
+            Assert.AreEqual(rawDamage, result.actualDamage, "再ブレイクのボーナス 1.3 倍が乗らないはず");
+            Assert.AreEqual(80, currentHp, "ボーナスなしの rawDamage が HP に通るはず");
+        }
+
         // ===== アーマー回復テスト =====
 
         [Test]

@@ -875,7 +875,7 @@ namespace Game.Runtime
             {
                 _collisionController.SetInvincible(false);
             }
-            CharacterRegistry.Unregister(ObjectHash);
+            CharacterRegistry.Unregister(ObjectHash, this);
             base.OnDestroy();
         }
     }

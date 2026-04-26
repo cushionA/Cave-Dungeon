@@ -1,3 +1,4 @@
+using System.Text;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Game.Core;
@@ -51,6 +52,9 @@ namespace Game.Runtime
         private int _cachedMaxMp = -1;
         private int _cachedCompanionHp = -1;
         private int _cachedCompanionMaxHp = -1;
+
+        // "current/max" フォーマット用の再利用 StringBuilder。$ 補間の内部 array alloc を避ける (Issue #79 M6-Perf)。
+        private readonly StringBuilder _vitalsTextBuilder = new StringBuilder(16);
 
         // 前フレームの比率（トゥイーン差分検出用）
         private float _prevHpRatio = -1f;
@@ -156,14 +160,27 @@ namespace Game.Runtime
             {
                 _cachedHp = vitals.currentHp;
                 _cachedMaxHp = vitals.maxHp;
-                _hpText.text = $"{vitals.currentHp}/{vitals.maxHp}";
+                _hpText.text = FormatVitalsText(vitals.currentHp, vitals.maxHp);
             }
             if (_mpText != null && (vitals.currentMp != _cachedMp || vitals.maxMp != _cachedMaxMp))
             {
                 _cachedMp = vitals.currentMp;
                 _cachedMaxMp = vitals.maxMp;
-                _mpText.text = $"{vitals.currentMp}/{vitals.maxMp}";
+                _mpText.text = FormatVitalsText(vitals.currentMp, vitals.maxMp);
             }
+        }
+
+        /// <summary>
+        /// "current/max" 文字列を生成する。再利用 StringBuilder で string 補間の内部 array alloc を避ける。
+        /// 戻り値の string allocation 1 個分は UI Toolkit Label.text への代入で必要 (避けられない最低限のコスト)。
+        /// </summary>
+        private string FormatVitalsText(int current, int max)
+        {
+            _vitalsTextBuilder.Clear();
+            _vitalsTextBuilder.Append(current);
+            _vitalsTextBuilder.Append('/');
+            _vitalsTextBuilder.Append(max);
+            return _vitalsTextBuilder.ToString();
         }
 
         private void UpdateCompanionStatus()
@@ -201,7 +218,7 @@ namespace Game.Runtime
             {
                 _cachedCompanionHp = vitals.currentHp;
                 _cachedCompanionMaxHp = vitals.maxHp;
-                _companionHpText.text = $"{vitals.currentHp}/{vitals.maxHp}";
+                _companionHpText.text = FormatVitalsText(vitals.currentHp, vitals.maxHp);
             }
         }
 

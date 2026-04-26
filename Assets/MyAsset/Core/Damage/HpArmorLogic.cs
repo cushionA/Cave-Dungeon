@@ -34,6 +34,11 @@ namespace Game.Core
             bool armorBroken = false;
             int actualDamage = rawDamage;
 
+            // Issue #80 L1: 「今回ブレイクしたか」を判定するため事前状態を記録する。
+            // 既に armor=0 のキャラに再ヒットした場合、armorBreakValue > 0 だけで誤って 1.3 倍ボーナスが
+            // 連続適用されるのを防ぐ (旧実装は処理後 nowZero のみ見ていた)。
+            bool wasBrokenBefore = currentArmor <= 0f && actionArmor <= 0f;
+
             // Step 1: Apply armor break (action armor first, then base armor)
             if (armorBreakValue > 0f)
             {
@@ -53,8 +58,10 @@ namespace Game.Core
                     currentArmor -= remaining;
                 }
 
-                // Step 2: Check if all armor is broken
-                if (currentArmor <= 0f && actionArmor <= 0f)
+                // Step 2: 「今回のヒットでブレイクした瞬間」のみボーナスを適用する。
+                // 既に破壊済み (wasBrokenBefore) のキャラには再ボーナスを乗せない。
+                bool nowZero = currentArmor <= 0f && actionArmor <= 0f;
+                if (nowZero && !wasBrokenBefore)
                 {
                     armorBroken = true;
                     actualDamage = Mathf.FloorToInt(rawDamage * k_ArmorBreakBonusMult);

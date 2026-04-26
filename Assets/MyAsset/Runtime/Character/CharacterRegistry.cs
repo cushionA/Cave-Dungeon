@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Game.Core;
 
 namespace Game.Runtime
 {
@@ -81,6 +82,29 @@ namespace Game.Runtime
                 _nameToHash.Remove(name);
                 _hashToName.Remove(hash);
             }
+        }
+
+        /// <summary>
+        /// 自分自身の登録のみ削除する安全な Unregister。
+        /// プール返却→新スポーンで同 hash が再利用された後、古い参照の遅延 OnDestroy が
+        /// 「生きている新キャラの登録」を誤って消すのを防ぐ (Issue #78 M1)。
+        ///
+        /// SoA コンテナ側の最新登録 (GameManager.Data.GetManaged) が expectedSelf でない場合、
+        /// 既に別キャラが同 hash で再登録されたとみなし無視する。
+        /// </summary>
+        public static void Unregister(int hash, ManagedCharacter expectedSelf)
+        {
+            if (GameManager.Data != null)
+            {
+                ManagedCharacter currentlyRegistered = GameManager.Data.GetManaged(hash);
+                // currentlyRegistered != expectedSelf の場合: 既に別キャラが同 hash で再登録されている
+                // (currentlyRegistered == null の場合は SoA から既に消えているため Unregister 自体は安全)
+                if (currentlyRegistered != null && currentlyRegistered != expectedSelf)
+                {
+                    return;
+                }
+            }
+            Unregister(hash);
         }
 
         public static void Clear()

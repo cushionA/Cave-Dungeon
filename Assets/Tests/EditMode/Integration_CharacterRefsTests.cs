@@ -141,6 +141,38 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
+        public void SoACharaDataDic_GetManaged_WhenManagedDestroyed_ReturnsTrueNullNotFakeNull()
+        {
+            // Issue #73: 破棄済み MonoBehaviour は Unity の == オーバーライドでは null だが
+            // C# native の `?.` / `is null` / `??` はバイパスする (fake-null trap)。
+            // GetManaged は Unity bool 変換を内包し、破棄済み ManagedCharacter を C# native null に変換して返すべき。
+            SoACharaDataDic dic = new SoACharaDataDic(4);
+            GameObject go = new GameObject("managed_destroy");
+            DummyManagedCharacter mc = go.AddComponent<DummyManagedCharacter>();
+            mc.SetHashForTest(321);
+
+            dic.Add(321, default, default, default, default,
+                default, default, default, mc);
+
+            // 登録は残したまま GameObject だけ破棄 → fake-null 状態を作る
+            Object.DestroyImmediate(go);
+
+            ManagedCharacter stored = dic.GetManaged(321);
+            // C# native null チェック (`is null`) を通すことで fake-null trap を露呈させる。
+            // 旧実装ではここで stored が fake-null (Unity == null だが C# != null) のため
+            // Assert.IsNull が失敗していた。
+            Assert.IsTrue(stored is null,
+                "破棄済み ManagedCharacter は C# native null として返るべき (fake null は禁止)");
+
+            // 呼び出し側パターン: `?.Damageable` が安全に短絡することを確認
+            IDamageable dmg = dic.GetManaged(321)?.Damageable;
+            Assert.IsTrue(dmg is null,
+                "破棄済み managed への `?.Damageable` は短絡して null を返すべき");
+
+            dic.Dispose();
+        }
+
+        [Test]
         public void SoACharaDataDic_ComputedApis_ThrowObjectDisposedExceptionAfterDispose()
         {
             SoACharaDataDic dic = new SoACharaDataDic(4);

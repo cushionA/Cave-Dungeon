@@ -78,6 +78,10 @@ namespace Game.Core
         {
             if (_currentMapId == null)
             {
+                // Issue #78 M4: 初期化前 / SwitchMap 呼び忘れの silent skip を警告化。
+                // 「宝箱開封フラグが立たないのに次回起動でも開いている」というデバッグ困難な事象を防ぐ。
+                UnityEngine.Debug.LogWarning(
+                    $"[FlagManager] SetLocalFlag('{flagId}', {value}) を呼ばれたが _currentMapId が null のため保存されません。SwitchMap を先に呼んでください。");
                 return;
             }
 
