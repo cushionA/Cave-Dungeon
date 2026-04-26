@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using Game.Core;
 using CharacterInfo = Game.Core.CharacterInfo;
@@ -266,6 +267,65 @@ namespace Game.Runtime
             if (result)
             {
                 current.ForceComplete();
+            }
+        }
+
+        /// <summary>
+        /// JudgmentLoop からターゲット情報を抜き出して BridgeAIActionToExecutor に橋渡しする共通ラッパー。
+        /// EnemyCharacter / CompanionCharacter で重複していた 8 行ロジックを集約 (Issue #79 M7-Reuse)。
+        /// </summary>
+        protected void BridgeAIActionForJudgmentLoop(JudgmentLoop loop)
+        {
+            if (_actionExecutorController == null || loop == null)
+            {
+                return;
+            }
+
+            ActionExecutor aiExecutor = loop.Executor;
+            int targetHash = loop.CurrentTargetHash;
+            BridgeAIActionToExecutor(aiExecutor, _actionExecutorController, targetHash);
+        }
+
+        /// <summary>
+        /// AI ターゲット候補リストを CharacterRegistry から構築する共通ヘルパー。
+        /// EnemyCharacter / CompanionCharacter の毎 FixedUpdate 重複を集約 (Issue #79 HIGH-Reuse-1)。
+        /// </summary>
+        /// <param name="candidates">出力先リスト。Clear から実行する。</param>
+        /// <param name="targetAllyFaction">true = 敵 AI が味方陣営を狙う場合 (Player + Allies)、false = 仲間 AI が敵陣営を狙う場合 (Enemies)。</param>
+        protected static void PopulateAITargetCandidates(List<int> candidates, bool targetAllyFaction)
+        {
+            candidates.Clear();
+            if (targetAllyFaction)
+            {
+                // 敵 AI 視点: プレイヤー + 味方
+                // 注: CharacterRegistry.RegisterPlayer は AllyHashes にも playerHash を入れるため、
+                // 既存挙動 (PlayerHash 単独 Add → AllyHashes 全 Add) は player を二重に candidates へ入れる場合がある。
+                // 動作変更を避けるためここでは旧ロジックをそのまま再現する。
+                int playerHash = CharacterRegistry.PlayerHash;
+                if (playerHash != 0)
+                {
+                    candidates.Add(playerHash);
+                }
+                List<int> allies = CharacterRegistry.AllyHashes;
+                if (allies != null)
+                {
+                    for (int i = 0; i < allies.Count; i++)
+                    {
+                        candidates.Add(allies[i]);
+                    }
+                }
+            }
+            else
+            {
+                // 仲間 AI 視点: 敵
+                List<int> enemies = CharacterRegistry.EnemyHashes;
+                if (enemies != null)
+                {
+                    for (int i = 0; i < enemies.Count; i++)
+                    {
+                        candidates.Add(enemies[i]);
+                    }
+                }
             }
         }
 

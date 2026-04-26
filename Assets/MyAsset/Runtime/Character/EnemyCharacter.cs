@@ -76,25 +76,12 @@ namespace Game.Runtime
             if (_enemyController != null)
             {
                 // 候補リスト構築（プレイヤー + 味方）
-                _candidates.Clear();
-                int playerHash = CharacterRegistry.PlayerHash;
-                if (playerHash != 0)
-                {
-                    _candidates.Add(playerHash);
-                }
-                List<int> allies = CharacterRegistry.AllyHashes;
-                if (allies != null)
-                {
-                    for (int i = 0; i < allies.Count; i++)
-                    {
-                        _candidates.Add(allies[i]);
-                    }
-                }
+                PopulateAITargetCandidates(_candidates, targetAllyFaction: true);
 
                 _enemyController.Tick(Time.fixedDeltaTime, _candidates, Time.time);
 
                 // AI が選択したアクションを ActionExecutorController に橋渡し
-                BridgeAIAction();
+                BridgeAIActionForJudgmentLoop(_enemyController.JudgmentLoop);
 
                 // 簡易移動: ターゲットへ追尾（Sustained/MoveアクションはAI側で別途処理）
                 UpdateMovement();
@@ -104,18 +91,6 @@ namespace Game.Runtime
             UpdateFacingToTarget();
 
             SyncPositionToData();
-        }
-
-        private void BridgeAIAction()
-        {
-            if (_actionExecutorController == null || _enemyController == null)
-            {
-                return;
-            }
-
-            ActionExecutor aiExecutor = _enemyController.JudgmentLoop?.Executor;
-            int targetHash = _enemyController.JudgmentLoop?.CurrentTargetHash ?? 0;
-            BridgeAIActionToExecutor(aiExecutor, _actionExecutorController, targetHash);
         }
 
         /// <summary>
