@@ -9,7 +9,8 @@
         "LitMotion",
         "LitMotion.Extensions",
         "com.rainyrizzle.anyportrait",
-        "Micosmo.SensorToolkit"
+        "Micosmo.SensorToolkit",
+        "ProCamera2D.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
