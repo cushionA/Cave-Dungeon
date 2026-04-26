@@ -172,7 +172,7 @@ namespace Game.Runtime
                 _enemyController.Dispose();
                 _enemyController = null;
             }
-            CharacterRegistry.Unregister(ObjectHash);
+            CharacterRegistry.Unregister(ObjectHash, this);
             base.OnDestroy();
         }
 
@@ -182,7 +182,7 @@ namespace Game.Runtime
             {
                 _enemyController.Deactivate();
             }
-            CharacterRegistry.Unregister(ObjectHash);
+            CharacterRegistry.Unregister(ObjectHash, this);
             base.OnPoolReturn();
         }
 

@@ -325,13 +325,13 @@ namespace Game.Runtime
             // GameEvents 購読解除（MpManager/StanceManager とは別リソース）
             _aiController?.Dispose();
 
-            CharacterRegistry.Unregister(ObjectHash);
+            CharacterRegistry.Unregister(ObjectHash, this);
             base.OnDestroy();
         }
 
         public override void OnPoolReturn()
         {
-            CharacterRegistry.Unregister(ObjectHash);
+            CharacterRegistry.Unregister(ObjectHash, this);
             base.OnPoolReturn();
         }
 

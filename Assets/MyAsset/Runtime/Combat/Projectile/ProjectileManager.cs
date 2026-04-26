@@ -87,6 +87,15 @@ namespace Game.Runtime
         public ProjectileController SpawnProjectile(int casterHash, MagicDefinition magic,
             Vector2 position, Vector2 direction, int targetHash = 0)
         {
+            // Issue #78 M5: magic / bulletProfile null だと bulletProfile.spawnOffset で NRE。
+            // Coroutine 経由で握り潰されると「弾が出ない」原因不明バグになるため、入口で防御。
+            if (magic == null || magic.bulletProfile == null)
+            {
+                Debug.LogWarning(
+                    $"[ProjectileManager] SpawnProjectile に null の magic/bulletProfile が渡されました (casterHash={casterHash})");
+                return null;
+            }
+
             // spawnOffset をローカル座標(forward/up)で解釈してワールド座標にオフセット
             Vector2 spawnPosition = ApplyLocalSpawnOffset(position, direction, magic.bulletProfile.spawnOffset);
 

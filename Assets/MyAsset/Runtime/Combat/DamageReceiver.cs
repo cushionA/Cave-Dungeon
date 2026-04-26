@@ -57,6 +57,13 @@ namespace Game.Runtime
         // k_ContinuousJustGuardWindow 秒以内の次ガードは即ジャスガ扱いになる。
         private float _continuousJustGuardExpireTime = -1f;
 
+        // 多段ヒット保護: 1 フレーム内で行動アーマーが削り切られた瞬間の検出後、
+        // 同フレーム後続のヒットを skip する (Issue #78 M2)。
+        // ActState=Flinch 書き込みは「次フレーム」判定にしか効かないため、同フレーム 2 発目が
+        // ForceZeroArmorIfInFlinch 経由で raw damage 直撃するのを防ぐ。
+        // Update() 冒頭で false に reset し、次フレームは通常の Flinch ロジックで処理する。
+        private bool _armorBrokenThisFrame;
+
         // 状況ボーナス設定（外部から注入可能）
         private SituationalBonusConfig _bonusConfig = SituationalBonusConfig.Default;
 
@@ -173,6 +180,11 @@ namespace Game.Runtime
 
         private void Update()
         {
+            // フレーム境界で armor break ガードフラグをリセット (Issue #78 M2)。
+            // Unity のライフサイクル順 (Physics → Update → LateUpdate) により、
+            // 次フレームの OnTriggerEnter2D 経由 ReceiveDamage より先に false に戻る。
+            _armorBrokenThisFrame = false;
+
             float dt = Time.deltaTime;
 
             if (_isGuarding)
@@ -255,6 +267,15 @@ namespace Game.Runtime
             if (!GameManager.IsCharacterValid(hash))
             {
                 return default;
+            }
+
+            // Issue #78 M2: 同フレーム内で行動アーマーを既に削り切っていれば、後続ヒットを skip する。
+            // ActState=Flinch 書き込みは次フレームから効くため、同フレーム 2 発目を許すと
+            // ForceZeroArmorIfInFlinch 経由で raw damage 直撃する隙ができる。
+            // フラグは Update() 冒頭で reset されるため、次フレーム以降は通常 Flinch ロジックに戻る。
+            if (_armorBrokenThisFrame)
+            {
+                return CreateInvincibleResult();
             }
 
             // Step 0: 行動特殊効果を評価
@@ -349,6 +370,13 @@ namespace Game.Runtime
             if (shouldInterruptForArmorBreak && !isKill && _actionExecutorController != null)
             {
                 _actionExecutorController.CancelAction();
+            }
+
+            // Issue #78 M2: armor 削り切ったヒットなら同フレーム後続を skip するためフラグを立てる。
+            // 次フレーム以降は ActState=Flinch ロジックで処理されるため、Update() で false に戻す。
+            if (shouldInterruptForArmorBreak && !isKill)
+            {
+                _armorBrokenThisFrame = true;
             }
 
             // Step 6.5: 状態異常蓄積

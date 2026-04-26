@@ -23,6 +23,23 @@ namespace Game.Core
             return ref GetCharacterVitalsByIndex(idx);
         }
 
+        /// <summary>
+        /// Vitals を値コピーで取得する。hash 不在時は false を返し例外を投げない (Issue #78 M3)。
+        /// OnTriggerEnter2D など Unity が例外を握り潰すコンテキストで攻撃判定全体を喪失するのを防ぐ。
+        /// 書き込みが必要な場合は ref ベースの GetVitals を使うこと。
+        /// </summary>
+        public bool TryGetVitals(int hash, out CharacterVitals vitals)
+        {
+            ThrowIfDisposed();
+            if (!TryGetIndexByHash(hash, out int idx))
+            {
+                vitals = default;
+                return false;
+            }
+            vitals = GetCharacterVitalsByIndex(idx);
+            return true;
+        }
+
         public ref CombatStats GetCombatStats(int hash)
         {
             ThrowIfDisposed();
