@@ -90,7 +90,7 @@ namespace Game.Core
         None           = 0,
         Light          = 1 << 0,
         Heavy          = 1 << 1,
-        Unparriable    = 1 << 2,
+        Unguardable    = 1 << 2,  // 通常ガード不成立、ただしジャスガは可能 (JustGuardImmune と組合せで完全防御不能)
         SelfRecover    = 1 << 3,
         HitRecover     = 1 << 4,
         SuperArmor     = 1 << 5,

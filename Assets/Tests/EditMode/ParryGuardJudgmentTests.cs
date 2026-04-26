@@ -42,12 +42,56 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
-        public void GuardJudgmentLogic_Judge_Unparriable_ReturnsNoGuard()
+        public void GuardJudgmentLogic_Judge_Unguardable_OutsideJustGuardWindow_ReturnsNoGuard()
         {
+            // Unguardable 単独: 通常ガード不可、ジャスガは可能
+            // タイミング窓外なので NoGuard
+            GuardResult result = Judge(
+                isGuarding: true, guardTimeSinceStart: 0.5f,
+                feature: AttackFeature.Unguardable);
+            Assert.AreEqual(GuardResult.NoGuard, result);
+        }
+
+        [Test]
+        public void GuardJudgmentLogic_Judge_Unguardable_WithinJustGuardWindow_ReturnsJustGuard()
+        {
+            // Unguardable 単独: ジャスガは可能。タイミング窓内なら JustGuard
             GuardResult result = Judge(
                 isGuarding: true, guardTimeSinceStart: 0.05f,
-                feature: AttackFeature.Unparriable);
+                feature: AttackFeature.Unguardable);
+            Assert.AreEqual(GuardResult.JustGuard, result);
+        }
+
+        [Test]
+        public void GuardJudgmentLogic_Judge_UnguardablePlusJustGuardImmune_WithinWindow_ReturnsNoGuard()
+        {
+            // Unguardable + JustGuardImmune の組合せ = 完全防御不能 (旧 Unparriable 相当)
+            // タイミング窓内でも NoGuard
+            GuardResult result = Judge(
+                isGuarding: true, guardTimeSinceStart: 0.05f,
+                feature: AttackFeature.Unguardable | AttackFeature.JustGuardImmune);
             Assert.AreEqual(GuardResult.NoGuard, result);
+        }
+
+        [Test]
+        public void GuardJudgmentLogic_Judge_UnguardablePlusJustGuardImmune_OutsideWindow_ReturnsNoGuard()
+        {
+            // Unguardable + JustGuardImmune の組合せ: タイミング外でも NoGuard
+            GuardResult result = Judge(
+                isGuarding: true, guardTimeSinceStart: 0.5f,
+                feature: AttackFeature.Unguardable | AttackFeature.JustGuardImmune);
+            Assert.AreEqual(GuardResult.NoGuard, result);
+        }
+
+        [Test]
+        public void GuardJudgmentLogic_Judge_Unguardable_InContinuousJustGuardWindow_ReturnsJustGuard()
+        {
+            // Unguardable: 連続ジャスガ窓中ならジャスガ成立
+            GuardResult result = Judge(
+                isGuarding: true, guardTimeSinceStart: 0.5f,
+                inContinuousJustGuardWindow: true,
+                feature: AttackFeature.Unguardable);
+            Assert.AreEqual(GuardResult.JustGuard, result);
         }
 
         [Test]

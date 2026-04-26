@@ -25,17 +25,22 @@ namespace Game.Core
         /// ガード結果を判定する。
         /// 判定優先順:
         ///   1. isGuarding=false => NoGuard
-        ///   2. Unparriable => NoGuard
-        ///   3. ガード方向不一致 => NoGuard
-        ///   4. (guardTimeSinceStart &lt;= JustGuardWindow OR 連続JG窓中) &amp;&amp; !JustGuardImmune => JustGuard
+        ///   2. ガード方向不一致 => NoGuard
+        ///   3. ジャスガタイミング窓内 (guardTimeSinceStart &lt;= JustGuardWindow OR 連続JG窓中):
+        ///      - !JustGuardImmune => JustGuard (Unguardable でもジャスガは可能)
+        ///      - JustGuardImmune:
+        ///        - Unguardable => NoGuard (両方立つと完全防御不能)
+        ///        - else => Guarded (通常ガード成立、スタミナ判定へ)
+        ///   4. ジャスガタイミング窓外:
+        ///      - Unguardable => NoGuard (通常ガード不成立)
+        ///      - else => Guarded (スタミナ判定へ)
         ///   5. スタミナ削り(=max(0, armorBreakValue - guardStrength)) &gt; currentStamina
         ///      &amp;&amp; !GuardAttack効果 => GuardBreak
-        ///   6. else => Guarded
         /// </summary>
         /// <param name="isGuarding">ガードボタン押下中か</param>
         /// <param name="guardTimeSinceStart">ガード開始からの経過秒数</param>
         /// <param name="inContinuousJustGuardWindow">直前のJustGuardから k_ContinuousJustGuardWindow 秒以内か</param>
-        /// <param name="attackFeature">攻撃フィーチャー(Unparriable/JustGuardImmune)</param>
+        /// <param name="attackFeature">攻撃フィーチャー(Unguardable/JustGuardImmune)</param>
         /// <param name="guardDirection">ガード方向(Front/Back/Both)</param>
         /// <param name="isAttackFromFront">攻撃が前方から来ているか</param>
         /// <param name="hasGuardAttackEffect">GuardAttack行動特殊効果が有効か(スタミナ枯渇でもブレイクしない)</param>
@@ -59,24 +64,27 @@ namespace Game.Core
                 return GuardResult.NoGuard;
             }
 
-            if ((attackFeature & AttackFeature.Unparriable) != 0)
-            {
-                return GuardResult.NoGuard;
-            }
-
             // ガード方向チェック
             if (!IsGuardDirectionValid(guardDirection, isAttackFromFront))
             {
                 return GuardResult.NoGuard;
             }
 
+            bool isUnguardable = (attackFeature & AttackFeature.Unguardable) != 0;
             bool isJustGuardImmune = (attackFeature & AttackFeature.JustGuardImmune) != 0;
+            bool inJustGuardWindow = guardTimeSinceStart <= k_JustGuardWindow
+                || inContinuousJustGuardWindow;
 
-            // JustGuard判定: 通常タイミング窓内 OR 連続ジャスガ窓中
-            if (!isJustGuardImmune &&
-                (guardTimeSinceStart <= k_JustGuardWindow || inContinuousJustGuardWindow))
+            // ジャスガタイミング窓内: ジャスガが成立できるなら最優先
+            if (inJustGuardWindow && !isJustGuardImmune)
             {
                 return GuardResult.JustGuard;
+            }
+
+            // ジャスガ不成立 (タイミング外 or JustGuardImmune): 通常ガードを試みる
+            if (isUnguardable)
+            {
+                return GuardResult.NoGuard;
             }
 
             // スタミナ削り判定: 削り量がスタミナ残量を超える場合、GuardAttack効果が無ければブレイク

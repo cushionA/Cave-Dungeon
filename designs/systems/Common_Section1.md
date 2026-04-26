@@ -123,7 +123,7 @@ public enum AttackFeature : ushort
     None             = 0,
     Light            = 1 << 0,   // 弱攻撃
     Heavy            = 1 << 1,   // 強攻撃
-    Unparriable      = 1 << 2,   // パリィ不可
+    Unguardable      = 1 << 2,   // 通常ガード不成立 (ジャスガは可能、JustGuardImmune と組合せで完全防御不能)
     SelfRecover      = 1 << 3,   // 自己回復（HP吸収等）
     HitRecover       = 1 << 4,   // ヒット時回復
     SuperArmor       = 1 << 5,   // スーパーアーマー（怯まない）
@@ -132,7 +132,7 @@ public enum AttackFeature : ushort
     PositiveEffect   = 1 << 8,   // バフ効果付き
     NegativeEffect   = 1 << 9,   // デバフ効果付き
     BackAttack       = 1 << 10,  // 背面攻撃
-    JustGuardImmune  = 1 << 11,  // ジャストガード不可
+    JustGuardImmune  = 1 << 11,  // ジャストガード不成立 (通常ガードは成立)
 }
 ```
 
@@ -306,7 +306,6 @@ public enum GuardResult : byte
     Guarded,        // 通常ガード（カット率適用）
     JustGuard,      // ジャストガード（弾き+反撃可能）
     GuardBreak,     // ガードブレイク（ガード崩壊）
-    EnhancedGuard,  // 強化ガード（ガード性能1.3倍）
 }
 ```
 
