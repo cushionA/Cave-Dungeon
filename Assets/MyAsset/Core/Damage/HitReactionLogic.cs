@@ -96,14 +96,33 @@ namespace Game.Core
         }
 
         /// <summary>
-        /// Flinch 解除瞬間 (前フレームが Flinch、現フレームが非 Flinch) かを判定する。
-        /// true の場合、呼び出し側はキャラクタの currentArmor を maxArmor へ満タン復帰させる。
-        /// Flinch 中は <see cref="DamageReceiver"/> が currentArmor=0 を強制しているため、
-        /// 解除瞬間に元の最大値へ戻すことで「Flinch=完全無防備、解除後は再び armor 持ち」の挙動になる。
+        /// アーマーリセット契約となる「無防備スタン状態」かどうか。
+        /// Flinch / GuardBroken / Stunned / Knockbacked いずれも、
+        /// 解除時に currentArmor を maxArmor へ満タン復帰させる対象。
+        /// 設計意図: アーマーが削り切られた結果としての硬直状態は、復帰時に再び armor 持ちに戻す。
+        ///   - Flinch: <see cref="DamageReceiver"/> が currentArmor=0 を強制
+        ///   - GuardBroken: スタミナ削り切りでガード崩壊した直後 (再 armor で粘れるよう復帰)
+        ///   - Stunned: 状態異常蓄積による気絶 (復帰時に防御能力を取り戻す)
+        ///   - Knockbacked: 吹き飛ばしはアーマー削り切りが前提条件のため、armor=0 で入る
         /// </summary>
-        public static bool ShouldResetArmorOnFlinchExit(ActState previousState, ActState currentState)
+        public static bool IsArmorResetStun(ActState state)
         {
-            return previousState == ActState.Flinch && currentState != ActState.Flinch;
+            return state == ActState.Flinch
+                || state == ActState.GuardBroken
+                || state == ActState.Stunned
+                || state == ActState.Knockbacked;
+        }
+
+        /// <summary>
+        /// スタン解除瞬間 (前フレームが Flinch/GuardBroken/Stunned/Knockbacked、
+        /// 現フレームが非スタン) かを判定する。
+        /// true の場合、呼び出し側はキャラクタの currentArmor を maxArmor へ満タン復帰させる。
+        /// スタン同士の遷移 (例: Flinch → Knockbacked) はリセット対象外: 連続して無防備状態のため、
+        /// 抜けるまで armor=0 維持となる。
+        /// </summary>
+        public static bool ShouldResetArmorOnStunExit(ActState previousState, ActState currentState)
+        {
+            return IsArmorResetStun(previousState) && !IsArmorResetStun(currentState);
         }
     }
 }

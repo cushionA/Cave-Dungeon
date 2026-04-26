@@ -46,9 +46,11 @@ namespace Game.Runtime
         private float _armorRecoveryRate;
         private float _maxArmor;
 
-        // Flinch 解除瞬間に currentArmor=maxArmor へ満タン復帰させるための前フレーム ActState 保持。
-        // Flinch 中は ForceZeroArmorIfInFlinch で強制的に 0 にされるが、解除直後に
-        // HitReactionLogic.ShouldResetArmorOnFlinchExit が true を返した瞬間に復帰させる。
+        // スタン解除瞬間に currentArmor=maxArmor へ満タン復帰させるための前フレーム ActState 保持。
+        // 対象スタン: Flinch / GuardBroken / Stunned / Knockbacked (HitReactionLogic.IsArmorResetStun)。
+        // Flinch 中は ForceZeroArmorIfInFlinch で 0 強制、Knockbacked は armor 削り切りが前提条件、
+        // GuardBroken はスタミナ削り切り後の無防備状態、Stunned は状態異常蓄積の気絶状態。
+        // いずれも HitReactionLogic.ShouldResetArmorOnStunExit が true を返した瞬間に復帰させる。
         private ActState _previousActState;
 
         // 連続ジャストガード窓: 直前にJustGuardが成立した場合、
@@ -189,16 +191,18 @@ namespace Game.Runtime
                 UpdateArmorRecovery(dt);
             }
 
-            // Flinch 解除瞬間のアーマー満タンリセット
-            UpdateFlinchExitArmorReset();
+            // スタン解除瞬間のアーマー満タンリセット (Flinch/GuardBroken/Stunned/Knockbacked)
+            UpdateStunExitArmorReset();
         }
 
         /// <summary>
-        /// 前フレームと現フレームの ActState を比較し、Flinch から非 Flinch への遷移を検出して
-        /// currentArmor を maxArmor へ満タン復帰させる。Flinch 中は ForceZeroArmorIfInFlinch で
-        /// 0 にされるため、解除直後に再び armor 持ちで戦える状態へ戻す仕様。
+        /// 前フレームと現フレームの ActState を比較し、スタン状態から非スタン状態への遷移を
+        /// 検出して currentArmor を maxArmor へ満タン復帰させる。
+        /// 対象スタン: Flinch / GuardBroken / Stunned / Knockbacked (HitReactionLogic.IsArmorResetStun)。
+        /// いずれも armor=0 が前提または強制された無防備状態のため、抜けた瞬間に再び armor 持ちへ復帰。
+        /// スタン同士の遷移 (例: Flinch → Knockbacked) はリセットなし: 連続無防備として扱う。
         /// </summary>
-        private void UpdateFlinchExitArmorReset()
+        private void UpdateStunExitArmorReset()
         {
             if (_character == null)
             {
@@ -212,7 +216,7 @@ namespace Game.Runtime
             }
 
             ActState currentActState = GameManager.Data.GetFlags(hash).ActState;
-            if (HitReactionLogic.ShouldResetArmorOnFlinchExit(_previousActState, currentActState))
+            if (HitReactionLogic.ShouldResetArmorOnStunExit(_previousActState, currentActState))
             {
                 ref CharacterVitals vitals = ref GameManager.Data.GetVitals(hash);
                 vitals.currentArmor = vitals.maxArmor;
