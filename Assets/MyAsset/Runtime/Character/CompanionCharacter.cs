@@ -53,13 +53,30 @@ namespace Game.Runtime
             base.Start();
             CharacterRegistry.RegisterAlly(ObjectHash);
 
-            // プレイヤーが指定されていなければタグで探す
+            // プレイヤーが指定されていなければハッシュ経由で取得 (GameManager 中央ハブ原則)。
+            // CharacterRegistry.PlayerHash → GameManager.Data.GetManaged で O(1) アクセスし、
+            // FindGameObjectWithTag (内部で全 GameObject 走査 O(n)) を回避する (Issue #75 HIGH-Hub-1)。
             if (_playerTransform == null)
             {
-                GameObject player = GameObject.FindGameObjectWithTag("Player");
-                if (player != null)
+                int playerHash = CharacterRegistry.PlayerHash;
+                if (playerHash != 0 && GameManager.Data != null)
                 {
-                    _playerTransform = player.transform;
+                    ManagedCharacter playerManaged = GameManager.Data.GetManaged(playerHash);
+                    if (playerManaged != null)
+                    {
+                        _playerTransform = playerManaged.transform;
+                    }
+                }
+
+                // PlayerCharacter.Start が未到達 (Unity の Start 実行順は不定) の場合のみ
+                // Tag 検索を一度だけフォールバックとして使う
+                if (_playerTransform == null)
+                {
+                    GameObject player = GameObject.FindGameObjectWithTag("Player");
+                    if (player != null)
+                    {
+                        _playerTransform = player.transform;
+                    }
                 }
             }
 

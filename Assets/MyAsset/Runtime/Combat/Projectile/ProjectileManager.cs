@@ -23,8 +23,9 @@ namespace Game.Runtime
         private List<ProjectileController> _activeControllers;
         private Transform _poolParent;
 
-        // 返却予約リスト（OnTriggerEnter2D中のリスト改変を防ぐ）
-        private List<ProjectileController> _pendingReturns;
+        // 返却予約集合（OnTriggerEnter2D中のリスト改変を防ぐ）。
+        // HashSet で O(1) の重複チェック+追加 (Issue #75 HIGH-Perf-2)。
+        private HashSet<ProjectileController> _pendingReturns;
 
         // 爆発処理用の再利用バッファ
         private List<int> _allHashesBuffer;
@@ -59,7 +60,7 @@ namespace Game.Runtime
             _corePool = new ProjectilePool(_preWarmCount);
             _goPool = new Queue<ProjectileController>();
             _activeControllers = new List<ProjectileController>();
-            _pendingReturns = new List<ProjectileController>();
+            _pendingReturns = new HashSet<ProjectileController>();
             _allHashesBuffer = new List<int>(64);
 
             // プール用の非表示親オブジェクト
@@ -236,10 +237,8 @@ namespace Game.Runtime
         /// </summary>
         public void ReturnProjectile(ProjectileController controller)
         {
-            if (!_pendingReturns.Contains(controller))
-            {
-                _pendingReturns.Add(controller);
-            }
+            // HashSet.Add は重複時 false を返すだけで例外を投げない (Contains 線形探索を排除)
+            _pendingReturns.Add(controller);
         }
 
         /// <summary>
@@ -426,9 +425,10 @@ namespace Game.Runtime
 
         private void ProcessPendingReturns()
         {
-            for (int i = 0; i < _pendingReturns.Count; i++)
+            // HashSet は順序保証なしだが、ReturnControllerInternal は _activeControllers のスワップ削除のみで
+            // _pendingReturns 自体を改変しないため、foreach 中の collection-modified 例外は発生しない。
+            foreach (ProjectileController controller in _pendingReturns)
             {
-                ProjectileController controller = _pendingReturns[i];
                 int index = _activeControllers.IndexOf(controller);
                 if (index >= 0)
                 {

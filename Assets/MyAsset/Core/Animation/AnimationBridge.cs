@@ -182,22 +182,28 @@ namespace Game.Core
 
         /// <summary>
         /// 変更があったパラメータキーのみを列挙する。Runtime 層はこれを使って差分送信する。
+        /// 列挙専用 (Add/Remove は禁止、Bridge 内部の Set/Clear API 経由で更新する)。
+        /// 具象 HashSet を公開しているのは foreach で struct enumerator を使い boxing を避けるため (Issue #75 HIGH-Perf-1)。
         /// </summary>
-        public IReadOnlyCollection<int> DirtyFloats => _dirtyFloats;
-        public IReadOnlyCollection<int> DirtyBools => _dirtyBools;
-        public IReadOnlyCollection<int> DirtyInts => _dirtyInts;
+        public HashSet<int> DirtyFloats => _dirtyFloats;
+        public HashSet<int> DirtyBools => _dirtyBools;
+        public HashSet<int> DirtyInts => _dirtyInts;
 
         /// <summary>
         /// 蓄積されたパラメータを列挙する。キーは Animator.StringToHash で得た int hash。
+        /// 列挙専用 (Add/Remove は禁止、Bridge 内部の Set API 経由で更新する)。
+        /// 具象 Dictionary を公開しているのは boxing 回避のため。
         /// </summary>
-        public IReadOnlyDictionary<int, float> Floats => _floats;
-        public IReadOnlyDictionary<int, bool> Bools => _bools;
-        public IReadOnlyDictionary<int, int> Ints => _ints;
+        public Dictionary<int, float> Floats => _floats;
+        public Dictionary<int, bool> Bools => _bools;
+        public Dictionary<int, int> Ints => _ints;
 
         /// <summary>
         /// 未消費のトリガー hash を列挙する。
+        /// 列挙専用 (Add/Remove は禁止、Bridge 内部の SetTrigger / ConsumeAllTriggers 経由で更新する)。
+        /// 具象 HashSet を公開しているのは boxing 回避のため (Issue #75 HIGH-Perf-1)。
         /// </summary>
-        public IReadOnlyCollection<int> PendingTriggers => _triggers;
+        public HashSet<int> PendingTriggers => _triggers;
 
         /// <summary>
         /// 全トリガーを消費済みとしてクリアする。
