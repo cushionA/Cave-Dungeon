@@ -342,7 +342,14 @@ namespace Game.Runtime
             }
             _isFacingRight = facingRight;
             Vector3 scale = transform.localScale;
-            scale.x = _isFacingRight ? Mathf.Abs(scale.x) : -Mathf.Abs(scale.x);
+            // Issue #80 L4: scale.x が 0 だと Mathf.Abs(0)=0 で向き情報が恒久消失する。
+            // プレハブの初期 scale ミスで永続化される事故を防ぐため、0 の場合は 1 をデフォルトとして補う。
+            float magnitude = Mathf.Abs(scale.x);
+            if (magnitude <= 0f)
+            {
+                magnitude = 1f;
+            }
+            scale.x = _isFacingRight ? magnitude : -magnitude;
             transform.localScale = scale;
         }
 
