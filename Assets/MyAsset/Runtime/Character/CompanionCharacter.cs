@@ -142,7 +142,7 @@ namespace Game.Runtime
                 _aiController.Tick(Time.fixedDeltaTime, _candidates, Time.time);
 
                 // AI が選択したアクションを ActionExecutorController に橋渡し
-                BridgeAIActionForJudgmentLoop(_aiController.JudgmentLoop);
+                BridgeAIActionForJudgmentLoop(_aiController.JudgmentLoop, _actionExecutorController);
 
                 // 追従移動
                 ApplyFollowMovement();

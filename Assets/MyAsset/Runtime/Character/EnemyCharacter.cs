@@ -81,7 +81,7 @@ namespace Game.Runtime
                 _enemyController.Tick(Time.fixedDeltaTime, _candidates, Time.time);
 
                 // AI が選択したアクションを ActionExecutorController に橋渡し
-                BridgeAIActionForJudgmentLoop(_enemyController.JudgmentLoop);
+                BridgeAIActionForJudgmentLoop(_enemyController.JudgmentLoop, _actionExecutorController);
 
                 // 簡易移動: ターゲットへ追尾（Sustained/MoveアクションはAI側で別途処理）
                 UpdateMovement();

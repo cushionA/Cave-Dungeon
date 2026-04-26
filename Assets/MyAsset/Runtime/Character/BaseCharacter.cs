@@ -275,20 +275,22 @@ namespace Game.Runtime
         /// EnemyCharacter / CompanionCharacter で重複していた 8 行ロジックを集約 (Issue #79 M7-Reuse)。
         /// </summary>
         /// <param name="loop">AI controller の JudgmentLoop。null の場合は no-op。</param>
+        /// <param name="actionExecutorController">派生クラスが保持する MonoBehaviour 側 Executor。null なら no-op。</param>
         /// <remarks>
         /// 呼出側で AI controller (EnemyController / CompanionController 等) の null check を済ませること。
-        /// 本メソッドは loop == null と _actionExecutorController == null のみハンドルする。
+        /// _actionExecutorController は派生クラス固有の private フィールドのため引数で受け取る (BaseCharacter には保持しない)。
         /// </remarks>
-        protected void BridgeAIActionForJudgmentLoop(JudgmentLoop loop)
+        protected static void BridgeAIActionForJudgmentLoop(
+            JudgmentLoop loop, ActionExecutorController actionExecutorController)
         {
-            if (_actionExecutorController == null || loop == null)
+            if (actionExecutorController == null || loop == null)
             {
                 return;
             }
 
             ActionExecutor aiExecutor = loop.Executor;
             int targetHash = loop.CurrentTargetHash;
-            BridgeAIActionToExecutor(aiExecutor, _actionExecutorController, targetHash);
+            BridgeAIActionToExecutor(aiExecutor, actionExecutorController, targetHash);
         }
 
         /// <summary>

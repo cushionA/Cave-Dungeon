@@ -57,17 +57,12 @@ namespace Game.Runtime
         // k_ContinuousJustGuardWindow 秒以内の次ガードは即ジャスガ扱いになる。
         private float _continuousJustGuardExpireTime = -1f;
 
-        // 多段ヒット保護: 1 フレーム内で行動アーマーが削り切られた瞬間の検出後、
-        // 同フレーム後続のヒットを skip する (Issue #78 M2)。
-        // ActState=Flinch 書き込みは「次フレーム」判定にしか効かないため、同フレーム 2 発目が
-        // ForceZeroArmorIfInFlinch 経由で raw damage 直撃するのを防ぐ。
-        //
-        // リセットタイミング: Update() 冒頭で false に reset する。Unity の 1 render frame は
-        // [複数 FixedUpdate → 各々の後に OnTriggerEnter2D] → Update → LateUpdate の順で進むため、
-        // 同 render frame 内で複数 FixedUpdate を跨いでも Update に到達するまで skip が継続する。
-        // 次 render frame の最初の FixedUpdate より前に Update が reset を完了している保証はないが、
-        // 次フレームでは ActState=Flinch が既に有効なため、Flinch 専用ロジック側で raw 直撃を防げる。
-        private bool _armorBrokenThisFrame;
+        // [REVERTED PR #90 / Issue #78 M2] _armorBrokenThisFrame フラグ撤回。
+        // 「armor 削り切ったヒット直後の同フレーム後続を skip」する目的だったが、
+        // 「アーマー 0 状態への通常被弾」も skip してしまい DamageReceiver_ActionArmor_ConsumedAcrossMultipleHits
+        // の Flinch 期待を破壊した。本来は ActState=Flinch を即フレーム反映する設計改修が必要。
+        // Issue #78 M2 自体は再 open し別 PR で正攻法 (Flinch 即時反映 or 削り切りヒット ID トラッキング)
+        // で対処する。
 
         // 状況ボーナス設定（外部から注入可能）
         private SituationalBonusConfig _bonusConfig = SituationalBonusConfig.Default;
@@ -185,10 +180,7 @@ namespace Game.Runtime
 
         private void Update()
         {
-            // フレーム境界で armor break ガードフラグをリセット (Issue #78 M2)。
-            // Unity のライフサイクル順 (Physics → Update → LateUpdate) により、
-            // 次フレームの OnTriggerEnter2D 経由 ReceiveDamage より先に false に戻る。
-            _armorBrokenThisFrame = false;
+            // [REVERTED PR #90 / Issue #78 M2] _armorBrokenThisFrame reset 撤回。
 
             float dt = Time.deltaTime;
 
@@ -274,14 +266,10 @@ namespace Game.Runtime
                 return default;
             }
 
-            // Issue #78 M2: 同フレーム内で行動アーマーを既に削り切っていれば、後続ヒットを skip する。
-            // ActState=Flinch 書き込みは次フレームから効くため、同フレーム 2 発目を許すと
-            // ForceZeroArmorIfInFlinch 経由で raw damage 直撃する隙ができる。
-            // フラグは Update() 冒頭で reset されるため、次フレーム以降は通常 Flinch ロジックに戻る。
-            if (_armorBrokenThisFrame)
-            {
-                return CreateInvincibleResult();
-            }
+            // [REVERTED PR #90 / Issue #78 M2] _armorBrokenThisFrame ガード撤回。
+            // 「armor 0 状態への通常被弾も skip する」副作用で
+            // DamageReceiver_ActionArmor_ConsumedAcrossMultipleHits 等の Flinch 期待を破壊。
+            // 別 PR で Flinch 即時反映 or 削り切りヒット ID トラッキングで対処予定。
 
             // Step 0: 行動特殊効果を評価
             ActionEffectProcessor.EffectState effectState =
@@ -377,12 +365,7 @@ namespace Game.Runtime
                 _actionExecutorController.CancelAction();
             }
 
-            // Issue #78 M2: armor 削り切ったヒットなら同フレーム後続を skip するためフラグを立てる。
-            // 次フレーム以降は ActState=Flinch ロジックで処理されるため、Update() で false に戻す。
-            if (shouldInterruptForArmorBreak && !isKill)
-            {
-                _armorBrokenThisFrame = true;
-            }
+            // [REVERTED PR #90 / Issue #78 M2] _armorBrokenThisFrame セット撤回。
 
             // Step 6.5: 状態異常蓄積
             StatusEffectId appliedEffect = ApplyStatusEffect(
