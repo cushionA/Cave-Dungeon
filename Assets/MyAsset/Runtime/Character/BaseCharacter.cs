@@ -274,6 +274,11 @@ namespace Game.Runtime
         /// JudgmentLoop からターゲット情報を抜き出して BridgeAIActionToExecutor に橋渡しする共通ラッパー。
         /// EnemyCharacter / CompanionCharacter で重複していた 8 行ロジックを集約 (Issue #79 M7-Reuse)。
         /// </summary>
+        /// <param name="loop">AI controller の JudgmentLoop。null の場合は no-op。</param>
+        /// <remarks>
+        /// 呼出側で AI controller (EnemyController / CompanionController 等) の null check を済ませること。
+        /// 本メソッドは loop == null と _actionExecutorController == null のみハンドルする。
+        /// </remarks>
         protected void BridgeAIActionForJudgmentLoop(JudgmentLoop loop)
         {
             if (_actionExecutorController == null || loop == null)

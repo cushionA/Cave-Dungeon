@@ -61,7 +61,12 @@ namespace Game.Runtime
         // 同フレーム後続のヒットを skip する (Issue #78 M2)。
         // ActState=Flinch 書き込みは「次フレーム」判定にしか効かないため、同フレーム 2 発目が
         // ForceZeroArmorIfInFlinch 経由で raw damage 直撃するのを防ぐ。
-        // Update() 冒頭で false に reset し、次フレームは通常の Flinch ロジックで処理する。
+        //
+        // リセットタイミング: Update() 冒頭で false に reset する。Unity の 1 render frame は
+        // [複数 FixedUpdate → 各々の後に OnTriggerEnter2D] → Update → LateUpdate の順で進むため、
+        // 同 render frame 内で複数 FixedUpdate を跨いでも Update に到達するまで skip が継続する。
+        // 次 render frame の最初の FixedUpdate より前に Update が reset を完了している保証はないが、
+        // 次フレームでは ActState=Flinch が既に有効なため、Flinch 専用ロジック側で raw 直撃を防げる。
         private bool _armorBrokenThisFrame;
 
         // 状況ボーナス設定（外部から注入可能）
