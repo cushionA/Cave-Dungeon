@@ -57,12 +57,16 @@ namespace Game.Runtime
         // k_ContinuousJustGuardWindow 秒以内の次ガードは即ジャスガ扱いになる。
         private float _continuousJustGuardExpireTime = -1f;
 
-        // [REVERTED PR #90 / Issue #78 M2] _armorBrokenThisFrame フラグ撤回。
-        // 「armor 削り切ったヒット直後の同フレーム後続を skip」する目的だったが、
-        // 「アーマー 0 状態への通常被弾」も skip してしまい DamageReceiver_ActionArmor_ConsumedAcrossMultipleHits
-        // の Flinch 期待を破壊した。本来は ActState=Flinch を即フレーム反映する設計改修が必要。
-        // Issue #78 M2 自体は再 open し別 PR で正攻法 (Flinch 即時反映 or 削り切りヒット ID トラッキング)
-        // で対処する。
+        // [Issue #78 M2 — 仕様として認定 / WontFix]
+        // 「同フレーム armor 削り切り → 後続ヒット rawDamage 直撃」は現行設計で発生しない:
+        //   ・DamageDealer は _hitTargets HashSet で 1 ヒットボックスが同一ターゲットに
+        //     多重ヒットしないようガード (Activate→Deactivate 区間で重複防止)
+        //   ・currentActState=Flinch は ApplyHitReactionToActState で SoA に同期書き戻されるため
+        //     即フレーム反映される。仮に複数ヒットボックスが同フレームに当たっても、
+        //     2 発目は currentActState=Flinch を読んで ForceZeroArmorIfInFlinch + StaggerHit
+        //     ボーナス (1.2x) で「Flinch 中の通常被弾」として扱われる
+        // PR #90 の _armorBrokenThisFrame フラグは「armor 0 状態の通常被弾」まで skip してしまい
+        // DamageReceiver_ActionArmor_ConsumedAcrossMultipleHits を破壊したため撤回済み。
 
         // 状況ボーナス設定（外部から注入可能）
         private SituationalBonusConfig _bonusConfig = SituationalBonusConfig.Default;
@@ -266,10 +270,9 @@ namespace Game.Runtime
                 return default;
             }
 
-            // [REVERTED PR #90 / Issue #78 M2] _armorBrokenThisFrame ガード撤回。
-            // 「armor 0 状態への通常被弾も skip する」副作用で
-            // DamageReceiver_ActionArmor_ConsumedAcrossMultipleHits 等の Flinch 期待を破壊。
-            // 別 PR で Flinch 即時反映 or 削り切りヒット ID トラッキングで対処予定。
+            // [Issue #78 M2 — 仕様として認定]
+            // 同フレーム armor 削り切り直後の後続ヒットは DamageDealer._hitTargets で重複ガード済。
+            // 詳細はクラス上部 [Issue #78 M2 — 仕様として認定 / WontFix] コメント参照。
 
             // Step 0: 行動特殊効果を評価
             ActionEffectProcessor.EffectState effectState =
@@ -365,7 +368,7 @@ namespace Game.Runtime
                 _actionExecutorController.CancelAction();
             }
 
-            // [REVERTED PR #90 / Issue #78 M2] _armorBrokenThisFrame セット撤回。
+            // [Issue #78 M2] 別途フラグでの skip は不要 (DamageDealer 側でガード)
 
             // Step 6.5: 状態異常蓄積
             StatusEffectId appliedEffect = ApplyStatusEffect(
