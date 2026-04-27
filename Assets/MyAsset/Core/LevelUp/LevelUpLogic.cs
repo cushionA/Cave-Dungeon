@@ -333,6 +333,17 @@ namespace Game.Core
 
         void ISaveable.Deserialize(object data)
         {
+            // Issue #80 L2: data == null はスロットに entry 無し → 初期状態にリセット。
+            // (コンストラクタの初期値: level=1, exp=0, points=0, stats=default)
+            if (data == null)
+            {
+                _level = 1;
+                _currentExp = 0;
+                _availablePoints = 0;
+                _allocatedStats = default;
+                return;
+            }
+
             LevelUpSaveData saveData;
             if (data is LevelUpSaveData direct)
             {

@@ -73,6 +73,13 @@ namespace Game.Core
 
         void ISaveable.Deserialize(object data)
         {
+            // Issue #80 L2: data == null はスロットに entry 無し → 初期状態にリセット。
+            if (data == null)
+            {
+                _gateStates.Clear();
+                return;
+            }
+
             if (data is Dictionary<string, bool> gateData)
             {
                 DeserializeAll(gateData);
