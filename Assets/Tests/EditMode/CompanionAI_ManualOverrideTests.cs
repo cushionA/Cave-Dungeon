@@ -26,11 +26,11 @@ namespace Game.Tests.EditMode
         private static (SoACharaDataDic data, CompanionController controller) CreateCompanion()
         {
             SoACharaDataDic data = new SoACharaDataDic();
-            data.Add(1, new CharacterVitals { position = Vector2.zero },
+            data.Add(1, new CharacterVitals { position = Vector2.zero, currentMp = 100, maxMp = 100 },
                 default, default, default);
             data.Add(2, new CharacterVitals { position = new Vector2(1f, 0f) },
                 default, default, default);
-            CompanionController controller = new CompanionController(1, 2, data, 100f, 50, DefaultMpSettings(), null);
+            CompanionController controller = new CompanionController(1, 2, data, 50, DefaultMpSettings(), null);
             return (data, controller);
         }
 
@@ -163,14 +163,14 @@ namespace Game.Tests.EditMode
         public void RequestModeSwitch_CustomTimeoutViaCtor_AppliesInjectedValue()
         {
             SoACharaDataDic data = new SoACharaDataDic();
-            data.Add(1, new CharacterVitals { position = Vector2.zero },
+            data.Add(1, new CharacterVitals { position = Vector2.zero, currentMp = 100, maxMp = 100 },
                 default, default, default);
             data.Add(2, new CharacterVitals { position = new Vector2(1f, 0f) },
                 default, default, default);
 
             const float customTimeout = 12.5f;
             CompanionController controller = new CompanionController(
-                1, 2, data, 100f, 50, DefaultMpSettings(), null, customTimeout);
+                1, 2, data, 50, DefaultMpSettings(), null, customTimeout);
 
             AIMode[] modes = new AIMode[]
             {
@@ -192,14 +192,14 @@ namespace Game.Tests.EditMode
         public void RequestModeSwitch_NonPositiveTimeoutViaCtor_FallsBackToDefault()
         {
             SoACharaDataDic data = new SoACharaDataDic();
-            data.Add(1, new CharacterVitals { position = Vector2.zero },
+            data.Add(1, new CharacterVitals { position = Vector2.zero, currentMp = 100, maxMp = 100 },
                 default, default, default);
             data.Add(2, new CharacterVitals { position = new Vector2(1f, 0f) },
                 default, default, default);
 
             // 0 指定 → デフォルト値フォールバック
             CompanionController controller = new CompanionController(
-                1, 2, data, 100f, 50, DefaultMpSettings(), null, 0f);
+                1, 2, data, 50, DefaultMpSettings(), null, 0f);
 
             AIMode[] modes = new AIMode[]
             {
@@ -243,13 +243,13 @@ namespace Game.Tests.EditMode
             };
 
             SoACharaDataDic data = new SoACharaDataDic();
-            data.Add(1, new CharacterVitals { position = Vector2.zero },
+            data.Add(1, new CharacterVitals { position = Vector2.zero, currentMp = 100, maxMp = 100 },
                 default, default, default);
             data.Add(2, new CharacterVitals { position = new Vector2(1f, 0f) },
                 default, default, default);
 
             CompanionController controller = new CompanionController(
-                1, 2, data, 100f, 50, DefaultMpSettings(), null,
+                1, 2, data, 50, DefaultMpSettings(), null,
                 config.manualOverrideTimeoutSeconds);
 
             AIMode[] modes = new AIMode[]

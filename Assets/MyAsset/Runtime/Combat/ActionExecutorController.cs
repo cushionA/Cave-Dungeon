@@ -1,327 +1,250 @@
-using UnityEngine;
+using System;
+using System.Collections.Generic;
 using Game.Core;
+using R3;
+using UnityEngine;
 
 namespace Game.Runtime
 {
-    /// <summary>
-    /// Core ActionExecutor をシーン上で駆動するMonoBehaviour橋渡し。
-    /// AttackInfo[] からActionSlot.paramIdで行動データを解決し、
-    /// AnimationBridgeのフェーズに基づいてヒットボックス・ActionEffectを管理する。
-    /// </summary>
-    public class ActionExecutorController : MonoBehaviour
+    public class ActionExecutorController : MonoBehaviour, IActionExecutionBackend
     {
         [SerializeField] private AttackInfo[] _attackInfos;
-
-        private BaseCharacter _character;
-        private CharacterAnimationController _animController;
+        private int _ownerHash;
         private HitBox _hitBox;
         private DamageDealer _damageDealer;
-        private DamageReceiver _damageReceiver;
-        private CharacterCollisionController _collisionController;
+        private long _instanceId;
+        private long _sourceInstanceId;
+        private long _aiInstanceId;
+        private long _aiSourceInstanceId;
+        private bool _aiAwaitingCompletion;
+        private long _aiMovementInstanceId;
+        private int _aiMovementTarget;
+        private SustainedAction _aiMovementKind;
+        private IDisposable _executionSubscription;
+        private readonly List<ActionExecution> _aiExecutions = new List<ActionExecution>();
 
-        private ActionExecutor _executor;
-        private ActionPhaseCoordinator _phaseCoordinator;
-
-        // 現在実行中の行動データ
-        private AttackInfo _currentAttackInfo;
-
-        // Bridge参照キャッシュ（OnEnable/OnDisable間で安定させる）
-        private AnimationBridge _cachedBridge;
-
-        public ActionExecutor Executor => _executor;
-        public bool IsExecuting => _executor != null && _executor.IsExecuting;
+        public bool IsExecuting => GameManager.Actions != null && GameManager.Actions.IsPrimaryExecuting(_ownerHash);
+        public long CurrentInstanceId => _instanceId;
+        public bool HasMovementRequest => _aiInstanceId != 0 && GameManager.Actions != null
+            && GameManager.Actions.Execution.TryGetInstance(_aiInstanceId, out ActionExecution execution)
+            && (execution.definition.resources & ActionResources.HorizontalMovement) != 0;
+        bool IActionExecutionBackend.IsExecuting => IsAIExecuting();
+        public event Action OnActionCompleted;
 
 #if UNITY_INCLUDE_TESTS
-        /// <summary>テスト専用: AttackInfosを設定する。</summary>
         public void SetAttackInfosForTest(AttackInfo[] infos) { _attackInfos = infos; }
 #endif
 
         private void Awake()
         {
-            _character = GetComponent<BaseCharacter>();
-            _animController = GetComponent<CharacterAnimationController>();
+            _ownerHash = gameObject.GetHashCode();
             _hitBox = GetComponentInChildren<HitBox>();
             _damageDealer = GetComponentInChildren<DamageDealer>();
-            _damageReceiver = GetComponent<DamageReceiver>();
-            _collisionController = GetComponent<CharacterCollisionController>();
-
-            _executor = new ActionExecutor();
-            _phaseCoordinator = new ActionPhaseCoordinator();
-
-            RegisterHandlers();
-        }
-
-        private void Start()
-        {
-            // Bridge購読はStart()で行う。
-            // CharacterAnimationController.Awake()でBridgeが生成されるが、
-            // ActionExecutorController.Awake()→OnEnable()時点ではまだnullの場合がある
-            // （同一GameObjectのAwake実行順序は不定）。
-            SubscribeToBridge();
         }
 
         private void OnEnable()
         {
-            // Start()前のOnEnableではBridge未生成の可能性があるため、
-            // Bridge購読はStart()で行い、ここではexecutorイベントのみ購読する。
-            // OnDisable→OnEnable再有効化時はBridge再購読が必要。
-            if (_cachedBridge != null)
-            {
-                // 再有効化時: OnDisableで解除済みのBridgeを再購読
-                _cachedBridge.OnPhaseChanged += HandlePhaseChanged;
-            }
-            if (_executor != null)
-            {
-                _executor.OnActionCompleted += HandleActionCompleted;
-            }
+            Attach();
+        }
+
+        private void Start()
+        {
+            if (_hitBox == null) { _hitBox = GetComponentInChildren<HitBox>(); }
+            if (_damageDealer == null) { _damageDealer = GetComponentInChildren<DamageDealer>(); }
+            Attach();
         }
 
         private void OnDisable()
         {
-            if (_cachedBridge != null)
-            {
-                _cachedBridge.OnPhaseChanged -= HandlePhaseChanged;
-            }
-            if (_executor != null)
-            {
-                _executor.OnActionCompleted -= HandleActionCompleted;
-            }
+            ((IActionExecutionBackend)this).CancelCurrent();
+            CancelAction();
+            _executionSubscription?.Dispose();
+            _executionSubscription = null;
+            GameManager.Actions?.Detach(_ownerHash, this);
         }
 
-        private void SubscribeToBridge()
+        private void Attach()
         {
-            if (_animController != null && _animController.Bridge != null)
+            GameManager.Actions?.Attach(_ownerHash, this);
+            if (_executionSubscription == null && GameManager.Events != null)
             {
-                _cachedBridge = _animController.Bridge;
-                _cachedBridge.OnPhaseChanged += HandlePhaseChanged;
+                _executionSubscription = GameManager.Events.OnActionExecution.Subscribe(HandleAIExecution);
             }
         }
 
-        private void Update()
-        {
-            if (_executor == null)
-            {
-                return;
-            }
-
-            _executor.Tick(Time.deltaTime);
-
-            if (_phaseCoordinator.ShouldCompleteAction)
-            {
-                CompleteCurrentAction();
-            }
-        }
-
-        /// <summary>
-        /// ActionSlotで指定された行動を実行する。
-        /// paramIdに対応するAttackInfoからデータを解決し、アニメーション・ヒットボックスを開始する。
-        /// </summary>
         public bool ExecuteAction(ActionSlot slot, int targetHash = 0)
         {
-            if (_character == null)
-            {
-                return false;
-            }
+            return TryExecuteAction(slot, targetHash, out _);
+        }
 
-            // フェーズロックアウト: 現在のアクションがキャンセル不可フェーズなら新アクション拒否
-            if (IsExecuting && _cachedBridge != null && !_cachedBridge.CurrentState.isCancelable)
-            {
-                return false;
-            }
-
-            int ownerHash = _character.ObjectHash;
-
+        private bool TryExecuteAction(ActionSlot slot, int targetHash, out long instanceId)
+        {
+            instanceId = 0;
+            if (GameManager.Actions == null || !GameManager.IsCharacterValid(_ownerHash)) { return false; }
+            Vector2 direction = transform.localScale.x >= 0f ? Vector2.right : Vector2.left;
             if (slot.execType == ActionExecType.Attack || slot.execType == ActionExecType.Cast)
             {
-                AttackInfo info = ResolveAttackInfo(slot.paramId);
-                if (info == null)
-                {
-                    return false;
-                }
-
-                if (!CheckAndDeductCost(ownerHash, info.staminaCost, info.mpCost))
-                {
-                    return false;
-                }
-
-                _currentAttackInfo = info;
-
-                if (_damageReceiver != null && info.motionInfo.actionEffects != null
-                    && info.motionInfo.actionEffects.Length > 0)
-                {
-                    _damageReceiver.SetActionEffects(info.motionInfo.actionEffects);
-                }
-
-                if (_animController != null)
-                {
-                    _animController.StartActionPhase(info.motionInfo, (byte)slot.paramId, info.cancelPoint);
-                }
-
-                // 攻撃のcontactTypeに応じて衝突モードを切替
-                if (_collisionController != null)
-                {
-                    _collisionController.SetCollisionMode(info.contactType);
-                }
-
-                _phaseCoordinator.BeginAction();
+                if (_attackInfos == null || slot.paramId < 0 || slot.paramId >= _attackInfos.Length) { return false; }
+                return GameManager.Actions.Execute(_ownerHash, _attackInfos[slot.paramId], targetHash, direction, out instanceId);
             }
-            else
+            if (slot.execType == ActionExecType.Instant && slot.paramId == (int)InstantAction.Dodge)
             {
-                _currentAttackInfo = null;
+                return GameManager.Actions.TryDodge(_ownerHash, direction, out instanceId);
             }
-
-            return _executor.Execute(ownerHash, targetHash, slot);
+            if (slot.execType == ActionExecType.Sustained)
+            {
+                if (slot.paramId == (int)SustainedAction.Guard) { return GameManager.Actions.TrySetGuarding(_ownerHash, true, out instanceId, slot.paramValue); }
+                if (slot.paramId == (int)SustainedAction.Idle) { return GameManager.Actions.TryIdle(_ownerHash, out instanceId, slot.paramValue); }
+                if (slot.paramId != (int)SustainedAction.MoveToTarget && slot.paramId != (int)SustainedAction.Follow
+                    && slot.paramId != (int)SustainedAction.Retreat && slot.paramId != (int)SustainedAction.Flee) { return false; }
+                if (GameManager.IsCharacterValid(targetHash))
+                {
+                    Vector2 delta = GameManager.Data.GetVitals(targetHash).position - GameManager.Data.GetVitals(_ownerHash).position;
+                    if (slot.paramId == (int)SustainedAction.Retreat || slot.paramId == (int)SustainedAction.Flee) { delta = -delta; }
+                    return GameManager.Actions.TrySetLocomotion(_ownerHash, delta.normalized,
+                        EffectiveMoveSpeed(), out instanceId, slot.paramValue);
+                }
+            }
+            return false;
         }
 
-        /// <summary>
-        /// 現在実行中の行動をキャンセルする。
-        /// </summary>
-        public void CancelAction()
+        bool IActionExecutionBackend.Execute(int ownerHash, int targetHash, ActionSlot slot)
         {
-            _executor.CancelCurrent();
-            DeactivateHitbox();
-            ClearActionState();
-        }
-
-        private AttackInfo ResolveAttackInfo(int paramId)
-        {
-            if (_attackInfos == null || paramId < 0 || paramId >= _attackInfos.Length)
-            {
-                return null;
-            }
-            return _attackInfos[paramId];
-        }
-
-        private bool CheckAndDeductCost(int ownerHash, float staminaCost, int mpCost)
-        {
-            if (!GameManager.IsCharacterValid(ownerHash))
-            {
-                return false;
-            }
-
-            ref CharacterVitals vitals = ref GameManager.Data.GetVitals(ownerHash);
-
-            if (!ActionCostValidator.CanAfford(
-                vitals.currentStamina, vitals.currentMp,
-                staminaCost, mpCost))
-            {
-                return false;
-            }
-
-            ActionCostValidator.DeductCost(
-                ref vitals.currentStamina, ref vitals.currentMp,
-                staminaCost, mpCost);
+            long previous = _aiInstanceId;
+            long previousSource = _aiSourceInstanceId;
+            if (ownerHash != _ownerHash || !TryExecuteAction(slot, targetHash, out long instanceId)) { return false; }
+            if (previous != 0 && previous != instanceId) { GameManager.Actions.Execution.Cancel(previous, true); }
+            if (previousSource != 0 && previousSource != instanceId) { GameManager.Actions.Execution.CancelPendingFrom(previousSource); }
+            _aiInstanceId = instanceId;
+            _aiSourceInstanceId = instanceId;
+            _aiAwaitingCompletion = true;
+            _aiMovementInstanceId = slot.execType == ActionExecType.Sustained
+                && (slot.paramId == (int)SustainedAction.MoveToTarget || slot.paramId == (int)SustainedAction.Follow
+                    || slot.paramId == (int)SustainedAction.Retreat || slot.paramId == (int)SustainedAction.Flee) ? instanceId : 0;
+            _aiMovementTarget = targetHash;
+            _aiMovementKind = (SustainedAction)slot.paramId;
+            CompleteAIIfSettled();
             return true;
         }
 
-        private void RegisterHandlers()
+        void IActionExecutionBackend.CancelCurrent()
         {
-            _executor.Register(new AttackActionHandler());
-            _executor.Register(new CastActionHandler());
-            _executor.Register(new InstantActionHandler());
-            _executor.Register(new SustainedActionHandler());
-            _executor.Register(new BroadcastActionHandler());
+            long instanceId = _aiInstanceId;
+            long sourceInstanceId = _aiSourceInstanceId;
+            _aiInstanceId = 0;
+            _aiSourceInstanceId = 0;
+            _aiAwaitingCompletion = false;
+            _aiMovementInstanceId = 0;
+            if (instanceId != 0) { GameManager.Actions?.Execution.Cancel(instanceId, true); }
+            if (sourceInstanceId != 0) { GameManager.Actions?.Execution.CancelPendingFrom(sourceInstanceId); }
         }
 
-        private void HandlePhaseChanged(AnimationPhase phase)
+        void IActionExecutionBackend.Tick(float deltaTime)
         {
-            ActionPhaseCoordinator.HitboxCommand cmd = _phaseCoordinator.OnPhaseChanged(phase);
-
-            switch (cmd)
-            {
-                case ActionPhaseCoordinator.HitboxCommand.Activate:
-                    ActivateHitbox();
-                    break;
-                case ActionPhaseCoordinator.HitboxCommand.Deactivate:
-                    DeactivateHitbox();
-                    break;
-            }
+            RefreshAIMovement();
+            CompleteAIIfSettled();
         }
 
-        private void ActivateHitbox()
+        private float EffectiveMoveSpeed()
         {
-            if (_currentAttackInfo == null)
+            CharacterStatusEffects effects = GameManager.Data.GetStatusEffects(_ownerHash);
+            return effects.BlocksMovement ? 0f : GameManager.Data.GetMoveParams(_ownerHash).moveSpeed * effects.MoveSpeedMultiplier;
+        }
+
+        private void RefreshAIMovement()
+        {
+            if (_aiMovementInstanceId == 0 || _aiMovementInstanceId != _aiInstanceId || GameManager.Actions == null
+                || !GameManager.Actions.Execution.TryGetInstance(_aiMovementInstanceId, out ActionExecution execution)
+                || !execution.definition.movementUsesInput) { return; }
+            if (!GameManager.IsCharacterValid(_aiMovementTarget))
             {
+                GameManager.Actions.Execution.Cancel(_aiMovementInstanceId, true);
                 return;
             }
-
-            int ownerHash = _character.ObjectHash;
-
-            AttackMotionData motionData = CombatDataHelper.BuildMotionData(_currentAttackInfo);
-
-            if (_hitBox != null)
-            {
-                _hitBox.Activate(motionData, ownerHash);
-            }
-            else if (_damageDealer != null)
-            {
-                _damageDealer.Activate(motionData, ownerHash);
-            }
+            Vector2 delta = GameManager.Data.GetVitals(_aiMovementTarget).position - GameManager.Data.GetVitals(_ownerHash).position;
+            if (_aiMovementKind == SustainedAction.Retreat || _aiMovementKind == SustainedAction.Flee) { delta = -delta; }
+            GameManager.Actions.Execution.UpdateInput(_aiMovementInstanceId, delta.normalized, EffectiveMoveSpeed());
         }
 
-        private void DeactivateHitbox()
+        private bool IsAIExecuting()
         {
-            if (_hitBox != null)
-            {
-                _hitBox.Deactivate();
-            }
-            if (_damageDealer != null)
-            {
-                _damageDealer.Deactivate();
-            }
+            if (GameManager.Actions == null) { return false; }
+            return (_aiInstanceId != 0 && GameManager.Actions.Execution.TryGetInstance(_aiInstanceId, out _))
+                || (_aiSourceInstanceId != 0 && GameManager.Actions.Execution.HasPendingFrom(_aiSourceInstanceId));
         }
 
-        /// <summary>
-        /// アニメーションフェーズ完了で呼ばれる。
-        /// HandleActionCompleted との二重呼び出しを避けるため、一時的にイベント購読を外す。
-        /// </summary>
-        private void CompleteCurrentAction()
+        private void CompleteAIIfSettled()
         {
-            if (_currentAttackInfo == null)
+            if (!_aiAwaitingCompletion || IsAIExecuting()) { return; }
+            _aiAwaitingCompletion = false;
+            _aiMovementInstanceId = 0;
+            _aiInstanceId = 0;
+            _aiSourceInstanceId = 0;
+            OnActionCompleted?.Invoke();
+        }
+
+        private void HandleAIExecution(ActionExecutionEvent notification)
+        {
+            if (notification.kind == ActionSignalKind.Started && _aiSourceInstanceId != 0
+                && notification.execution.sourceInstanceId == _aiSourceInstanceId)
             {
-                return;
+                _aiInstanceId = notification.execution.instanceId;
+                _aiSourceInstanceId = _aiInstanceId;
             }
-
-            _executor.OnActionCompleted -= HandleActionCompleted;
-
-            try
+            if (notification.execution.instanceId != _aiInstanceId) { return; }
+            if (notification.kind == ActionSignalKind.Completed || notification.kind == ActionSignalKind.Interrupted)
             {
-                ActionBase current = _executor.CurrentAction;
-                if (current != null && current.IsExecuting)
+                _aiInstanceId = 0;
+                GameManager.Actions.Execution.CopyActive(_ownerHash, _aiExecutions);
+                for (int i = 0; i < _aiExecutions.Count; i++)
                 {
-                    current.ForceComplete();
+                    ActionExecution successor = _aiExecutions[i];
+                    if (successor.sourceInstanceId != notification.execution.instanceId) { continue; }
+                    _aiInstanceId = successor.instanceId;
+                    _aiSourceInstanceId = successor.instanceId;
+                    break;
                 }
-
-                DeactivateHitbox();
-                ClearActionState();
-            }
-            finally
-            {
-                _executor.OnActionCompleted += HandleActionCompleted;
+                CompleteAIIfSettled();
             }
         }
 
-        private void HandleActionCompleted()
+        public void CancelAction()
         {
-            DeactivateHitbox();
-            ClearActionState();
+            if (_instanceId != 0) { GameManager.Actions?.Execution.Cancel(_instanceId, true); }
+            if (_sourceInstanceId != 0) { GameManager.Actions?.Execution.CancelPendingFrom(_sourceInstanceId); }
+            Deactivate();
+            _instanceId = 0;
+            _sourceInstanceId = 0;
         }
 
-        private void ClearActionState()
+        public void HandleExecution(ActionExecutionEvent notification, AttackMotionData motion, bool projectile)
         {
-            _currentAttackInfo = null;
-            _phaseCoordinator.EndAction();
-
-            if (_damageReceiver != null)
+            if (notification.kind == ActionSignalKind.Started)
             {
-                _damageReceiver.ClearActionEffects();
+                _instanceId = notification.execution.instanceId;
+                _sourceInstanceId = _instanceId;
             }
-
-            // 衝突モードをすり抜けに戻す
-            if (_collisionController != null)
+            if (notification.execution.instanceId != _instanceId) { return; }
+            if (notification.kind == ActionSignalKind.PhaseChanged)
             {
-                _collisionController.ClearCollisionMode();
+                if (notification.execution.phase == AnimationPhase.Active && !projectile)
+                {
+                    if (_hitBox != null) { _hitBox.Activate(motion, _ownerHash); }
+                    else if (_damageDealer != null) { _damageDealer.Activate(motion, _ownerHash); }
+                }
+                else { Deactivate(); }
             }
+            if (notification.kind == ActionSignalKind.Completed || notification.kind == ActionSignalKind.Interrupted)
+            {
+                Deactivate();
+                _instanceId = 0;
+            }
+        }
+
+        private void Deactivate()
+        {
+            if (_hitBox != null) { _hitBox.Deactivate(); }
+            if (_damageDealer != null) { _damageDealer.Deactivate(); }
         }
     }
 }

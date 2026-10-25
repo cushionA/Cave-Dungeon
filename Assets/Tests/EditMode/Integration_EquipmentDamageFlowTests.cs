@@ -113,7 +113,7 @@ namespace Game.Tests.EditMode
                 hasGuardAttackEffect: false,
                 currentStamina: 100f,
                 guardStrength: 80f,
-                armorBreakValue: 50f
+                guardDamage: 50f
             );
 
             // 新仕様: GuardStats.xxxCut で軽減。斬撃カット50%を設定して検証。

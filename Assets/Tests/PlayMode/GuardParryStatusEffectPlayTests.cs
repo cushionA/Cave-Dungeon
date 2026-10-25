@@ -74,6 +74,7 @@ namespace Game.Tests.PlayMode
                 attackElement = Element.Slash,
                 knockbackForce = new Vector2(-5f, 0f),
                 feature = AttackFeature.None,
+                guardDamage = 0f,
                 armorBreakValue = 0f,
             };
 
@@ -244,8 +245,6 @@ namespace Game.Tests.PlayMode
             GameObject targetObj = TestSceneHelper.CreateBaseCharacterObject(targetInfo, new Vector3(3, 2, 0));
             DamageReceiver receiver = targetObj.AddComponent<DamageReceiver>();
 
-            StatusEffectManager manager = new StatusEffectManager();
-            receiver.SetStatusEffectManager(manager);
             yield return null;
 
             int targetHash = targetObj.GetComponent<BaseCharacter>().ObjectHash;
@@ -258,19 +257,19 @@ namespace Game.Tests.PlayMode
                 motionValue = 1.0f,
                 attackElement = Element.Slash,
                 feature = AttackFeature.None,
-                statusEffectInfo = new StatusEffectInfo
+                statusEffects = new[] { new StatusEffectApplicationData { info = new StatusEffectInfo
                 {
                     effect = StatusEffectId.Poison,
                     accumulateValue = StatusEffectManager.k_DefaultThreshold,  // 閾値一撃
                     duration = 3f,
                     tickDamage = 1f,
                     tickInterval = 1f,
-                },
+                } } },
             };
 
             DamageResult result = receiver.ReceiveDamage(data);
 
-            Assert.IsTrue(manager.IsActive(StatusEffectId.Poison),
+            Assert.IsTrue(GameManager.StatusEffects.Store.IsActive(targetHash, StatusEffectId.Poison),
                 "蓄積値が閾値に達した瞬間に毒状態が発動する");
             Assert.AreEqual(StatusEffectId.Poison, result.appliedEffect,
                 "DamageResult.appliedEffect に発動した効果 ID が反映される");
@@ -290,8 +289,6 @@ namespace Game.Tests.PlayMode
             GameObject targetObj = TestSceneHelper.CreateBaseCharacterObject(targetInfo, new Vector3(3, 2, 0));
             DamageReceiver receiver = targetObj.AddComponent<DamageReceiver>();
 
-            StatusEffectManager manager = new StatusEffectManager();
-            receiver.SetStatusEffectManager(manager);
             yield return null;
 
             int targetHash = targetObj.GetComponent<BaseCharacter>().ObjectHash;
@@ -304,26 +301,26 @@ namespace Game.Tests.PlayMode
                 motionValue = 1.0f,
                 attackElement = Element.Slash,
                 feature = AttackFeature.None,
-                statusEffectInfo = new StatusEffectInfo
+                statusEffects = new[] { new StatusEffectApplicationData { info = new StatusEffectInfo
                 {
                     effect = StatusEffectId.Burn,
                     accumulateValue = StatusEffectManager.k_DefaultThreshold,
                     duration = 1.0f,
                     tickDamage = 0f,
                     tickInterval = 2f,
-                },
+                } } },
             };
 
             receiver.ReceiveDamage(data);
-            Assert.IsTrue(manager.IsActive(StatusEffectId.Burn), "発症直後は有効");
+            Assert.IsTrue(GameManager.StatusEffects.Store.IsActive(targetHash, StatusEffectId.Burn), "発症直後は有効");
 
             // 効果時間(1秒)を超えるまで Tick して解除を促す
-            manager.Tick(0.5f);
-            Assert.IsTrue(manager.IsActive(StatusEffectId.Burn),
+            GameManager.StatusEffects.Tick(0.5f);
+            Assert.IsTrue(GameManager.StatusEffects.Store.IsActive(targetHash, StatusEffectId.Burn),
                 "半分経過時点ではまだ有効");
 
-            manager.Tick(0.6f);
-            Assert.IsFalse(manager.IsActive(StatusEffectId.Burn),
+            GameManager.StatusEffects.Tick(0.6f);
+            Assert.IsFalse(GameManager.StatusEffects.Store.IsActive(targetHash, StatusEffectId.Burn),
                 "効果時間経過後は自然解除される");
 
             Object.Destroy(targetObj);

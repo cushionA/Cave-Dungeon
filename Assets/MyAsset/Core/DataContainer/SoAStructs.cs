@@ -11,7 +11,7 @@ namespace Game.Core
     {
         public int currentHp;
         public int maxHp;
-        public int currentMp;
+        public float currentMp;
         public int maxMp;
         public float currentStamina;
         public float maxStamina;
@@ -23,6 +23,53 @@ namespace Game.Core
         public float staminaRecoveryDelay;    // 消費後回復開始遅延(秒)
         public byte hpRatio;                  // HP割合(0-100) AI判定用キャッシュ
         public byte mpRatio;                  // MP割合(0-100) AI判定用キャッシュ
+    }
+
+    [Serializable]
+    public struct CharacterBaseStats
+    {
+        public int maxHp;
+        public int maxMp;
+        public float maxStamina;
+        public float maxArmor;
+        public float staminaRecoveryRate;
+        public float staminaRecoveryDelay;
+        public StatModifier attributes;
+        public CombatStats combat;
+        public MoveParams movement;
+        public AbilityFlag abilityFlags;
+
+        public static CharacterBaseStats FromValues(in CharacterVitals vitals, in CombatStats combat,
+            in CharacterFlags flags, in MoveParams movement)
+        {
+            return new CharacterBaseStats
+            {
+                maxHp = vitals.maxHp,
+                maxMp = vitals.maxMp,
+                maxStamina = vitals.maxStamina,
+                maxArmor = vitals.maxArmor,
+                staminaRecoveryRate = vitals.staminaRecoveryRate,
+                staminaRecoveryDelay = vitals.staminaRecoveryDelay,
+                combat = combat,
+                movement = movement,
+                abilityFlags = flags.AbilityFlags,
+            };
+        }
+    }
+
+    [Serializable]
+    public struct CharacterGrowth
+    {
+        public int level;
+        public StatModifier allocatedStats;
+    }
+
+    public struct CharacterRegistration
+    {
+        public CharacterBaseStats baseStats;
+        public CharacterGrowth growth;
+        public CharacterFlags flags;
+        public CharacterDefenseState defenseState;
     }
 
     /// <summary>
@@ -175,26 +222,63 @@ namespace Game.Core
     [Serializable]
     public struct CharacterStatusEffects
     {
-        // 各状態異常の蓄積値（11種）
-        public float poisonAccum;
-        public float burnAccum;
-        public float bleedAccum;
-        public float stunAccum;
-        public float freezeAccum;
-        public float paralyzeAccum;
-        public float slowAccum;
-        public float blindAccum;
-        public float silenceAccum;
-        public float weaknessAccum;
-        public float curseAccum;
+        private ulong _activeMask;
+        private int _activeCount;
+        private float _moveSpeedMultiplier;
+        private float _attackMultiplier;
+        private float _defenseMultiplier;
+        private float _damageTakenMultiplier;
 
-        // アクティブ効果スロット（最大3）
-        public StatusEffectId activeSlot0;
-        public float remainTime0;
-        public StatusEffectId activeSlot1;
-        public float remainTime1;
-        public StatusEffectId activeSlot2;
-        public float remainTime2;
+        public int ActiveCount => _activeCount;
+        public float MoveSpeedMultiplier => _activeCount > 0 ? _moveSpeedMultiplier : 1f;
+        public float AttackMultiplier => _activeCount > 0 ? _attackMultiplier : 1f;
+        public float DefenseMultiplier => _activeCount > 0 ? _defenseMultiplier : 1f;
+        public float DamageTakenMultiplier => _activeCount > 0 ? _damageTakenMultiplier : 1f;
+        public bool BlocksMovement => IsActive(StatusEffectId.Stun) || IsActive(StatusEffectId.Freeze);
+        public bool BlocksActions => BlocksMovement;
+        public bool BlocksCasting => BlocksActions || IsActive(StatusEffectId.Silence);
+
+        public static bool IsValidId(StatusEffectId id)
+        {
+            return id > StatusEffectId.None && id < StatusEffectId.Count;
+        }
+
+        public bool IsActive(StatusEffectId id)
+        {
+            return IsValidId(id) && (_activeMask & (1UL << (int)id)) != 0;
+        }
+
+        internal void Include(ActiveEffect effect)
+        {
+            if (_activeCount == 0)
+            {
+                _moveSpeedMultiplier = 1f;
+                _attackMultiplier = 1f;
+                _defenseMultiplier = 1f;
+                _damageTakenMultiplier = 1f;
+            }
+            _activeMask |= 1UL << (int)effect.id;
+            _activeCount++;
+            float increase = (float)Math.Pow(1f + effect.modifier, effect.stackCount);
+            switch (effect.id)
+            {
+                case StatusEffectId.Slow:
+                    _moveSpeedMultiplier *= (float)Math.Pow(1f - effect.modifier, effect.stackCount);
+                    break;
+                case StatusEffectId.SpeedUp:
+                    _moveSpeedMultiplier *= increase;
+                    break;
+                case StatusEffectId.AttackUp:
+                    _attackMultiplier *= increase;
+                    break;
+                case StatusEffectId.DefenseUp:
+                    _defenseMultiplier *= increase;
+                    break;
+                case StatusEffectId.Weakness:
+                    _damageTakenMultiplier *= increase;
+                    break;
+            }
+        }
     }
 
     /// <summary>

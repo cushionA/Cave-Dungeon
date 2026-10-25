@@ -27,6 +27,9 @@ namespace Game.Runtime
         private bool _capacityWarningFired;
 
         private GameManagerCore _core;
+        private GameActionRuntime _actions;
+        [SerializeField] private StatusEffectCatalog _statusEffectCatalog;
+        private StatusEffectPresentationController _statusEffectPresentation;
 
         /// <summary>
         /// 登録された IGameSubManager を型別にインデックスする。
@@ -38,6 +41,10 @@ namespace Game.Runtime
         public static GameManager Instance { get; private set; }
         public static SoACharaDataDic Data => Instance != null ? Instance._core.Data : null;
         public static GameEvents Events => Instance != null ? Instance._core.Events : null;
+        public static StatusEffectSystem StatusEffects => Instance != null ? Instance._core.StatusEffects : null;
+        public static EquipmentStore Equipment => Instance != null ? Instance._core.Equipment : null;
+        public static GameActionRuntime Actions => Instance != null ? Instance._actions : null;
+        public static StatusEffectCatalog StatusEffectCatalog => Instance != null ? Instance._statusEffectCatalog : null;
 
         /// <summary>
         /// ProjectileManager への薄いプロキシ。型別辞書からの解決を維持しつつ後方互換 API を提供する。
@@ -97,8 +104,23 @@ namespace Game.Runtime
 
             _core = new GameManagerCore();
             _core.Initialize(k_InitialContainerCapacity);
+            _actions = new GameActionRuntime(_core.Data, _core.Events, _core.Actions);
+            _statusEffectPresentation = new StatusEffectPresentationController(_core.Data, _core.StatusEffects.Store, _statusEffectCatalog);
 
             InitializeSubManagers();
+        }
+
+        private void FixedUpdate()
+        {
+            _core.StatusEffects.Tick(Time.fixedDeltaTime);
+            _core.Actions.Tick(Time.fixedDeltaTime);
+            _actions.Tick();
+        }
+
+        private void LateUpdate()
+        {
+            _statusEffectPresentation.Sync();
+            _actions.Present();
         }
 
         /// <summary>
@@ -163,54 +185,15 @@ namespace Game.Runtime
 
         private int RegisterCharacterInternal(int hash, CharacterInfo info, BaseCharacter chara)
         {
-            float gravity = Physics2D.gravity.magnitude * GameConstants.k_GravityScale;
-            float jumpForce = Mathf.Sqrt(2f * info.jumpHeight * gravity);
-
-            CharacterVitals vitals = new CharacterVitals
-            {
-                currentHp = info.maxHp,
-                maxHp = info.maxHp,
-                currentMp = info.maxMp,
-                maxMp = info.maxMp,
-                currentStamina = info.maxStamina,
-                maxStamina = info.maxStamina,
-                currentArmor = info.maxArmor,
-                maxArmor = info.maxArmor,
-                staminaRecoveryRate = info.staminaRecoveryRate,
-                staminaRecoveryDelay = info.staminaRecoveryDelay,
-                level = 1
-            };
-
-            CombatStats combat = new CombatStats
-            {
-                attack = info.baseAttack,
-                defense = info.baseDefense,
-                knockbackResistance = info.knockbackResistance
-            };
-
-            CharacterFlags flags = CharacterFlags.Pack(
-                info.belong, info.feature, info.initialActState, AbilityFlag.None);
-
-            MoveParams move = new MoveParams
-            {
-                moveSpeed = info.moveSpeed,
-                jumpForce = jumpForce,
-                dashSpeed = info.dashSpeed,
-                dashDuration = GameConstants.k_DefaultDashDuration,
-                gravityScale = GameConstants.k_GravityScale,
-                weightRatio = 0f,
-                jumpStaminaCost = info.jumpStaminaCost,
-                dodgeStaminaCost = info.dodgeStaminaCost,
-                sprintStaminaPerSecond = info.sprintStaminaPerSecond,
-                dodgeDuration = info.dodgeDuration,
-                dodgeSpeedMultiplier = info.dodgeSpeedMultiplier,
-                sprintSpeedMultiplier = info.sprintSpeedMultiplier,
-                coyoteTime = info.coyoteTime
-            };
-
-            int result = _core.RegisterCharacter(hash, vitals, combat, flags, move, chara);
+            CharacterRegistration registration = info.CreateRegistration(Physics2D.gravity.magnitude);
+            int result = _core.RegisterCharacter(hash, registration, chara);
             WarnIfCapacityUsageHigh();
             return result;
+        }
+
+        public void ApplyCharacterGrowth(int hash, in CharacterGrowth growth)
+        {
+            _core.ApplyCharacterGrowth(hash, growth);
         }
 
         public void UnregisterCharacter(int hash)
@@ -255,6 +238,8 @@ namespace Game.Runtime
         {
             if (Instance == this)
             {
+                _statusEffectPresentation?.Dispose();
+                _actions?.Dispose();
                 _core?.Dispose();
                 _subManagers.Clear();
                 Instance = null;

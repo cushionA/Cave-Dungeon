@@ -87,6 +87,11 @@ namespace Game.Runtime
         public ProjectileController SpawnProjectile(int casterHash, MagicDefinition magic,
             Vector2 position, Vector2 direction, int targetHash = 0)
         {
+            // 子弾は親の装備スナップショットを引き継ぎ、途中の装備変更を再反映しない。
+            if (magic.equipmentStatusEffects == null)
+            {
+                magic.equipmentStatusEffects = GameManager.Equipment.GetOnHitEffects(casterHash, magic.equipmentSource);
+            }
             // Issue #78 M5 撤回: MagicDefinition / BulletProfile はいずれも struct (値型) のため
             // null 比較は不可能 (CS0019)。NRE 起因の「弾が出ない」silent bug は元々発生し得ないため
             // 入口 null チェックは不要 (struct はデフォルト値で初期化される)。
@@ -285,7 +290,7 @@ namespace Game.Runtime
                 }
 
                 ProjectileHitProcessor.ProcessHit(
-                    projectile, receiver, GameManager.Data, magic, GameManager.Events);
+                    projectile, receiver, GameManager.Data, magic, GameManager.Events, GameManager.StatusEffects);
             }
         }
 
@@ -460,14 +465,9 @@ namespace Game.Runtime
 
         private ProjectileController GetOrCreateController()
         {
-            if (_goPool.Count > 0)
-            {
-                ProjectileController controller = _goPool.Dequeue();
-                controller.transform.SetParent(null);
-                return controller;
-            }
-
-            return CreatePooledController();
+            ProjectileController controller = _goPool.Count > 0 ? _goPool.Dequeue() : CreatePooledController();
+            controller.transform.SetParent(transform);
+            return controller;
         }
 
         private ProjectileController CreatePooledController()

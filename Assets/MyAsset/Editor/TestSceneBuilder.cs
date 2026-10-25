@@ -182,26 +182,26 @@ namespace Game.Editor
         private static AttackInfo[] CreatePlayerAttackInfos(AnimatorController controller)
         {
             // 3段コンボ: 弱1 → 弱2 → 弱3（フィニッシュ）
-            MotionInfo combo1Motion = CreateMotionInfoWithClips(controller, "PH_LightCombo1", 0.05f, 0.2f, 0.1f);
+            MotionDefinition combo1Motion = CreateMotionDefinitionWithClips(controller, "Assets/MyAsset/Data/PLACEHOLDER_PlayerCombo1_Motion.asset", "PH_LightCombo1", 0.05f, 0.2f, 0.1f);
             AttackInfo combo1 = CreateOrLoadAttackInfo(
                 "Assets/MyAsset/Data/PLACEHOLDER_PlayerCombo1.asset",
                 info =>
                 {
                     info.attackName = "Light_Combo1";
                     info.category = AttackCategory.Melee;
-                    info.motionInfo = combo1Motion;
+                    info.motion = combo1Motion;
                     info.cancelPoint = 0.5f;
                     info.baseDamage = new ElementalStatus { slash = 10 };
                     info.damageMultiplier = 1.0f;
                     info.attackElement = Element.Slash;
                     info.feature = AttackFeature.Light;
                     info.contactType = AttackContactType.StopOnHit;
-                    info.attackMoveDistance = 1.0f;
-                    info.attackMoveDuration = 0.12f;
+                    info.movement = new ActionMovementProfile { speed = 1.0f / 0.12f, duration = 0.12f };
                     info.aerialMoveDirection = new Vector2(0f, 0.3f);
                     info.isParriable = true;
                     info.staminaCost = 5f;
                     info.armorBreakValue = 10f;
+                    info.guardDamage = 10f;
                     info.inputWindow = 0.6f;
                     info.knockbackInfo = new KnockbackInfo
                     {
@@ -210,26 +210,26 @@ namespace Game.Editor
                     };
                 });
 
-            MotionInfo combo2Motion = CreateMotionInfoWithClips(controller, "PH_LightCombo2", 0.05f, 0.2f, 0.12f);
+            MotionDefinition combo2Motion = CreateMotionDefinitionWithClips(controller, "Assets/MyAsset/Data/PLACEHOLDER_PlayerCombo2_Motion.asset", "PH_LightCombo2", 0.05f, 0.2f, 0.12f);
             AttackInfo combo2 = CreateOrLoadAttackInfo(
                 "Assets/MyAsset/Data/PLACEHOLDER_PlayerCombo2.asset",
                 info =>
                 {
                     info.attackName = "Light_Combo2";
                     info.category = AttackCategory.Melee;
-                    info.motionInfo = combo2Motion;
+                    info.motion = combo2Motion;
                     info.cancelPoint = 0.5f;
                     info.baseDamage = new ElementalStatus { slash = 12 };
                     info.damageMultiplier = 1.2f;
                     info.attackElement = Element.Slash;
                     info.feature = AttackFeature.Light;
                     info.contactType = AttackContactType.StopOnHit;
-                    info.attackMoveDistance = 1.2f;
-                    info.attackMoveDuration = 0.12f;
+                    info.movement = new ActionMovementProfile { speed = 1.2f / 0.12f, duration = 0.12f };
                     info.aerialMoveDirection = new Vector2(0f, 0.2f);
                     info.isParriable = true;
                     info.staminaCost = 7f;
                     info.armorBreakValue = 12f;
+                    info.guardDamage = 12f;
                     info.inputWindow = 0.6f;
                     info.knockbackInfo = new KnockbackInfo
                     {
@@ -238,26 +238,26 @@ namespace Game.Editor
                     };
                 });
 
-            MotionInfo combo3Motion = CreateMotionInfoWithClips(controller, "PH_LightCombo3", 0.08f, 0.25f, 0.2f);
+            MotionDefinition combo3Motion = CreateMotionDefinitionWithClips(controller, "Assets/MyAsset/Data/PLACEHOLDER_PlayerCombo3_Motion.asset", "PH_LightCombo3", 0.08f, 0.25f, 0.2f);
             AttackInfo combo3 = CreateOrLoadAttackInfo(
                 "Assets/MyAsset/Data/PLACEHOLDER_PlayerCombo3.asset",
                 info =>
                 {
                     info.attackName = "Light_Combo3_Finish";
                     info.category = AttackCategory.Melee;
-                    info.motionInfo = combo3Motion;
+                    info.motion = combo3Motion;
                     info.cancelPoint = 0.8f;
                     info.baseDamage = new ElementalStatus { slash = 15, strike = 5 };
                     info.damageMultiplier = 1.8f;
                     info.attackElement = Element.Slash;
                     info.feature = AttackFeature.Heavy;
                     info.contactType = AttackContactType.StopOnHit;
-                    info.attackMoveDistance = 1.8f;
-                    info.attackMoveDuration = 0.15f;
+                    info.movement = new ActionMovementProfile { speed = 1.8f / 0.15f, duration = 0.15f };
                     info.aerialMoveDirection = new Vector2(0.3f, -0.5f);
                     info.isParriable = true;
                     info.staminaCost = 12f;
                     info.armorBreakValue = 20f;
+                    info.guardDamage = 20f;
                     info.isChainEndPoint = true;
                     info.inputWindow = 0f; // フィニッシュ: コンボ継続なし
                     info.knockbackInfo = new KnockbackInfo
@@ -273,14 +273,14 @@ namespace Game.Editor
 
         private static AttackInfo[] CreateEnemyAttackInfos(AnimatorController controller)
         {
-            MotionInfo enemyMotion = CreateMotionInfoWithClips(controller, "PH_EnemyAttack", 0.15f, 0.2f, 0.2f);
+            MotionDefinition enemyMotion = CreateMotionDefinitionWithClips(controller, "Assets/MyAsset/Data/PLACEHOLDER_EnemyAttack_Motion.asset", "PH_EnemyAttack", 0.15f, 0.2f, 0.2f);
             AttackInfo attack = CreateOrLoadAttackInfo(
                 "Assets/MyAsset/Data/PLACEHOLDER_EnemyAttack.asset",
                 info =>
                 {
                     info.attackName = "PLACEHOLDER_EnemyAttack";
                     info.category = AttackCategory.Melee;
-                    info.motionInfo = enemyMotion;
+                    info.motion = enemyMotion;
                     info.cancelPoint = 0.7f;
                     info.baseDamage = new ElementalStatus { slash = 8 };
                     info.damageMultiplier = 1.0f;
@@ -293,20 +293,21 @@ namespace Game.Editor
 
         private static AttackInfo[] CreateBossAttackInfos(AnimatorController controller)
         {
-            MotionInfo bossMotion = CreateMotionInfoWithClips(controller, "PH_BossSlam", 0.4f, 0.3f, 0.5f);
+            MotionDefinition bossMotion = CreateMotionDefinitionWithClips(controller, "Assets/MyAsset/Data/PLACEHOLDER_BossSlam_Motion.asset", "PH_BossSlam", 0.4f, 0.3f, 0.5f);
             AttackInfo slam = CreateOrLoadAttackInfo(
                 "Assets/MyAsset/Data/PLACEHOLDER_BossSlam.asset",
                 info =>
                 {
                     info.attackName = "PLACEHOLDER_BossSlam";
                     info.category = AttackCategory.Melee;
-                    info.motionInfo = bossMotion;
+                    info.motion = bossMotion;
                     info.cancelPoint = 0.85f;
                     info.baseDamage = new ElementalStatus { strike = 15 };
                     info.damageMultiplier = 2.0f;
                     info.attackElement = Element.Strike;
                     info.contactType = AttackContactType.PassThrough;
                     info.armorBreakValue = 30f;
+                    info.guardDamage = 30f;
                     info.knockbackInfo = new KnockbackInfo
                     {
                         hasKnockback = true,
@@ -320,14 +321,14 @@ namespace Game.Editor
 
         private static AttackInfo[] CreateCompanionAttackInfos(AnimatorController controller)
         {
-            MotionInfo companionMotion = CreateMotionInfoWithClips(controller, "PH_CompanionAttack", 0.1f, 0.15f, 0.15f);
+            MotionDefinition companionMotion = CreateMotionDefinitionWithClips(controller, "Assets/MyAsset/Data/PLACEHOLDER_CompanionAttack_Motion.asset", "PH_CompanionAttack", 0.1f, 0.15f, 0.15f);
             AttackInfo attack = CreateOrLoadAttackInfo(
                 "Assets/MyAsset/Data/PLACEHOLDER_CompanionAttack.asset",
                 info =>
                 {
                     info.attackName = "PLACEHOLDER_CompanionAttack";
                     info.category = AttackCategory.Melee;
-                    info.motionInfo = companionMotion;
+                    info.motion = companionMotion;
                     info.cancelPoint = 0.6f;
                     info.baseDamage = new ElementalStatus { slash = 6 };
                     info.damageMultiplier = 1.0f;
@@ -651,11 +652,11 @@ namespace Game.Editor
         /// 3フェーズ（予備動作/アクティブ/硬直）のダミークリップを生成してMotionInfoに設定する。
         /// cancelPointは AttackInfo.cancelPoint で個別設定する（呼び出し元で設定）。
         /// </summary>
-        private static MotionInfo CreateMotionInfoWithClips(
-            AnimatorController controller, string prefix,
+        private static MotionDefinition CreateMotionDefinitionWithClips(
+            AnimatorController controller, string path, string prefix,
             float preDuration, float activeDuration, float recoveryDuration)
         {
-            return new MotionInfo
+            MotionInfo info = new MotionInfo
             {
                 preMotionDuration = preDuration,
                 activeMotionDuration = activeDuration,
@@ -668,6 +669,19 @@ namespace Game.Editor
                     ? AddDummyClipToController(controller, $"{prefix}_Recovery", k_RecoveryColor, recoveryDuration)
                     : null,
             };
+            MotionDefinition definition = AssetDatabase.LoadAssetAtPath<MotionDefinition>(path);
+            if (definition == null)
+            {
+                definition = ScriptableObject.CreateInstance<MotionDefinition>();
+                definition.info = info;
+                AssetDatabase.CreateAsset(definition, path);
+            }
+            else
+            {
+                definition.info = info;
+                EditorUtility.SetDirty(definition);
+            }
+            return definition;
         }
 
         // ===== 環境 =====

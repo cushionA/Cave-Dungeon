@@ -10,11 +10,19 @@ namespace Game.Core
     /// </summary>
     public class GameEvents : IDisposable
     {
+        private readonly Subject<ActionExecutionEvent> _onActionExecution = new();
+        private readonly Subject<ActionRequest> _onActionRequested = new();
+        public Observable<ActionExecutionEvent> OnActionExecution => _onActionExecution;
+        public Observable<ActionRequest> OnActionRequested => _onActionRequested;
+        public void FireActionExecution(ActionExecutionEvent notification) => _onActionExecution.OnNext(notification);
+        public void FireActionRequested(ActionRequest request) => _onActionRequested.OnNext(request);
         // ===== キャラクター登録・削除 =====
         private readonly Subject<int> _onCharacterRegistered = new();
         private readonly Subject<int> _onCharacterRemoved = new();
+        private readonly Subject<int> _onCharacterStatsChanged = new();
         public Observable<int> OnCharacterRegistered => _onCharacterRegistered;
         public Observable<int> OnCharacterRemoved => _onCharacterRemoved;
+        public Observable<int> OnCharacterStatsChanged => _onCharacterStatsChanged;
 
         // ===== ゲーム状態 =====
         private readonly Subject<Unit> _onGamePaused = new();
@@ -33,11 +41,13 @@ namespace Game.Core
         private readonly Subject<(int deadHash, int killerHash)> _onCharacterDeath = new();
         private readonly Subject<(int defenderHash, int attackerHash, GuardResult result)> _onGuardEvent = new();
         private readonly Subject<(int targetHash, StatusEffectId effectId)> _onStatusEffectApplied = new();
+        private readonly Subject<(int targetHash, StatusEffectId effectId, StatusEffectChangeKind kind)> _onStatusEffectChanged = new();
         private readonly Subject<int> _onConfusionCleared = new();
         public Observable<(DamageResult result, int attackerHash, int defenderHash)> OnDamageDealt => _onDamageDealt;
         public Observable<(int deadHash, int killerHash)> OnCharacterDeath => _onCharacterDeath;
         public Observable<(int defenderHash, int attackerHash, GuardResult result)> OnGuardEvent => _onGuardEvent;
         public Observable<(int targetHash, StatusEffectId effectId)> OnStatusEffectApplied => _onStatusEffectApplied;
+        public Observable<(int targetHash, StatusEffectId effectId, StatusEffectChangeKind kind)> OnStatusEffectChanged => _onStatusEffectChanged;
         /// <summary>
         /// 混乱状態が解除された時。AI が保持しているターゲットが無効化されるため、
         /// 受け手は JudgmentLoop.ForceEvaluate() でターゲット再選択を促すべき。
@@ -110,6 +120,7 @@ namespace Game.Core
 
         public void FireCharacterRegistered(int hash) => _onCharacterRegistered.OnNext(hash);
         public void FireCharacterRemoved(int hash) => _onCharacterRemoved.OnNext(hash);
+        public void FireCharacterStatsChanged(int hash) => _onCharacterStatsChanged.OnNext(hash);
         public void FireGamePaused() => _onGamePaused.OnNext(Unit.Default);
         public void FireGameResumed() => _onGameResumed.OnNext(Unit.Default);
         public void FireSceneLoadStarted(string sceneName) => _onSceneLoadStarted.OnNext(sceneName);
@@ -129,6 +140,8 @@ namespace Game.Core
             => _onGuardEvent.OnNext((defenderHash, attackerHash, result));
         public void FireStatusEffectApplied(int targetHash, StatusEffectId effectId)
             => _onStatusEffectApplied.OnNext((targetHash, effectId));
+        public void FireStatusEffectChanged(int targetHash, StatusEffectId effectId, StatusEffectChangeKind kind)
+            => _onStatusEffectChanged.OnNext((targetHash, effectId, kind));
         public void FireConfusionCleared(int targetHash)
             => _onConfusionCleared.OnNext(targetHash);
 
@@ -161,8 +174,11 @@ namespace Game.Core
 
         public void Dispose()
         {
+            _onActionExecution.Dispose();
+            _onActionRequested.Dispose();
             _onCharacterRegistered.Dispose();
             _onCharacterRemoved.Dispose();
+            _onCharacterStatsChanged.Dispose();
             _onGamePaused.Dispose();
             _onGameResumed.Dispose();
             _onSceneLoadStarted.Dispose();
@@ -171,6 +187,7 @@ namespace Game.Core
             _onCharacterDeath.Dispose();
             _onGuardEvent.Dispose();
             _onStatusEffectApplied.Dispose();
+            _onStatusEffectChanged.Dispose();
             _onConfusionCleared.Dispose();
             _onExpGained.Dispose();
             _onLevelUp.Dispose();

@@ -89,6 +89,7 @@ namespace Game.Runtime
                         attackElement = Element.Strike,
                         feature = AttackFeature.Light,
                         knockbackForce = new Vector2(facingRight ? 2f : -2f, 0.5f),
+                        guardDamage = 5f,
                         armorBreakValue = 5f,
                         maxHitCount = 1
                     };

@@ -60,7 +60,9 @@ namespace Game.Tests.EditMode
                 level = 1
             };
 
-            CharacterVitals result = logic.RecalculateVitals(baseVitals);
+            CharacterBaseStats basis = new CharacterBaseStats { maxHp = 100, maxMp = 50 };
+            CharacterVitals result = logic.RecalculateVitals(basis, baseVitals);
+            result = logic.RecalculateVitals(basis, result);
 
             // vit 2 * k_HpPerVit(10) = 20 bonus hp
             Assert.AreEqual(120, result.maxHp);

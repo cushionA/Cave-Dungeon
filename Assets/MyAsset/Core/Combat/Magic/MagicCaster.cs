@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 namespace Game.Core
 {
@@ -8,6 +9,7 @@ namespace Game.Core
     [Serializable]
     public struct MagicDefinition
     {
+        public long actionInstanceId;
         public string magicName;
         public int magicId;
         public MagicType magicType;
@@ -20,7 +22,14 @@ namespace Game.Core
         public BulletProfile bulletProfile;
         public float motionValue;
         public Element attackElement;
-        public StatusEffectInfo statusEffect;
+        public float guardDamage;
+        public float armorBreakValue;
+        public float justGuardResistance;
+        public AttackFeature feature;
+        public Vector2 knockbackForce;
+        public StatusEffectApplicationData[] statusEffects;
+        public StatusEffectApplicationData[] equipmentStatusEffects;
+        public AttackEquipmentSource equipmentSource;
         public int healAmount;
         public ChildBulletConfig childBullet;
     }

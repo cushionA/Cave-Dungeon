@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace Game.Core
@@ -47,7 +48,7 @@ namespace Game.Core
                 // Step 1a: Consume action armor first
                 if (actionArmor > 0f)
                 {
-                    float absorbed = Mathf.Min(actionArmor, remaining);
+                    float absorbed = Math.Min(actionArmor, remaining);
                     actionArmor -= absorbed;
                     remaining -= absorbed;
                 }
@@ -64,12 +65,12 @@ namespace Game.Core
                 if (nowZero && !wasBrokenBefore)
                 {
                     armorBroken = true;
-                    actualDamage = Mathf.FloorToInt(rawDamage * k_ArmorBreakBonusMult);
+                    actualDamage = (int)Math.Min(int.MaxValue, Math.Floor(rawDamage * k_ArmorBreakBonusMult));
                 }
             }
 
             // Step 3: Reduce HP (clamp to 0)
-            currentHp = Mathf.Max(0, currentHp - actualDamage);
+            currentHp = Math.Max(0, currentHp - actualDamage);
 
             // Step 4: Determine kill
             bool isKill = currentHp <= 0;
@@ -92,7 +93,7 @@ namespace Game.Core
                 return;
             }
 
-            currentArmor = Mathf.Min(maxArmor, currentArmor + recoveryRate * deltaTime);
+            currentArmor = Math.Min(maxArmor, currentArmor + recoveryRate * deltaTime);
         }
 
         /// <summary>
@@ -104,7 +105,7 @@ namespace Game.Core
         /// <returns>Adjusted knockback force vector.</returns>
         public static Vector2 CalculateKnockback(Vector2 baseForce, float knockbackResistance)
         {
-            float multiplier = Mathf.Max(0f, 1f - knockbackResistance);
+            float multiplier = Math.Max(0f, 1f - knockbackResistance);
             return baseForce * multiplier;
         }
     }

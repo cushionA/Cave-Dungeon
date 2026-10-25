@@ -7,6 +7,9 @@ Usage:
   python feature-db.py add <name> --tests <files> --impl <files> [--category system|content] [--section id] [--depends dep1 dep2]
   python feature-db.py update <name> --status <status> [--test-passed N] [--test-failed N]
   python feature-db.py get <name>                    # Get single feature
+  python feature-db.py set-call-path <name> --file <JSON> # Register or replace an ordered call path
+  python feature-db.py import-call-paths --file designs/call-paths.json # Atomically restore a tracked manifest
+  python feature-db.py call-paths [name]             # Show implementation, connection, evidence and stale paths
   python feature-db.py list [--status <status>] [--section <id>]  # List features
   python feature-db.py assets [--status pending|placed]  # List assets
   python feature-db.py bind <asset_id>               # Mark asset as placed
@@ -16,16 +19,204 @@ import sqlite3
 import json
 import sys
 import os
+import hashlib
+import re
+from pathlib import Path
 from datetime import datetime, timezone
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'feature-log.db')
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+CALL_PATH_STATES = {
+    'implementation_status': {'implemented', 'planned'},
+    'connection_status': {'connected', 'partial', 'unconnected'},
+    'verification': {'unverified', 'compiled', 'logic_tested', 'runtime_tested'},
+}
+CALL_PATH_STEP_KINDS = {'entry', 'call', 'event', 'read', 'write', 'update', 'output'}
 
 def get_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS feature_call_paths (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            feature_id INTEGER NOT NULL,
+            path_key TEXT NOT NULL,
+            title TEXT NOT NULL,
+            implementation_status TEXT NOT NULL CHECK(implementation_status IN ('implemented', 'planned')),
+            connection_status TEXT NOT NULL CHECK(connection_status IN ('connected', 'partial', 'unconnected')),
+            verification TEXT NOT NULL CHECK(verification IN ('unverified', 'compiled', 'logic_tested', 'runtime_tested')),
+            steps_json TEXT NOT NULL,
+            tests_json TEXT NOT NULL,
+            notes TEXT NOT NULL,
+            source_hashes_json TEXT NOT NULL,
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE(feature_id, path_key),
+            FOREIGN KEY (feature_id) REFERENCES features(id) ON DELETE CASCADE
+        )
+    """)
+    conn.commit()
     return conn
+
+def _call_path_file(value):
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError('Call path files must be nonempty project-relative paths')
+    path = Path(value)
+    if path.is_absolute() or path.drive or '..' in path.parts:
+        raise ValueError(f'Call path file must stay within the project: {value}')
+    root = PROJECT_ROOT.resolve()
+    resolved = (root / path).resolve()
+    if not resolved.is_relative_to(root) or not resolved.is_file():
+        raise ValueError(f'Call path file does not exist within the project: {value}')
+    return resolved.relative_to(root).as_posix()
+
+def _call_path_hash(file):
+    path = PROJECT_ROOT / file
+    if not path.is_file() or not path.resolve().is_relative_to(PROJECT_ROOT.resolve()):
+        return None
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+def _validate_call_path(payload):
+    if not isinstance(payload, dict):
+        raise ValueError('Call path must be a JSON object')
+    for field in ('key', 'title'):
+        if not isinstance(payload.get(field), str) or not payload[field].strip():
+            raise ValueError(f'Call path {field} must be a nonempty string')
+    for field, choices in CALL_PATH_STATES.items():
+        if not isinstance(payload.get(field), str) or payload[field] not in choices:
+            raise ValueError(f'Call path {field} must be one of {sorted(choices)}')
+    if payload['implementation_status'] == 'planned' and payload['connection_status'] == 'connected':
+        raise ValueError('Planned paths cannot be connected')
+    steps = payload.get('steps')
+    if not isinstance(steps, list) or not steps:
+        raise ValueError('Call path steps must be a nonempty ordered list')
+    normalized_steps = []
+    for step in steps:
+        if not isinstance(step, dict) or not isinstance(step.get('symbol'), str) or not step['symbol'].strip():
+            raise ValueError('Each call path step needs a nonempty symbol')
+        if not isinstance(step.get('kind'), str) or step['kind'] not in CALL_PATH_STEP_KINDS:
+            raise ValueError(f'Call path step kind must be one of {sorted(CALL_PATH_STEP_KINDS)}')
+        normalized_steps.append({'file': _call_path_file(step.get('file')), 'symbol': step['symbol'], 'kind': step['kind']})
+    tests = payload.get('tests', [])
+    if not isinstance(tests, list):
+        raise ValueError('Call path tests must be a list of project-relative paths')
+    normalized_tests = [_call_path_file(file) for file in tests]
+    notes = payload.get('notes', '')
+    if not isinstance(notes, str):
+        raise ValueError('Call path notes must be a string')
+    if payload['verification'] != 'unverified' and not notes.strip():
+        raise ValueError('Verified paths require evidence in notes')
+    if payload['verification'] in {'logic_tested', 'runtime_tested'} and not tests:
+        raise ValueError('Tested paths require test files')
+    hashes = payload.get('verification_hashes', {})
+    if not isinstance(hashes, dict):
+        raise ValueError('Call path verification_hashes must map project-relative files to SHA-256 hashes')
+    normalized_hashes = {}
+    for file, fingerprint in hashes.items():
+        if not isinstance(fingerprint, str) or re.fullmatch(r'[0-9a-fA-F]{64}', fingerprint) is None:
+            raise ValueError('Call path verification hashes must be 64 hexadecimal characters')
+        normalized_file = _call_path_file(file)
+        if normalized_file in normalized_hashes:
+            raise ValueError(f'Duplicate verification hash file: {normalized_file}')
+        normalized_hashes[normalized_file] = fingerprint.lower()
+    if payload['verification'] != 'unverified':
+        files = {step['file'] for step in normalized_steps} | set(normalized_tests)
+        missing = sorted(files - normalized_hashes.keys())
+        if missing:
+            raise ValueError(f'Verified call paths require verification hashes for: {", ".join(missing)}')
+    return {**payload, 'steps': normalized_steps, 'tests': normalized_tests, 'notes': notes,
+            'verification_hashes': normalized_hashes}
+
+def _upsert_call_path(conn, feature_id, payload):
+    conn.execute("""
+            INSERT INTO feature_call_paths (
+                feature_id, path_key, title, implementation_status, connection_status, verification,
+                steps_json, tests_json, notes, source_hashes_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(feature_id, path_key) DO UPDATE SET
+                title=excluded.title, implementation_status=excluded.implementation_status,
+                connection_status=excluded.connection_status, verification=excluded.verification,
+                steps_json=excluded.steps_json, tests_json=excluded.tests_json,
+                notes=excluded.notes, source_hashes_json=excluded.source_hashes_json,
+                updated_at=datetime('now')
+        """, (feature_id, payload['key'], payload['title'], payload['implementation_status'],
+              payload['connection_status'], payload['verification'], json.dumps(payload['steps'], ensure_ascii=False),
+              json.dumps(payload['tests'], ensure_ascii=False), payload['notes'], json.dumps(payload['verification_hashes'])))
+
+def set_call_path(name, payload):
+    payload = _validate_call_path(payload)
+    conn = get_connection()
+    try:
+        feature = conn.execute('SELECT id FROM features WHERE name=?', (name,)).fetchone()
+        if feature is None:
+            raise ValueError(f"Feature '{name}' not found")
+        with conn:
+            _upsert_call_path(conn, feature['id'], payload)
+    finally:
+        conn.close()
+    print(f"Registered call path: {name}/{payload['key']}")
+
+def import_call_paths(entries):
+    if not isinstance(entries, list) or not entries:
+        raise ValueError('Call path manifest must be a nonempty list of feature/path objects')
+    validated = []
+    seen = set()
+    for entry in entries:
+        if not isinstance(entry, dict) or not isinstance(entry.get('feature'), str) or not entry['feature'].strip():
+            raise ValueError('Each manifest entry requires a feature name and path object')
+        payload = _validate_call_path(entry.get('path'))
+        identity = (entry['feature'], payload['key'])
+        if identity in seen:
+            raise ValueError(f'Duplicate call path in manifest: {identity[0]}/{identity[1]}')
+        seen.add(identity)
+        validated.append((entry['feature'], payload))
+    conn = get_connection()
+    try:
+        resolved = []
+        for name, payload in validated:
+            feature = conn.execute('SELECT id FROM features WHERE name=?', (name,)).fetchone()
+            if feature is None:
+                raise ValueError(f"Feature '{name}' not found")
+            resolved.append((feature['id'], payload))
+        with conn:
+            for feature_id, payload in resolved:
+                _upsert_call_path(conn, feature_id, payload)
+    finally:
+        conn.close()
+    print(f'Registered {len(validated)} call paths')
+
+def _read_call_paths(conn, name=None):
+    query = 'SELECT p.*, f.name AS feature_name FROM feature_call_paths p JOIN features f ON f.id=p.feature_id'
+    params = []
+    if name is not None:
+        if conn.execute('SELECT 1 FROM features WHERE name=?', (name,)).fetchone() is None:
+            raise ValueError(f"Feature '{name}' not found")
+        query += ' WHERE f.name=?'
+        params.append(name)
+    query += ' ORDER BY f.name, p.path_key'
+    result = []
+    for row in conn.execute(query, params):
+        hashes = json.loads(row['source_hashes_json'])
+        changed = [file for file, fingerprint in hashes.items() if _call_path_hash(file) != fingerprint]
+        result.append({
+            'feature': row['feature_name'], 'key': row['path_key'], 'title': row['title'],
+            'implementation_status': row['implementation_status'], 'connection_status': row['connection_status'],
+            'verification': row['verification'], 'verification_current': not changed and row['verification'] != 'unverified',
+            'verification_hashes': hashes,
+            'steps': json.loads(row['steps_json']), 'tests': json.loads(row['tests_json']),
+            'notes': row['notes'], 'updated_at': row['updated_at'], 'stale': bool(changed), 'changed_files': changed,
+        })
+    return result
+
+def list_call_paths(name=None):
+    conn = get_connection()
+    try:
+        result = _read_call_paths(conn, name)
+    finally:
+        conn.close()
+    print(json.dumps(result, indent=2, ensure_ascii=False))
 
 def _migrate_features_table(conn):
     """Add new columns to existing features table if they don't exist."""
@@ -150,6 +341,7 @@ def get_feature(name):
 
     deps_raw = feature['dependencies']
     deps = json.loads(deps_raw) if deps_raw else []
+    call_paths = _read_call_paths(conn, name)
     result = {
         "name": feature['name'],
         "status": feature['status'],
@@ -162,7 +354,9 @@ def get_feature(name):
         "tests_failed": feature['tests_failed'],
         "tests": [f['file_path'] for f in files if f['file_type'] == 'test'],
         "implementation": [f['file_path'] for f in files if f['file_type'] == 'implementation'],
-        "pending_assets": [dict(a) for a in assets]
+        "pending_assets": [dict(a) for a in assets],
+        "call_path_registration": 'registered' if call_paths else 'unregistered',
+        "call_paths": call_paths,
     }
     print(json.dumps(result, indent=2, ensure_ascii=False))
     conn.close()
@@ -185,13 +379,17 @@ def list_features(status=None, section=None):
         conn.close()
         return
 
-    print(f"{'Name':<30} {'Status':<15} {'Category':<10} {'Section':<12} {'Tests':>12} {'Created':<20}")
+    print(f"{'Name':<30} {'Status':<15} {'Category':<10} {'Section':<12} {'Tests':>12} {'Paths':<16} {'Created':<20}")
     print("-" * 99)
     for f in features:
         tests_str = f"{f['tests_passed']}P/{f['tests_failed']}F"
         cat = f['category'] or '-'
         sec = f['section_id'] or '-'
-        print(f"{f['name']:<30} {f['status']:<15} {cat:<10} {sec:<12} {tests_str:>12} {f['created_at']:<20}")
+        paths = _read_call_paths(conn, f['name'])
+        path_status = f"{len(paths)} registered" if paths else 'unregistered'
+        if any(path['stale'] for path in paths):
+            path_status += '*'
+        print(f"{f['name']:<30} {f['status']:<15} {cat:<10} {sec:<12} {tests_str:>12} {path_status:<16} {f['created_at']:<20}")
     conn.close()
 
 def list_assets(status=None):
@@ -299,6 +497,10 @@ def summary():
                 print(p)
     print(f"Tests: {total_passed} passed | {total_failed_tests} failed")
     print(f"Assets: {pending_assets} pending | {placed_assets} placed")
+    paths = _read_call_paths(conn)
+    registered = len({path['feature'] for path in paths})
+    stale = sum(path['stale'] for path in paths)
+    print(f"Call paths: {len(paths)} total | {registered} registered features | {total - registered} unregistered features | {stale} stale")
     conn.close()
 
 def main():
@@ -360,6 +562,20 @@ def main():
         update_feature(name, status, tp, tf)
     elif cmd == 'get':
         get_feature(sys.argv[2])
+    elif cmd == 'set-call-path':
+        if len(sys.argv) != 5 or sys.argv[3] != '--file':
+            raise ValueError('Usage: feature-db.py set-call-path <feature> --file <JSON>')
+        with open(sys.argv[4], encoding='utf-8-sig') as payload_file:
+            set_call_path(sys.argv[2], json.load(payload_file))
+    elif cmd == 'call-paths':
+        if len(sys.argv) > 3:
+            raise ValueError('Usage: feature-db.py call-paths [feature]')
+        list_call_paths(sys.argv[2] if len(sys.argv) == 3 else None)
+    elif cmd == 'import-call-paths':
+        if len(sys.argv) != 4 or sys.argv[2] != '--file':
+            raise ValueError('Usage: feature-db.py import-call-paths --file <JSON>')
+        with open(sys.argv[3], encoding='utf-8-sig') as manifest_file:
+            import_call_paths(json.load(manifest_file))
     elif cmd == 'list':
         status, section = None, None
         i = 2
@@ -404,4 +620,8 @@ def main():
         sys.exit(1)
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except (ValueError, OSError) as error:
+        print(f'Error: {error}', file=sys.stderr)
+        sys.exit(1)

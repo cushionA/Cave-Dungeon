@@ -10,6 +10,7 @@ namespace Game.Tests.EditMode
             public EquipSlot Slot { get; set; }
             public int Weight { get; set; }
             public AbilityFlag GrantedFlags { get; set; }
+            public StatusEffectApplicationData[] OnHitEffects => System.Array.Empty<StatusEffectApplicationData>();
             public bool WasEquipped { get; private set; }
             public bool WasUnequipped { get; private set; }
             public int EquippedOwnerHash { get; private set; }

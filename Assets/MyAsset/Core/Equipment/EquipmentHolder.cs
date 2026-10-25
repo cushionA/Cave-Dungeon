@@ -11,6 +11,11 @@ namespace Game.Core
         private IEquippable _shield;
         private IEquippable _core;
         private readonly int _ownerHash;
+        private StatusEffectApplicationData[] _weaponEffects = Array.Empty<StatusEffectApplicationData>();
+        private StatusEffectApplicationData[] _shieldEffects = Array.Empty<StatusEffectApplicationData>();
+        private StatusEffectApplicationData[] _coreEffects = Array.Empty<StatusEffectApplicationData>();
+        private StatusEffectApplicationData[] _weaponCombinedEffects = Array.Empty<StatusEffectApplicationData>();
+        private StatusEffectApplicationData[] _shieldCombinedEffects = Array.Empty<StatusEffectApplicationData>();
 
         public IEquippable Weapon => _weapon;
         public IEquippable Shield => _shield;
@@ -37,6 +42,10 @@ namespace Game.Core
             }
 
             IEquippable previous = null;
+            StatusEffectApplicationData[] effects = item.OnHitEffects;
+            effects = effects == null || effects.Length == 0
+                ? Array.Empty<StatusEffectApplicationData>()
+                : (StatusEffectApplicationData[])effects.Clone();
 
             switch (item.Slot)
             {
@@ -47,6 +56,7 @@ namespace Game.Core
                         previous.OnUnequip(_ownerHash);
                     }
                     _weapon = item;
+                    _weaponEffects = effects;
                     break;
 
                 case EquipSlot.Shield:
@@ -56,6 +66,7 @@ namespace Game.Core
                         previous.OnUnequip(_ownerHash);
                     }
                     _shield = item;
+                    _shieldEffects = effects;
                     break;
 
                 case EquipSlot.Core:
@@ -65,12 +76,14 @@ namespace Game.Core
                         previous.OnUnequip(_ownerHash);
                     }
                     _core = item;
+                    _coreEffects = effects;
                     break;
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(item), $"Unknown EquipSlot: {item.Slot}");
             }
 
+            RebuildEffectSnapshots();
             item.OnEquip(_ownerHash);
             return previous;
         }
@@ -89,28 +102,66 @@ namespace Game.Core
                 case EquipSlot.Weapon:
                     removed = _weapon;
                     _weapon = null;
+                    _weaponEffects = Array.Empty<StatusEffectApplicationData>();
                     break;
 
                 case EquipSlot.Shield:
                     removed = _shield;
                     _shield = null;
+                    _shieldEffects = Array.Empty<StatusEffectApplicationData>();
                     break;
 
                 case EquipSlot.Core:
                     removed = _core;
                     _core = null;
+                    _coreEffects = Array.Empty<StatusEffectApplicationData>();
                     break;
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(slot), $"Unknown EquipSlot: {slot}");
             }
 
+            RebuildEffectSnapshots();
             if (removed != null)
             {
                 removed.OnUnequip(_ownerHash);
             }
 
             return removed;
+        }
+
+        public StatusEffectApplicationData[] GetOnHitEffects(AttackEquipmentSource source)
+        {
+            switch (source)
+            {
+                case AttackEquipmentSource.None: return _coreEffects;
+                case AttackEquipmentSource.Weapon: return _weaponCombinedEffects;
+                case AttackEquipmentSource.Shield: return _shieldCombinedEffects;
+                default: throw new ArgumentOutOfRangeException(nameof(source));
+            }
+        }
+
+        private void RebuildEffectSnapshots()
+        {
+            _weaponCombinedEffects = Combine(_weaponEffects, _coreEffects);
+            _shieldCombinedEffects = Combine(_shieldEffects, _coreEffects);
+        }
+
+        private static StatusEffectApplicationData[] Combine(StatusEffectApplicationData[] first,
+            StatusEffectApplicationData[] second)
+        {
+            if (first.Length == 0)
+            {
+                return second;
+            }
+            if (second.Length == 0)
+            {
+                return first;
+            }
+            StatusEffectApplicationData[] result = new StatusEffectApplicationData[first.Length + second.Length];
+            Array.Copy(first, 0, result, 0, first.Length);
+            Array.Copy(second, 0, result, first.Length, second.Length);
+            return result;
         }
 
         /// <summary>

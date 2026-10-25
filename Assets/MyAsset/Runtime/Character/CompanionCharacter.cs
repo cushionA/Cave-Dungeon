@@ -85,7 +85,7 @@ namespace Game.Runtime
 
         private void InitializeAI()
         {
-            if (_playerTransform == null || GameManager.Data == null)
+            if (_aiController != null || _playerTransform == null || GameManager.Data == null)
             {
                 return;
             }
@@ -97,13 +97,11 @@ namespace Game.Runtime
                 return;
             }
 
-            // CharacterInfo から maxMp 取得
-            float maxMp = CharacterInfoRef != null ? CharacterInfoRef.maxMp : 50f;
             int initialReserveMp = _mpSettings.maxReserveMp > 0 ? _mpSettings.maxReserveMp : 100;
 
             _aiController = new CompanionController(
                 ObjectHash, playerHash, GameManager.Data,
-                maxMp, initialReserveMp, _mpSettings, GameManager.Events);
+                initialReserveMp, _mpSettings, GameManager.Events);
 
             // AIモード設定
             if (_aiInfo != null)
@@ -122,6 +120,7 @@ namespace Game.Runtime
             // イベント購読
             _aiController.MpManager.OnVanish += OnCompanionVanish;
             _aiController.MpManager.OnReturn += OnCompanionReturn;
+            OnCompanionReturn();
         }
 
         private void FixedUpdate()
@@ -133,16 +132,19 @@ namespace Game.Runtime
 
             UpdateGroundCheck();
 
+            if (GameManager.Actions != null && GameManager.Actions.IsPhysicsControlled(ObjectHash))
+            {
+                SyncPositionToData();
+                return;
+            }
+
             if (_aiController != null)
             {
                 // 候補リスト構築（敵ハッシュ）
                 PopulateAITargetCandidates(_candidates, targetAllyFaction: false);
 
-                // AI Tick（MP回復 → 追従判定 → モード遷移 → 行動判定）
-                _aiController.Tick(Time.fixedDeltaTime, _candidates, Time.time);
-
-                // AI が選択したアクションを ActionExecutorController に橋渡し
                 BridgeAIActionForJudgmentLoop(_aiController.JudgmentLoop, _actionExecutorController);
+                _aiController.Tick(Time.fixedDeltaTime, _candidates, Time.time);
 
                 // 追従移動
                 ApplyFollowMovement();
@@ -162,6 +164,7 @@ namespace Game.Runtime
         /// </summary>
         private void ApplyFollowMovement()
         {
+            if (_actionExecutorController != null && _actionExecutorController.HasMovementRequest) { return; }
             // 攻撃中は移動しない
             if (_actionExecutorController != null && _actionExecutorController.IsExecuting)
             {
@@ -191,7 +194,7 @@ namespace Game.Runtime
                 case FollowState.Following:
                 {
                     Vector2 target = _aiController.FollowBehavior.GetFollowTarget(myPos, playerPos);
-                    ref MoveParams moveParams = ref GameManager.Data.GetMoveParams(ObjectHash);
+                    MoveParams moveParams = GetEffectiveMoveParams(GameConstants.k_FallbackMoveSpeed);
                     float dir = target.x > myPos.x ? 1f : -1f;
                     _rb.linearVelocity = new Vector2(dir * moveParams.moveSpeed * 0.8f, _rb.linearVelocity.y);
                     SetFacing(dir > 0f);
@@ -216,14 +219,14 @@ namespace Game.Runtime
         {
             ref CharacterVitals targetVitals = ref GameManager.Data.GetVitals(targetHash);
             ref CharacterVitals myVitals = ref GameManager.Data.GetVitals(ObjectHash);
-            ref MoveParams moveParams = ref GameManager.Data.GetMoveParams(ObjectHash);
+            MoveParams moveParams = GetEffectiveMoveParams(GameConstants.k_FallbackMoveSpeed);
 
             float diff = targetVitals.position.x - myVitals.position.x;
             float absDist = Mathf.Abs(diff);
             if (absDist > GameConstants.k_DefaultAttackRange)
             {
                 float dir = diff > 0f ? 1f : -1f;
-                float speed = moveParams.moveSpeed > 0f ? moveParams.moveSpeed : GameConstants.k_FallbackMoveSpeed;
+                float speed = moveParams.moveSpeed;
                 _rb.linearVelocity = new Vector2(dir * speed, _rb.linearVelocity.y);
                 SetFacing(dir > 0f);
             }
@@ -273,7 +276,7 @@ namespace Game.Runtime
             else if (sqrDist > _followDistance * _followDistance)
             {
                 // 追従
-                ref MoveParams moveParams = ref GameManager.Data.GetMoveParams(ObjectHash);
+                MoveParams moveParams = GetEffectiveMoveParams(GameConstants.k_FallbackMoveSpeed);
                 float dir = playerPos.x > myPos.x ? 1f : -1f;
                 _rb.linearVelocity = new Vector2(dir * moveParams.moveSpeed * 0.8f, _rb.linearVelocity.y);
                 SetFacing(dir > 0f);
@@ -308,29 +311,28 @@ namespace Game.Runtime
             }
         }
 
-        protected override void OnDestroy()
+        private void DisposeAI()
         {
             if (_aiController?.MpManager != null)
             {
                 _aiController.MpManager.OnVanish -= OnCompanionVanish;
                 _aiController.MpManager.OnReturn -= OnCompanionReturn;
-                _aiController.MpManager.Dispose();
             }
 
-            if (_aiController?.StanceManager != null)
-            {
-                _aiController.StanceManager.Dispose();
-            }
-
-            // GameEvents 購読解除（MpManager/StanceManager とは別リソース）
             _aiController?.Dispose();
+            _aiController = null;
+        }
 
+        protected override void OnDestroy()
+        {
+            DisposeAI();
             CharacterRegistry.Unregister(ObjectHash, this);
             base.OnDestroy();
         }
 
         public override void OnPoolReturn()
         {
+            DisposeAI();
             CharacterRegistry.Unregister(ObjectHash, this);
             base.OnPoolReturn();
         }
@@ -339,6 +341,7 @@ namespace Game.Runtime
         {
             base.OnPoolAcquire();
             CharacterRegistry.RegisterAlly(ObjectHash);
+            InitializeAI();
         }
     }
 }

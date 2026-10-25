@@ -45,5 +45,6 @@ namespace Game.Core
         void OnEquip(int ownerHash);
         void OnUnequip(int ownerHash);
         AbilityFlag GrantedFlags { get; }
+        StatusEffectApplicationData[] OnHitEffects { get; }
     }
 }

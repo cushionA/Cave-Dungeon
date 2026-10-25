@@ -176,6 +176,7 @@ namespace Game.Tests.PlayMode
                 attackElement = Element.Slash,
                 knockbackForce = new Vector2(-1f, 0f),
                 feature = AttackFeature.None,
+                guardDamage = 999f,
                 armorBreakValue = 999f,        // 本来ならアーマーを吹き飛ばすほどの値
                 justGuardResistance = 0f,      // 近接なら全アーマー削りされる
                 isProjectile = true            // 飛翔体フラグ → アーマー削り0に分岐
@@ -228,6 +229,7 @@ namespace Game.Tests.PlayMode
                 damage = new ElementalStatus { slash = 10 },
                 motionValue = 1.0f,
                 attackElement = Element.Slash,
+                guardDamage = 20f,
                 armorBreakValue = 20f,  // 1発で 20 削る
                 feature = AttackFeature.None
             };
@@ -275,6 +277,7 @@ namespace Game.Tests.PlayMode
                 damage = new ElementalStatus { slash = 10 },
                 motionValue = 1.0f,
                 attackElement = Element.Slash,
+                guardDamage = 20f,
                 armorBreakValue = 20f,
                 feature = AttackFeature.None
             };

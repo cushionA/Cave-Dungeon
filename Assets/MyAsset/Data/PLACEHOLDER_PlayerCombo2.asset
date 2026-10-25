@@ -14,18 +14,22 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Core::Game.Core.AttackInfo
   attackName: Light_Combo2
   category: 0
-  motionInfo:
-    preMotionDuration: 0.05
-    activeMotionDuration: 0.2
-    recoveryDuration: 0.12
-    chargeTimeMin: 0
-    chargeTimeMax: 0
-    chargeDamageMultiplier: 0
-    preMotionClip: {fileID: 3080920384655787124, guid: 34dd98adbbc5db542b1bda6ba8c2d3c3, type: 2}
-    activeClip: {fileID: -4370528395423665769, guid: 34dd98adbbc5db542b1bda6ba8c2d3c3, type: 2}
-    chargeLoopClip: {fileID: 0}
-    recoveryClip: {fileID: -3883611289441434290, guid: 34dd98adbbc5db542b1bda6ba8c2d3c3, type: 2}
-    actionEffects: []
+  motion: {fileID: 11400000, guid: f3d0007cd2044e67ade4b87155c4733e, type: 2}
+  chargeTimeMin: 0
+  chargeTimeMax: 0
+  chargeDamageMultiplier: 0
+  actionEffects: []
+  staminaPerSecond: 0
+  cancelAfter: -1
+  endMode: 0
+  durationMode: 0
+  duration: 0
+  resources: 29
+  priority: 10
+  actState: 7
+  gameplay: 0
+  transitions: []
+  cancelPoint: -1
   baseDamage:
     slash: 12
     strike: 0
@@ -63,14 +67,8 @@ MonoBehaviour:
     groundBounce: 0
     wallBounce: 0
     gravityScale: 0
-  statusEffectInfo:
-    effect: 0
-    accumulateValue: 0
-    duration: 0
-    tickDamage: 0
-    tickInterval: 0
-    modifier: 0
-    maxStack: 0
+  statusEffects: []
+  equipmentSource: 1
   mpCost: 0
   staminaCost: 7
   aiEvaluation:
@@ -82,8 +80,11 @@ MonoBehaviour:
     totalWindupTime: 0
     preferredUseHpThreshold: 0
     priority: 0
-  attackMoveDistance: 1.2
-  attackMoveDuration: 0.12
+  movement:
+    speed: 10
+    startTime: 0
+    duration: 0.12
+    usesInput: 0
   contactType: 1
   aerialMoveDirection: {x: 0, y: 0.2}
   airHangDuration: 0.3
@@ -93,6 +94,7 @@ MonoBehaviour:
   divingForwardSpeed: 1
   divingLandingRecoveryDuration: 0.3
   isParriable: 1
+  guardDamage: 12
   armorBreakValue: 12
   feature: 1
   attackElement: 1
@@ -100,3 +102,5 @@ MonoBehaviour:
   isChainEndPoint: 0
   inputWindow: 0.6
   justGuardResistance: 0
+  magicType: 0
+  healAmount: 0

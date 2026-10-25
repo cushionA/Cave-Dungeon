@@ -14,7 +14,8 @@ namespace Game.Core
         /// AttackInfoからAttackMotionDataを構築する。
         /// ActionExecutorController等、AttackInfoベースで攻撃を駆動する箇所で使用。
         /// </summary>
-        public static AttackMotionData BuildMotionData(AttackInfo info, int maxHitCount = k_DefaultMaxHitCount)
+        public static AttackMotionData BuildMotionData(AttackInfo info, int maxHitCount = k_DefaultMaxHitCount,
+            StatusEffectApplicationData[] equipmentEffects = null)
         {
             return new AttackMotionData
             {
@@ -26,12 +27,14 @@ namespace Game.Core
                     ? info.knockbackInfo.force
                     : Vector2.zero,
                 armorBreakValue = info.armorBreakValue,
+                guardDamage = info.guardDamage,
                 maxHitCount = maxHitCount,
                 staminaCost = info.staminaCost,
                 mpCost = info.mpCost,
-                statusEffect = info.statusEffectInfo,
-                attackMoveDistance = info.attackMoveDistance,
-                attackMoveDuration = info.attackMoveDuration,
+                statusEffects = StatusEffectApplicationLogic.Resolve(info.statusEffects),
+                equipmentStatusEffects = equipmentEffects,
+                attackMoveDistance = info.movement.speed * info.movement.duration,
+                attackMoveDuration = info.movement.duration,
                 contactType = info.contactType,
                 isAutoChain = info.isAutoChain,
                 isChainEndPoint = info.isChainEndPoint,
@@ -63,15 +66,18 @@ namespace Game.Core
         {
             return new DamageData
             {
+                actionInstanceId = motion.actionInstanceId,
                 attackerHash = attackerHash,
                 defenderHash = defenderHash,
                 damage = attackStats,
                 motionValue = motion.motionValue,
                 knockbackForce = motion.knockbackForce,
                 attackElement = motion.attackElement,
-                statusEffectInfo = motion.statusEffect,
+                statusEffects = motion.statusEffects,
+                equipmentStatusEffects = motion.equipmentStatusEffects,
                 feature = motion.feature,
                 armorBreakValue = motion.armorBreakValue,
+                guardDamage = motion.guardDamage,
                 justGuardResistance = motion.justGuardResistance,
                 isProjectile = isProjectile
             };

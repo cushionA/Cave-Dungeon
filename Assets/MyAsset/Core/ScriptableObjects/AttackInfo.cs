@@ -8,7 +8,7 @@ namespace Game.Core
     /// 攻撃・魔法・スキルを1つのアセットで完全に定義するScriptableObject。
     /// </summary>
     [CreateAssetMenu(fileName = "NewAttackInfo", menuName = "Game/AttackInfo")]
-    public class AttackInfo : ScriptableObject
+    public class AttackInfo : ActionDefinition
     {
         [TitleGroup("基本情報")]
         public string attackName;
@@ -16,15 +16,6 @@ namespace Game.Core
         [TitleGroup("基本情報")]
         [EnumToggleButtons]
         public AttackCategory category;
-
-        [TitleGroup("モーション")]
-        [InlineProperty]
-        public MotionInfo motionInfo;
-
-        [TitleGroup("モーション")]
-        [Tooltip("Recovery中のキャンセル可能ポイント（0=Recovery開始直後、1=Recovery終了時、-1=キャンセル不可）。行動データ側に持たせることで全行動タイプで統一管理する。")]
-        [Range(-1f, 1f)]
-        public float cancelPoint = -1f;
 
         [TitleGroup("ダメージ")]
         public ElementalStatus baseDamage;
@@ -45,29 +36,15 @@ namespace Game.Core
         [InlineProperty]
         public KnockbackInfo knockbackInfo;
 
-        [TitleGroup("状態異常")]
-        [InlineProperty]
-        public StatusEffectInfo statusEffectInfo;
+        [TitleGroup("状態異常・バフ付与")]
+        public StatusEffectApplication[] statusEffects = Array.Empty<StatusEffectApplication>();
 
-        [TitleGroup("コスト")]
-        [MinValue(0)]
-        public int mpCost;
-
-        [TitleGroup("コスト")]
-        [MinValue(0)]
-        public float staminaCost;
+        [TitleGroup("状態異常・バフ付与")]
+        public AttackEquipmentSource equipmentSource = AttackEquipmentSource.Weapon;
 
         [TitleGroup("AI認識用")]
         [InlineProperty]
         public AIAttackEvaluation aiEvaluation;
-
-        [TitleGroup("攻撃移動")]
-        [MinValue(0)]
-        public float attackMoveDistance;
-
-        [TitleGroup("攻撃移動")]
-        [MinValue(0)]
-        public float attackMoveDuration;
 
         [TitleGroup("攻撃移動")]
         public AttackContactType contactType;
@@ -87,7 +64,7 @@ namespace Game.Core
         public float airHangGravityScale = 0.1f;
 
         [TitleGroup("空中攻撃")]
-        [Tooltip("空中移動速度のデフォルト値（attackMoveDistance未設定時）")]
+        [Tooltip("空中移動速度のデフォルト値（移動プロファイル未設定時）")]
         [MinValue(0)]
         public float aerialMoveSpeedDefault = 3f;
 
@@ -108,6 +85,10 @@ namespace Game.Core
 
         [TitleGroup("パリィ・ガード")]
         public bool isParriable;
+
+        [TitleGroup("パリィ・ガード")]
+        [MinValue(0)]
+        public float guardDamage;
 
         [TitleGroup("パリィ・ガード")]
         [MinValue(0)]
@@ -134,37 +115,12 @@ namespace Game.Core
         [TitleGroup("コンボ")]
         [Range(0f, 100f)]
         public float justGuardResistance;
-    }
 
-    [Serializable]
-    public struct MotionInfo
-    {
-        [FoldoutGroup("タイミング")]
-        [MinValue(0)] public float preMotionDuration;
-        [FoldoutGroup("タイミング")]
-        [MinValue(0)] public float activeMotionDuration;
-        [FoldoutGroup("タイミング")]
-        [MinValue(0)] public float recoveryDuration;
+        [TitleGroup("魔法")]
+        public MagicType magicType = MagicType.Attack;
 
-        [FoldoutGroup("チャージ")]
-        [MinValue(0)] public float chargeTimeMin;
-        [FoldoutGroup("チャージ")]
-        [MinValue(0)] public float chargeTimeMax;
-        [FoldoutGroup("チャージ")]
-        [MinValue(0)] public float chargeDamageMultiplier;
-
-        [FoldoutGroup("アニメーション")]
-        public AnimationClip preMotionClip;
-        [FoldoutGroup("アニメーション")]
-        public AnimationClip activeClip;
-        [FoldoutGroup("アニメーション")]
-        public AnimationClip chargeLoopClip;
-        [FoldoutGroup("アニメーション")]
-        public AnimationClip recoveryClip;
-
-        [FoldoutGroup("行動特殊効果")]
-        [ListDrawerSettings(ShowFoldout = true)]
-        public ActionEffect[] actionEffects;
+        [TitleGroup("魔法")]
+        [MinValue(0)] public int healAmount;
     }
 
     [Serializable]

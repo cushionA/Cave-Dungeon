@@ -7,10 +7,16 @@
 }
 
 /* ===== Status Panel (Player/Companion) ===== */
-.status-panel {
+.party-status {
     position: absolute;
     left: 20px;
     top: 20px;
+    width: 280px;
+    flex-direction: column;
+}
+
+.status-panel {
+    position: relative;
     width: 280px;
     padding: 8px;
     background-color: rgba(0, 0, 0, 0.6);
@@ -18,7 +24,7 @@
 }
 
 .companion-panel {
-    top: 110px;
+    margin-top: 8px;
     width: 220px;
 }
 
@@ -144,4 +150,51 @@
     font-size: 16px;
     color: rgb(255, 215, 0);
     -unity-font-style: bold;
+}
+
+.status-effects {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 4px;
+    display: none;
+}
+
+.status-effect {
+    width: 32px;
+    margin-right: 4px;
+    margin-bottom: 2px;
+    align-items: center;
+}
+
+.status-effect-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.status-effect-short-name {
+    width: 100%;
+    height: 100%;
+    font-size: 10px;
+    color: white;
+    -unity-text-align: middle-center;
+    -unity-font-style: bold;
+    text-shadow: 1px 1px 1px black;
+}
+
+.status-effect-time {
+    font-size: 10px;
+    color: white;
+    -unity-text-align: middle-center;
+}
+
+.status-effect-stack {
+    position: absolute;
+    right: 1px;
+    bottom: 0;
+    font-size: 11px;
+    color: white;
+    -unity-font-style: bold;
+    text-shadow: 1px 1px 1px black;
 }

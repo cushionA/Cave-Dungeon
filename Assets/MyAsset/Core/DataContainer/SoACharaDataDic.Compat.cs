@@ -137,11 +137,50 @@ namespace Game.Core
         public int Add(int hash, CharacterVitals vitals, CombatStats combatStats,
             CharacterFlags flags, MoveParams moveParams,
             EquipmentStatus equipmentStatus = default, CharacterStatusEffects statusEffects = default,
-            AnimationStateData animationState = default, ManagedCharacter managed = null)
+            AnimationStateData animationState = default, ManagedCharacter managed = null,
+            CharacterDefenseState defenseState = default)
         {
             ThrowIfDisposed();
+            vitals.level = Math.Max(1, vitals.level);
             return AddByHash(hash, vitals, combatStats, flags, moveParams,
-                equipmentStatus, statusEffects, animationState, managed);
+                equipmentStatus, statusEffects, animationState, defenseState,
+                CharacterBaseStats.FromValues(vitals, combatStats, flags, moveParams),
+                new CharacterGrowth { level = vitals.level }, managed);
+        }
+
+        public ref CharacterBaseStats GetBaseStats(int hash)
+        {
+            ThrowIfDisposed();
+            if (!TryGetIndexByHash(hash, out int index))
+            {
+                throw new KeyNotFoundException($"Hash {hash} is not registered.");
+            }
+            return ref GetCharacterBaseStatsByIndex(index);
+        }
+
+        public ref CharacterGrowth GetGrowth(int hash)
+        {
+            ThrowIfDisposed();
+            if (!TryGetIndexByHash(hash, out int index))
+            {
+                throw new KeyNotFoundException($"Hash {hash} is not registered.");
+            }
+            return ref GetCharacterGrowthByIndex(index);
+        }
+
+        public StatModifier GetAttributes(int hash)
+        {
+            return CharacterStatCalculator.CalculateAttributes(GetBaseStats(hash), GetGrowth(hash));
+        }
+
+        public ref CharacterDefenseState GetDefenseState(int hash)
+        {
+            ThrowIfDisposed();
+            if (!TryGetIndexByHash(hash, out int index))
+            {
+                throw new KeyNotFoundException($"Hash {hash} is not registered.");
+            }
+            return ref GetCharacterDefenseStateByIndex(index);
         }
 
         public void Remove(int hash)

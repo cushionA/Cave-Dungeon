@@ -110,8 +110,9 @@ namespace Game.Core
         [MinValue(0)] public float duration;
         [MinValue(0)] public float tickDamage;
         [MinValue(0)] public float tickInterval;
+        [Tooltip("1スタックあたりの割合。Slow=減速、Weakness=被ダメ増加、AttackUp/DefenseUp/SpeedUp=上昇。0.5=50%。")]
         [Range(0f, 1f)] public float modifier;
-        [Tooltip("0=スタック不可")]
+        [Tooltip("0/1=重複なし。再付与は持続時間を更新。")]
         public byte maxStack;
     }
 
@@ -153,14 +154,17 @@ namespace Game.Core
     /// </summary>
     public struct DamageData
     {
+        public long actionInstanceId;
         public int attackerHash;
         public int defenderHash;
         public ElementalStatus damage;
         public float motionValue;
         public Vector2 knockbackForce;
         public Element attackElement;
-        public StatusEffectInfo statusEffectInfo;
+        public StatusEffectApplicationData[] statusEffects;
+        public StatusEffectApplicationData[] equipmentStatusEffects;
         public AttackFeature feature;
+        public float guardDamage;
         public float armorBreakValue;
         public float justGuardResistance;
         public bool isProjectile;
@@ -168,13 +172,16 @@ namespace Game.Core
 
     public struct DamageResult
     {
+        public long actionInstanceId;
         public int totalDamage;
         public GuardResult guardResult;
         public HitReaction hitReaction;
         public SituationalBonus situationalBonus;
         public bool isCritical;
         public bool isKill;
+        public float guardDamage;
         public float armorDamage;
+        public float actionArmorDamage;
         public StatusEffectId appliedEffect;
     }
 
@@ -201,6 +208,7 @@ namespace Game.Core
     [Serializable]
     public struct AttackMotionData
     {
+        public long actionInstanceId;
         [FoldoutGroup("基本")]
         [LabelText("行動名")] public string actionName;
         [FoldoutGroup("基本")]
@@ -218,13 +226,16 @@ namespace Game.Core
         [FoldoutGroup("ヒット")]
         [MinValue(1)] public int maxHitCount;
         [FoldoutGroup("ヒット")]
+        [MinValue(0)] public float guardDamage;
+        [FoldoutGroup("ヒット")]
         [MinValue(0)] public float armorBreakValue;
 
         [FoldoutGroup("ノックバック")]
         public Vector2 knockbackForce;
 
         [FoldoutGroup("状態異常")]
-        [InlineProperty] public StatusEffectInfo statusEffect;
+        public StatusEffectApplicationData[] statusEffects;
+        public StatusEffectApplicationData[] equipmentStatusEffects;
 
         [FoldoutGroup("移動")]
         [MinValue(0)] public float attackMoveDistance;

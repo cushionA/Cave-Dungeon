@@ -31,6 +31,7 @@ namespace Game.Core
         private float _manualOverrideTimer;
         private float _manualOverrideTimeoutSeconds;
         private IDisposable _confusionClearedSubscription;
+        private bool _disposed;
 
         public JudgmentLoop JudgmentLoop => _judgmentLoop;
         public ModeController ModeController => _modeController;
@@ -56,7 +57,6 @@ namespace Game.Core
             int companionHash,
             int playerHash,
             SoACharaDataDic data,
-            float maxMp,
             int initialReserveMp,
             CompanionMpSettings mpSettings,
             GameEvents events,
@@ -82,7 +82,7 @@ namespace Game.Core
                 _modeController, _manualOverrideTimeoutSeconds);
             _followBehavior = new FollowBehavior();
             _stanceManager = new StanceManager();
-            _mpManager = new CompanionMpManager(maxMp, initialReserveMp, mpSettings);
+            _mpManager = new CompanionMpManager(new SoAExecutionWorld(data), companionHash, initialReserveMp, mpSettings);
 
             if (events != null)
             {
@@ -102,16 +102,15 @@ namespace Game.Core
             }
         }
 
-        /// <summary>
-        /// 購読解除 + 保持リソースの後始末。キャラ破棄時に必ず呼ぶ。
-        /// MpManager / StanceManager は CompanionCharacter 側の OnDestroy で別途 Dispose される
-        /// ため、ここでは二重解放を避けて購読解除と ActionExecutor のキャンセルのみ行う。
-        /// </summary>
         public void Dispose()
         {
+            if (_disposed) { return; }
+            _disposed = true;
             _confusionClearedSubscription?.Dispose();
             _confusionClearedSubscription = null;
             _executor?.CancelCurrent();
+            _mpManager.Dispose();
+            _stanceManager.Dispose();
         }
 
         /// <summary>
@@ -145,14 +144,15 @@ namespace Game.Core
         /// </summary>
         public void Tick(float deltaTime, List<int> candidates, float currentTime)
         {
-            if (!_data.TryGetValue(_companionHash, out int _) ||
-                !_data.TryGetValue(_playerHash, out int _))
+            if (_disposed || !_data.TryGetValue(_companionHash, out int _))
             {
                 return;
             }
 
             // MP回復は常にTick（消滅中も回復する）
             _mpManager.Tick(deltaTime);
+
+            if (_disposed || !_data.TryGetValue(_companionHash, out _) || !_data.TryGetValue(_playerHash, out _)) { return; }
 
             // 消滅中はAI判定をスキップ
             if (_mpManager.IsVanished)

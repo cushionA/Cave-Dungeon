@@ -1,5 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
     <ui:VisualElement name="hud-root" class="hud-root">
+        <ui:VisualElement name="party-status" class="party-status">
         <!-- 左上: プレイヤーステータス -->
         <ui:VisualElement name="player-status" class="status-panel">
             <ui:Label name="player-name" text="Player" class="character-name" />
@@ -14,6 +15,7 @@
             <ui:VisualElement name="stamina-bar-container" class="bar-container stamina-bar">
                 <ui:VisualElement name="stamina-bar-fill" class="bar-fill stamina-fill" />
             </ui:VisualElement>
+            <ui:VisualElement name="player-effects" class="status-effects" />
         </ui:VisualElement>
 
         <!-- 左上下: 仲間ステータス -->
@@ -26,6 +28,8 @@
             <ui:VisualElement name="companion-mp-bar-container" class="bar-container mp-bar">
                 <ui:VisualElement name="companion-mp-bar-fill" class="bar-fill companion-mp-fill" />
             </ui:VisualElement>
+            <ui:VisualElement name="companion-effects" class="status-effects" />
+        </ui:VisualElement>
         </ui:VisualElement>
 
         <!-- 右上: ボスHPバー（ボス戦時のみ表示） -->
@@ -34,6 +38,7 @@
             <ui:VisualElement name="boss-hp-bar-container" class="boss-bar-container">
                 <ui:VisualElement name="boss-hp-bar-fill" class="bar-fill boss-hp-fill" />
             </ui:VisualElement>
+            <ui:VisualElement name="boss-effects" class="status-effects" />
         </ui:VisualElement>
 
         <!-- 右下: 通貨表示 -->

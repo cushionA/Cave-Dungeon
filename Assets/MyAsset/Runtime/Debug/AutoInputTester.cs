@@ -299,7 +299,7 @@ namespace Game.Runtime
                 // ActionExecutorの実行状態をクリア
                 if (_actionExecutor != null && _actionExecutor.IsExecuting)
                 {
-                    _actionExecutor.Executor?.CancelCurrent();
+                    _actionExecutor.CancelAction();
                 }
 
                 // PlayerCharacterの内部フラグを全リセット

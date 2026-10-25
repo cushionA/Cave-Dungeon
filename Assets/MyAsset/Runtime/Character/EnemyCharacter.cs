@@ -72,16 +72,20 @@ namespace Game.Runtime
 
             UpdateGroundCheck();
 
+            if (GameManager.Actions != null && GameManager.Actions.IsPhysicsControlled(ObjectHash))
+            {
+                SyncPositionToData();
+                return;
+            }
+
             // AI Tick
             if (_enemyController != null)
             {
                 // 候補リスト構築（プレイヤー + 味方）
                 PopulateAITargetCandidates(_candidates, targetAllyFaction: true);
 
-                _enemyController.Tick(Time.fixedDeltaTime, _candidates, Time.time);
-
-                // AI が選択したアクションを ActionExecutorController に橋渡し
                 BridgeAIActionForJudgmentLoop(_enemyController.JudgmentLoop, _actionExecutorController);
+                _enemyController.Tick(Time.fixedDeltaTime, _candidates, Time.time);
 
                 // 簡易移動: ターゲットへ追尾（Sustained/MoveアクションはAI側で別途処理）
                 UpdateMovement();
@@ -130,6 +134,7 @@ namespace Game.Runtime
         /// </summary>
         private void UpdateMovement()
         {
+            if (_actionExecutorController != null && _actionExecutorController.HasMovementRequest) { return; }
             // 攻撃中は移動しない
             if (_actionExecutorController != null && _actionExecutorController.IsExecuting)
             {
@@ -146,7 +151,7 @@ namespace Game.Runtime
 
             ref CharacterVitals targetVitals = ref GameManager.Data.GetVitals(targetHash);
             ref CharacterVitals myVitals = ref GameManager.Data.GetVitals(ObjectHash);
-            ref MoveParams moveParams = ref GameManager.Data.GetMoveParams(ObjectHash);
+            MoveParams moveParams = GetEffectiveMoveParams(GameConstants.k_FallbackMoveSpeed);
 
             float diff = targetVitals.position.x - myVitals.position.x;
             float absDist = Mathf.Abs(diff);
@@ -156,7 +161,7 @@ namespace Game.Runtime
             if (absDist > GameConstants.k_DefaultAttackRange)
             {
                 float dir = diff > 0f ? 1f : -1f;
-                float speed = moveParams.moveSpeed > 0f ? moveParams.moveSpeed : GameConstants.k_FallbackMoveSpeed;
+                float speed = moveParams.moveSpeed;
                 _rb.linearVelocity = new Vector2(dir * speed, _rb.linearVelocity.y);
             }
             else

@@ -14,18 +14,22 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Core::Game.Core.AttackInfo
   attackName: PLACEHOLDER_PlayerHeavy
   category: 0
-  motionInfo:
-    preMotionDuration: 0.3
-    activeMotionDuration: 0.25
-    recoveryDuration: 0.3
-    chargeTimeMin: 0
-    chargeTimeMax: 0
-    chargeDamageMultiplier: 0
-    preMotionClip: {fileID: 0}
-    activeClip: {fileID: 0}
-    chargeLoopClip: {fileID: 0}
-    recoveryClip: {fileID: 0}
-    actionEffects: []
+  motion: {fileID: 11400000, guid: cbd817df5f8c4d96987f36ab4c0c00d1, type: 2}
+  chargeTimeMin: 0
+  chargeTimeMax: 0
+  chargeDamageMultiplier: 0
+  actionEffects: []
+  staminaPerSecond: 0
+  cancelAfter: -1
+  endMode: 0
+  durationMode: 0
+  duration: 0
+  resources: 29
+  priority: 10
+  actState: 7
+  gameplay: 0
+  transitions: []
+  cancelPoint: -1
   baseDamage:
     slash: 0
     strike: 20
@@ -62,14 +66,8 @@ MonoBehaviour:
     groundBounce: 0
     wallBounce: 0
     gravityScale: 0
-  statusEffectInfo:
-    effect: 0
-    accumulateValue: 0
-    duration: 0
-    tickDamage: 0
-    tickInterval: 0
-    modifier: 0
-    maxStack: 0
+  statusEffects: []
+  equipmentSource: 1
   mpCost: 0
   staminaCost: 25
   aiEvaluation:
@@ -81,10 +79,14 @@ MonoBehaviour:
     totalWindupTime: 0
     preferredUseHpThreshold: 0
     priority: 0
-  attackMoveDistance: 0
-  attackMoveDuration: 0
+  movement:
+    speed: 0
+    startTime: 0
+    duration: 0
+    usesInput: 0
   contactType: 0
   isParriable: 1
+  guardDamage: 0
   armorBreakValue: 0
   feature: 0
   attackElement: 2
@@ -92,3 +94,5 @@ MonoBehaviour:
   isChainEndPoint: 1
   inputWindow: 0
   justGuardResistance: 0
+  magicType: 0
+  healAmount: 0

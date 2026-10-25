@@ -39,11 +39,6 @@ namespace Game.Runtime
         // --- 攻撃入力消費 ---
         private bool _attackConsumed;     // 今回のFixedUpdateで攻撃入力を消費済みか
 
-        // --- 攻撃移動 ---
-        private float _attackMoveTimer;
-        private float _attackMoveSpeed;
-        private float _attackMoveDir;
-
         // --- フラッシュ（デバッグUI補助）---
         private const float k_AttackFlashDuration = 0.12f;
         private float _flashTimer;
@@ -86,9 +81,6 @@ namespace Game.Runtime
         // --- 壁蹴り左右交互制約 ---
         private int _lastKickedWallId;
 
-        // --- 回避無敵追跡 ---
-        private bool _wasDodging;
-
         // --- Drop-through (一方通行プラットフォームすり抜け) ---
         // 発動中はプレイヤーのレイヤーを CharaInvincible (Ground とは衝突するため足場貫通には別途 PlatformEffector2D が必要) へ切替え、
         // タイマー経過後に CharaPassThrough に戻す。
@@ -110,6 +102,14 @@ namespace Game.Runtime
         /// </summary>
         public void ResetInternalState()
         {
+            ResetPlayerState();
+        }
+#endif
+
+        private void ResetPlayerState()
+        {
+            GameManager.Actions?.StopActor(ObjectHash);
+            _jumpBufferTimer = 0f;
             // 落下攻撃
             _isDivingAttack = false;
             _isDivingLanding = false;
@@ -132,7 +132,6 @@ namespace Game.Runtime
 
             // チャージ・回避
             _isCharging = false;
-            _wasDodging = false;
             if (_collisionController != null)
             {
                 _collisionController.SetInvincible(false);
@@ -149,7 +148,7 @@ namespace Game.Runtime
             _lastKickedWallId = AdvancedMovementLogic.k_NoWallId;
 
             // MovementLogicの状態リセット（ジャンプ・回避・スプリント）
-            _movementLogic?.Reset();
+            _movementLogic = new GroundMovementLogic();
 
             // 重力リセット
             if (_rb != null)
@@ -157,7 +156,18 @@ namespace Game.Runtime
                 _rb.gravityScale = GameConstants.k_GravityScale;
             }
         }
-#endif
+
+        public override void OnPoolReturn()
+        {
+            ResetPlayerState();
+            base.OnPoolReturn();
+        }
+
+        public override void OnPoolAcquire()
+        {
+            ResetPlayerState();
+            base.OnPoolAcquire();
+        }
 
         protected override void Awake()
         {
@@ -200,7 +210,33 @@ namespace Game.Runtime
             UpdateGroundCheck();
 
             MovementInfo input = _inputHandler != null ? _inputHandler.CurrentInput : default;
-            ref MoveParams moveParams = ref GameManager.Data.GetMoveParams(ObjectHash);
+            CharacterStatusEffects effects = GameManager.Data.GetStatusEffects(ObjectHash);
+            input = StatusEffectSystem.RestrictInput(input, effects);
+            bool movementBlocked = GameManager.Actions.IsMovementBlocked(ObjectHash);
+            ActState actState = GameManager.Data.GetFlags(ObjectHash).ActState;
+            bool preserveVelocity = actState == ActState.Knockbacked;
+            bool reactionBlocksMovement = HitReactionLogic.IsArmorResetStun(actState) || WakeUpLogic.IsWakeUpState(actState);
+            if (movementBlocked)
+            {
+                input.moveDirection = Vector2.zero;
+                input.jumpPressed = false;
+                input.jumpHeld = false;
+                input.dodgePressed = false;
+                input.sprintHeld = false;
+                _jumpBufferTimer = 0f;
+            }
+            if (effects.BlocksMovement || reactionBlocksMovement)
+            {
+                _jumpBufferTimer = 0f;
+                _airHangTimer = 0f;
+                _isAirAttacking = false;
+                _isDivingAttack = false;
+                _isDivingLanding = false;
+                _divingLandingTimer = 0f;
+                _divingAttackInfo = null;
+                _rb.gravityScale = GameConstants.k_GravityScale;
+            }
+            MoveParams moveParams = GetEffectiveMoveParams();
             ref CharacterVitals vitals = ref GameManager.Data.GetVitals(ObjectHash);
 
             // Drop-through タイマー更新 (接地より先に行い、発動判定時にはタイマー 0 で正しく評価する)
@@ -212,6 +248,15 @@ namespace Game.Runtime
             // 着地時に空中攻撃制限・壁蹴りIDをリセット
             if (IsGrounded)
             {
+                if (_rb.linearVelocity.y <= 0f)
+                {
+                    GameManager.Actions.EndJump(ObjectHash);
+                    if (!GameManager.IsCharacterValid(ObjectHash))
+                    {
+                        return;
+                    }
+                    vitals = ref GameManager.Data.GetVitals(ObjectHash);
+                }
                 _lastKickedWallId = AdvancedMovementLogic.k_NoWallId;
 
                 if (_aerialComboUsed)
@@ -230,13 +275,14 @@ namespace Game.Runtime
             if (_isDivingLanding)
             {
                 UpdateDivingLanding();
+                GameManager.Actions.SetMovementOutput(ObjectHash, _actionExecutor != null ? _actionExecutor.CurrentInstanceId : 0, _rb.linearVelocity);
                 // リカバリー中は他の入力を受け付けない
                 SyncPositionToData();
                 return;
             }
 
             // チャージ状態更新（InputHandlerのボタンホールド状態を参照）
-            _isCharging = _inputHandler != null && _inputHandler.IsCharging;
+            _isCharging = !effects.BlocksActions && _inputHandler != null && _inputHandler.IsCharging;
 
             // ジャンプ入力バッファ
             if (input.jumpPressed)
@@ -253,10 +299,22 @@ namespace Game.Runtime
             // Coyote Time 判定のため接地状態を MovementLogic に通知する (TryStartJump の直前)
             _movementLogic.UpdateGroundedState(IsGrounded, Time.fixedDeltaTime);
 
-            // ジャンプ（スタミナ消費あり）
             float prevStamina = vitals.currentStamina;
-            float jumpForce = _movementLogic.TryStartJump(
-                bufferedJump, IsGrounded, moveParams, ref vitals.currentStamina);
+            float jumpForce = 0f;
+            bool canJump = bufferedJump && !movementBlocked && moveParams.jumpForce > 0f
+                && (IsGrounded || _movementLogic.IsInCoyoteWindowFor(moveParams));
+            if (canJump && GameManager.Actions.BeginJump(ObjectHash))
+            {
+                if (!GameManager.IsCharacterValid(ObjectHash))
+                {
+                    return;
+                }
+                vitals = ref GameManager.Data.GetVitals(ObjectHash);
+                MoveParams jumpParams = moveParams;
+                jumpParams.jumpStaminaCost = 0f;
+                float unusedStamina = 0f;
+                jumpForce = _movementLogic.TryStartJump(true, IsGrounded, jumpParams, ref unusedStamina);
+            }
             if (jumpForce > 0f)
             {
                 _jumpBufferTimer = 0f;
@@ -267,67 +325,42 @@ namespace Game.Runtime
             }
             float jumpHoldFactor = _movementLogic.UpdateJumpHold(input.jumpHeld, Time.fixedDeltaTime);
 
-            // 回避（単押し）+ 無敵連動
             prevStamina = vitals.currentStamina;
-            bool dodgeStarted = _movementLogic.TryStartDodge(
-                input.dodgePressed, ref vitals.currentStamina, moveParams);
-            if (dodgeStarted)
+            if (input.dodgePressed)
             {
-                _wasDodging = true;
-                if (_collisionController != null)
+                Vector2 dodgeDirection = Mathf.Abs(input.moveDirection.x) > _moveInputDeadzone
+                    ? new Vector2(Mathf.Sign(input.moveDirection.x), 0f)
+                    : new Vector2(_isFacingRight ? 1f : -1f, 0f);
+                if (GameManager.Actions.TryDodge(ObjectHash, dodgeDirection))
                 {
-                    _collisionController.SetInvincible(true);
-                }
-                if (vitals.currentStamina < prevStamina)
-                {
-                    ResetStaminaRecoveryDelay(ref vitals);
+                    if (!GameManager.IsCharacterValid(ObjectHash))
+                    {
+                        return;
+                    }
+                    vitals = ref GameManager.Data.GetVitals(ObjectHash);
+                    if (vitals.currentStamina < prevStamina)
+                    {
+                        ResetStaminaRecoveryDelay(ref vitals);
+                    }
                 }
             }
-            _movementLogic.UpdateDodge(Time.fixedDeltaTime, moveParams);
-
-            // 回避終了時に無敵解除
-            if (_wasDodging && !_movementLogic.IsDodging)
-            {
-                _wasDodging = false;
-                if (_collisionController != null)
-                {
-                    _collisionController.SetInvincible(false);
-                }
-            }
-
-            // 攻撃中は通常移動・スプリントを無効化（攻撃移動のみ許可）
-            bool actionBusy = IsActionExecutorBusy();
+            bool dodging = GameManager.Actions.IsDodging(ObjectHash);
+            movementBlocked = GameManager.Actions.IsMovementBlocked(ObjectHash);
 
             // スプリント（長押し・継続スタミナ消費、移動入力がある場合のみ）
             bool hasMovement = Mathf.Abs(input.moveDirection.x) > _moveInputDeadzone;
             prevStamina = vitals.currentStamina;
             _movementLogic.UpdateSprint(
-                input.sprintHeld && hasMovement && !actionBusy,
+                input.sprintHeld && hasMovement && !movementBlocked,
                 ref vitals.currentStamina, Time.fixedDeltaTime, moveParams);
             if (vitals.currentStamina < prevStamina)
             {
                 ResetStaminaRecoveryDelay(ref vitals);
             }
 
-            // 水平速度（回避時はfacingDir使用）
             float facingDir = _isFacingRight ? 1f : -1f;
-            float horizontalSpeed;
-            if (_attackMoveTimer > 0f)
-            {
-                // 攻撃移動（AttackInfoのデータ駆動）
-                _attackMoveTimer -= Time.fixedDeltaTime;
-                horizontalSpeed = _attackMoveDir * _attackMoveSpeed;
-            }
-            else if (actionBusy)
-            {
-                // 攻撃中は停止（攻撃移動終了後）
-                horizontalSpeed = 0f;
-            }
-            else
-            {
-                horizontalSpeed = _movementLogic.CalculateHorizontalSpeed(
-                    input.moveDirection.x, moveParams, facingDir);
-            }
+            float horizontalSpeed = movementBlocked ? 0f
+                : _movementLogic.CalculateHorizontalSpeed(input.moveDirection.x, moveParams, facingDir);
 
             // Rigidbody2Dに適用
             Vector2 velocity = _rb.linearVelocity;
@@ -375,7 +408,21 @@ namespace Game.Runtime
                 // y速度はgravityScaleによる自然落下（高重力）
             }
 
-            _rb.linearVelocity = velocity;
+            if (effects.BlocksMovement)
+            {
+                velocity.x = 0f;
+            }
+            GameManager.Actions.SetLocomotion(ObjectHash,
+                new Vector2(velocity.x == 0f ? 0f : Mathf.Sign(velocity.x), 0f), Mathf.Abs(velocity.x));
+            if (!GameManager.IsCharacterValid(ObjectHash))
+            {
+                return;
+            }
+            vitals = ref GameManager.Data.GetVitals(ObjectHash);
+            if (!preserveVelocity)
+            {
+                _rb.linearVelocity = velocity;
+            }
 
             // 空中攻撃浮遊の重力制御
             UpdateAirHang();
@@ -405,7 +452,8 @@ namespace Game.Runtime
             }
 
             if (vitals.currentStamina < vitals.maxStamina
-                && !_movementLogic.IsDashing
+                && !dodging
+                && !_movementLogic.IsSprinting
                 && !_isCharging
                 && _staminaRecoveryDelayTimer <= 0f)
             {
@@ -418,6 +466,11 @@ namespace Game.Runtime
             if (_damageReceiver != null)
             {
                 _damageReceiver.SetGuarding(input.guardHeld);
+                if (!GameManager.IsCharacterValid(ObjectHash))
+                {
+                    return;
+                }
+                vitals = ref GameManager.Data.GetVitals(ObjectHash);
             }
 
             // 攻撃処理（ActionExecutorController経由）
@@ -428,6 +481,10 @@ namespace Game.Runtime
             UpdateAttackFlash();
 
             // 位置同期
+            if (_isAirAttacking)
+            {
+                GameManager.Actions.SetMovementOutput(ObjectHash, _actionExecutor != null ? _actionExecutor.CurrentInstanceId : 0, _rb.linearVelocity);
+            }
             SyncPositionToData();
         }
 
@@ -506,6 +563,11 @@ namespace Game.Runtime
                 {
                     return;
                 }
+                if (!GameManager.IsCharacterValid(ObjectHash))
+                {
+                    return;
+                }
+                vitals = ref GameManager.Data.GetVitals(ObjectHash);
 
                 _attackConsumed = true;
                 if (_inputHandler != null) { _inputHandler.ConsumeAttackInput(); }
@@ -518,16 +580,6 @@ namespace Game.Runtime
 
                 float comboWindow = info.inputWindow > 0f ? info.inputWindow : 0.6f;
                 _comboWindowTimer = comboWindow;
-
-                float dir = _isFacingRight ? 1f : -1f;
-
-                // 攻撃移動（AttackInfoのデータ駆動）
-                if (info.attackMoveDuration > 0f)
-                {
-                    _attackMoveTimer = info.attackMoveDuration;
-                    _attackMoveSpeed = info.attackMoveDistance / info.attackMoveDuration;
-                    _attackMoveDir = dir;
-                }
 
                 // デバッグフラッシュ
                 _flashTimer = k_AttackFlashDuration;
@@ -549,8 +601,8 @@ namespace Game.Runtime
                     _aerialMoveDir = info.aerialMoveDirection.sqrMagnitude > 0.01f
                         ? info.aerialMoveDirection.normalized
                         : new Vector2(0f, 0.3f);
-                    _aerialMoveSpeed = info.attackMoveDistance > 0f
-                        ? info.attackMoveDistance / Mathf.Max(info.attackMoveDuration, 0.1f)
+                    _aerialMoveSpeed = info.movement.speed > 0f
+                        ? info.movement.speed
                         : info.aerialMoveSpeedDefault;
 
                     Vector2 vel = _rb.linearVelocity;
@@ -595,14 +647,17 @@ namespace Game.Runtime
                 bool executed = _actionExecutor.ExecuteAction(slot);
                 if (executed)
                 {
+                    if (!GameManager.IsCharacterValid(ObjectHash))
+                    {
+                        return;
+                    }
+                    vitals = ref GameManager.Data.GetVitals(ObjectHash);
                     _attackConsumed = true;
                     if (_inputHandler != null) { _inputHandler.ConsumeAttackInput(); }
                     ResetStaminaRecoveryDelay(ref vitals);
                     _comboStep = 0;
                     _comboQueued = false;
                     _comboWindowTimer = 0f;
-
-                    float dir = _isFacingRight ? 1f : -1f;
 
                     if (aerialHeavy)
                     {
@@ -611,8 +666,6 @@ namespace Game.Runtime
                         _isAirAttacking = true;
                         _divingAttackInfo = heavyInfo;
                         _rb.gravityScale = GameConstants.k_GravityScale * heavyInfo.divingGravityMultiplier;
-                        _attackMoveTimer = 0f; // 水平移動なし
-
                         // フラッシュ
                         _flashTimer = k_AttackFlashDuration;
                         if (_spriteRenderer != null)
@@ -622,14 +675,6 @@ namespace Game.Runtime
                     }
                     else
                     {
-                        // 地上強攻撃
-                        if (heavyInfo.attackMoveDuration > 0f)
-                        {
-                            _attackMoveTimer = heavyInfo.attackMoveDuration;
-                            _attackMoveSpeed = heavyInfo.attackMoveDistance / heavyInfo.attackMoveDuration;
-                            _attackMoveDir = dir;
-                        }
-
                         _flashTimer = k_AttackFlashDuration;
                         if (_spriteRenderer != null)
                         {
@@ -871,6 +916,7 @@ namespace Game.Runtime
 
         protected override void OnDestroy()
         {
+            GameManager.Actions?.StopActor(ObjectHash);
             if (_collisionController != null)
             {
                 _collisionController.SetInvincible(false);

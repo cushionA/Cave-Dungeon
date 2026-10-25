@@ -1,4 +1,5 @@
 using System.Text;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Game.Core;
@@ -40,6 +41,9 @@ namespace Game.Runtime
 
         // 通貨
         private Label _currencyText;
+        private StatusEffectIconStrip _playerEffects;
+        private StatusEffectIconStrip _companionEffects;
+        private StatusEffectIconStrip _bossEffects;
 
         // ボス表示状態
         private int _bossHash;
@@ -48,7 +52,7 @@ namespace Game.Runtime
         // テキスト変更検出用キャッシュ（毎フレーム文字列アロケーション回避）
         private int _cachedHp = -1;
         private int _cachedMaxHp = -1;
-        private int _cachedMp = -1;
+        private float _cachedMp = -1f;
         private int _cachedMaxMp = -1;
         private int _cachedCompanionHp = -1;
         private int _cachedCompanionMaxHp = -1;
@@ -108,6 +112,9 @@ namespace Game.Runtime
 
             // 通貨
             _currencyText = root.Q<Label>("currency-text");
+            _playerEffects = new StatusEffectIconStrip(root.Q<VisualElement>("player-effects"));
+            _companionEffects = new StatusEffectIconStrip(root.Q<VisualElement>("companion-effects"));
+            _bossEffects = new StatusEffectIconStrip(root.Q<VisualElement>("boss-effects"));
         }
 
         private void OnDisable()
@@ -119,12 +126,14 @@ namespace Game.Runtime
             CancelHandle(ref _companionHpHandle);
             CancelHandle(ref _companionMpHandle);
             CancelHandle(ref _bossHpHandle);
+            ClearStatusEffects();
         }
 
         private void Update()
         {
             if (GameManager.Data == null)
             {
+                ClearStatusEffects();
                 return;
             }
 
@@ -138,8 +147,11 @@ namespace Game.Runtime
             int playerHash = CharacterRegistry.PlayerHash;
             if (playerHash == 0 || !GameManager.IsCharacterValid(playerHash))
             {
+                _playerEffects?.Clear();
                 return;
             }
+
+            UpdateStatusEffects(_playerEffects, playerHash);
 
             ref CharacterVitals vitals = ref GameManager.Data.GetVitals(playerHash);
             HudDataProvider.GetVitalsRatios(vitals, out float hpRatio, out float mpRatio, out float staminaRatio);
@@ -183,6 +195,15 @@ namespace Game.Runtime
             return _vitalsTextBuilder.ToString();
         }
 
+        private string FormatVitalsText(float current, int max)
+        {
+            _vitalsTextBuilder.Clear();
+            _vitalsTextBuilder.Append(current);
+            _vitalsTextBuilder.Append('/');
+            _vitalsTextBuilder.Append(max);
+            return _vitalsTextBuilder.ToString();
+        }
+
         private void UpdateCompanionStatus()
         {
             if (_companionPanel == null)
@@ -204,10 +225,12 @@ namespace Game.Runtime
             if (companionHash == 0 || !GameManager.IsCharacterValid(companionHash))
             {
                 _companionPanel.style.display = DisplayStyle.None;
+                _companionEffects?.Clear();
                 return;
             }
 
             _companionPanel.style.display = DisplayStyle.Flex;
+            UpdateStatusEffects(_companionEffects, companionHash);
             ref CharacterVitals vitals = ref GameManager.Data.GetVitals(companionHash);
             HudDataProvider.GetVitalsRatios(vitals, out float hpRatio, out float mpRatio, out float _);
 
@@ -232,10 +255,12 @@ namespace Game.Runtime
             if (!_showBoss || _bossHash == 0 || !GameManager.IsCharacterValid(_bossHash))
             {
                 _bossPanel.style.display = DisplayStyle.None;
+                _bossEffects?.Clear();
                 return;
             }
 
             _bossPanel.style.display = DisplayStyle.Flex;
+            UpdateStatusEffects(_bossEffects, _bossHash);
             ref CharacterVitals vitals = ref GameManager.Data.GetVitals(_bossHash);
             float hpRatio = HudDataProvider.CalculateBarRatio(vitals.currentHp, vitals.maxHp);
             TweenBar(_bossHpBarFill, ref _bossHpHandle, ref _prevBossHpRatio, hpRatio, _barTweenDuration);
@@ -261,6 +286,25 @@ namespace Game.Runtime
         {
             _showBoss = false;
             _bossHash = 0;
+            _bossEffects?.Clear();
+        }
+
+        private static void UpdateStatusEffects(StatusEffectIconStrip strip, int hash)
+        {
+            if (GameManager.Data.GetFlags(hash).ActState == ActState.Dead)
+            {
+                strip?.Clear();
+                return;
+            }
+
+            strip?.Sync(GameManager.StatusEffects?.Store, hash, GameManager.StatusEffectCatalog);
+        }
+
+        private void ClearStatusEffects()
+        {
+            _playerEffects?.Clear();
+            _companionEffects?.Clear();
+            _bossEffects?.Clear();
         }
 
         /// <summary>
@@ -320,6 +364,129 @@ namespace Game.Runtime
                 handle.Cancel();
             }
             handle = default;
+        }
+    }
+
+    internal sealed class StatusEffectIconStrip
+    {
+        private sealed class Entry
+        {
+            public VisualElement root;
+            public VisualElement icon;
+            public Label shortName;
+            public Label time;
+            public Label stack;
+            public StatusEffectId id;
+            public int seconds = -1;
+            public int stackCount = -1;
+            public StatusEffectPresentation presentation;
+        }
+
+        private readonly VisualElement _root;
+        private readonly List<Entry> _entries = new List<Entry>();
+        private readonly List<ActiveEffect> _effects = new List<ActiveEffect>();
+
+        public StatusEffectIconStrip(VisualElement root)
+        {
+            _root = root;
+        }
+
+        public void Sync(StatusEffectStore store, int targetHash, StatusEffectCatalog catalog)
+        {
+            if (_root == null)
+            {
+                return;
+            }
+
+            _effects.Clear();
+            store?.CopyActiveEffects(targetHash, _effects);
+            int count = _effects.Count;
+            while (_entries.Count > count)
+            {
+                int last = _entries.Count - 1;
+                _entries[last].root.RemoveFromHierarchy();
+                _entries.RemoveAt(last);
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                if (i == _entries.Count)
+                {
+                    Entry created = CreateEntry();
+                    _entries.Add(created);
+                    _root.Add(created.root);
+                }
+
+                Entry entry = _entries[i];
+                ActiveEffect effect = _effects[i];
+                StatusEffectPresentation presentation = null;
+                if (catalog != null)
+                {
+                    catalog.TryGet(effect.id, out presentation);
+                }
+
+                if (entry.id != effect.id || entry.presentation != presentation)
+                {
+                    entry.id = effect.id;
+                    entry.presentation = presentation;
+                    entry.root.tooltip = !string.IsNullOrEmpty(presentation?.displayName)
+                        ? presentation.displayName : effect.id.ToString();
+                    entry.icon.style.backgroundColor = presentation != null
+                        ? presentation.tint : StatusEffectCatalog.GetDefaultTint(effect.id);
+                    bool hasIcon = presentation?.icon != null;
+                    entry.icon.style.backgroundImage = hasIcon
+                        ? new StyleBackground(presentation.icon) : new StyleBackground(StyleKeyword.None);
+                    entry.shortName.text = StatusEffectCatalog.GetShortName(effect.id);
+                    entry.shortName.style.display = hasIcon ? DisplayStyle.None : DisplayStyle.Flex;
+                }
+
+                int seconds = Mathf.CeilToInt(effect.remainTime);
+                if (entry.seconds != seconds)
+                {
+                    entry.seconds = seconds;
+                    entry.time.text = seconds.ToString();
+                }
+                if (entry.stackCount != effect.stackCount)
+                {
+                    entry.stackCount = effect.stackCount;
+                    entry.stack.text = effect.stackCount > 1 ? effect.stackCount.ToString() : "";
+                }
+            }
+
+            _root.style.display = count > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        public void Clear()
+        {
+            _root?.Clear();
+            _entries.Clear();
+            _effects.Clear();
+            if (_root != null)
+            {
+                _root.style.display = DisplayStyle.None;
+            }
+        }
+
+        private static Entry CreateEntry()
+        {
+            Entry entry = new Entry
+            {
+                root = new VisualElement(),
+                icon = new VisualElement(),
+                shortName = new Label { name = "effect-short-name" },
+                time = new Label { name = "effect-time" },
+                stack = new Label { name = "effect-stack" }
+            };
+            entry.root.AddToClassList("status-effect");
+            entry.icon.AddToClassList("status-effect-icon");
+            entry.shortName.AddToClassList("status-effect-short-name");
+            entry.time.AddToClassList("status-effect-time");
+            entry.stack.AddToClassList("status-effect-stack");
+            entry.icon.Add(entry.shortName);
+            entry.icon.Add(entry.stack);
+            entry.root.Add(entry.icon);
+            entry.root.Add(entry.time);
+            return entry;
         }
     }
 }

@@ -61,6 +61,7 @@ namespace Game.Runtime
         /// </summary>
         public void Activate(Projectile projectile, MagicDefinition magic, ProjectileManager manager)
         {
+            gameObject.SetActive(true);
             _coreProjectile = projectile;
             _magic = magic;
             _manager = manager;
@@ -105,7 +106,6 @@ namespace Game.Runtime
                 _spriteRenderer.enabled = !_isSpawnDelayedLastFrame;
             }
 
-            gameObject.SetActive(true);
         }
 
         /// <summary>
@@ -222,7 +222,7 @@ namespace Game.Runtime
             // Core経由でダメージ処理(IDamageable経由でガード/無敵/HitReaction/イベント発火を共通化)
             ProjectileHitProcessor.ProcessHit(
                 _coreProjectile, receiver,
-                GameManager.Data, _magic, GameManager.Events);
+                GameManager.Data, _magic, GameManager.Events, GameManager.StatusEffects);
 
             // 爆発処理
             if (BulletFeatureProcessor.ShouldExplode(_coreProjectile.Profile.features))

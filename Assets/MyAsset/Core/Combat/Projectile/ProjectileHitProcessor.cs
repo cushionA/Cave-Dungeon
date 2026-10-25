@@ -1,3 +1,5 @@
+using System;
+
 namespace Game.Core
 {
     /// <summary>
@@ -27,7 +29,8 @@ namespace Game.Core
         /// <param name="magic">魔法定義</param>
         /// <param name="events">Recover系のイベント発火(Attack系はDamageReceiverが発火)</param>
         public static HitResult ProcessHit(Projectile projectile, IDamageable receiver,
-            SoACharaDataDic data, MagicDefinition magic, GameEvents events = null)
+            SoACharaDataDic data, MagicDefinition magic, GameEvents events = null,
+            StatusEffectSystem statusEffects = null)
         {
             HitResult result = new HitResult { magicType = magic.magicType };
 
@@ -45,6 +48,14 @@ namespace Game.Core
             if (!data.TryGetValue(targetHash, out int _))
             {
                 return result;
+            }
+
+            bool appliesEffects = magic.magicType != MagicType.Attack
+                && ((magic.statusEffects != null && magic.statusEffects.Length > 0)
+                    || (magic.equipmentStatusEffects != null && magic.equipmentStatusEffects.Length > 0));
+            if (appliesEffects && statusEffects == null)
+            {
+                throw new InvalidOperationException("Configured magic effects require a StatusEffectSystem.");
             }
 
             switch (magic.magicType)
@@ -82,6 +93,13 @@ namespace Game.Core
                 }
             }
 
+            if (appliesEffects)
+            {
+                float statusCut = data.GetCombatStats(targetHash).guardStats.statusCut;
+                statusEffects.ApplyApplications(magic.statusEffects, projectile.CasterHash,
+                    targetHash, GuardResult.NoGuard, statusCut, magic.equipmentStatusEffects);
+            }
+
             // 総ヒット数の消費 (Projectile.RegisterHit) は ProjectileController.TryRegisterHit 側で
             // ターゲット別上限ゲートと合わせて実行する。ここでは呼ばない (二重消費防止)。
             // AoE 爆発 (ProjectileManager.ProcessExplosion) は 1 弾丸に対し 1 回の発動なので
@@ -92,8 +110,6 @@ namespace Game.Core
         /// <summary>
         /// 飛翔体の DamageData を組み立てる。isProjectile=true でDamageReceiverが
         /// JustGuard時のアーマー削り0扱いに分岐する。
-        /// TODO: MagicDefinition にノックバック/状態異常/feature/armorBreakValue が拡張された際は
-        ///       ここから伝搬する。現時点では仕様未定のため default 固定。
         /// </summary>
         private static DamageData BuildProjectileDamageData(
             int attackerHash, int defenderHash, MagicDefinition magic, SoACharaDataDic data)
@@ -101,16 +117,19 @@ namespace Game.Core
             ElementalStatus attackStats = CombatDataHelper.GetAttackStats(data, attackerHash);
             return new DamageData
             {
+                actionInstanceId = magic.actionInstanceId,
                 attackerHash = attackerHash,
                 defenderHash = defenderHash,
                 damage = attackStats,
                 motionValue = magic.motionValue,
-                knockbackForce = default,           // TODO: magic.knockback 追加時に伝搬
+                knockbackForce = magic.knockbackForce,
                 attackElement = magic.attackElement,
-                statusEffectInfo = default,         // TODO: magic.statusEffect 追加時に伝搬
-                feature = AttackFeature.None,       // TODO: magic.feature 追加時に伝搬
-                armorBreakValue = 0f,               // 飛翔体は仕様上アーマー削りなし
-                justGuardResistance = 0f,
+                statusEffects = magic.statusEffects,
+                equipmentStatusEffects = magic.equipmentStatusEffects,
+                feature = magic.feature,
+                guardDamage = magic.guardDamage,
+                armorBreakValue = magic.armorBreakValue,
+                justGuardResistance = magic.justGuardResistance,
                 isProjectile = true
             };
         }

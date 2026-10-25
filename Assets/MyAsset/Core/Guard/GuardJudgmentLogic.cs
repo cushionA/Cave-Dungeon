@@ -1,7 +1,13 @@
-using UnityEngine;
+using System;
 
 namespace Game.Core
 {
+    public struct GuardEvaluation
+    {
+        public GuardResult result;
+        public float staminaDrain;
+    }
+
     /// <summary>
     /// ガード判定ロジック。
     /// タイミングベースのジャストガード、スタミナ削り、GuardAttack効果による保護を処理する。
@@ -34,7 +40,7 @@ namespace Game.Core
         ///   4. ジャスガタイミング窓外:
         ///      - Unguardable => NoGuard (通常ガード不成立)
         ///      - else => Guarded (スタミナ判定へ)
-        ///   5. スタミナ削り(=max(0, armorBreakValue - guardStrength)) &gt; currentStamina
+        ///   5. スタミナ削り(=max(0, guardDamage - guardStrength)) &gt; currentStamina
         ///      &amp;&amp; !GuardAttack効果 => GuardBreak
         /// </summary>
         /// <param name="isGuarding">ガードボタン押下中か</param>
@@ -46,7 +52,7 @@ namespace Game.Core
         /// <param name="hasGuardAttackEffect">GuardAttack行動特殊効果が有効か(スタミナ枯渇でもブレイクしない)</param>
         /// <param name="currentStamina">被弾側の現在スタミナ</param>
         /// <param name="guardStrength">ガード側の受け値(スタミナ削り抵抗)</param>
-        /// <param name="armorBreakValue">攻撃側のアーマー削り値</param>
+        /// <param name="guardDamage">攻撃側のガード削り値</param>
         public static GuardResult Judge(
             bool isGuarding,
             float guardTimeSinceStart,
@@ -57,17 +63,34 @@ namespace Game.Core
             bool hasGuardAttackEffect,
             float currentStamina,
             float guardStrength,
-            float armorBreakValue)
+            float guardDamage)
+        {
+            return Evaluate(isGuarding, guardTimeSinceStart, inContinuousJustGuardWindow,
+                attackFeature, guardDirection, isAttackFromFront, hasGuardAttackEffect,
+                currentStamina, guardStrength, guardDamage).result;
+        }
+
+        public static GuardEvaluation Evaluate(
+            bool isGuarding,
+            float guardTimeSinceStart,
+            bool inContinuousJustGuardWindow,
+            AttackFeature attackFeature,
+            GuardDirection guardDirection,
+            bool isAttackFromFront,
+            bool hasGuardAttackEffect,
+            float currentStamina,
+            float guardStrength,
+            float guardDamage)
         {
             if (!isGuarding)
             {
-                return GuardResult.NoGuard;
+                return default;
             }
 
             // ガード方向チェック
             if (!IsGuardDirectionValid(guardDirection, isAttackFromFront))
             {
-                return GuardResult.NoGuard;
+                return default;
             }
 
             bool isUnguardable = (attackFeature & AttackFeature.Unguardable) != 0;
@@ -78,33 +101,33 @@ namespace Game.Core
             // ジャスガタイミング窓内: ジャスガが成立できるなら最優先
             if (inJustGuardWindow && !isJustGuardImmune)
             {
-                return GuardResult.JustGuard;
+                return new GuardEvaluation { result = GuardResult.JustGuard };
             }
 
             // ジャスガ不成立 (タイミング外 or JustGuardImmune): 通常ガードを試みる
             if (isUnguardable)
             {
-                return GuardResult.NoGuard;
+                return default;
             }
 
             // スタミナ削り判定: 削り量がスタミナ残量を超える場合、GuardAttack効果が無ければブレイク
-            float drain = CalculateStaminaDrain(armorBreakValue, guardStrength);
+            float drain = CalculateStaminaDrain(guardDamage, guardStrength);
             if (drain > 0f && currentStamina < drain && !hasGuardAttackEffect)
             {
-                return GuardResult.GuardBreak;
+                return new GuardEvaluation { result = GuardResult.GuardBreak, staminaDrain = drain };
             }
 
-            return GuardResult.Guarded;
+            return new GuardEvaluation { result = GuardResult.Guarded, staminaDrain = drain };
         }
 
         /// <summary>
         /// スタミナ削り量を計算する。
-        /// 削り = max(0, armorBreakValue - guardStrength)
-        /// guardStrength が armorBreakValue 以上なら完全受け流し(削りなし)。
+        /// 削り = max(0, guardDamage - guardStrength)
+        /// guardStrength が guardDamage 以上なら完全受け流し(削りなし)。
         /// </summary>
-        public static float CalculateStaminaDrain(float armorBreakValue, float guardStrength)
+        public static float CalculateStaminaDrain(float guardDamage, float guardStrength)
         {
-            float drain = armorBreakValue - guardStrength;
+            float drain = guardDamage - guardStrength;
             return drain > 0f ? drain : 0f;
         }
 
@@ -143,8 +166,8 @@ namespace Game.Core
             ref float currentStamina, float maxStamina,
             ref float currentArmor, float maxArmor)
         {
-            currentStamina = Mathf.Min(maxStamina, currentStamina + k_JustGuardStaminaRecovery);
-            currentArmor = Mathf.Min(maxArmor, currentArmor + k_JustGuardArmorRecovery);
+            currentStamina = Math.Min(maxStamina, currentStamina + k_JustGuardStaminaRecovery);
+            currentArmor = Math.Min(maxArmor, currentArmor + k_JustGuardArmorRecovery);
         }
     }
 }

@@ -3,6 +3,15 @@ using System.Collections.Generic;
 
 namespace Game.Core
 {
+    public interface IActionExecutionBackend
+    {
+        bool IsExecuting { get; }
+        bool Execute(int ownerHash, int targetHash, ActionSlot slot);
+        void CancelCurrent();
+        void Tick(float deltaTime);
+        event Action OnActionCompleted;
+    }
+
     /// <summary>
     /// Dispatches ActionSlot execution to registered ActionBase handlers.
     /// Manages the current action lifecycle: execute, tick, cancel, complete.
@@ -11,15 +20,25 @@ namespace Game.Core
     {
         private Dictionary<ActionExecType, ActionBase> _handlers;
         private ActionBase _currentAction;
+        private IActionExecutionBackend _backend;
 
         public ActionBase CurrentAction => _currentAction;
-        public bool IsExecuting => _currentAction != null && _currentAction.IsExecuting;
+        public bool IsExecuting => _backend != null ? _backend.IsExecuting : _currentAction != null && _currentAction.IsExecuting;
 
         public event Action OnActionCompleted;
 
         public ActionExecutor()
         {
             _handlers = new Dictionary<ActionExecType, ActionBase>();
+        }
+
+        public void SetExecutionBackend(IActionExecutionBackend backend)
+        {
+            if (ReferenceEquals(_backend, backend)) { return; }
+            if (_backend != null) { _backend.OnActionCompleted -= HandleBackendCompleted; }
+            CancelCurrent();
+            _backend = backend;
+            if (_backend != null) { _backend.OnActionCompleted += HandleBackendCompleted; }
         }
 
         /// <summary>
@@ -38,6 +57,7 @@ namespace Game.Core
         /// </summary>
         public bool Execute(int ownerHash, int targetHash, ActionSlot slot)
         {
+            if (_backend != null) { return _backend.Execute(ownerHash, targetHash, slot); }
             if (!_handlers.TryGetValue(slot.execType, out ActionBase handler))
             {
                 return false;
@@ -60,6 +80,7 @@ namespace Game.Core
         /// </summary>
         public void CancelCurrent()
         {
+            if (_backend != null) { _backend.CancelCurrent(); return; }
             if (_currentAction != null && _currentAction.IsExecuting)
             {
                 _currentAction.OnCompleted -= HandleActionCompleted;
@@ -73,6 +94,7 @@ namespace Game.Core
         /// </summary>
         public void Tick(float deltaTime)
         {
+            if (_backend != null) { _backend.Tick(deltaTime); return; }
             if (_currentAction != null && _currentAction.IsExecuting)
             {
                 _currentAction.Tick(deltaTime);
@@ -96,5 +118,7 @@ namespace Game.Core
             _currentAction = null;
             OnActionCompleted?.Invoke();
         }
+
+        private void HandleBackendCompleted() => OnActionCompleted?.Invoke();
     }
 }

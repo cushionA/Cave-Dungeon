@@ -25,6 +25,8 @@ namespace Game.Runtime
         protected BoxCollider2D _collider;
         protected DamageReceiver _damageReceiver;
         protected CharacterAnimationController _animationController;
+        private CharacterCollisionController _collisionController;
+        private ActionExecutorController _actionController;
 
         private int _objectHash;
         private bool _isGrounded;
@@ -39,6 +41,8 @@ namespace Game.Runtime
         public override IDamageable Damageable => _damageReceiver != null ? (IDamageable)_damageReceiver : null;
         public DamageReceiver DamageReceiver => _damageReceiver;
         public CharacterAnimationController AnimationController => _animationController;
+        public Rigidbody2D Rigidbody => _rb;
+        public CharacterCollisionController CollisionController => _collisionController;
         public CharacterInfo CharacterInfoRef => _characterInfo;
         public bool IsAlive
         {
@@ -68,6 +72,8 @@ namespace Game.Runtime
             _collider = GetComponent<BoxCollider2D>();
             _damageReceiver = GetComponent<DamageReceiver>();
             _animationController = GetComponent<CharacterAnimationController>();
+            _collisionController = GetComponent<CharacterCollisionController>();
+            _actionController = GetComponent<ActionExecutorController>();
             _objectHash = gameObject.GetHashCode();
 
             // 物理設定
@@ -117,10 +123,21 @@ namespace Game.Runtime
 
         protected virtual void OnDestroy()
         {
+            GameManager.Actions?.StopActor(_objectHash);
             if (_isRegistered && GameManager.Instance != null)
             {
                 GameManager.Instance.UnregisterCharacter(_objectHash);
             }
+        }
+
+        protected MoveParams GetEffectiveMoveParams(float fallbackSpeed = 0f)
+        {
+            MoveParams move = GameManager.Data.GetMoveParams(_objectHash);
+            CharacterStatusEffects effects = GameManager.Data.GetStatusEffects(_objectHash);
+            float multiplier = effects.BlocksMovement ? 0f : effects.MoveSpeedMultiplier;
+            move.moveSpeed = (move.moveSpeed > 0f ? move.moveSpeed : fallbackSpeed) * multiplier;
+            move.dashSpeed *= multiplier;
+            return move;
         }
 
         /// <summary>
@@ -129,6 +146,7 @@ namespace Game.Runtime
         /// </summary>
         public virtual void OnPoolReturn()
         {
+            GameManager.Actions?.StopActor(_objectHash);
             if (_isRegistered && GameManager.Instance != null)
             {
                 GameManager.Instance.UnregisterCharacter(_objectHash);
@@ -215,71 +233,12 @@ namespace Game.Runtime
                 : GroundInfo.NotGrounded;
         }
 
-        /// <summary>
-        /// AI内部ExecutorのAttack/Castアクションを
-        /// ActionExecutorController（MonoBehaviour側）に橋渡しする共通ヘルパー。
-        /// 橋渡し成功後にAI側のアクションをForceCompleteして二重実行を防ぐ。
-        /// </summary>
         protected static void BridgeAIActionToExecutor(
-            ActionExecutor aiExecutor, ActionExecutorController monoExecutor, int targetHash)
+            ActionExecutor aiExecutor, ActionExecutorController monoExecutor)
         {
-            if (aiExecutor == null || !aiExecutor.IsExecuting)
-            {
-                return;
-            }
-
-            if (monoExecutor.IsExecuting)
-            {
-                return;
-            }
-
-            ActionBase current = aiExecutor.CurrentAction;
-            if (current == null)
-            {
-                return;
-            }
-
-            ActionSlot slot;
-            if (current is AttackActionHandler attackHandler)
-            {
-                slot = new ActionSlot
-                {
-                    execType = ActionExecType.Attack,
-                    paramId = attackHandler.LastParamId,
-                    paramValue = 1f
-                };
-            }
-            else if (current is CastActionHandler castHandler)
-            {
-                slot = new ActionSlot
-                {
-                    execType = ActionExecType.Cast,
-                    paramId = castHandler.LastParamId,
-                    paramValue = 1f
-                };
-            }
-            else
-            {
-                return;
-            }
-
-            bool result = monoExecutor.ExecuteAction(slot, targetHash);
-            if (result)
-            {
-                current.ForceComplete();
-            }
+            if (aiExecutor != null && monoExecutor != null) { aiExecutor.SetExecutionBackend(monoExecutor); }
         }
 
-        /// <summary>
-        /// JudgmentLoop からターゲット情報を抜き出して BridgeAIActionToExecutor に橋渡しする共通ラッパー。
-        /// EnemyCharacter / CompanionCharacter で重複していた 8 行ロジックを集約 (Issue #79 M7-Reuse)。
-        /// </summary>
-        /// <param name="loop">AI controller の JudgmentLoop。null の場合は no-op。</param>
-        /// <param name="actionExecutorController">派生クラスが保持する MonoBehaviour 側 Executor。null なら no-op。</param>
-        /// <remarks>
-        /// 呼出側で AI controller (EnemyController / CompanionController 等) の null check を済ませること。
-        /// _actionExecutorController は派生クラス固有の private フィールドのため引数で受け取る (BaseCharacter には保持しない)。
-        /// </remarks>
         protected static void BridgeAIActionForJudgmentLoop(
             JudgmentLoop loop, ActionExecutorController actionExecutorController)
         {
@@ -288,9 +247,7 @@ namespace Game.Runtime
                 return;
             }
 
-            ActionExecutor aiExecutor = loop.Executor;
-            int targetHash = loop.CurrentTargetHash;
-            BridgeAIActionToExecutor(aiExecutor, actionExecutorController, targetHash);
+            BridgeAIActionToExecutor(loop.Executor, actionExecutorController);
         }
 
         /// <summary>
@@ -368,6 +325,20 @@ namespace Game.Runtime
             if (!GameManager.IsCharacterValid(_objectHash))
             {
                 return;
+            }
+            if (GameManager.Actions != null)
+            {
+                if (!GameManager.Actions.IsMovementBlocked(_objectHash)
+                    && !(_actionController != null && _actionController.HasMovementRequest))
+                {
+                    float speed = Mathf.Abs(_rb.linearVelocity.x);
+                    GameManager.Actions.SetLocomotion(_objectHash, new Vector2(Mathf.Sign(_rb.linearVelocity.x), 0f), speed);
+                }
+                GameManager.Actions.ApplyMovement(_objectHash, _rb);
+                if (_collisionController != null)
+                {
+                    _collisionController.SetInvincible(GameManager.Actions.Execution.EvaluateEffects(_objectHash).isInvincible);
+                }
             }
             ref CharacterVitals vitals = ref GameManager.Data.GetVitals(_objectHash);
             vitals.position = (Vector2)transform.position;

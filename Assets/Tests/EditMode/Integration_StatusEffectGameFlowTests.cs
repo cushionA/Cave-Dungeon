@@ -46,6 +46,69 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
+        public void StatusEffectSystem_ApplyAndExpire_UpdatesSharedStateBeforeNotifications()
+        {
+            using StatusEffectSystem system = new StatusEffectSystem(_data, _events);
+            system.Register(k_TargetHash);
+            int changes = 0;
+            using System.IDisposable subscription = _events.OnStatusEffectChanged.Subscribe(change =>
+            {
+                changes++;
+                bool active = _data.GetStatusEffects(k_TargetHash).IsActive(change.effectId);
+                Assert.AreEqual(change.kind == StatusEffectChangeKind.Applied, active);
+            });
+
+            system.Apply(k_TargetHash, new StatusEffectInfo
+            {
+                effect = StatusEffectId.SpeedUp, duration = 1f, modifier = 0.5f
+            });
+
+            Assert.AreEqual(1.5f, _data.GetStatusEffects(k_TargetHash).MoveSpeedMultiplier, 0.001f);
+            system.Tick(2f);
+            Assert.AreEqual(1f, _data.GetStatusEffects(k_TargetHash).MoveSpeedMultiplier, 0.001f);
+            Assert.AreEqual(2, changes);
+        }
+
+        [Test]
+        public void StatusEffectSystem_LethalTick_ClampsHpAndEmitsDeathOnce()
+        {
+            using StatusEffectSystem system = new StatusEffectSystem(_data, _events);
+            system.Register(k_TargetHash);
+            int deaths = 0;
+            using System.IDisposable subscription = _events.OnCharacterDeath.Subscribe(_ => deaths++);
+            system.Apply(k_TargetHash, new StatusEffectInfo
+            {
+                effect = StatusEffectId.Poison, duration = 10f, tickDamage = 200f, tickInterval = 1f
+            });
+
+            system.Tick(1f);
+            system.Tick(1f);
+
+            Assert.AreEqual(0, _data.GetVitals(k_TargetHash).currentHp);
+            Assert.AreEqual(ActState.Dead, _data.GetFlags(k_TargetHash).ActState);
+            Assert.AreEqual(0, _data.GetStatusEffects(k_TargetHash).ActiveCount);
+            Assert.AreEqual(1, deaths);
+        }
+
+        [Test]
+        public void StatusEffectSystem_RemoveAndReuseHash_DoesNotRetainPreviousEffects()
+        {
+            using StatusEffectSystem system = new StatusEffectSystem(_data, _events);
+            system.Register(k_TargetHash);
+            system.Apply(k_TargetHash, new StatusEffectInfo
+            {
+                effect = StatusEffectId.AttackUp, duration = 10f, modifier = 0.5f
+            });
+            system.Unregister(k_TargetHash);
+            _data.Remove(k_TargetHash);
+            _data.Add(k_TargetHash, new CharacterVitals { currentHp = 100 }, default, default, default);
+            system.Register(k_TargetHash);
+
+            Assert.AreEqual(0, _data.GetStatusEffects(k_TargetHash).ActiveCount);
+            Assert.AreEqual(1f, _data.GetStatusEffects(k_TargetHash).AttackMultiplier);
+        }
+
+        [Test]
         public void StatusEffectGameFlow_AccumulateThenApply_ReducesHpViaTick()
         {
             // Arrange

@@ -1,0 +1,2171 @@
+[
+  {
+    "feature": "DamageSystem_StatusEffects",
+    "path": {
+      "key": "effect-core",
+      "title": "複数付与・蓄積・照会・個別解除",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "logic_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Core/Damage/StatusEffectApplication.cs",
+          "symbol": "StatusEffectApplicationLogic.Apply",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/StatusEffectStore.cs",
+          "symbol": "StatusEffectStore.Accumulate",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/StatusEffectStore.cs",
+          "symbol": "StatusEffectStore.Apply",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/StatusEffectStore.cs",
+          "symbol": "StatusEffectStore.GetSummary",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/StatusEffectStore.cs",
+          "symbol": "StatusEffectStore.GetRemainingTime",
+          "kind": "read"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/StatusEffectApplicationTests.cs",
+        "Assets/Tests/EditMode/StatusEffectWiringTests.cs",
+        "Assets/Tests/EditMode/DamageStatusEffectsTests.cs"
+      ],
+      "notes": "実Core＋NUnitをEditor外で実行し、既存236件とActionExecution34件・AICore_ActionExecutor9件を含む純ロジック回帰302件が成功。Unity native APIを使う表示・PlayMode実行は未実施。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Damage/StatusEffectApplication.cs": "f6eefe768bab54306da9ef9689fc6dbdbe3c23933f26cde9f7760e1603d04551",
+        "Assets/MyAsset/Core/Damage/StatusEffectStore.cs": "5601d9c7e364ac4219705fd2ff0ffe6e6108a32ea4f4d855f791ae08acc653d6",
+        "Assets/Tests/EditMode/DamageStatusEffectsTests.cs": "4e011d4fb1b2abd643350b65674747faadfd2b281b2fe5de831f842fffd5e6f1",
+        "Assets/Tests/EditMode/StatusEffectApplicationTests.cs": "e485c056dcd37343e9ad8310e19b585455535bf80a26940c836ccf599fabb946",
+        "Assets/Tests/EditMode/StatusEffectWiringTests.cs": "afb0dce4ba95ac14104d7fc8893c4e9fcd4879ca3793d78f3afa794afa49680e"
+      }
+    }
+  },
+  {
+    "feature": "DamageSystem_StatusEffects",
+    "path": {
+      "key": "hit-to-shared-state",
+      "title": "被弾から技固有・装備効果を共有状態へ反映",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs",
+          "symbol": "DamageReceiver.ReceiveDamage",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/HitResolver.cs",
+          "symbol": "HitResolver.Resolve",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Guard/GuardJudgmentLogic.cs",
+          "symbol": "GuardJudgmentLogic.Evaluate",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/HpArmorLogic.cs",
+          "symbol": "HpArmorLogic.ApplyDamage",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs",
+          "symbol": "StatusEffectSystem.ApplyApplications",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/StatusEffectApplication.cs",
+          "symbol": "StatusEffectApplicationLogic.Apply",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/StatusEffectStore.cs",
+          "symbol": "StatusEffectStore.Changed",
+          "kind": "event"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs",
+          "symbol": "StatusEffectSystem.PublishChange",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
+          "symbol": "CharacterStatusEffects",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/GameManager/GameEvents.cs",
+          "symbol": "GameEvents.FireStatusEffectChanged",
+          "kind": "event"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/PlayMode/GuardParryStatusEffectPlayTests.cs",
+        "Assets/Tests/EditMode/Integration_StatusEffectGameFlowTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。 DF-01反映後もCore/Runtime/Editor/EditMode/PlayMode全5アセンブリを再コンパイル成功。Unity内実行は引き続き保留。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Damage/HitResolver.cs": "101d98dccbd9c26c626f8b52d2db24be03e20d2dd1b73e22f15a90a9ed206309",
+        "Assets/MyAsset/Core/Damage/HpArmorLogic.cs": "9865167ed94c9b804e8286fbf2d8097895ded989e536f3a474c09d9b02ffea5c",
+        "Assets/MyAsset/Core/Damage/StatusEffectApplication.cs": "f6eefe768bab54306da9ef9689fc6dbdbe3c23933f26cde9f7760e1603d04551",
+        "Assets/MyAsset/Core/Damage/StatusEffectStore.cs": "5601d9c7e364ac4219705fd2ff0ffe6e6108a32ea4f4d855f791ae08acc653d6",
+        "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs": "82fba81fb4d94103e55fedecdf4cbaf3613e9251e907a6d401814de0647d9150",
+        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "15f53473f68d7071c823b0a9d385b0369018554f876fb3f423a1eb95b87f54f8",
+        "Assets/MyAsset/Core/GameManager/GameEvents.cs": "53d64261b950cc6a91569bf91671694de032349460646846a1563d40943f9577",
+        "Assets/MyAsset/Core/Guard/GuardJudgmentLogic.cs": "883cbe4d303c658f1e051ecc0b5bbf7aa3f33c480b8dd51e43cf2b6f17a0712d",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "774487ac9224e08ec7817ade0c7a71b10b0408bd7ca57e2ed4f37643b2a98148",
+        "Assets/Tests/EditMode/Integration_StatusEffectGameFlowTests.cs": "a6ae4ba3027d60421b4b3c63ac4d5b587075a9ba29c74f08fc15d51f5159324f",
+        "Assets/Tests/PlayMode/GuardParryStatusEffectPlayTests.cs": "64035c4ee19b24c751a55673a7659a31a73c4e0edf9fdd8ebafca72624394428"
+      }
+    }
+  },
+  {
+    "feature": "DamageSystem_StatusEffects",
+    "path": {
+      "key": "timers-and-dot",
+      "title": "全効果の時間更新・周期ダメージ・死亡解除",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/GameManager.cs",
+          "symbol": "GameManager.FixedUpdate",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs",
+          "symbol": "StatusEffectSystem.Tick",
+          "kind": "update"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/StatusEffectStore.cs",
+          "symbol": "StatusEffectStore.TickAll",
+          "kind": "update"
+        },
+        {
+          "file": "Assets/MyAsset/Core/GameManager/GameEvents.cs",
+          "symbol": "GameEvents.FireDamageDealt",
+          "kind": "event"
+        },
+        {
+          "file": "Assets/MyAsset/Core/GameManager/GameEvents.cs",
+          "symbol": "GameEvents.FireCharacterDeath",
+          "kind": "event"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs",
+          "symbol": "StatusEffectSystem.ClearAll",
+          "kind": "write"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/StatusEffectWiringTests.cs",
+        "Assets/Tests/EditMode/Integration_StatusEffectGameFlowTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。 DF-01反映後もCore/Runtime/Editor/EditMode/PlayMode全5アセンブリを再コンパイル成功。Unity内実行は引き続き保留。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Damage/StatusEffectStore.cs": "5601d9c7e364ac4219705fd2ff0ffe6e6108a32ea4f4d855f791ae08acc653d6",
+        "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs": "82fba81fb4d94103e55fedecdf4cbaf3613e9251e907a6d401814de0647d9150",
+        "Assets/MyAsset/Core/GameManager/GameEvents.cs": "53d64261b950cc6a91569bf91671694de032349460646846a1563d40943f9577",
+        "Assets/MyAsset/Runtime/GameManager.cs": "3cd5263300b19f02ec346772270838e4bc1e065b2be7e7174b539db4b493b99d",
+        "Assets/Tests/EditMode/Integration_StatusEffectGameFlowTests.cs": "a6ae4ba3027d60421b4b3c63ac4d5b587075a9ba29c74f08fc15d51f5159324f",
+        "Assets/Tests/EditMode/StatusEffectWiringTests.cs": "afb0dce4ba95ac14104d7fc8893c4e9fcd4879ca3793d78f3afa794afa49680e"
+      }
+    }
+  },
+  {
+    "feature": "DamageSystem_StatusEffects",
+    "path": {
+      "key": "character-effects",
+      "title": "共有instanceからキャラFX表示・解除",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/GameManager.cs",
+          "symbol": "GameManager.LateUpdate",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/UI/StatusEffectPresentationController.cs",
+          "symbol": "StatusEffectPresentationController.Sync",
+          "kind": "update"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/StatusEffectStore.cs",
+          "symbol": "StatusEffectStore.CopyActiveEffects",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/UI/StatusEffectCatalog.cs",
+          "symbol": "StatusEffectCatalog.TryGet",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/UI/StatusEffectPresentationController.cs",
+          "symbol": "StatusEffectPresentationController.Release",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/StatusEffectPresentationTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。表示カタログへのprefab割当が必要。 DF-01反映後もCore/Runtime/Editor/EditMode/PlayMode全5アセンブリを再コンパイル成功。Unity内実行は引き続き保留。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Damage/StatusEffectStore.cs": "5601d9c7e364ac4219705fd2ff0ffe6e6108a32ea4f4d855f791ae08acc653d6",
+        "Assets/MyAsset/Runtime/GameManager.cs": "3cd5263300b19f02ec346772270838e4bc1e065b2be7e7174b539db4b493b99d",
+        "Assets/MyAsset/Runtime/UI/StatusEffectCatalog.cs": "310641670a57615c24773580e827aa4c086c8796601dbba01e8166a194317c84",
+        "Assets/MyAsset/Runtime/UI/StatusEffectPresentationController.cs": "4c1aa32c7c14ab91276b372a445beb78314c8c62ffd0e580bd98adf3030b457e",
+        "Assets/Tests/EditMode/StatusEffectPresentationTests.cs": "2be54e85020f1c328fb749c5ff4c54661a1a1dada6bc32b661af6a848c3c7930"
+      }
+    }
+  },
+  {
+    "feature": "EquipmentSystem_EquipUnequip",
+    "path": {
+      "key": "equipment-hit-effects",
+      "title": "武器・盾・Coreの効果合成とsnapshot維持",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "logic_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Core/Equipment/EquipmentStore.cs",
+          "symbol": "EquipmentStore.Equip",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Equipment/EquipmentHolder.cs",
+          "symbol": "EquipmentHolder.Equip",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Equipment/EquipmentHolder.cs",
+          "symbol": "EquipmentHolder.RebuildEffectSnapshots",
+          "kind": "update"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Equipment/EquipmentStore.cs",
+          "symbol": "EquipmentStore.GetOnHitEffects",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/StatusEffectApplication.cs",
+          "symbol": "StatusEffectApplicationLogic.Apply",
+          "kind": "call"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/EquipmentEffectTests.cs",
+        "Assets/Tests/EditMode/EquipmentSystemTests.cs"
+      ],
+      "notes": "実Core＋NUnitをEditor外で実行し、既存236件とActionExecution34件・AICore_ActionExecutor9件を含む純ロジック回帰302件が成功。Unity native APIを使う表示・PlayMode実行は未実施。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Damage/StatusEffectApplication.cs": "f6eefe768bab54306da9ef9689fc6dbdbe3c23933f26cde9f7760e1603d04551",
+        "Assets/MyAsset/Core/Equipment/EquipmentHolder.cs": "6b9ba850ab1e7285ebe04991321619af732316e4e2670dc03fcdf7ab3184ac4b",
+        "Assets/MyAsset/Core/Equipment/EquipmentStore.cs": "e38df40ceadc869d58e760614cd0d06ecf3fc817dde196acbf42f2779cd8a5ec",
+        "Assets/Tests/EditMode/EquipmentEffectTests.cs": "fff676a73a46210f9c8cf96c0fe9c0f6b8f18c51e502fd9bd1ce0763cd7bf843",
+        "Assets/Tests/EditMode/EquipmentSystemTests.cs": "63312130e36109406874279c9b2e07013739c2bce27f950ba364ecf61ddbcce6"
+      }
+    }
+  },
+  {
+    "feature": "EquipmentSystem_EquipUnequip",
+    "path": {
+      "key": "equipment-selection-gap",
+      "title": "装備選択UIから共通Equip入口への未接続区間",
+      "implementation_status": "implemented",
+      "connection_status": "partial",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/GameManager.cs",
+          "symbol": "GameManager.Equipment",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Equipment/EquipmentStore.cs",
+          "symbol": "EquipmentStore.Equip",
+          "kind": "call"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/EquipmentEffectTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。共通Equip APIと行動側の読取は実装済み。装備選択UIからこのAPIを呼ぶ処理は未接続。 DF-01反映後もCore/Runtime/Editor/EditMode/PlayMode全5アセンブリを再コンパイル成功。Unity内実行は引き続き保留。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Equipment/EquipmentStore.cs": "e38df40ceadc869d58e760614cd0d06ecf3fc817dde196acbf42f2779cd8a5ec",
+        "Assets/MyAsset/Runtime/GameManager.cs": "3cd5263300b19f02ec346772270838e4bc1e065b2be7e7174b539db4b493b99d",
+        "Assets/Tests/EditMode/EquipmentEffectTests.cs": "fff676a73a46210f9c8cf96c0fe9c0f6b8f18c51e502fd9bd1ce0763cd7bf843"
+      }
+    }
+  },
+  {
+    "feature": "WeaponSystem_HitboxAndMovement",
+    "path": {
+      "key": "attack-definition-to-hit",
+      "title": "攻撃開始時に定義と装備を確定し命中packetへ渡す",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs",
+          "symbol": "ActionExecutorController.ExecuteAction",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Equipment/EquipmentStore.cs",
+          "symbol": "EquipmentStore.GetOnHitEffects",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Common/CombatDataHelper.cs",
+          "symbol": "CombatDataHelper.BuildMotionData",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/StatusEffectApplication.cs",
+          "symbol": "StatusEffectApplicationLogic.Resolve",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs",
+          "symbol": "ActionExecutorController.HandleExecution",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/HitBox.cs",
+          "symbol": "HitBox.OnTriggerEnter2D",
+          "kind": "event"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Common/CombatDataHelper.cs",
+          "symbol": "CombatDataHelper.BuildDamageData",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs",
+          "symbol": "DamageReceiver.ReceiveDamage",
+          "kind": "call"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/CombatDataHelperTests.cs",
+        "Assets/Tests/PlayMode/GuardParryStatusEffectPlayTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。共通実行器のStartedで技・装備snapshotと行動instance IDを確定し、PhaseChangedのActiveで近接判定を有効化する。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Common/CombatDataHelper.cs": "f57d064ad921c35f9356b75647e21f4caac987323c6b6b2af4a463978f8e0bd4",
+        "Assets/MyAsset/Core/Damage/StatusEffectApplication.cs": "f6eefe768bab54306da9ef9689fc6dbdbe3c23933f26cde9f7760e1603d04551",
+        "Assets/MyAsset/Core/Equipment/EquipmentStore.cs": "e38df40ceadc869d58e760614cd0d06ecf3fc817dde196acbf42f2779cd8a5ec",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "1bed9c74311c571cbcbf42d72ffabccd8fe952f990189ab947e329b9cb728c55",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "774487ac9224e08ec7817ade0c7a71b10b0408bd7ca57e2ed4f37643b2a98148",
+        "Assets/MyAsset/Runtime/Combat/HitBox.cs": "458028855cdc7b54874215b8a6c7d2095f0734e65d3372813c4d4fa80ed9f1a3",
+        "Assets/Tests/EditMode/CombatDataHelperTests.cs": "579475ab4f6e243c9114dc6b93a5a30d2250aef1223ac2b33ddd866399216685",
+        "Assets/Tests/PlayMode/GuardParryStatusEffectPlayTests.cs": "64035c4ee19b24c751a55673a7659a31a73c4e0edf9fdd8ebafca72624394428"
+      }
+    }
+  },
+  {
+    "feature": "MagicSystem_HitProcessing",
+    "path": {
+      "key": "attack-magic-effects",
+      "title": "攻撃魔法の効果リストを被弾処理へ一度だけ渡す",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileController.cs",
+          "symbol": "ProjectileController.OnTriggerEnter2D",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Combat/Projectile/ProjectileHitProcessor.cs",
+          "symbol": "ProjectileHitProcessor.ProcessHit",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Combat/Projectile/ProjectileHitProcessor.cs",
+          "symbol": "ProjectileHitProcessor.BuildProjectileDamageData",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs",
+          "symbol": "DamageReceiver.ReceiveDamage",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/HitResolver.cs",
+          "symbol": "HitResolver.Resolve",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs",
+          "symbol": "StatusEffectSystem.ApplyApplications",
+          "kind": "call"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/DamageProjectileHitProcessorTests.cs",
+        "Assets/Tests/PlayMode/GuardParryStatusEffectPlayTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Combat/Projectile/ProjectileHitProcessor.cs": "c2f3e337533ce451481792098ba1c725890581ff11c84372dcbbd8b5b341edc3",
+        "Assets/MyAsset/Core/Damage/HitResolver.cs": "101d98dccbd9c26c626f8b52d2db24be03e20d2dd1b73e22f15a90a9ed206309",
+        "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs": "82fba81fb4d94103e55fedecdf4cbaf3613e9251e907a6d401814de0647d9150",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "774487ac9224e08ec7817ade0c7a71b10b0408bd7ca57e2ed4f37643b2a98148",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileController.cs": "871a0411347b8ed94e2a773226e979bf166009841b879d93830bae021ee97268",
+        "Assets/Tests/EditMode/DamageProjectileHitProcessorTests.cs": "85a9610e5f7a61f8731b02aeb51afc82c4695f02a78e7c9970d1e789d84b0114",
+        "Assets/Tests/PlayMode/GuardParryStatusEffectPlayTests.cs": "64035c4ee19b24c751a55673a7659a31a73c4e0edf9fdd8ebafca72624394428"
+      }
+    }
+  },
+  {
+    "feature": "MagicSystem_HitProcessing",
+    "path": {
+      "key": "support-recovery-effects",
+      "title": "支援・回復魔法も明示された付与方式を使用",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileController.cs",
+          "symbol": "ProjectileController.OnTriggerEnter2D",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Combat/Projectile/ProjectileHitProcessor.cs",
+          "symbol": "ProjectileHitProcessor.ProcessHit",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs",
+          "symbol": "StatusEffectSystem.ApplyApplications",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/StatusEffectApplication.cs",
+          "symbol": "StatusEffectApplicationLogic.Apply",
+          "kind": "call"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/DamageProjectileHitProcessorTests.cs",
+        "Assets/Tests/EditMode/StatusEffectApplicationTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Combat/Projectile/ProjectileHitProcessor.cs": "c2f3e337533ce451481792098ba1c725890581ff11c84372dcbbd8b5b341edc3",
+        "Assets/MyAsset/Core/Damage/StatusEffectApplication.cs": "f6eefe768bab54306da9ef9689fc6dbdbe3c23933f26cde9f7760e1603d04551",
+        "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs": "82fba81fb4d94103e55fedecdf4cbaf3613e9251e907a6d401814de0647d9150",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileController.cs": "871a0411347b8ed94e2a773226e979bf166009841b879d93830bae021ee97268",
+        "Assets/Tests/EditMode/DamageProjectileHitProcessorTests.cs": "85a9610e5f7a61f8731b02aeb51afc82c4695f02a78e7c9970d1e789d84b0114",
+        "Assets/Tests/EditMode/StatusEffectApplicationTests.cs": "e485c056dcd37343e9ad8310e19b585455535bf80a26940c836ccf599fabb946"
+      }
+    }
+  },
+  {
+    "feature": "MagicSystem_CastingFlow",
+    "path": {
+      "key": "cast-to-runtime-gap",
+      "title": "詠唱完了イベントから実際の発射への未接続区間",
+      "implementation_status": "implemented",
+      "connection_status": "partial",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Core/Combat/Magic/MagicCaster.cs",
+          "symbol": "MagicCaster.StartCast",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Combat/Magic/MagicCaster.cs",
+          "symbol": "MagicCaster.Tick",
+          "kind": "update"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Combat/Magic/MagicCaster.cs",
+          "symbol": "MagicCaster.OnFired",
+          "kind": "event"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs",
+          "symbol": "ProjectileManager.SpawnProjectile",
+          "kind": "call"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/MagicSystem_CastingFlowTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。旧単独ユーティリティMagicCaster.OnFiredを購読してSpawnProjectileへ渡すRuntime処理は未接続。実際の共通詠唱・発射はshared-cast-to-projectileを参照。この経路のOnFiredからSpawnProjectileの辺は未接続。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Combat/Magic/MagicCaster.cs": "098616c6ca9642a1d3344675e3409d747513c87488b7076ee8c0dc2cfbb4c5b0",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs": "2c93de46157eeab1d9466af7fb020d194412b1504e47b1392626b7e4e051fd6b",
+        "Assets/Tests/EditMode/MagicSystem_CastingFlowTests.cs": "cfa2d3c1b4e12b45517340e0b703ba744c603e6d0d77d28e863fefe916c17583"
+      }
+    }
+  },
+  {
+    "feature": "MagicSystem_ProjectileCore",
+    "path": {
+      "key": "public-spawn",
+      "title": "公開発射APIで装備snapshotと飛翔体を生成",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs",
+          "symbol": "ProjectileManager.SpawnProjectile",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Equipment/EquipmentStore.cs",
+          "symbol": "EquipmentStore.GetOnHitEffects",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Combat/Projectile/Projectile.cs",
+          "symbol": "Projectile.Initialize",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileController.cs",
+          "symbol": "ProjectileController.Activate",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/MagicSystem_ProjectileCoreTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。公開APIを起点とする接続。共通詠唱からの到達はshared-cast-to-projectile、旧単独MagicCasterからの未接続区間はcast-to-runtime-gapを参照。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Combat/Projectile/Projectile.cs": "0db9e25428abadecf86fbfda8d5b843f3e0d86be10c50dd3120a8b78e9517963",
+        "Assets/MyAsset/Core/Equipment/EquipmentStore.cs": "e38df40ceadc869d58e760614cd0d06ecf3fc817dde196acbf42f2779cd8a5ec",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileController.cs": "871a0411347b8ed94e2a773226e979bf166009841b879d93830bae021ee97268",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs": "2c93de46157eeab1d9466af7fb020d194412b1504e47b1392626b7e4e051fd6b",
+        "Assets/Tests/EditMode/MagicSystem_ProjectileCoreTests.cs": "8aa5c13e3a3c60668071c46a29ef37f64693fb1d3e9741ad084494cf861bb782"
+      }
+    }
+  },
+  {
+    "feature": "MagicSystem_ProjectileMovement",
+    "path": {
+      "key": "projectile-update",
+      "title": "飛翔体の一括更新から表示同期",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs",
+          "symbol": "ProjectileManager.Update",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Combat/Projectile/ProjectileMovement.cs",
+          "symbol": "ProjectileMovement.UpdateAll",
+          "kind": "update"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Combat/Projectile/Projectile.cs",
+          "symbol": "Projectile.Tick",
+          "kind": "update"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileController.cs",
+          "symbol": "ProjectileController.SyncTransform",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/MagicSystem_ProjectileMovementTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Combat/Projectile/Projectile.cs": "0db9e25428abadecf86fbfda8d5b843f3e0d86be10c50dd3120a8b78e9517963",
+        "Assets/MyAsset/Core/Combat/Projectile/ProjectileMovement.cs": "d9d869ad8c1e3a7607b4ffeb055c83745b559552de146a61b3dcb55dfb414c0f",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileController.cs": "871a0411347b8ed94e2a773226e979bf166009841b879d93830bae021ee97268",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs": "2c93de46157eeab1d9466af7fb020d194412b1504e47b1392626b7e4e051fd6b",
+        "Assets/Tests/EditMode/MagicSystem_ProjectileMovementTests.cs": "6857a45a76a3bfb36dc79773c55af622f43aec05f71c206e818d0fc0f84310b7"
+      }
+    }
+  },
+  {
+    "feature": "MagicSystem_BulletFeatures",
+    "path": {
+      "key": "child-effect-snapshot",
+      "title": "子弾へ親の技固有・装備snapshotを維持",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs",
+          "symbol": "ProjectileManager.SpawnChildProjectiles",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Combat/Projectile/ChildBulletHelper.cs",
+          "symbol": "ChildBulletHelper.CreateChildMagic",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs",
+          "symbol": "ProjectileManager.SpawnProjectile",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileController.cs",
+          "symbol": "ProjectileController.Activate",
+          "kind": "call"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/StatusEffectApplicationTests.cs",
+        "Assets/Tests/EditMode/ChildBulletTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Combat/Projectile/ChildBulletHelper.cs": "9360e75aa85cf0077de042ed34385a67b141d447a095a8bcb76efde18d857d11",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileController.cs": "871a0411347b8ed94e2a773226e979bf166009841b879d93830bae021ee97268",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs": "2c93de46157eeab1d9466af7fb020d194412b1504e47b1392626b7e4e051fd6b",
+        "Assets/Tests/EditMode/ChildBulletTests.cs": "9851a8f7b85c965420e710ad05e1de2001274d91690e1534204f4fa1744641d8",
+        "Assets/Tests/EditMode/StatusEffectApplicationTests.cs": "e485c056dcd37343e9ad8310e19b585455535bf80a26940c836ccf599fabb946"
+      }
+    }
+  },
+  {
+    "feature": "UISystem_HUD",
+    "path": {
+      "key": "status-effect-icons",
+      "title": "キャラ別instanceの残時間とstackをHUDへ表示",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/UI/HudController.cs",
+          "symbol": "HudController.Update",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/UI/HudController.cs",
+          "symbol": "StatusEffectIconStrip.Sync",
+          "kind": "update"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/StatusEffectStore.cs",
+          "symbol": "StatusEffectStore.CopyActiveEffects",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/UI/StatusEffectCatalog.cs",
+          "symbol": "StatusEffectCatalog.TryGet",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/UI/HudController.cs",
+          "symbol": "StatusEffectIconStrip.CreateEntry",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/StatusEffectPresentationTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Damage/StatusEffectStore.cs": "5601d9c7e364ac4219705fd2ff0ffe6e6108a32ea4f4d855f791ae08acc653d6",
+        "Assets/MyAsset/Runtime/UI/HudController.cs": "64435503c4f3b50a7066ef5ec6fee263ab7f4ca0e99cd8a45734d70e4aa1682e",
+        "Assets/MyAsset/Runtime/UI/StatusEffectCatalog.cs": "310641670a57615c24773580e827aa4c086c8796601dbba01e8166a194317c84",
+        "Assets/Tests/EditMode/StatusEffectPresentationTests.cs": "2be54e85020f1c328fb749c5ff4c54661a1a1dada6bc32b661af6a848c3c7930"
+      }
+    }
+  },
+  {
+    "feature": "GameManager_Core",
+    "path": {
+      "key": "actor-effect-lifecycle",
+      "title": "キャラ登録・削除に共通行動・効果・装備の寿命を接続",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Character/BaseCharacter.cs",
+          "symbol": "BaseCharacter.Start",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/GameManager/GameManagerCore.cs",
+          "symbol": "GameManagerCore.RegisterCharacter",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/CharacterDefenseState.cs",
+          "symbol": "CharacterDefenseState",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs",
+          "symbol": "StatusEffectSystem.Register",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Equipment/EquipmentStore.cs",
+          "symbol": "EquipmentStore.Register",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.RegisterActor",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Character/BaseCharacter.cs",
+          "symbol": "BaseCharacter.OnPoolReturn",
+          "kind": "event"
+        },
+        {
+          "file": "Assets/MyAsset/Core/GameManager/GameManagerCore.cs",
+          "symbol": "GameManagerCore.UnregisterCharacter",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.RemoveActor",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Animation/CharacterAnimationController.cs",
+          "symbol": "CharacterAnimationController.EndExecution",
+          "kind": "output"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs",
+          "symbol": "GameActionRuntime.RemoveOwner",
+          "kind": "write"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/PlayMode/BaseCharacterLifecycleTests.cs",
+        "Assets/Tests/EditMode/Integration_StatusEffectGameFlowTests.cs",
+        "Assets/Tests/EditMode/EquipmentEffectTests.cs",
+        "Assets/Tests/PlayMode/HitResolutionFlowPlayTests.cs",
+        "Assets/Tests/PlayMode/ActionRuntimeFlowTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。共有行動の登録・中断・待機中の連携破棄・装備／効果解除と表示終了をキャラ寿命に合わせる。プール返却時はStopActorから現行instanceと保留要求を破棄する。 DF-01反映後もCore/Runtime/Editor/EditMode/PlayMode全5アセンブリを再コンパイル成功。Unity内実行は引き続き保留。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "cc01ba85c61deb97b3b4efefb147181a3452b8ecaee3b1c283fbefb7407c8782",
+        "Assets/MyAsset/Core/Damage/CharacterDefenseState.cs": "ab9394939d861692b2662056fbf841153b76da9da3b40a82534b0a7a429500e9",
+        "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs": "82fba81fb4d94103e55fedecdf4cbaf3613e9251e907a6d401814de0647d9150",
+        "Assets/MyAsset/Core/Equipment/EquipmentStore.cs": "e38df40ceadc869d58e760614cd0d06ecf3fc817dde196acbf42f2779cd8a5ec",
+        "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "d668df907f91eab89c838fd28edd9a27dd05ce685eaaf1335261f77421e167d9",
+        "Assets/MyAsset/Runtime/Animation/CharacterAnimationController.cs": "a9795a981d6a2d1b5d92123aa4d9bb9bb0cb520222b38a5165c9c2516bbfc839",
+        "Assets/MyAsset/Runtime/Character/BaseCharacter.cs": "94b279e916f3dce27cc50e2434426f3fa859b8aa04daab6042de0c8a7c128414",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "f03341e01726701386c6700b2c4d3b646a466ef68c22d700b55816caf42b8785",
+        "Assets/Tests/EditMode/EquipmentEffectTests.cs": "fff676a73a46210f9c8cf96c0fe9c0f6b8f18c51e502fd9bd1ce0763cd7bf843",
+        "Assets/Tests/EditMode/Integration_StatusEffectGameFlowTests.cs": "a6ae4ba3027d60421b4b3c63ac4d5b587075a9ba29c74f08fc15d51f5159324f",
+        "Assets/Tests/PlayMode/ActionRuntimeFlowTests.cs": "6fc9024be31e7290aed6a4c5201bdf9e2e4109ff8e73fbf86fa2d36af326e035",
+        "Assets/Tests/PlayMode/BaseCharacterLifecycleTests.cs": "c483694e1e8b9520dfaf89129d022e7ec317fad430e7c95343f5fec94d8f51e5",
+        "Assets/Tests/PlayMode/HitResolutionFlowPlayTests.cs": "39057a7b9cdb522ee3adf9e8e4c77b0a3fe745e24ed557bd46fd2c915beb8592"
+      }
+    }
+  },
+  {
+    "feature": "DamageSystem_HpArmorKnockback",
+    "path": {
+      "key": "hit-resolution-core",
+      "title": "共通被弾計算でHP・SP・基礎／行動アーマーとリアクションを確定",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "logic_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Core/Damage/HitResolver.cs",
+          "symbol": "HitResolver.Resolve",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Guard/GuardJudgmentLogic.cs",
+          "symbol": "GuardJudgmentLogic.Evaluate",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/DamageCalculator.cs",
+          "symbol": "DamageCalculator.CalculateTotalDamageWithElementalCut",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/HpArmorLogic.cs",
+          "symbol": "HpArmorLogic.ApplyDamage",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/HitReactionLogic.cs",
+          "symbol": "HitReactionLogic.Determine",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/CharacterDefenseState.cs",
+          "symbol": "CharacterDefenseState",
+          "kind": "write"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/HitResolverTests.cs",
+        "Assets/Tests/EditMode/DamageHpArmorTests.cs",
+        "Assets/Tests/EditMode/Integration_DamageHitReactionTests.cs"
+      ],
+      "notes": "実Core＋NUnitをEditor外で実行し、既存236件とActionExecution34件・AICore_ActionExecutor9件を含む純ロジック回帰302件が成功。GuardPoint自動ガードは含まない。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Damage/CharacterDefenseState.cs": "ab9394939d861692b2662056fbf841153b76da9da3b40a82534b0a7a429500e9",
+        "Assets/MyAsset/Core/Damage/DamageCalculator.cs": "8c3ffbe44f03abc942f2390dd4001fd1f44eaa9041c3fde05d0a5c0c671b2427",
+        "Assets/MyAsset/Core/Damage/HitReactionLogic.cs": "4d318d44aba7ecd71cfd6da54dbbfc639c6b0815c4b37341190d058d30f352c5",
+        "Assets/MyAsset/Core/Damage/HitResolver.cs": "101d98dccbd9c26c626f8b52d2db24be03e20d2dd1b73e22f15a90a9ed206309",
+        "Assets/MyAsset/Core/Damage/HpArmorLogic.cs": "9865167ed94c9b804e8286fbf2d8097895ded989e536f3a474c09d9b02ffea5c",
+        "Assets/MyAsset/Core/Guard/GuardJudgmentLogic.cs": "883cbe4d303c658f1e051ecc0b5bbf7aa3f33c480b8dd51e43cf2b6f17a0712d",
+        "Assets/Tests/EditMode/DamageHpArmorTests.cs": "0f70a212f8da57dabf51cb819231d8607315328269a86c8c23f0563275e0606b",
+        "Assets/Tests/EditMode/HitResolverTests.cs": "e646bb47a19088d98f936cc8c51e1f6e2d6e897c038a873147b61ca8bfd18bf9",
+        "Assets/Tests/EditMode/Integration_DamageHitReactionTests.cs": "75764dabd070532d3b538c387aa5ad56e84f2754c3bdfe0ee00d6c71a630dad0"
+      }
+    }
+  },
+  {
+    "feature": "DamageSystem_HpArmorKnockback",
+    "path": {
+      "key": "shared-defense-update",
+      "title": "共有防御状態の経過時間・回復待ち・スタン解除を更新",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs",
+          "symbol": "DamageReceiver.Update",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/SoACharaDataDic.Compat.cs",
+          "symbol": "SoACharaDataDic.GetDefenseState",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/HitResolver.cs",
+          "symbol": "HitResolver.TickRecovery",
+          "kind": "update"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/HpArmorLogic.cs",
+          "symbol": "HpArmorLogic.RecoverArmor",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/HitReactionLogic.cs",
+          "symbol": "HitReactionLogic.ShouldResetArmorOnStunExit",
+          "kind": "call"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/HitResolverTests.cs",
+        "Assets/Tests/EditMode/FlinchArmorResetTests.cs",
+        "Assets/Tests/PlayMode/HitResolutionFlowPlayTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。時間付き行動・ガード窓は共通ActionExecutionSystem側で更新し、ここではアーマー回復とスタン退出時の回復を処理する。初回Start前のプール取得・登録通知時の回復設定を含むNative回帰はコンパイルのみ。 DF-01反映後もCore/Runtime/Editor/EditMode/PlayMode全5アセンブリを再コンパイル成功。Unity内実行は引き続き保留。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Damage/HitReactionLogic.cs": "4d318d44aba7ecd71cfd6da54dbbfc639c6b0815c4b37341190d058d30f352c5",
+        "Assets/MyAsset/Core/Damage/HitResolver.cs": "101d98dccbd9c26c626f8b52d2db24be03e20d2dd1b73e22f15a90a9ed206309",
+        "Assets/MyAsset/Core/Damage/HpArmorLogic.cs": "9865167ed94c9b804e8286fbf2d8097895ded989e536f3a474c09d9b02ffea5c",
+        "Assets/MyAsset/Core/DataContainer/SoACharaDataDic.Compat.cs": "f8a0d126964467156b1abc0e9efc36143ba087fdb1ff053373838101f8924c0a",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "774487ac9224e08ec7817ade0c7a71b10b0408bd7ca57e2ed4f37643b2a98148",
+        "Assets/Tests/EditMode/FlinchArmorResetTests.cs": "6c64a9445a788b72d91c0d99a8ff9028d262326a8aa60795c4437e464d5f5e14",
+        "Assets/Tests/EditMode/HitResolverTests.cs": "e646bb47a19088d98f936cc8c51e1f6e2d6e897c038a873147b61ca8bfd18bf9",
+        "Assets/Tests/PlayMode/HitResolutionFlowPlayTests.cs": "39057a7b9cdb522ee3adf9e8e4c77b0a3fe745e24ed557bd46fd2c915beb8592"
+      }
+    }
+  },
+  {
+    "feature": "ParryGuard_GuardJudgment",
+    "path": {
+      "key": "guard-evaluation",
+      "title": "ガード判定とスタミナ要求削りを一度の計算で返す",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "logic_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Core/Damage/HitResolver.cs",
+          "symbol": "HitResolver.Resolve",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Guard/GuardJudgmentLogic.cs",
+          "symbol": "GuardJudgmentLogic.Evaluate",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Guard/GuardJudgmentLogic.cs",
+          "symbol": "GuardJudgmentLogic.CalculateStaminaDrain",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
+          "symbol": "CharacterVitals.currentStamina",
+          "kind": "write"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/ParryGuardJudgmentTests.cs",
+        "Assets/Tests/EditMode/HitResolverTests.cs"
+      ],
+      "notes": "実Core＋NUnitをEditor外で実行し、既存236件とActionExecution34件・AICore_ActionExecutor9件を含む純ロジック回帰302件が成功。Guard判定26件・HitResolver17件を包含。完全一致SPはGuarded、JGの近接／飛翔体差を確認。 DF-01反映後もCore/Runtime/Editor/EditMode/PlayMode全5アセンブリを再コンパイル成功。当該純ロジックを含む回帰313件成功・失敗0件。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Damage/HitResolver.cs": "101d98dccbd9c26c626f8b52d2db24be03e20d2dd1b73e22f15a90a9ed206309",
+        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "15f53473f68d7071c823b0a9d385b0369018554f876fb3f423a1eb95b87f54f8",
+        "Assets/MyAsset/Core/Guard/GuardJudgmentLogic.cs": "883cbe4d303c658f1e051ecc0b5bbf7aa3f33c480b8dd51e43cf2b6f17a0712d",
+        "Assets/Tests/EditMode/HitResolverTests.cs": "e646bb47a19088d98f936cc8c51e1f6e2d6e897c038a873147b61ca8bfd18bf9",
+        "Assets/Tests/EditMode/ParryGuardJudgmentTests.cs": "85545441d5ac39899233f00f2411aa4617c96c80f79aab8e53ab49ee8a42af26"
+      }
+    }
+  },
+  {
+    "feature": "ParryGuard_GuardJudgment",
+    "path": {
+      "key": "guard-point-gap",
+      "title": "GuardPointの評価flagから自動ガードへの未接続区間",
+      "implementation_status": "implemented",
+      "connection_status": "partial",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Core/Damage/ActionEffectProcessor.cs",
+          "symbol": "ActionEffectProcessor.Evaluate",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Guard/GuardJudgmentLogic.cs",
+          "symbol": "GuardJudgmentLogic.Evaluate",
+          "kind": "call"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/ActionEffectProcessorTests.cs",
+        "Assets/Tests/EditMode/HitResolverTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。GuardPointは評価flagのみ。HitResolverは現時点で自動ガードへ結線しない。JG窓との仕様を決めずにガード入力へORしない。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Damage/ActionEffectProcessor.cs": "ce0e796ee4e8b6a11065aaf4d8d34a88f128d32704f7d3fc1c6dfc5302dd2e95",
+        "Assets/MyAsset/Core/Guard/GuardJudgmentLogic.cs": "883cbe4d303c658f1e051ecc0b5bbf7aa3f33c480b8dd51e43cf2b6f17a0712d",
+        "Assets/Tests/EditMode/ActionEffectProcessorTests.cs": "9801d74673cf37729fefb141f31522487a3c9b806571719b4661818ba2e686fd",
+        "Assets/Tests/EditMode/HitResolverTests.cs": "e646bb47a19088d98f936cc8c51e1f6e2d6e897c038a873147b61ca8bfd18bf9"
+      }
+    }
+  },
+  {
+    "feature": "ParryGuard_Feedback",
+    "path": {
+      "key": "guard-result-notification",
+      "title": "資源更新後にガード結果を一度通知する",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs",
+          "symbol": "DamageReceiver.ReceiveDamage",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/HitResolver.cs",
+          "symbol": "HitResolver.Resolve",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/GameManager/GameEvents.cs",
+          "symbol": "GameEvents.FireDamageDealt",
+          "kind": "event"
+        },
+        {
+          "file": "Assets/MyAsset/Core/GameManager/GameEvents.cs",
+          "symbol": "GameEvents.FireGuardEvent",
+          "kind": "event"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/PlayMode/HitResolutionFlowPlayTests.cs",
+        "Assets/Tests/EditMode/DamageEventVerificationTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。ガード結果通知までの経路。UI/演出の自動再生との結線は検証対象外。Nativeの通知回数・確定データ観測はコンパイルのみ。 DF-01反映後もCore/Runtime/Editor/EditMode/PlayMode全5アセンブリを再コンパイル成功。Unity内実行は引き続き保留。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Damage/HitResolver.cs": "101d98dccbd9c26c626f8b52d2db24be03e20d2dd1b73e22f15a90a9ed206309",
+        "Assets/MyAsset/Core/GameManager/GameEvents.cs": "53d64261b950cc6a91569bf91671694de032349460646846a1563d40943f9577",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "774487ac9224e08ec7817ade0c7a71b10b0408bd7ca57e2ed4f37643b2a98148",
+        "Assets/Tests/EditMode/DamageEventVerificationTests.cs": "4e50e2461c4613d2b8ac368da64dcab0ced3289aa6f363135ce020fed3f02b1c",
+        "Assets/Tests/PlayMode/HitResolutionFlowPlayTests.cs": "39057a7b9cdb522ee3adf9e8e4c77b0a3fe745e24ed557bd46fd2c915beb8592"
+      }
+    }
+  },
+  {
+    "feature": "ActionSystem_SharedExecution",
+    "path": {
+      "key": "shared-execution-core",
+      "title": "定義snapshot・資源占有・消費・時間・割込を共通実行器で確定",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "logic_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.RegisterDefinition",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.SnapshotDefinition",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.TryStart",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ExecutionTypes.cs",
+          "symbol": "IExecutionWorld.CommitActor",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.Tick",
+          "kind": "update"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.Changed",
+          "kind": "event"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/ActionExecutionTests.cs"
+      ],
+      "notes": "実Core＋NUnitをEditor外で実行し、既存236件とActionExecution34件・AICore_ActionExecutor9件を含む純ロジック回帰302件が成功。ActionExecution34件は偽IExecutionWorldを使い、実行中snapshot不変・ゼロ時間phase・資源競合・強制割込・時間付き属性・連携要求の寿命を確認。SoA nativeコンテナとの統合はshared-soa-executionで区別。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "cc01ba85c61deb97b3b4efefb147181a3452b8ecaee3b1c283fbefb7407c8782",
+        "Assets/MyAsset/Core/Actions/ExecutionTypes.cs": "7ce3b9aa630e5f4a90c5bb70e56ae241ba3a6e39c811cace69119a6e98b06e57",
+        "Assets/Tests/EditMode/ActionExecutionTests.cs": "ff607ccf1f34b4850f6bd1a10a31fc5d5b7956d1d6e6fb01466ef0469cf0beee"
+      }
+    }
+  },
+  {
+    "feature": "ActionSystem_SharedExecution",
+    "path": {
+      "key": "shared-soa-execution",
+      "title": "キャラごとの共通行動要求をSoAの資源・状態へ反映",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Core/GameManager/GameManagerCore.cs",
+          "symbol": "GameManagerCore.Initialize",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/GameManager/GameManagerCore.cs",
+          "symbol": "GameManagerCore.RegisterCharacter",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.RegisterActor",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/GameManager/GameEvents.cs",
+          "symbol": "GameEvents.FireActionRequested",
+          "kind": "event"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs",
+          "symbol": "GameActionRuntime.GameActionRuntime",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.Queue",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/GameManager.cs",
+          "symbol": "GameManager.FixedUpdate",
+          "kind": "update"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.Tick",
+          "kind": "update"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/SoAExecutionWorld.cs",
+          "symbol": "SoAExecutionWorld.TryGetActor",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/SoAExecutionWorld.cs",
+          "symbol": "SoAExecutionWorld.CommitActor",
+          "kind": "write"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/PlayMode/ActionRuntimeFlowTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。共通CoreをIExecutionWorldで分離し、実ゲームではSoAExecutionWorldがVitals/Flags/StatusEffectsを読み書きする。行動要求イベントはキューで次の更新へ渡す。NativeのActionRuntimeFlow8件はコンパイルのみ。 DF-01反映後もCore/Runtime/Editor/EditMode/PlayMode全5アセンブリを再コンパイル成功。Unity内実行は引き続き保留。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "cc01ba85c61deb97b3b4efefb147181a3452b8ecaee3b1c283fbefb7407c8782",
+        "Assets/MyAsset/Core/Actions/SoAExecutionWorld.cs": "61a61668639775706708b0e2126590ab488c1f495f2339a19b3d66ff8a33faae",
+        "Assets/MyAsset/Core/GameManager/GameEvents.cs": "53d64261b950cc6a91569bf91671694de032349460646846a1563d40943f9577",
+        "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "d668df907f91eab89c838fd28edd9a27dd05ce685eaaf1335261f77421e167d9",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "f03341e01726701386c6700b2c4d3b646a466ef68c22d700b55816caf42b8785",
+        "Assets/MyAsset/Runtime/GameManager.cs": "3cd5263300b19f02ec346772270838e4bc1e065b2be7e7174b539db4b493b99d",
+        "Assets/Tests/PlayMode/ActionRuntimeFlowTests.cs": "6fc9024be31e7290aed6a4c5201bdf9e2e4109ff8e73fbf86fa2d36af326e035"
+      }
+    }
+  },
+  {
+    "feature": "ActionSystem_SharedExecution",
+    "path": {
+      "key": "motion-only-to-graph",
+      "title": "モーション単独再生をゲーム行動と共存させ任意clipを表示",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs",
+          "symbol": "GameActionRuntime.PlayMotion",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ActionCatalog.cs",
+          "symbol": "ActionCatalog.Register",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.TryStart",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/GameManager.cs",
+          "symbol": "GameManager.LateUpdate",
+          "kind": "update"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs",
+          "symbol": "GameActionRuntime.Present",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Animation/CharacterAnimationController.cs",
+          "symbol": "CharacterAnimationController.Present",
+          "kind": "output"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Animation/CharacterAnimationController.cs",
+          "symbol": "CharacterAnimationController.EnsureGraph",
+          "kind": "output"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Animation/CharacterAnimationController.cs",
+          "symbol": "CharacterAnimationController.EndExecution",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/PlayMode/ActionRuntimeFlowTests.cs",
+        "Assets/Tests/PlayMode/MotionPresentationTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。MotionOnlyはコスト・ActState・ゲーム属性を変えず、占有resourceで共存を制御する。表示は共通phase時計からPlayableGraph/clip/レイヤーを同期。ActionRuntimeFlow8件・MotionPresentation4件はコンパイルのみ。 DF-01反映後もCore/Runtime/Editor/EditMode/PlayMode全5アセンブリを再コンパイル成功。Unity内実行は引き続き保留。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "cc01ba85c61deb97b3b4efefb147181a3452b8ecaee3b1c283fbefb7407c8782",
+        "Assets/MyAsset/Runtime/Animation/CharacterAnimationController.cs": "a9795a981d6a2d1b5d92123aa4d9bb9bb0cb520222b38a5165c9c2516bbfc839",
+        "Assets/MyAsset/Runtime/Combat/ActionCatalog.cs": "8050c963871e6e855dd67e01c1832891049969b84e9de0b5c7d3e04a5d7129bc",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "f03341e01726701386c6700b2c4d3b646a466ef68c22d700b55816caf42b8785",
+        "Assets/MyAsset/Runtime/GameManager.cs": "3cd5263300b19f02ec346772270838e4bc1e065b2be7e7174b539db4b493b99d",
+        "Assets/Tests/PlayMode/ActionRuntimeFlowTests.cs": "6fc9024be31e7290aed6a4c5201bdf9e2e4109ff8e73fbf86fa2d36af326e035",
+        "Assets/Tests/PlayMode/MotionPresentationTests.cs": "88176b923564cb7a6ebcb000eb05b104dad1b16043207325467d9e886f2b9762"
+      }
+    }
+  },
+  {
+    "feature": "ActionSystem_SharedExecution",
+    "path": {
+      "key": "player-input-to-shared-execution",
+      "title": "プレイヤーの入力行動を共通コスト・占有・実行へ渡す",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Input/PlayerInputHandler.cs",
+          "symbol": "PlayerInputHandler.CurrentInput",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Character/PlayerCharacter.cs",
+          "symbol": "PlayerCharacter.FixedUpdate",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Character/PlayerCharacter.cs",
+          "symbol": "PlayerCharacter.HandleAttack",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs",
+          "symbol": "ActionExecutorController.ExecuteAction",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs",
+          "symbol": "GameActionRuntime.Execute",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.TryStart",
+          "kind": "write"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/PlayMode/ActionRuntimeFlowTests.cs",
+        "Assets/Tests/PlayMode/AIExecutionBridgeTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。攻撃はActionSlotから共通実行へ、移動・ジャンプ・回避・ガードもGameActionRuntime入口から同じ実行器へ到達する。入力判定・空中攻撃などの運動制御はPlayerCharacterに残る。Native実行は未実施。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "cc01ba85c61deb97b3b4efefb147181a3452b8ecaee3b1c283fbefb7407c8782",
+        "Assets/MyAsset/Runtime/Character/PlayerCharacter.cs": "76cc4257f31d61713d62e9a5b904ce1e5f43b2c6827894bc61d50ef178747b74",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "1bed9c74311c571cbcbf42d72ffabccd8fe952f990189ab947e329b9cb728c55",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "f03341e01726701386c6700b2c4d3b646a466ef68c22d700b55816caf42b8785",
+        "Assets/MyAsset/Runtime/Input/PlayerInputHandler.cs": "6304e765c9c304c4aaecc8277526888b970ae3ce8eba24bb47d05ce0574d6722",
+        "Assets/Tests/PlayMode/AIExecutionBridgeTests.cs": "262c48c352ec765869c26b9841e9cc9d96dc8ab90b3234d8a65f31dbf26ec421",
+        "Assets/Tests/PlayMode/ActionRuntimeFlowTests.cs": "6fc9024be31e7290aed6a4c5201bdf9e2e4109ff8e73fbf86fa2d36af326e035"
+      }
+    }
+  },
+  {
+    "feature": "ActionSystem_SharedExecution",
+    "path": {
+      "key": "ai-backend-to-shared-execution",
+      "title": "AI判断を実行backendへ渡し保留連携も含めて完了を管理",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Character/BaseCharacter.cs",
+          "symbol": "BaseCharacter.BridgeAIActionForJudgmentLoop",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/ActionExecutor.cs",
+          "symbol": "ActionExecutor.SetExecutionBackend",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs",
+          "symbol": "JudgmentLoop.EvaluateAction",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/ActionExecutor.cs",
+          "symbol": "ActionExecutor.Execute",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs",
+          "symbol": "IActionExecutionBackend.Execute",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs",
+          "symbol": "ActionExecutorController.TryExecuteAction",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs",
+          "symbol": "GameActionRuntime.Execute",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.TryStart",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs",
+          "symbol": "ActionExecutorController.HandleAIExecution",
+          "kind": "event"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs",
+          "symbol": "ActionExecutorController.CompleteAIIfSettled",
+          "kind": "event"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/AICore_ActionExecutorTests.cs",
+        "Assets/Tests/PlayMode/AIExecutionBridgeTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。backend分離自体はAICore_ActionExecutor9件を含む純ロジック回帰302件で成功。実キャラ側の攻撃・移動追跡・共通寿命・命中連携successor引継ぎ・キャンセルはAIExecutionBridge9件をコンパイルのみ。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/AI/Core/ActionExecutor.cs": "2c221e61ec5884562ab25fb181cb15af9ccda33c68fcca675f7c4f083fe8ebd1",
+        "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "0ef0d288b78e4bfba8ced3d5c1427f6995dd6899b1b0a7e6460ff437d730ff98",
+        "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "cc01ba85c61deb97b3b4efefb147181a3452b8ecaee3b1c283fbefb7407c8782",
+        "Assets/MyAsset/Runtime/Character/BaseCharacter.cs": "94b279e916f3dce27cc50e2434426f3fa859b8aa04daab6042de0c8a7c128414",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "1bed9c74311c571cbcbf42d72ffabccd8fe952f990189ab947e329b9cb728c55",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "f03341e01726701386c6700b2c4d3b646a466ef68c22d700b55816caf42b8785",
+        "Assets/Tests/EditMode/AICore_ActionExecutorTests.cs": "3ad78840c5eaef03a2ddcccfab2bd62569a47411bd4de3acd72081a11f784eb0",
+        "Assets/Tests/PlayMode/AIExecutionBridgeTests.cs": "262c48c352ec765869c26b9841e9cc9d96dc8ab90b3234d8a65f31dbf26ec421"
+      }
+    }
+  },
+  {
+    "feature": "ActionSystem_SharedExecution",
+    "path": {
+      "key": "hit-confirm-to-successor",
+      "title": "行動instance IDで命中を相関し条件一致した次行動を予約",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs",
+          "symbol": "DamageReceiver.ReceiveDamage",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/GameManager/GameEvents.cs",
+          "symbol": "GameEvents.FireDamageDealt",
+          "kind": "event"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs",
+          "symbol": "GameActionRuntime.GameActionRuntime",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.Signal",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.ProcessTransitions",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.Queue",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.Tick",
+          "kind": "update"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.TryStart",
+          "kind": "write"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/ActionExecutionTests.cs",
+        "Assets/Tests/PlayMode/ActionRuntimeFlowTests.cs",
+        "Assets/Tests/PlayMode/AIExecutionBridgeTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。正の実ダメージかつガード成功でない命中を発生元instanceへ返す。requiresHit/minElapsed/onCompletion/カスタムsignalを評価し、次のTickで遷移する。別技・古い命中・中断済み連携を除外するCoreは34件の一部で実行済み。Nativeの相関・successor追跡はコンパイルのみ。 DF-01反映後もCore/Runtime/Editor/EditMode/PlayMode全5アセンブリを再コンパイル成功。Unity内実行は引き続き保留。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "cc01ba85c61deb97b3b4efefb147181a3452b8ecaee3b1c283fbefb7407c8782",
+        "Assets/MyAsset/Core/GameManager/GameEvents.cs": "53d64261b950cc6a91569bf91671694de032349460646846a1563d40943f9577",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "774487ac9224e08ec7817ade0c7a71b10b0408bd7ca57e2ed4f37643b2a98148",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "f03341e01726701386c6700b2c4d3b646a466ef68c22d700b55816caf42b8785",
+        "Assets/Tests/EditMode/ActionExecutionTests.cs": "ff607ccf1f34b4850f6bd1a10a31fc5d5b7956d1d6e6fb01466ef0469cf0beee",
+        "Assets/Tests/PlayMode/AIExecutionBridgeTests.cs": "262c48c352ec765869c26b9841e9cc9d96dc8ab90b3234d8a65f31dbf26ec421",
+        "Assets/Tests/PlayMode/ActionRuntimeFlowTests.cs": "6fc9024be31e7290aed6a4c5201bdf9e2e4109ff8e73fbf86fa2d36af326e035"
+      }
+    }
+  },
+  {
+    "feature": "ActionSystem_SharedExecution",
+    "path": {
+      "key": "generic-movement-timed-effects",
+      "title": "汎用移動と時間付き無敵・アーマーを独立属性として実行",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs",
+          "symbol": "GameActionRuntime.Execute",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ActionCatalog.cs",
+          "symbol": "ActionCatalog.Register",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.TryStart",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.TryGetMovement",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs",
+          "symbol": "GameActionRuntime.ApplyMovement",
+          "kind": "output"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.EvaluateEffects",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/ActionEffectProcessor.cs",
+          "symbol": "ActionEffectProcessor.Evaluate",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs",
+          "symbol": "DamageReceiver.ReceiveDamage",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.ConsumeArmor",
+          "kind": "write"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/ActionExecutionTests.cs",
+        "Assets/Tests/PlayMode/ActionRuntimeFlowTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。ActionDefinitionのmovementとactionEffectsを別々にsnapshot化し、Motion由来またはFixedの行動寿命で管理する。回避以外の移動にも無敵窓を付与可能。属性・アーマー消費のCoreは実行済み、物理と被弾のNative統合はコンパイルのみ。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "cc01ba85c61deb97b3b4efefb147181a3452b8ecaee3b1c283fbefb7407c8782",
+        "Assets/MyAsset/Core/Damage/ActionEffectProcessor.cs": "ce0e796ee4e8b6a11065aaf4d8d34a88f128d32704f7d3fc1c6dfc5302dd2e95",
+        "Assets/MyAsset/Runtime/Combat/ActionCatalog.cs": "8050c963871e6e855dd67e01c1832891049969b84e9de0b5c7d3e04a5d7129bc",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "774487ac9224e08ec7817ade0c7a71b10b0408bd7ca57e2ed4f37643b2a98148",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "f03341e01726701386c6700b2c4d3b646a466ef68c22d700b55816caf42b8785",
+        "Assets/Tests/EditMode/ActionExecutionTests.cs": "ff607ccf1f34b4850f6bd1a10a31fc5d5b7956d1d6e6fb01466ef0469cf0beee",
+        "Assets/Tests/PlayMode/ActionRuntimeFlowTests.cs": "6fc9024be31e7290aed6a4c5201bdf9e2e4109ff8e73fbf86fa2d36af326e035"
+      }
+    }
+  },
+  {
+    "feature": "ActionSystem_SharedExecution",
+    "path": {
+      "key": "forced-hit-reaction",
+      "title": "被弾リアクションを強制行動として開始し共通時間で解除",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs",
+          "symbol": "DamageReceiver.ReceiveDamage",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/HitResolver.cs",
+          "symbol": "HitResolver.Resolve",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs",
+          "symbol": "GameActionRuntime.React",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs",
+          "symbol": "GameActionRuntime.StartBuiltin",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.TryStart",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.Tick",
+          "kind": "update"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs",
+          "symbol": "GameActionRuntime.Tick",
+          "kind": "update"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.Release",
+          "kind": "write"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/ActionExecutionTests.cs",
+        "Assets/Tests/PlayMode/ActionRuntimeFlowTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。怯み・ガードブレイクは強制Timed行動、ノックバックはManual行動、接地後の起き上がりは時間付き無敵を持つ次行動として扱う。他キャラの継続行動を保ち、死亡時は復帰させない。Core割込は実行済み、Native8件はコンパイルのみ。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "cc01ba85c61deb97b3b4efefb147181a3452b8ecaee3b1c283fbefb7407c8782",
+        "Assets/MyAsset/Core/Damage/HitResolver.cs": "101d98dccbd9c26c626f8b52d2db24be03e20d2dd1b73e22f15a90a9ed206309",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "774487ac9224e08ec7817ade0c7a71b10b0408bd7ca57e2ed4f37643b2a98148",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "f03341e01726701386c6700b2c4d3b646a466ef68c22d700b55816caf42b8785",
+        "Assets/Tests/EditMode/ActionExecutionTests.cs": "ff607ccf1f34b4850f6bd1a10a31fc5d5b7956d1d6e6fb01466ef0469cf0beee",
+        "Assets/Tests/PlayMode/ActionRuntimeFlowTests.cs": "6fc9024be31e7290aed6a4c5201bdf9e2e4109ff8e73fbf86fa2d36af326e035"
+      }
+    }
+  },
+  {
+    "feature": "ActionSystem_SharedExecution",
+    "path": {
+      "key": "motion-action-authoring",
+      "title": "共有モーションを参照して行動ごとのルールを独立定義",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Core/ScriptableObjects/MotionDefinition.cs",
+          "symbol": "MotionDefinition",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/ScriptableObjects/ActionDefinition.cs",
+          "symbol": "ActionDefinition.motion",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/ScriptableObjects/AttackInfo.cs",
+          "symbol": "AttackInfo",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/ScriptableObjects/ActionDefinition.cs",
+          "symbol": "ActionDefinition.GetMotion",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ActionCatalog.cs",
+          "symbol": "ActionCatalog.RegisterGraph",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.RegisterDefinition",
+          "kind": "write"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/MotionActionDefinitionTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。MotionDefinitionはclip・phase・再生先、ActionDefinitionは消費・継続・占有・移動・時間付き属性・条件遷移を保持し、AttackInfoが攻撃内容を追加する。共有参照・値snapshot・無モーション行動・旧Recovery cancel意味のSO定義4件はコンパイルのみ。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "cc01ba85c61deb97b3b4efefb147181a3452b8ecaee3b1c283fbefb7407c8782",
+        "Assets/MyAsset/Core/ScriptableObjects/ActionDefinition.cs": "d35852fe62a85a7978b7ef2c190e70567a37bb73eaf034aa411ae72e265bb389",
+        "Assets/MyAsset/Core/ScriptableObjects/AttackInfo.cs": "e3e460715602362cc860d2a21a161725c4ce5527308fe30d7376aeb39946c834",
+        "Assets/MyAsset/Core/ScriptableObjects/MotionDefinition.cs": "abd9ccc62cce0c45468a6476745e629424242f30b86dbff7b086ce6807d6a097",
+        "Assets/MyAsset/Runtime/Combat/ActionCatalog.cs": "8050c963871e6e855dd67e01c1832891049969b84e9de0b5c7d3e04a5d7129bc",
+        "Assets/Tests/EditMode/MotionActionDefinitionTests.cs": "1b3567e046b56633a47691f5a1ec942d982419ff9cefd2f3dc7298ce47721f59"
+      }
+    }
+  },
+  {
+    "feature": "MagicSystem_CastingFlow",
+    "path": {
+      "key": "shared-cast-to-projectile",
+      "title": "共通詠唱行動のActive到達から発生元ID付き飛翔体を発射",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs",
+          "symbol": "ActionExecutorController.ExecuteAction",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs",
+          "symbol": "GameActionRuntime.Execute",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ActionCatalog.cs",
+          "symbol": "ActionCatalog.RegisterGraph",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.TryStart",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.Changed",
+          "kind": "event"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs",
+          "symbol": "GameActionRuntime.HandleExecution",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs",
+          "symbol": "ProjectileManager.SpawnSpread",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs",
+          "symbol": "ProjectileManager.SpawnProjectile",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/PlayMode/ActionRuntimeFlowTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。AttackInfoのprojectileInfo.hasProjectileからCast属性・MagicDefinitionを組み立て、PhaseChangedのActiveで一度だけSpawnSpreadへ渡す。技・装備snapshotとactionInstanceIdを飛翔体へ維持する。ActionRuntimeFlowの発射回数・発生元ID検証はコンパイルのみ。旧MagicCaster.OnFiredを経由しない。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "cc01ba85c61deb97b3b4efefb147181a3452b8ecaee3b1c283fbefb7407c8782",
+        "Assets/MyAsset/Runtime/Combat/ActionCatalog.cs": "8050c963871e6e855dd67e01c1832891049969b84e9de0b5c7d3e04a5d7129bc",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "1bed9c74311c571cbcbf42d72ffabccd8fe952f990189ab947e329b9cb728c55",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "f03341e01726701386c6700b2c4d3b646a466ef68c22d700b55816caf42b8785",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs": "2c93de46157eeab1d9466af7fb020d194412b1504e47b1392626b7e4e051fd6b",
+        "Assets/Tests/PlayMode/ActionRuntimeFlowTests.cs": "6fc9024be31e7290aed6a4c5201bdf9e2e4109ff8e73fbf86fa2d36af326e035"
+      }
+    }
+  },
+  {
+    "feature": "CompanionAI_SharedMp",
+    "path": {
+      "key": "shared-mp-core",
+      "title": "行動消費・シスターMP消費／回復・消滅を同じworld残高で処理",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "logic_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.TryStart",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ExecutionTypes.cs",
+          "symbol": "IExecutionWorld.TryGetActor",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ExecutionTypes.cs",
+          "symbol": "IExecutionWorld.CommitActor",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
+          "symbol": "CharacterVitals.currentMp",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Companion/CompanionMpManager.cs",
+          "symbol": "CompanionMpManager.ConsumeMp",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Companion/CompanionMpManager.cs",
+          "symbol": "CompanionMpManager.ApplyBarrierDamage",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Companion/CompanionMpManager.cs",
+          "symbol": "CompanionMpManager.Tick",
+          "kind": "update"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Companion/CompanionMpManager.cs",
+          "symbol": "CompanionMpManager.CurrentMp",
+          "kind": "read"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/CompanionAI_MpManagerTests.cs",
+        "Assets/Tests/EditMode/Integration_CompanionSharedMpTests.cs"
+      ],
+      "notes": "実Core＋NUnitをEditor外で実行し、旧302件＋MPManager18件＋共有MP結合5件の計302件成功・失敗0件。共有world portのFakeWorld上で、行動とManagerの単一MP残高、最大MP参照、小数消費と予備MP総量、消滅/復帰、所有者削除と旧Manager破棄を検証。SoA allocatorやCompanionControllerはUnity native依存なので、このlogic_testedには含めない。ApplyBarrierDamage API自体の共有MP書き込みを検証済みだが、通常被弾からの呼び出しは別の未接続経路。 DF-01反映後もCore/Runtime/Editor/EditMode/PlayMode全5アセンブリを再コンパイル成功。当該純ロジックを含む回帰313件成功・失敗0件。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/AI/Companion/CompanionMpManager.cs": "7a55bb50388d5e11c6eaf572e4ab641b651d51f5189671588aaf8bd24d143d57",
+        "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "cc01ba85c61deb97b3b4efefb147181a3452b8ecaee3b1c283fbefb7407c8782",
+        "Assets/MyAsset/Core/Actions/ExecutionTypes.cs": "7ce3b9aa630e5f4a90c5bb70e56ae241ba3a6e39c811cace69119a6e98b06e57",
+        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "15f53473f68d7071c823b0a9d385b0369018554f876fb3f423a1eb95b87f54f8",
+        "Assets/Tests/EditMode/CompanionAI_MpManagerTests.cs": "a694c13be986d7f025f16725c2bf1d62ac9b231f22dbd5483a3276117c35cc48",
+        "Assets/Tests/EditMode/Integration_CompanionSharedMpTests.cs": "319f8d9b896936434af75c02a1964fa92a1b4bfe2ececadd023f6aceeed77619"
+      }
+    }
+  },
+  {
+    "feature": "CompanionAI_Controller",
+    "path": {
+      "key": "native-shared-mp-lifecycle",
+      "title": "キャラ登録から共有MPの回復・判断参照・プール再取得までのRuntime接続",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/GameManager.cs",
+          "symbol": "GameManager.RegisterCharacter",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/GameManager/GameManagerCore.cs",
+          "symbol": "GameManagerCore.RegisterCharacter",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Character/CompanionCharacter.cs",
+          "symbol": "CompanionCharacter.InitializeAI",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Companion/CompanionController.cs",
+          "symbol": "CompanionController",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/SoAExecutionWorld.cs",
+          "symbol": "SoAExecutionWorld.TryGetActor",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/SoAExecutionWorld.cs",
+          "symbol": "SoAExecutionWorld.CommitActor",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Companion/CompanionController.cs",
+          "symbol": "CompanionController.Tick",
+          "kind": "update"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Companion/CompanionMpManager.cs",
+          "symbol": "CompanionMpManager.Tick",
+          "kind": "update"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/ConditionEvaluator.cs",
+          "symbol": "ConditionEvaluator.GetConditionValue",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Character/CompanionCharacter.cs",
+          "symbol": "CompanionCharacter.OnPoolReturn",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Character/CompanionCharacter.cs",
+          "symbol": "CompanionCharacter.OnPoolAcquire",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/UI/HudController.cs",
+          "symbol": "HudController.FormatVitalsText",
+          "kind": "read"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/PlayMode/CompanionSharedMpFlowTests.cs",
+        "Assets/Tests/EditMode/CompanionAI_ControllerTests.cs",
+        "Assets/Tests/EditMode/CompanionAI_ManualOverrideTests.cs",
+        "Assets/Tests/EditMode/Integration_ConfusionClearedAIRetriggerTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。Native共有MPの2テストは、Runtime行動消費→回復→AI条件の同残高参照と、プール再取得時の旧Manager破棄・消滅表示解除を追加しコンパイルのみ確認。real SoAを使うController/ManualOverride/混乱解除AI再判定テストもコンパイルのみで、純回帰302件の実行成功には含めない。currentMpのfloat化に伴う既存Player HUDのfloat表示もコンパイル確認済みで、シスター専用MP表示を新設した経路ではない。 DF-01反映後もCore/Runtime/Editor/EditMode/PlayMode全5アセンブリを再コンパイル成功。Unity内実行は引き続き保留。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/AI/Companion/CompanionController.cs": "a103276f756ac63c7b111e922a994c417c89fb78337a86ad0bb77226ce6e58c9",
+        "Assets/MyAsset/Core/AI/Companion/CompanionMpManager.cs": "7a55bb50388d5e11c6eaf572e4ab641b651d51f5189671588aaf8bd24d143d57",
+        "Assets/MyAsset/Core/AI/Core/ConditionEvaluator.cs": "3b5ecae7b942c7c579078c0b45e216c53b53d104f8ba5115e1982e407ba5aa51",
+        "Assets/MyAsset/Core/Actions/SoAExecutionWorld.cs": "61a61668639775706708b0e2126590ab488c1f495f2339a19b3d66ff8a33faae",
+        "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "d668df907f91eab89c838fd28edd9a27dd05ce685eaaf1335261f77421e167d9",
+        "Assets/MyAsset/Runtime/Character/CompanionCharacter.cs": "0619a98b480319dead1c79cee4d13a423edf931dc2900007041143f5889ef645",
+        "Assets/MyAsset/Runtime/GameManager.cs": "3cd5263300b19f02ec346772270838e4bc1e065b2be7e7174b539db4b493b99d",
+        "Assets/MyAsset/Runtime/UI/HudController.cs": "64435503c4f3b50a7066ef5ec6fee263ab7f4ca0e99cd8a45734d70e4aa1682e",
+        "Assets/Tests/EditMode/CompanionAI_ControllerTests.cs": "61f4de4e33b9012b36f0047d41f0af07db3b7c50e0e356739f96deda638bf5c6",
+        "Assets/Tests/EditMode/CompanionAI_ManualOverrideTests.cs": "1b6470a82cdd5f44705cd1c5b319b9722b8199015120560000e9759c44c926cc",
+        "Assets/Tests/EditMode/Integration_ConfusionClearedAIRetriggerTests.cs": "478186fba6ed77466f211b7ac62195e015687da479ec3abe6eaaefbeda492975",
+        "Assets/Tests/PlayMode/CompanionSharedMpFlowTests.cs": "4bc9be903685e7c98738ebf915755f5dcdd2df83d771f25f06fead237aab8124"
+      }
+    }
+  },
+  {
+    "feature": "CompanionAI_SharedMp",
+    "path": {
+      "key": "companion-barrier-hit-gap",
+      "title": "通常被弾のHP処理からシスターMPバリアへの未接続区間",
+      "implementation_status": "implemented",
+      "connection_status": "partial",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs",
+          "symbol": "DamageReceiver.ReceiveDamage",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/HitResolver.cs",
+          "symbol": "HitResolver.Resolve",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/HpArmorLogic.cs",
+          "symbol": "HpArmorLogic.ApplyDamage",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Companion/CompanionMpManager.cs",
+          "symbol": "CompanionMpManager.ApplyBarrierDamage",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ExecutionTypes.cs",
+          "symbol": "IExecutionWorld.CommitActor",
+          "kind": "write"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/Integration_CompanionSharedMpTests.cs",
+        "Assets/Tests/PlayMode/CompanionSharedMpFlowTests.cs"
+      ],
+      "notes": "Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。通常被弾はDamageReceiver→HitResolver→HP処理を通り、シスターのApplyBarrierDamageを呼ぶ辺は未接続。ManagerのバリアAPIは共有MPへ書き込む実装と純テストがあるが、通常被弾からMPバリアへの統合成功とは扱わない。残作業はFUTURE_TASKSのDF-13で管理し、HP/MP配分や対象攻撃の仕様確定後に接続する。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/AI/Companion/CompanionMpManager.cs": "7a55bb50388d5e11c6eaf572e4ab641b651d51f5189671588aaf8bd24d143d57",
+        "Assets/MyAsset/Core/Actions/ExecutionTypes.cs": "7ce3b9aa630e5f4a90c5bb70e56ae241ba3a6e39c811cace69119a6e98b06e57",
+        "Assets/MyAsset/Core/Damage/HitResolver.cs": "101d98dccbd9c26c626f8b52d2db24be03e20d2dd1b73e22f15a90a9ed206309",
+        "Assets/MyAsset/Core/Damage/HpArmorLogic.cs": "9865167ed94c9b804e8286fbf2d8097895ded989e536f3a474c09d9b02ffea5c",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "774487ac9224e08ec7817ade0c7a71b10b0408bd7ca57e2ed4f37643b2a98148",
+        "Assets/Tests/EditMode/Integration_CompanionSharedMpTests.cs": "319f8d9b896936434af75c02a1964fa92a1b4bfe2ececadd023f6aceeed77619",
+        "Assets/Tests/PlayMode/CompanionSharedMpFlowTests.cs": "4bc9be903685e7c98738ebf915755f5dcdd2df83d771f25f06fead237aab8124"
+      }
+    }
+  },
+  {
+    "feature": "CharacterStats_SharedRegistration",
+    "path": {
+      "key": "base-growth-derivation",
+      "title": "基礎値と成長スナップショットから最大値・6能力を共通導出",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "logic_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Core/LevelUp/LevelUpLogic.cs",
+          "symbol": "LevelUpLogic.Growth",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
+          "symbol": "CharacterBaseStats",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/LevelUp/CharacterStatCalculator.cs",
+          "symbol": "CharacterStatCalculator.CreateVitals",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/LevelUp/CharacterStatCalculator.cs",
+          "symbol": "CharacterStatCalculator.RecalculateVitals",
+          "kind": "update"
+        },
+        {
+          "file": "Assets/MyAsset/Core/LevelUp/CharacterStatCalculator.cs",
+          "symbol": "CharacterStatCalculator.CalculateAttributes",
+          "kind": "output"
+        },
+        {
+          "file": "Assets/MyAsset/Core/LevelUp/LevelUpLogic.cs",
+          "symbol": "LevelUpLogic.RecalculateVitals",
+          "kind": "call"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/CharacterStatCalculatorTests.cs",
+        "Assets/Tests/EditMode/LevelUpSystemCoreTests.cs"
+      ],
+      "notes": "実Core＋NUnitをEditor外で実行。新規計算5件・既存成長6件を含む回帰313件成功、失敗0件。配分VIT×10/MND×5、基礎属性の二重加算防止、反復計算、現在値維持、上限減少時の制限、HP0と小数MP保持、6能力合計を検証。SO・実SoA・GameManagerのNative実行はこのlogic_testedには含めない。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "15f53473f68d7071c823b0a9d385b0369018554f876fb3f423a1eb95b87f54f8",
+        "Assets/MyAsset/Core/LevelUp/CharacterStatCalculator.cs": "fcad03a3a0b95d7db791713204c5b30fe4d08404042126fc81f4c24fb142beef",
+        "Assets/MyAsset/Core/LevelUp/LevelUpLogic.cs": "25edc26538220fe869289e2c6945516329d698e24996c1ab8d6ef7a09d146e89",
+        "Assets/Tests/EditMode/CharacterStatCalculatorTests.cs": "6d95cd2cfc7e9f7d481e07ee71cf0d4d94cff19d7d618e69db2a882b1f7e5147",
+        "Assets/Tests/EditMode/LevelUpSystemCoreTests.cs": "b83e8cef0e109df9ba14db96f39f3d6f05fad99e1bae00e429159a1356453fcb"
+      }
+    }
+  },
+  {
+    "feature": "CharacterStats_SharedRegistration",
+    "path": {
+      "key": "native-character-registration",
+      "title": "全陣営のCharacterInfoを基礎・成長・利用値へ転記してから登録通知",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Data/PlayerInfo.asset",
+          "symbol": "PlayerInfo",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Data/BasicEnemyInfo.asset",
+          "symbol": "BasicEnemyInfo",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Data/CompanionInfo.asset",
+          "symbol": "CompanionInfo",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/ScriptableObjects/CharacterInfo.cs",
+          "symbol": "CharacterInfo.CreateRegistration",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/GameManager.cs",
+          "symbol": "GameManager.RegisterCharacterInternal",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/GameManager/GameManagerCore.cs",
+          "symbol": "GameManagerCore.RegisterCharacter",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/LevelUp/CharacterStatCalculator.cs",
+          "symbol": "CharacterStatCalculator.CreateVitals",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/GameManager/GameManagerCore.cs",
+          "symbol": "GameManagerCore.RegisterCharacterData",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/SoACharaDataDic.Compat.cs",
+          "symbol": "SoACharaDataDic.GetBaseStats",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/SoACharaDataDic.Compat.cs",
+          "symbol": "SoACharaDataDic.GetGrowth",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/SoACharaDataDic.Compat.cs",
+          "symbol": "SoACharaDataDic.GetVitals",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/GameManager/GameEvents.cs",
+          "symbol": "GameEvents.FireCharacterRegistered",
+          "kind": "event"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/Integration_CharacterRegistrationTests.cs",
+        "Assets/Tests/PlayMode/CharacterStatRegistrationFlowTests.cs"
+      ],
+      "notes": "実SourceGeneratorとUnity付属コンパイラでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Native結合5件とPlayMode2件を追加してコンパイルのみ確認、Unity内実行は保留。三陣営の通知前初期化、既存PlayerInfo/BasicEnemyInfo/CompanionInfoの数値維持、移動設定、低レベル登録の基礎列とレベル整合を検証するテストを含む。アセットの初期レベル1・基礎6能力0を明示し、既存バランス値は変更しない。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/DataContainer/SoACharaDataDic.Compat.cs": "f8a0d126964467156b1abc0e9efc36143ba087fdb1ff053373838101f8924c0a",
+        "Assets/MyAsset/Core/GameManager/GameEvents.cs": "53d64261b950cc6a91569bf91671694de032349460646846a1563d40943f9577",
+        "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "d668df907f91eab89c838fd28edd9a27dd05ce685eaaf1335261f77421e167d9",
+        "Assets/MyAsset/Core/LevelUp/CharacterStatCalculator.cs": "fcad03a3a0b95d7db791713204c5b30fe4d08404042126fc81f4c24fb142beef",
+        "Assets/MyAsset/Core/ScriptableObjects/CharacterInfo.cs": "7b6b9fe6d7249e1505987ba180880dbc5828d0714810c86399a4bad060fe1723",
+        "Assets/MyAsset/Runtime/GameManager.cs": "3cd5263300b19f02ec346772270838e4bc1e065b2be7e7174b539db4b493b99d",
+        "Assets/Tests/EditMode/Integration_CharacterRegistrationTests.cs": "dd80679a612b134c667bca32cb54420546ae5ec0514487e52772008c36100475",
+        "Assets/Tests/PlayMode/CharacterStatRegistrationFlowTests.cs": "219e36587e99a9e0fba4283be42bf38ed16c7a974a2a04088f4d6a44b3b9bbb7",
+        "Assets/MyAsset/Data/PlayerInfo.asset": "e96b29a7f3fab6a67834882901aad90ec2e75abcd2b706ea319c61b751b80b3a",
+        "Assets/MyAsset/Data/BasicEnemyInfo.asset": "d1fbe898b7b7fc7d34c1922a130b9207e4513df88fb892bbc1a673935251d9ce",
+        "Assets/MyAsset/Data/CompanionInfo.asset": "35bffa3e149f99a97e3301bc3daf4fc496506e5de52e810efca3f315df3c4172"
+      }
+    }
+  },
+  {
+    "feature": "CharacterStats_SharedRegistration",
+    "path": {
+      "key": "native-growth-commit",
+      "title": "成長入力を共通更新APIから共有値へ反映して能力値変更を通知",
+      "implementation_status": "implemented",
+      "connection_status": "partial",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Core/LevelUp/LevelUpLogic.cs",
+          "symbol": "LevelUpLogic.Growth",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/GameManager.cs",
+          "symbol": "GameManager.ApplyCharacterGrowth",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/GameManager/GameManagerCore.cs",
+          "symbol": "GameManagerCore.ApplyCharacterGrowth",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/SoACharaDataDic.Compat.cs",
+          "symbol": "SoACharaDataDic.GetBaseStats",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/LevelUp/CharacterStatCalculator.cs",
+          "symbol": "CharacterStatCalculator.RecalculateVitals",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/SoACharaDataDic.Compat.cs",
+          "symbol": "SoACharaDataDic.GetGrowth",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/SoACharaDataDic.Compat.cs",
+          "symbol": "SoACharaDataDic.GetVitals",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/GameManager/GameEvents.cs",
+          "symbol": "GameEvents.FireCharacterStatsChanged",
+          "kind": "event"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/SoACharaDataDic.Compat.cs",
+          "symbol": "SoACharaDataDic.GetAttributes",
+          "kind": "read"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/Integration_CharacterRegistrationTests.cs",
+        "Assets/Tests/PlayMode/CharacterStatRegistrationFlowTests.cs"
+      ],
+      "notes": "Core/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Nativeテストは共有更新後の成長値・利用値・通知順序・反復更新・別キャラ独立・小数MPを検証する内容で、実行は未実施。LevelUpLogicの成長スナップショットを明示的に共通APIへ渡す経路を用意した段階。経験値報酬からAddExp、成長UI、SaveManagerへの登録、シスターの自動レベル同期の呼び出し元は未接続であり、反映API内部は接続済みだが、呼び出し元未接続を含む経路全体はpartialとして記録する。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/DataContainer/SoACharaDataDic.Compat.cs": "f8a0d126964467156b1abc0e9efc36143ba087fdb1ff053373838101f8924c0a",
+        "Assets/MyAsset/Core/GameManager/GameEvents.cs": "53d64261b950cc6a91569bf91671694de032349460646846a1563d40943f9577",
+        "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "d668df907f91eab89c838fd28edd9a27dd05ce685eaaf1335261f77421e167d9",
+        "Assets/MyAsset/Core/LevelUp/CharacterStatCalculator.cs": "fcad03a3a0b95d7db791713204c5b30fe4d08404042126fc81f4c24fb142beef",
+        "Assets/MyAsset/Core/LevelUp/LevelUpLogic.cs": "25edc26538220fe869289e2c6945516329d698e24996c1ab8d6ef7a09d146e89",
+        "Assets/MyAsset/Runtime/GameManager.cs": "3cd5263300b19f02ec346772270838e4bc1e065b2be7e7174b539db4b493b99d",
+        "Assets/Tests/EditMode/Integration_CharacterRegistrationTests.cs": "dd80679a612b134c667bca32cb54420546ae5ec0514487e52772008c36100475",
+        "Assets/Tests/PlayMode/CharacterStatRegistrationFlowTests.cs": "219e36587e99a9e0fba4283be42bf38ed16c7a974a2a04088f4d6a44b3b9bbb7"
+      }
+    }
+  },
+  {
+    "feature": "CharacterStats_SharedRegistration",
+    "path": {
+      "key": "native-initial-and-pool-lifecycle",
+      "title": "初回生成とプール再取得で同じ基礎値・初期成長・残量を登録",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "compiled",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Character/BaseCharacter.cs",
+          "symbol": "BaseCharacter.Start",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/GameManager.cs",
+          "symbol": "GameManager.RegisterCharacter",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/ScriptableObjects/CharacterInfo.cs",
+          "symbol": "CharacterInfo.CreateRegistration",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/GameManager/GameManagerCore.cs",
+          "symbol": "GameManagerCore.RegisterCharacter",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Character/BaseCharacter.cs",
+          "symbol": "BaseCharacter.OnPoolReturn",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/GameManager/GameManagerCore.cs",
+          "symbol": "GameManagerCore.UnregisterCharacter",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Character/BaseCharacter.cs",
+          "symbol": "BaseCharacter.OnPoolAcquire",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/GameManager.cs",
+          "symbol": "GameManager.RegisterCharacter",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/SoACharaDataDic.Compat.cs",
+          "symbol": "SoACharaDataDic.GetGrowth",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/SoACharaDataDic.Compat.cs",
+          "symbol": "SoACharaDataDic.GetVitals",
+          "kind": "read"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/Integration_CharacterRegistrationTests.cs",
+        "Assets/Tests/PlayMode/CharacterStatRegistrationFlowTests.cs"
+      ],
+      "notes": "実SourceGeneratorとUnity付属コンパイラで全5アセンブリのコンパイル成功。成長を反映して残量を減らした個体を返却・再取得し、CharacterInfoの基礎値・初期レベル・配分0・導出後満タンへ戻すNativeテストを追加しコンパイル確認のみ。Unity内実行はユーザー指定で保留。保存成長を維持して再生成する入力元は、成長スナップショットを明示的に再登録する必要がある。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/DataContainer/SoACharaDataDic.Compat.cs": "f8a0d126964467156b1abc0e9efc36143ba087fdb1ff053373838101f8924c0a",
+        "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "d668df907f91eab89c838fd28edd9a27dd05ce685eaaf1335261f77421e167d9",
+        "Assets/MyAsset/Core/ScriptableObjects/CharacterInfo.cs": "7b6b9fe6d7249e1505987ba180880dbc5828d0714810c86399a4bad060fe1723",
+        "Assets/MyAsset/Runtime/Character/BaseCharacter.cs": "94b279e916f3dce27cc50e2434426f3fa859b8aa04daab6042de0c8a7c128414",
+        "Assets/MyAsset/Runtime/GameManager.cs": "3cd5263300b19f02ec346772270838e4bc1e065b2be7e7174b539db4b493b99d",
+        "Assets/Tests/EditMode/Integration_CharacterRegistrationTests.cs": "dd80679a612b134c667bca32cb54420546ae5ec0514487e52772008c36100475",
+        "Assets/Tests/PlayMode/CharacterStatRegistrationFlowTests.cs": "219e36587e99a9e0fba4283be42bf38ed16c7a974a2a04088f4d6a44b3b9bbb7"
+      }
+    }
+  }
+]
