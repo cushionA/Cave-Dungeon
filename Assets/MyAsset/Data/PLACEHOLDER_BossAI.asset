@@ -22,6 +22,7 @@ MonoBehaviour:
   actDataList:
   - actName: BossSlam
     actType: 0
+    actionDefinitionId: b2fbfb737dfe37246b7a19cc89dae813
     attackInfoIndex: 0
     weight: 90
     coolTime: 1.5

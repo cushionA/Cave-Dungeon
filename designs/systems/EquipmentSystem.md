@@ -5,8 +5,33 @@ Section: 1 — MVP
 装備の装着・脱着管理、ステータス再計算、AbilityFlag管理、重量比率計算。装備変更時に全関連ステータスを再計算してSoAコンテナに書き戻す。
 
 ## 依存
-- 入力: WeaponData/ShieldData/CoreData（ScriptableObject）、DataContainer
+- 入力: EquipmentDefinition（ScriptableObject）/ IEquippable、任意の IEquipmentStatsProvider、DataContainer
 - 出力: EquipmentStatus更新、OnEquipmentChangedイベント、OnAbilityFlagsChangedイベント
+
+## 実装済みの補正入力と再計算（2026-10-26）
+
+装備の変更入口は `GameManager.Equipment` の `EquipmentStore.Equip / Unequip`。能力の再導出・成長・恒久能力の正本は `GameManager.Stats` の `CharacterStatsSystem` と `CharacterStatCalculator.CalculateDerived`。旧 `EquipmentStore.Recalculate / GrantAbilityFlags` と `EquipmentStatCalculator.Calculate` は互換入口としてのみ委譲する。`GetHolder` は着脱操作を公開しない読取専用viewを返す。既存の装備定義を参照したまま、Weapon・Shield・Coreの全スロットから毎回再導出する。`IEquippable` だけを実装する既存装備は数値補正なしとして使用できる。数値補正を持つ装備は任意の `IEquipmentStatsProvider.StatModifiers` を供給し、`EquipmentDefinition` はInspectorの `_statModifiers` から供給する。各補正の初期値は0、ガード上書きは無効なので、既存アセットの数値は維持する。
+
+`EquipmentStatModifiers` の入力は次のとおり。
+
+| 入力 | 意味 |
+|------|------|
+| `attributes` | STR/DEX/INT/VIT/MND/ENDの加算・減算 |
+| `attackBonus` / `defenseBonus` | キャラクター全体への7属性別攻防加算。技ごとの武器・盾の参照元選択とは別 |
+| `strengthScaling` / `dexterityScaling` / `intelligenceScaling` | 当該装備の攻撃加算値に適用する係数。0なら能力スケーリングなし |
+| `bonusHp` / `bonusMp` / `bonusStamina` / `bonusArmor` | 各最大値への明示的な加算・減算 |
+| `overridesGuard` / `guardStats` | Shieldスロットだけが使用する明示的なガード性能上書き。未設定なら素体値を維持 |
+
+再計算の原本は `CharacterBaseStats`・`CharacterGrowth`・全装備。前回の導出結果へ差分を足し引きしない。
+
+1. 最終6能力 = 基礎6能力 + 成長配分 + 全装備の能力補正。
+2. 最大HP = 基礎最大HP + (配分VIT + 装備VIT) × 既存の10 + 明示HP加算。最大MPも配分MND・装備MNDに既存の5を使用する。基礎VIT/MNDを重ねて加算しない。END等に未定義の倍率は追加しない。
+3. 各装備の攻撃加算へ、既存式を拡張した `bonus × (1 + (STR係数×STR + DEX係数×DEX + INT係数×INT) / 100)` を適用し、素体攻撃へ合算する。単一係数の場合は既存APIの演算・切り捨てを維持する。防御は素体防御と全装備の防御加算を合算する。攻防は合算後の負値を0に制限する。
+4. 現在HP/MP/SP/アーマー・位置を保持し、装備込みの最終上限に対して一度だけ制限する。上限を増やしても現在値は回復させず、死亡済みのHP0も復活させない。HPを持つキャラクターの最大HPは最低1とし、装備変更だけで死亡通知を迂回してHP0へ落とさない。
+5. `CombatStats` と `EquipmentStatus.finalAttack / finalDefense / finalGuardStats` を同じ値へ更新し、装備の6能力加算は `EquipmentStatus.attributeModifiers` へ保持する。`GetAttributes` は同じ加算を参照する。防御状態は最大アーマーだけ同期し、ガード時間や回復待ち時間は維持する。
+6. 書き戻し後に装備・能力フラグ・ステータス変更を通知する。成長変更も同じ再計算経路へ通す。
+
+状態効果の攻防倍率は従来どおり命中時に適用し、装備の導出値へ焼き込まない。重量の合計・能力フラグの反映は既存の共通入口で継続する。重量上限の算出、持ち方の性能差、技ごとの攻撃入力契約（DF-03）、装備選択UI・見た目の切り替えはこの数値反映とは別の接続項目。
 
 ## コンポーネント構成
 | コンポーネント | 責務 | MonoBehaviour? |

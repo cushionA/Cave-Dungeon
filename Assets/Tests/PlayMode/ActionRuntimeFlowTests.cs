@@ -126,6 +126,45 @@ namespace Game.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator ActionRuntime_RegisteredMeleeChangedToProjectile_UsesCapturedMeleeWithoutProjectileManager()
+        {
+            BaseCharacter actor = CreateActor();
+            yield return null;
+            AttackInfo attack = CreateAsset<AttackInfo>();
+            attack.durationMode = ActionDurationMode.Fixed;
+            attack.duration = 1f;
+            attack.staminaCost = 5f;
+            GameManager.Actions.RegisterDefinition(attack);
+            attack.projectileInfo = new ProjectileInfo { hasProjectile = true };
+            Object.Destroy(_projectiles.gameObject);
+            yield return null;
+            Assert.IsTrue(GameManager.Projectiles == null);
+
+            Assert.IsTrue(GameManager.Actions.Execute(actor.ObjectHash, attack, 0, Vector2.right, out _));
+            Assert.AreEqual(95f, GameManager.Data.GetVitals(actor.ObjectHash).currentStamina);
+        }
+
+        [UnityTest]
+        public IEnumerator ActionRuntime_RegisteredProjectileChangedToMelee_StillRequiresProjectileManagerWithoutSpendingCost()
+        {
+            BaseCharacter actor = CreateActor();
+            yield return null;
+            AttackInfo attack = CreateAsset<AttackInfo>();
+            attack.durationMode = ActionDurationMode.Fixed;
+            attack.duration = 1f;
+            attack.staminaCost = 5f;
+            attack.projectileInfo = new ProjectileInfo { hasProjectile = true };
+            GameManager.Actions.RegisterDefinition(attack);
+            attack.projectileInfo = default;
+            Object.Destroy(_projectiles.gameObject);
+            yield return null;
+            Assert.IsTrue(GameManager.Projectiles == null);
+
+            Assert.IsFalse(GameManager.Actions.Execute(actor.ObjectHash, attack, 0, Vector2.right, out _));
+            Assert.AreEqual(100f, GameManager.Data.GetVitals(actor.ObjectHash).currentStamina);
+        }
+
+        [UnityTest]
         public IEnumerator ActionRuntime_MotionOnlyAlongsideGameplay_PreservesCostAndPrimaryState()
         {
             BaseCharacter actor = CreateActor(true);
@@ -246,6 +285,51 @@ namespace Game.Tests.PlayMode
             Assert.AreEqual(2, spawned);
             Advance(0.05f);
             Assert.AreEqual(2, _projectiles.ActiveCount);
+        }
+
+        [UnityTest]
+        public IEnumerator ActionRuntime_LastMpAcceptedCast_FiresWhileVanishedButNewPublicSpawnIsRejected()
+        {
+            BaseCharacter actor = CreateActor();
+            yield return null;
+            int owner = actor.ObjectHash;
+            AttackInfo cast = CreateAsset<AttackInfo>();
+            MotionDefinition motion = CreateAsset<MotionDefinition>();
+            motion.info = new MotionInfo { preMotionDuration = 0.1f, activeMotionDuration = 0.2f, recoveryDuration = 0.1f };
+            cast.motion = motion;
+            cast.mpCost = 50;
+            cast.damageMultiplier = 1f;
+            cast.projectileInfo = new ProjectileInfo
+            {
+                hasProjectile = true, projectileCount = 1, speed = 3f, lifetime = 5f,
+            };
+            Assert.IsTrue(GameManager.Actions.Execute(owner, cast, 0, Vector2.right, 1.5f, ActionVariant.Default,
+                out long id, out _));
+            using CompanionMpManager mp = new CompanionMpManager(new SoAExecutionWorld(GameManager.Data), owner, 0,
+                new CompanionMpSettings { returnThresholdRatio = 0.5f, vanishRecoveryMultiplier = 1f });
+            mp.Tick(0f);
+            Assert.IsTrue(mp.IsVanished);
+            Assert.AreEqual(0f, GameManager.Data.GetVitals(owner).currentMp);
+
+            Advance(0.11f);
+
+            Assert.AreEqual(1, _projectiles.ActiveCount);
+            ProjectileController[] controllers = Object.FindObjectsByType<ProjectileController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            int matching = 0;
+            for (int i = 0; i < controllers.Length; i++)
+            {
+                if (!controllers[i].IsActive || controllers[i].Magic.actionInstanceId != id) { continue; }
+                matching++;
+                Assert.AreEqual(1.5f, controllers[i].Magic.motionValue);
+                _objects.Add(controllers[i].gameObject);
+            }
+            Assert.AreEqual(1, matching);
+            Assert.IsNull(_projectiles.SpawnProjectile(owner, new MagicDefinition
+            {
+                actionInstanceId = id, magicType = MagicType.Attack,
+                bulletProfile = new BulletProfile { speed = 3f, lifeTime = 5f },
+            }, Vector2.zero, Vector2.right));
+            Assert.AreEqual(1, _projectiles.ActiveCount);
         }
 
         [UnityTest]

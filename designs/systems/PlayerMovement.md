@@ -8,6 +8,27 @@ Section: 1 — MVP
 - 入力: InputSystem（MovementInfo）、DataContainer（MoveStatus, EquipmentStatus）
 - 出力: キャラクター位置・速度の更新
 
+## 現在の物理境界と固定更新（2026-10-26）
+
+現在の共通基底は`BaseCharacter`、Abilityの契約は`IAbility`。以下のWalkAbility等の表は設計案を含み、実際の移動はPlayer/Enemy/Companionと共通Coreロジックで実行する。
+
+物理の入口は`BaseCharacter.Physics.cs`へ集約する。速度・重力・位置・力積・移動リセット・衝突レイヤー・一時停止・接地/壁/床すり抜けは`ICharacterPhysics2D`へ委譲し、`RigidbodyCharacterPhysics2D`が既存Physics2Dを操作する。`CreateCharacterPhysics()`が差替え口。既存Rigidbody getterと`ApplyMovement(owner, Rigidbody2D)`は互換入口。Projectileと未接続legacy SimpleEnemyBrainは今回の境界の対象外。
+
+`GameManager.FixedUpdate`から`SimulationTickRunner`を一度呼び、以下の順に全キャラを進める。派生キャラの独立したFixedUpdateは廃止する。
+
+1. ActorRefで対象世代を固定し、前の物理ステップの位置・接地を取得。
+2. 処理済み入力を全キャラへ公開。
+3. 状態効果・共有行動・弾・資源を更新し、共通AI観測を確定。
+4. 全キャラの`SimulateCharacterTick`で判断・移動計算。
+5. 全キャラの`ApplySimulationPhysics`で共通行動の最終移動補正・衝突モードを反映。
+6. Unityの通常のPhysics2Dが移動・衝突を解決し、次tickでその結果を取得。
+
+各段階で世代とGameObject生存を再確認する。componentが無効でも物理観測は取得し、入力・判断・最終補正は有効なcomponentだけ実行する。死亡時の派生cleanupも維持する。
+
+制御中の物理setterはread-after-write互換のため即時反映する。全書込みを最後まで遅延するコマンドバッファではなく、Unity物理前に判断と最終補正を完了する契約。明示速度入力があったtickだけ実速度から共通移動へのfallbackを更新し、受理済みHeld移動要求を旧速度0で上書きしない。
+
+通常ジャンプ・壁蹴り・床すり抜けの受理時に押下だけを消費し、拒否時の先行入力と長押しは保持する。現行ステージとPhysics2Dは維持し、3D/DOTS Physics移行時には座標・Collider・接地/壁クエリ・床すり抜け・接触イベントとステージを併せて対応する。
+
 ## コンポーネント構成
 | コンポーネント | 責務 | MonoBehaviour? |
 |--------------|------|---------------|

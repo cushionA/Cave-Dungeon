@@ -1,38 +1,53 @@
 using System;
 using System.Collections.Generic;
 using Game.Core;
-using R3;
 using UnityEngine;
 
 namespace Game.Runtime
 {
-    public class ActionExecutorController : MonoBehaviour, IActionExecutionBackend
+    public class ActionExecutorController : MonoBehaviour, IActionCommandBackend
     {
         [SerializeField] private AttackInfo[] _attackInfos;
+        private string[] _definitionIds;
         private int _ownerHash;
         private HitBox _hitBox;
         private DamageDealer _damageDealer;
         private long _instanceId;
-        private long _sourceInstanceId;
-        private long _aiInstanceId;
-        private long _aiSourceInstanceId;
+        private long _actionGroupId;
+        private long _aiGroupId;
         private bool _aiAwaitingCompletion;
+        private int _dispatchDepth;
         private long _aiMovementInstanceId;
-        private int _aiMovementTarget;
-        private SustainedAction _aiMovementKind;
-        private IDisposable _executionSubscription;
+        private ActorRef _aiMovementTarget;
+        private ActionCommandKind _aiMovementKind;
+        private ActionExecutionSystem _subscribedExecution;
         private readonly List<ActionExecution> _aiExecutions = new List<ActionExecution>();
 
-        public bool IsExecuting => GameManager.Actions != null && GameManager.Actions.IsPrimaryExecuting(_ownerHash);
-        public long CurrentInstanceId => _instanceId;
-        public bool HasMovementRequest => _aiInstanceId != 0 && GameManager.Actions != null
-            && GameManager.Actions.Execution.TryGetInstance(_aiInstanceId, out ActionExecution execution)
-            && (execution.definition.resources & ActionResources.HorizontalMovement) != 0;
+        public bool IsExecuting => GameManager.Actions != null
+            && (GameManager.Actions.Execution.IsGroupActive(_actionGroupId) || GameManager.Actions.IsPrimaryExecuting(_ownerHash));
+        public long CurrentInstanceId => GameManager.Actions != null
+            && GameManager.Actions.Execution.GetGroupPrimary(_actionGroupId, out ActionExecution current)
+                ? current.instanceId : _instanceId;
+        public long CurrentGroupId => _actionGroupId;
+        public ActionDispatchStatus LastDispatchStatus { get; private set; }
+        public bool HasMovementRequest
+        {
+            get
+            {
+                if (GameManager.Actions == null || _aiGroupId == 0) { return false; }
+                GameManager.Actions.Execution.CopyGroupActive(_aiGroupId, _aiExecutions);
+                for (int i = 0; i < _aiExecutions.Count; i++)
+                {
+                    if ((_aiExecutions[i].definition.resources & ActionResources.HorizontalMovement) != 0) { return true; }
+                }
+                return false;
+            }
+        }
         bool IActionExecutionBackend.IsExecuting => IsAIExecuting();
         public event Action OnActionCompleted;
 
 #if UNITY_INCLUDE_TESTS
-        public void SetAttackInfosForTest(AttackInfo[] infos) { _attackInfos = infos; }
+        public void SetAttackInfosForTest(AttackInfo[] infos) { _attackInfos = infos; CacheDefinitionIds(); }
 #endif
 
         private void Awake()
@@ -40,12 +55,10 @@ namespace Game.Runtime
             _ownerHash = gameObject.GetHashCode();
             _hitBox = GetComponentInChildren<HitBox>();
             _damageDealer = GetComponentInChildren<DamageDealer>();
+            CacheDefinitionIds();
         }
 
-        private void OnEnable()
-        {
-            Attach();
-        }
+        private void OnEnable() { Attach(); }
 
         private void Start()
         {
@@ -58,85 +71,173 @@ namespace Game.Runtime
         {
             ((IActionExecutionBackend)this).CancelCurrent();
             CancelAction();
-            _executionSubscription?.Dispose();
-            _executionSubscription = null;
+            if (_subscribedExecution != null) { _subscribedExecution.GroupChanged -= HandleGroupChanged; }
+            _subscribedExecution = null;
             GameManager.Actions?.Detach(_ownerHash, this);
         }
 
         private void Attach()
         {
             GameManager.Actions?.Attach(_ownerHash, this);
-            if (_executionSubscription == null && GameManager.Events != null)
+            ActionExecutionSystem execution = GameManager.Actions != null ? GameManager.Actions.Execution : null;
+            if (ReferenceEquals(execution, _subscribedExecution)) { return; }
+            if (_subscribedExecution != null) { _subscribedExecution.GroupChanged -= HandleGroupChanged; }
+            _subscribedExecution = execution;
+            if (_subscribedExecution != null) { _subscribedExecution.GroupChanged += HandleGroupChanged; }
+        }
+
+        private void CacheDefinitionIds()
+        {
+            _definitionIds = new string[_attackInfos != null ? _attackInfos.Length : 0];
+            for (int i = 0; i < _definitionIds.Length; i++)
             {
-                _executionSubscription = GameManager.Events.OnActionExecution.Subscribe(HandleAIExecution);
+                _definitionIds[i] = _attackInfos[i] != null ? _attackInfos[i].PersistentId : null;
             }
         }
 
+        /// <summary>旧ActionSlot保存の互換入口。実行前に意味付き要求へ変換する。</summary>
         public bool ExecuteAction(ActionSlot slot, int targetHash = 0)
         {
-            return TryExecuteAction(slot, targetHash, out _);
+            ActionCommand command = ActionCommand.FromLegacySlot(slot);
+            long replaceGroupId = GameManager.Actions != null && GameManager.Actions.Execution.IsGroupActive(_actionGroupId)
+                ? _actionGroupId : 0;
+            ActionDispatchResult result = Dispatch(command, targetHash, replaceGroupId);
+            if (result.Accepted) { TrackAcceptedGroup(result.GroupId); }
+            return result.Accepted;
         }
 
-        private bool TryExecuteAction(ActionSlot slot, int targetHash, out long instanceId)
+        public bool ExecuteAttack(AttackInfo definition, int targetHash, float chargeMultiplier,
+            ActionVariant variant, out long instanceId, out long groupId)
         {
-            instanceId = 0;
-            if (GameManager.Actions == null || !GameManager.IsCharacterValid(_ownerHash)) { return false; }
-            Vector2 direction = transform.localScale.x >= 0f ? Vector2.right : Vector2.left;
-            if (slot.execType == ActionExecType.Attack || slot.execType == ActionExecType.Cast)
+            instanceId = groupId = 0;
+            if (GameManager.Actions == null || !GameManager.IsCharacterValid(_ownerHash))
             {
-                if (_attackInfos == null || slot.paramId < 0 || slot.paramId >= _attackInfos.Length) { return false; }
-                return GameManager.Actions.Execute(_ownerHash, _attackInfos[slot.paramId], targetHash, direction, out instanceId);
+                LastDispatchStatus = ActionDispatchStatus.InvalidOwner;
+                return false;
             }
-            if (slot.execType == ActionExecType.Instant && slot.paramId == (int)InstantAction.Dodge)
+            if (definition == null)
             {
-                return GameManager.Actions.TryDodge(_ownerHash, direction, out instanceId);
+                LastDispatchStatus = ActionDispatchStatus.UnknownDefinition;
+                return false;
             }
-            if (slot.execType == ActionExecType.Sustained)
-            {
-                if (slot.paramId == (int)SustainedAction.Guard) { return GameManager.Actions.TrySetGuarding(_ownerHash, true, out instanceId, slot.paramValue); }
-                if (slot.paramId == (int)SustainedAction.Idle) { return GameManager.Actions.TryIdle(_ownerHash, out instanceId, slot.paramValue); }
-                if (slot.paramId != (int)SustainedAction.MoveToTarget && slot.paramId != (int)SustainedAction.Follow
-                    && slot.paramId != (int)SustainedAction.Retreat && slot.paramId != (int)SustainedAction.Flee) { return false; }
-                if (GameManager.IsCharacterValid(targetHash))
-                {
-                    Vector2 delta = GameManager.Data.GetVitals(targetHash).position - GameManager.Data.GetVitals(_ownerHash).position;
-                    if (slot.paramId == (int)SustainedAction.Retreat || slot.paramId == (int)SustainedAction.Flee) { delta = -delta; }
-                    return GameManager.Actions.TrySetLocomotion(_ownerHash, delta.normalized,
-                        EffectiveMoveSpeed(), out instanceId, slot.paramValue);
-                }
-            }
-            return false;
+            long replaceGroupId = GameManager.Actions.Execution.IsGroupActive(_actionGroupId) ? _actionGroupId : 0;
+            bool accepted = GameManager.Actions.Execute(_ownerHash, definition, targetHash, FacingDirection(),
+                chargeMultiplier, variant, out instanceId, out groupId, replaceGroupId);
+            LastDispatchStatus = accepted ? ActionDispatchStatus.Accepted : ActionDispatchStatus.Rejected;
+            if (accepted) { TrackAcceptedGroup(groupId); }
+            return accepted;
         }
+
+        private Vector2 FacingDirection() => transform.localScale.x >= 0f ? Vector2.right : Vector2.left;
+
+        private void TrackAcceptedGroup(long groupId) =>
+            _actionGroupId = GameManager.Actions != null && GameManager.Actions.Execution.IsGroupActive(groupId) ? groupId : 0;
+
+        private ActionDispatchResult Dispatch(in ActionCommand command, int targetHash, long replaceGroupId = 0)
+        {
+            if (GameManager.Actions == null || !GameManager.IsCharacterValid(_ownerHash))
+            {
+                return Result(ActionDispatchStatus.InvalidOwner);
+            }
+            if (!Supports(command.kind)) { return Result(ActionDispatchStatus.Unsupported); }
+            ActorRef targetRef = default;
+            if (targetHash != 0 && (GameManager.Actors == null || !GameManager.Actors.TryGet(targetHash, out targetRef)))
+            {
+                return Result(ActionDispatchStatus.InvalidTarget);
+            }
+            if (targetHash != 0 && GameManager.Data.GetFlags(targetHash).IsVanished) { return Result(ActionDispatchStatus.InvalidTarget); }
+            Vector2 direction = FacingDirection();
+            long instanceId = 0;
+            bool accepted;
+            if (command.kind == ActionCommandKind.Attack || command.kind == ActionCommandKind.Cast)
+            {
+                if (_definitionIds == null || _definitionIds.Length != (_attackInfos != null ? _attackInfos.Length : 0)) { CacheDefinitionIds(); }
+                ActionDispatchStatus resolved = ActionDefinitionReference.Resolve(command.attack.definitionId,
+                    command.attack.legacyIndex, _definitionIds, out int index);
+                if (resolved != ActionDispatchStatus.Accepted) { return Result(resolved); }
+                if (_attackInfos[index] == null) { return Result(ActionDispatchStatus.UnknownDefinition); }
+                bool attackAccepted = GameManager.Actions.Execute(_ownerHash, _attackInfos[index], targetHash, direction,
+                    command.attack.chargeMultiplier, command.attack.variant, out instanceId, out long attackGroup, replaceGroupId);
+                if (!attackAccepted) { return Result(ActionDispatchStatus.Rejected); }
+                TrackAcceptedGroup(attackGroup);
+                return Result(ActionDispatchStatus.Accepted, instanceId, attackGroup);
+            }
+            if (float.IsNaN(command.sustained.duration) || float.IsInfinity(command.sustained.duration)
+                || command.sustained.duration < 0f) { return Result(ActionDispatchStatus.InvalidParameters); }
+            if (command.kind == ActionCommandKind.Dodge)
+            {
+                accepted = GameManager.Actions.TryDodge(_ownerHash, direction, out instanceId, replaceGroupId);
+            }
+            else if (command.kind == ActionCommandKind.Guard)
+            {
+                accepted = GameManager.Actions.TrySetGuarding(_ownerHash, true, out instanceId, command.sustained.duration, replaceGroupId);
+            }
+            else if (command.kind == ActionCommandKind.Idle)
+            {
+                accepted = GameManager.Actions.TryIdle(_ownerHash, out instanceId, command.sustained.duration, replaceGroupId);
+            }
+            else
+            {
+                if (!GameManager.IsCharacterValid(targetHash)) { return Result(ActionDispatchStatus.InvalidTarget); }
+                Vector2 delta = ObservedPosition(targetHash) - ObservedPosition(_ownerHash);
+                if (command.kind == ActionCommandKind.Retreat || command.kind == ActionCommandKind.Flee) { delta = -delta; }
+                accepted = GameManager.Actions.TrySetLocomotion(_ownerHash, delta.normalized,
+                    EffectiveMoveSpeed(), out instanceId, command.sustained.duration, targetRef, replaceGroupId);
+            }
+            long groupId = 0;
+            if (accepted) { GameManager.Actions.Execution.TryGetGroupId(instanceId, out groupId); }
+            return Result(accepted ? ActionDispatchStatus.Accepted : ActionDispatchStatus.Rejected, instanceId, groupId, targetRef);
+        }
+
+        private ActionDispatchResult Result(ActionDispatchStatus status, long instanceId = 0, long groupId = 0, ActorRef targetRef = default)
+        {
+            LastDispatchStatus = status;
+            return new ActionDispatchResult(status, instanceId, groupId, targetRef);
+        }
+
+        public bool Supports(ActionCommandKind kind) => kind >= ActionCommandKind.Attack && kind <= ActionCommandKind.Flee;
 
         bool IActionExecutionBackend.Execute(int ownerHash, int targetHash, ActionSlot slot)
         {
-            long previous = _aiInstanceId;
-            long previousSource = _aiSourceInstanceId;
-            if (ownerHash != _ownerHash || !TryExecuteAction(slot, targetHash, out long instanceId)) { return false; }
-            if (previous != 0 && previous != instanceId) { GameManager.Actions.Execution.Cancel(previous, true); }
-            if (previousSource != 0 && previousSource != instanceId) { GameManager.Actions.Execution.CancelPendingFrom(previousSource); }
-            _aiInstanceId = instanceId;
-            _aiSourceInstanceId = instanceId;
-            _aiAwaitingCompletion = true;
-            _aiMovementInstanceId = slot.execType == ActionExecType.Sustained
-                && (slot.paramId == (int)SustainedAction.MoveToTarget || slot.paramId == (int)SustainedAction.Follow
-                    || slot.paramId == (int)SustainedAction.Retreat || slot.paramId == (int)SustainedAction.Flee) ? instanceId : 0;
-            _aiMovementTarget = targetHash;
-            _aiMovementKind = (SustainedAction)slot.paramId;
-            CompleteAIIfSettled();
-            return true;
+            ActionCommand command = ActionCommand.FromLegacySlot(slot);
+            return ExecuteCommand(ownerHash, targetHash, command).Accepted;
         }
+
+        public ActionDispatchResult ExecuteCommand(int ownerHash, int targetHash, in ActionCommand command)
+        {
+            if (ownerHash != _ownerHash) { return Result(ActionDispatchStatus.InvalidOwner); }
+            _dispatchDepth++;
+            try
+            {
+                long replaceGroupId = IsAIExecuting() ? _aiGroupId : 0;
+                ActionDispatchResult result = Dispatch(command, targetHash, replaceGroupId);
+                if (!result.Accepted) { return result; }
+                _aiAwaitingCompletion = false;
+                _aiGroupId = result.GroupId;
+                TrackAcceptedGroup(result.GroupId);
+                _aiAwaitingCompletion = true;
+                _aiMovementInstanceId = IsMovement(command.kind) ? result.InstanceId : 0;
+                _aiMovementTarget = result.TargetRef;
+                _aiMovementKind = command.kind;
+                return result;
+            }
+            finally
+            {
+                _dispatchDepth--;
+                CompleteAIIfSettled();
+            }
+        }
+
+        private static bool IsMovement(ActionCommandKind kind) => kind == ActionCommandKind.MoveToTarget
+            || kind == ActionCommandKind.Follow || kind == ActionCommandKind.Retreat || kind == ActionCommandKind.Flee;
 
         void IActionExecutionBackend.CancelCurrent()
         {
-            long instanceId = _aiInstanceId;
-            long sourceInstanceId = _aiSourceInstanceId;
-            _aiInstanceId = 0;
-            _aiSourceInstanceId = 0;
+            long groupId = _aiGroupId;
+            _aiGroupId = 0;
             _aiAwaitingCompletion = false;
             _aiMovementInstanceId = 0;
-            if (instanceId != 0) { GameManager.Actions?.Execution.Cancel(instanceId, true); }
-            if (sourceInstanceId != 0) { GameManager.Actions?.Execution.CancelPendingFrom(sourceInstanceId); }
+            if (groupId != 0) { GameManager.Actions?.Execution.CancelGroup(groupId); }
         }
 
         void IActionExecutionBackend.Tick(float deltaTime)
@@ -151,70 +252,47 @@ namespace Game.Runtime
             return effects.BlocksMovement ? 0f : GameManager.Data.GetMoveParams(_ownerHash).moveSpeed * effects.MoveSpeedMultiplier;
         }
 
+        private static Vector2 ObservedPosition(int actorHash) =>
+            GameManager.ObservedPosition(actorHash, GameManager.Data.GetVitals(actorHash).position);
+
         private void RefreshAIMovement()
         {
-            if (_aiMovementInstanceId == 0 || _aiMovementInstanceId != _aiInstanceId || GameManager.Actions == null
+            if (_aiMovementInstanceId == 0 || GameManager.Actions == null
                 || !GameManager.Actions.Execution.TryGetInstance(_aiMovementInstanceId, out ActionExecution execution)
                 || !execution.definition.movementUsesInput) { return; }
-            if (!GameManager.IsCharacterValid(_aiMovementTarget))
+            if (!_aiMovementTarget.IsValid || GameManager.Actors == null || !GameManager.Actors.IsCurrent(_aiMovementTarget))
             {
-                GameManager.Actions.Execution.Cancel(_aiMovementInstanceId, true);
+                GameManager.Actions.Execution.CancelGroup(_aiGroupId);
                 return;
             }
-            Vector2 delta = GameManager.Data.GetVitals(_aiMovementTarget).position - GameManager.Data.GetVitals(_ownerHash).position;
-            if (_aiMovementKind == SustainedAction.Retreat || _aiMovementKind == SustainedAction.Flee) { delta = -delta; }
+            Vector2 delta = ObservedPosition(_aiMovementTarget.Hash) - ObservedPosition(_ownerHash);
+            if (_aiMovementKind == ActionCommandKind.Retreat || _aiMovementKind == ActionCommandKind.Flee) { delta = -delta; }
             GameManager.Actions.Execution.UpdateInput(_aiMovementInstanceId, delta.normalized, EffectiveMoveSpeed());
         }
 
-        private bool IsAIExecuting()
-        {
-            if (GameManager.Actions == null) { return false; }
-            return (_aiInstanceId != 0 && GameManager.Actions.Execution.TryGetInstance(_aiInstanceId, out _))
-                || (_aiSourceInstanceId != 0 && GameManager.Actions.Execution.HasPendingFrom(_aiSourceInstanceId));
-        }
+        private bool IsAIExecuting() => GameManager.Actions != null && GameManager.Actions.Execution.IsGroupActive(_aiGroupId);
 
         private void CompleteAIIfSettled()
         {
-            if (!_aiAwaitingCompletion || IsAIExecuting()) { return; }
+            if (_dispatchDepth > 0 || !_aiAwaitingCompletion || IsAIExecuting()) { return; }
             _aiAwaitingCompletion = false;
             _aiMovementInstanceId = 0;
-            _aiInstanceId = 0;
-            _aiSourceInstanceId = 0;
+            _aiGroupId = 0;
             OnActionCompleted?.Invoke();
         }
 
-        private void HandleAIExecution(ActionExecutionEvent notification)
+        private void HandleGroupChanged(ActionGroupEvent notification)
         {
-            if (notification.kind == ActionSignalKind.Started && _aiSourceInstanceId != 0
-                && notification.execution.sourceInstanceId == _aiSourceInstanceId)
-            {
-                _aiInstanceId = notification.execution.instanceId;
-                _aiSourceInstanceId = _aiInstanceId;
-            }
-            if (notification.execution.instanceId != _aiInstanceId) { return; }
-            if (notification.kind == ActionSignalKind.Completed || notification.kind == ActionSignalKind.Interrupted)
-            {
-                _aiInstanceId = 0;
-                GameManager.Actions.Execution.CopyActive(_ownerHash, _aiExecutions);
-                for (int i = 0; i < _aiExecutions.Count; i++)
-                {
-                    ActionExecution successor = _aiExecutions[i];
-                    if (successor.sourceInstanceId != notification.execution.instanceId) { continue; }
-                    _aiInstanceId = successor.instanceId;
-                    _aiSourceInstanceId = successor.instanceId;
-                    break;
-                }
-                CompleteAIIfSettled();
-            }
+            if (notification.groupId == _actionGroupId) { _actionGroupId = 0; }
+            if (notification.groupId == _aiGroupId) { CompleteAIIfSettled(); }
         }
 
         public void CancelAction()
         {
-            if (_instanceId != 0) { GameManager.Actions?.Execution.Cancel(_instanceId, true); }
-            if (_sourceInstanceId != 0) { GameManager.Actions?.Execution.CancelPendingFrom(_sourceInstanceId); }
+            if (_actionGroupId != 0) { GameManager.Actions?.Execution.CancelGroup(_actionGroupId); }
+            else if (_instanceId != 0) { GameManager.Actions?.Execution.Cancel(_instanceId, true); }
             Deactivate();
-            _instanceId = 0;
-            _sourceInstanceId = 0;
+            _instanceId = _actionGroupId = 0;
         }
 
         public void HandleExecution(ActionExecutionEvent notification, AttackMotionData motion, bool projectile)
@@ -222,7 +300,7 @@ namespace Game.Runtime
             if (notification.kind == ActionSignalKind.Started)
             {
                 _instanceId = notification.execution.instanceId;
-                _sourceInstanceId = _instanceId;
+                _actionGroupId = notification.execution.groupId;
             }
             if (notification.execution.instanceId != _instanceId) { return; }
             if (notification.kind == ActionSignalKind.PhaseChanged)

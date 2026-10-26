@@ -24,6 +24,7 @@ namespace Game.Core
 
         public ActionBase CurrentAction => _currentAction;
         public bool IsExecuting => _backend != null ? _backend.IsExecuting : _currentAction != null && _currentAction.IsExecuting;
+        public ActionDispatchStatus LastDispatchStatus { get; private set; }
 
         public event Action OnActionCompleted;
 
@@ -57,9 +58,22 @@ namespace Game.Core
         /// </summary>
         public bool Execute(int ownerHash, int targetHash, ActionSlot slot)
         {
-            if (_backend != null) { return _backend.Execute(ownerHash, targetHash, slot); }
+            if (_backend is IActionCommandBackend commandBackend)
+            {
+                ActionCommand command = ActionCommand.FromLegacySlot(slot);
+                ActionDispatchResult result = commandBackend.ExecuteCommand(ownerHash, targetHash, command);
+                LastDispatchStatus = result.Status;
+                return result.Accepted;
+            }
+            if (_backend != null)
+            {
+                bool accepted = _backend.Execute(ownerHash, targetHash, slot);
+                LastDispatchStatus = accepted ? ActionDispatchStatus.Accepted : ActionDispatchStatus.Rejected;
+                return accepted;
+            }
             if (!_handlers.TryGetValue(slot.execType, out ActionBase handler))
             {
+                LastDispatchStatus = ActionDispatchStatus.Unsupported;
                 return false;
             }
 
@@ -72,6 +86,7 @@ namespace Game.Core
             _currentAction = handler;
             handler.OnCompleted += HandleActionCompleted;
             handler.Execute(ownerHash, targetHash, slot);
+            LastDispatchStatus = ActionDispatchStatus.Accepted;
             return true;
         }
 
@@ -106,7 +121,26 @@ namespace Game.Core
         /// </summary>
         public bool HasHandler(ActionExecType type)
         {
+            if (_backend is IActionCommandBackend backend)
+            {
+                switch (type)
+                {
+                    case ActionExecType.Attack: return backend.Supports(ActionCommandKind.Attack);
+                    case ActionExecType.Cast: return backend.Supports(ActionCommandKind.Cast);
+                    case ActionExecType.Instant: return backend.Supports(ActionCommandKind.Dodge);
+                    case ActionExecType.Sustained: return backend.Supports(ActionCommandKind.Guard)
+                        || backend.Supports(ActionCommandKind.MoveToTarget) || backend.Supports(ActionCommandKind.Idle);
+                    default: return false;
+                }
+            }
             return _handlers.ContainsKey(type);
+        }
+
+        /// <summary>本番backendがある時は旧Handler登録ではなく、同じ要求変換から対応可否を照会する。</summary>
+        public bool CanExecute(in ActionSlot slot)
+        {
+            return _backend is IActionCommandBackend backend
+                ? backend.Supports(ActionCommand.FromLegacySlot(slot).kind) : HasHandler(slot.execType);
         }
 
         private void HandleActionCompleted()

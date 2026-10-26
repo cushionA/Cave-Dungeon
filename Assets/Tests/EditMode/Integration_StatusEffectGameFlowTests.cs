@@ -90,6 +90,33 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(1, deaths);
         }
 
+        [TestCase(25f, 100, 75, 75)]
+        [TestCase(200f, 100, 0, 0)]
+        [TestCase(25f, 0, 75, 0)]
+        public void StatusEffectSystem_DamageTick_PublishesSynchronizedHpRatio(float damage, int maxHp,
+            int expectedHp, int expectedRatio)
+        {
+            _data.GetVitals(k_TargetHash).maxHp = maxHp;
+            using StatusEffectSystem system = new StatusEffectSystem(_data, _events);
+            system.Register(k_TargetHash);
+            int notifications = 0;
+            using System.IDisposable subscription = _events.OnDamageDealt.Subscribe(_ =>
+            {
+                notifications++;
+                Assert.AreEqual(expectedHp, _data.GetVitals(k_TargetHash).currentHp);
+                Assert.AreEqual(expectedRatio, _data.GetVitals(k_TargetHash).hpRatio);
+            });
+            system.Apply(k_TargetHash, new StatusEffectInfo
+            {
+                effect = StatusEffectId.Poison, duration = 10f, tickDamage = damage, tickInterval = 1f
+            });
+
+            system.Tick(1f);
+
+            Assert.AreEqual(1, notifications);
+            Assert.AreEqual(expectedRatio, _data.GetVitals(k_TargetHash).hpRatio);
+        }
+
         [Test]
         public void StatusEffectSystem_RemoveAndReuseHash_DoesNotRetainPreviousEffects()
         {

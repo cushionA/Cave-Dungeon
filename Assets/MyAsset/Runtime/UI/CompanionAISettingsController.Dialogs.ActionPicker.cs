@@ -198,7 +198,11 @@ namespace Game.Runtime
                 });
                 item.text = label;
                 item.AddToClassList("action-picker-item");
-                if (!IsActionUnlocked(ActionExecType.Instant, paramId))
+                if (!IsRuntimeActionSupported(ActionExecType.Instant, paramId))
+                {
+                    DisableUnsupportedAction(item);
+                }
+                else if (!IsActionUnlocked(ActionExecType.Instant, paramId))
                 {
                     item.AddToClassList("action-picker-item--locked");
                     item.SetEnabled(false);
@@ -251,7 +255,11 @@ namespace Game.Runtime
                 item.text = displayName;
                 item.tooltip = string.IsNullOrEmpty(entry.description) ? displayName : entry.description;
                 item.AddToClassList("action-picker-item");
-                if (!unlocked)
+                if (!IsRuntimeActionSupported(ActionExecType.Instant, (int)InstantAction.UseItem))
+                {
+                    DisableUnsupportedAction(item);
+                }
+                else if (!unlocked)
                 {
                     item.AddToClassList("action-picker-item--locked");
                     item.SetEnabled(false);
@@ -311,6 +319,7 @@ namespace Game.Runtime
                 {
                     int paramId = idx;
                     AttackInfo info = _attackCatalog[idx];
+                    string definitionId = info.PersistentId;
                     string displayName = string.IsNullOrEmpty(info.attackName) ? info.name : info.attackName;
 
                     Button item = new Button(() =>
@@ -319,6 +328,7 @@ namespace Game.Runtime
                         ActionSlot slot = new ActionSlot
                         {
                             execType = execType,
+                            actionDefinitionId = definitionId,
                             paramId = paramId,
                             paramValue = 0f,
                             displayName = displayName,
@@ -330,6 +340,11 @@ namespace Game.Runtime
                         + "\nMPコスト: " + info.mpCost
                         + "\nスタミナコスト: " + info.staminaCost;
                     item.AddToClassList("action-picker-item");
+                    if (string.IsNullOrEmpty(definitionId))
+                    {
+                        item.SetEnabled(false);
+                        item.tooltip = "行動定義IDが未設定です。行動アセットを保存してください。";
+                    }
                     if (!IsActionUnlocked(onlyCasters ? ActionExecType.Cast : ActionExecType.Attack, paramId))
                     {
                         item.AddToClassList("action-picker-item--locked");
@@ -364,7 +379,11 @@ namespace Game.Runtime
                 });
                 item.text = label;
                 item.AddToClassList("action-picker-item");
-                if (!IsActionUnlocked(execType, paramId))
+                if (!IsRuntimeActionSupported(execType, paramId))
+                {
+                    DisableUnsupportedAction(item);
+                }
+                else if (!IsActionUnlocked(execType, paramId))
                 {
                     item.AddToClassList("action-picker-item--locked");
                     item.SetEnabled(false);
@@ -406,7 +425,11 @@ namespace Game.Runtime
                 item.tooltip = "自然終了: " + endCondition;
                 item.AddToClassList("action-picker-item");
 
-                if (!IsActionUnlocked(ActionExecType.Sustained, paramId))
+                if (!IsRuntimeActionSupported(ActionExecType.Sustained, paramId))
+                {
+                    DisableUnsupportedAction(item);
+                }
+                else if (!IsActionUnlocked(ActionExecType.Sustained, paramId))
                 {
                     item.AddToClassList("action-picker-item--locked");
                     item.SetEnabled(false);
@@ -414,6 +437,19 @@ namespace Game.Runtime
                 }
                 container.Add(item);
             }
+        }
+
+        private static bool IsRuntimeActionSupported(ActionExecType type, int parameter)
+        {
+            ActionCommand command = ActionCommand.FromLegacySlot(new ActionSlot { execType = type, paramId = parameter });
+            return command.kind != ActionCommandKind.Unsupported;
+        }
+
+        private static void DisableUnsupportedAction(Button item)
+        {
+            item.SetEnabled(false);
+            item.text += "  [未対応]";
+            item.tooltip = "この行動はゲーム内の実行にまだ対応していません。";
         }
 
         private void ShowSustainedDurationDialog(SustainedAction action, string label, Action<float> onConfirm)

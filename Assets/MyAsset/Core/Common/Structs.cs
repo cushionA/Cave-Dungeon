@@ -154,6 +154,9 @@ namespace Game.Core
     /// </summary>
     public struct DamageData
     {
+        public ActorRef attackerRef;
+        public ActorRef defenderRef;
+        public AttackContext attackContext;
         public long actionInstanceId;
         public int attackerHash;
         public int defenderHash;
@@ -172,6 +175,8 @@ namespace Game.Core
 
     public struct DamageResult
     {
+        public ActorRef attackerRef;
+        public ActorRef defenderRef;
         public long actionInstanceId;
         public int totalDamage;
         public GuardResult guardResult;

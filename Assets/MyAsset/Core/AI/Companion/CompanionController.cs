@@ -142,7 +142,8 @@ namespace Game.Core
         /// Teleports the companion if too far from the player.
         /// Vanished state skips AI judgment and only ticks MP recovery.
         /// </summary>
-        public void Tick(float deltaTime, List<int> candidates, float currentTime)
+        public void Tick(float deltaTime, List<int> candidates, float currentTime,
+            AIObservationContext observation = null, AITargetRelations targets = null)
         {
             if (_disposed || !_data.TryGetValue(_companionHash, out int _))
             {
@@ -150,7 +151,8 @@ namespace Game.Core
             }
 
             // MP回復は常にTick（消滅中も回復する）
-            _mpManager.Tick(deltaTime);
+            if (observation == null) { TickResources(deltaTime); }
+            else if (!_judgmentLoop.UseObservation(observation, targets)) { return; }
 
             if (_disposed || !_data.TryGetValue(_companionHash, out _) || !_data.TryGetValue(_playerHash, out _)) { return; }
 
@@ -163,12 +165,21 @@ namespace Game.Core
             ref CharacterVitals companionVitals = ref _data.GetVitals(_companionHash);
             ref CharacterVitals playerVitals = ref _data.GetVitals(_playerHash);
 
-            FollowState followState = _followBehavior.Evaluate(
-                companionVitals.position, playerVitals.position);
-
-            if (followState == FollowState.Teleporting)
+            Vector2 companionPosition = companionVitals.position;
+            Vector2 playerPosition = playerVitals.position;
+            if (observation != null && observation.TryGetActor(_companionHash, out AIActorObservation observedCompanion)
+                && observation.TryGetActor(_playerHash, out AIActorObservation observedPlayer))
             {
-                companionVitals.position = playerVitals.position;
+                companionPosition = observedCompanion.vitals.position;
+                playerPosition = observedPlayer.vitals.position;
+            }
+            FollowState followState = _followBehavior.Evaluate(companionPosition, playerPosition);
+
+            // RuntimeではFollowStateを物理出力へ変換した後に位置を公開する。
+            // 純SoA互換経路だけが従来の直接位置更新を保持する。
+            if (followState == FollowState.Teleporting && observation == null)
+            {
+                companionVitals.position = playerPosition;
             }
 
             // 手動オーバーライドタイマーを消化。タイマー中は自動遷移を抑制する。
@@ -182,16 +193,22 @@ namespace Game.Core
             }
             else
             {
-                _modeController.EvaluateTransitions(
-                    _companionHash, _judgmentLoop.CurrentTargetHash, _data, currentTime);
+                if (observation != null) { _modeController.EvaluateTransitions(_companionHash, _judgmentLoop.CurrentTargetHash, observation); }
+                else { _modeController.EvaluateTransitions(_companionHash, _judgmentLoop.CurrentTargetHash, _data, currentTime); }
             }
 
             _judgmentLoop.Tick(deltaTime, candidates, currentTime);
         }
 
         /// <summary>
-        /// 連携発動可否。消滅中は連携拒否。
+        /// 観測確定前に、消滅中を含む共有MPの回復を一度だけ進める。
         /// </summary>
+        public void TickResources(float deltaTime)
+        {
+            if (!_disposed && _data.TryGetValue(_companionHash, out _)) { _mpManager.Tick(deltaTime); }
+        }
+
+        /// <summary>連携発動可否。消滅中は連携拒否。</summary>
         public bool CanAcceptCoop()
         {
             return !_mpManager.IsVanished;

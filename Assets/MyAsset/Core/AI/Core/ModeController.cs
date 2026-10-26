@@ -56,8 +56,13 @@ namespace Game.Core
         /// Evaluates transition rules in order. First matching rule triggers a mode switch.
         /// Does not switch if already in the target mode.
         /// </summary>
+        public void EvaluateTransitions(int ownerHash, int targetHash, AIObservationContext observation)
+        {
+            if (observation != null) { EvaluateTransitions(ownerHash, targetHash, null, observation.Time, observation); }
+        }
+
         public void EvaluateTransitions(int ownerHash, int targetHash,
-            SoACharaDataDic data, float currentTime)
+            SoACharaDataDic data, float currentTime, AIObservationContext observation = null)
         {
             if (_transitionRules == null)
             {
@@ -74,7 +79,10 @@ namespace Game.Core
                     continue;
                 }
 
-                if (ConditionEvaluator.EvaluateAll(rule.conditions, ownerHash, targetHash, data, currentTime))
+                bool matched = observation != null
+                    ? ConditionEvaluator.EvaluateAll(rule.conditions, ownerHash, targetHash, observation)
+                    : ConditionEvaluator.EvaluateAll(rule.conditions, ownerHash, targetHash, data, currentTime);
+                if (matched)
                 {
                     if (rule.targetModeIndex != _currentModeIndex)
                     {

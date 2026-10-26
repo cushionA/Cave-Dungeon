@@ -21,7 +21,7 @@ namespace Game.Runtime
         // キャラクター毎のヒット回数を記録 (targetHash → hitCount)。
         // BulletProfile.perTargetHitLimit までキャラ毎に多段ヒット可能。
         // 総ヒット数 (hitLimit) は Projectile.RegisterHit 側で別途管理 (二段管理)。
-        private Dictionary<int, int> _hitCounts;
+        private Dictionary<ActorRef, int> _hitCounts;
         private bool _isActive;
         private ProjectileManager _manager;
 
@@ -49,7 +49,7 @@ namespace Game.Runtime
             _rb.gravityScale = 0f;
 
             _spriteRenderer = GetComponentInChildren<SpriteRenderer>();
-            _hitCounts = new Dictionary<int, int>();
+            _hitCounts = new Dictionary<ActorRef, int>();
 
             // プレハブ/デザイナー設定のスケールを保持（scaleTime>0 のスケール補間で上書き→戻す際のベース）
             _baseLocalScale = transform.localScale;
@@ -68,7 +68,7 @@ namespace Game.Runtime
             _isActive = true;
             if (_hitCounts == null)
             {
-                _hitCounts = new Dictionary<int, int>();
+                _hitCounts = new Dictionary<ActorRef, int>();
             }
             else
             {
@@ -197,9 +197,12 @@ namespace Game.Runtime
             // アーキテクチャ準拠: 毎衝突でのGetComponentを避け、GameObject.GetHashCode から
             // SoA逆引き(GameManager.Data.GetManaged)で IDamageable を取得する。
             int targetHash = other.gameObject.GetHashCode();
+            if (GameManager.Actors == null || !GameManager.Actors.TryGet(targetHash, out ActorRef target)
+                || !_coreProjectile.CanHit(target, GameManager.Actors)) { return; }
+            if (GameManager.Data.GetFlags(targetHash).IsVanished) { return; }
 
             // 自分自身にはダメージを与えない
-            if (targetHash == _coreProjectile.CasterHash)
+            if (target == _coreProjectile.CasterRef)
             {
                 return;
             }
@@ -214,7 +217,7 @@ namespace Game.Runtime
             }
 
             // キャラ別ヒット回数ゲート: perTargetHitLimit 到達キャラはスキップし、総数にもカウントしない
-            if (!TryRegisterHit(targetHash, out bool shouldDespawnFromHitLimit))
+            if (!TryRegisterHit(target, out bool shouldDespawnFromHitLimit))
             {
                 return;
             }
@@ -222,7 +225,7 @@ namespace Game.Runtime
             // Core経由でダメージ処理(IDamageable経由でガード/無敵/HitReaction/イベント発火を共通化)
             ProjectileHitProcessor.ProcessHit(
                 _coreProjectile, receiver,
-                GameManager.Data, _magic, GameManager.Events, GameManager.StatusEffects);
+                GameManager.Data, _magic, GameManager.Events, GameManager.StatusEffects, GameManager.Actors, target);
 
             // 爆発処理
             if (BulletFeatureProcessor.ShouldExplode(_coreProjectile.Profile.features))
@@ -267,6 +270,9 @@ namespace Game.Runtime
         /// <returns>ヒットを受理した場合 true。ターゲット別上限到達でスキップした場合 false。
         /// Projectile が既に死亡している場合も false を返す。</returns>
         internal bool TryRegisterHit(int targetHash, out bool shouldDespawn)
+            => TryRegisterHit(new ActorRef(targetHash, 0), out shouldDespawn);
+
+        internal bool TryRegisterHit(ActorRef target, out bool shouldDespawn)
         {
             shouldDespawn = false;
 
@@ -277,19 +283,19 @@ namespace Game.Runtime
 
             if (_hitCounts == null)
             {
-                _hitCounts = new Dictionary<int, int>();
+                _hitCounts = new Dictionary<ActorRef, int>();
             }
 
             // ターゲット別上限ゲート: 到達済みは総数にもカウントせずスキップ
             int perTargetLimit = _coreProjectile.Profile.GetEffectivePerTargetHitLimit();
-            _hitCounts.TryGetValue(targetHash, out int current);
+            _hitCounts.TryGetValue(target, out int current);
             if (current >= perTargetLimit)
             {
                 return false;
             }
 
             current++;
-            _hitCounts[targetHash] = current;
+            _hitCounts[target] = current;
 
             // 総ヒット数を Projectile 側で消費 (既存経路)。
             // RegisterHit は非 Pierce で RemainingHits<=0 になった際に内部で Kill() する。
@@ -307,7 +313,12 @@ namespace Game.Runtime
             {
                 return 0;
             }
-            return _hitCounts.TryGetValue(targetHash, out int count) ? count : 0;
+            int count = 0;
+            foreach (KeyValuePair<ActorRef, int> pair in _hitCounts)
+            {
+                if (pair.Key.Hash == targetHash) { count += pair.Value; }
+            }
+            return count;
         }
     }
 }

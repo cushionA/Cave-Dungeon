@@ -13,6 +13,8 @@ namespace Game.Core
 
     public struct ActiveEffect
     {
+        public ActorRef targetRef;
+        public ActorRef sourceRef;
         public int instanceId;
         public int targetHash;
         public int sourceHash;

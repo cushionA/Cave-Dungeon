@@ -43,6 +43,25 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
+        public void HitResolver_VanishedTarget_IgnoresDamageWithoutChangingResourcesOrGuard()
+        {
+            CharacterVitals vitals = Vitals();
+            CharacterFlags flags = default;
+            flags.IsVanished = true;
+            CharacterDefenseState defense = new CharacterDefenseState { isGuarding = true, guardElapsedTime = 1f };
+
+            HitResolution result = HitResolver.Resolve(Attack(30f, 10f), ref vitals,
+                Combat(), ref flags, ref defense, Context());
+
+            Assert.IsTrue(result.ignored);
+            Assert.AreEqual(1000, vitals.currentHp);
+            Assert.AreEqual(100f, vitals.currentStamina);
+            Assert.AreEqual(100f, vitals.currentArmor);
+            Assert.IsTrue(defense.isGuarding);
+            Assert.AreEqual(1f, defense.guardElapsedTime);
+        }
+
+        [Test]
         public void HitResolver_GuardAndArmorDamage_AreIndependentChannels()
         {
             CharacterVitals vitals = Vitals(stamina: 50f);

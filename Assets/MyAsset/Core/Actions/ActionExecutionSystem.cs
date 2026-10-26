@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Game.Core
 {
-    public sealed class ActionExecutionSystem : IDisposable
+    public sealed partial class ActionExecutionSystem : IDisposable
     {
         private sealed class Instance
         {
@@ -21,10 +21,11 @@ namespace Game.Core
             public int actorVersion;
             public int definitionVersion;
             public bool allowInterruptedSource;
+            public long waitForInstanceId;
         }
 
         private readonly IExecutionWorld _world;
-        private readonly Dictionary<int, ActionDefinitionData> _definitions = new Dictionary<int, ActionDefinitionData>();
+        private readonly Dictionary<int, ActionDefinitionSnapshot> _definitions = new Dictionary<int, ActionDefinitionSnapshot>();
         private readonly Dictionary<int, int> _definitionVersions = new Dictionary<int, int>();
         private readonly Dictionary<int, int> _actors = new Dictionary<int, int>();
         private readonly Dictionary<long, Instance> _instances = new Dictionary<long, Instance>();
@@ -49,9 +50,10 @@ namespace Game.Core
         public int PendingCount => _requests.Count + _tickRequests.Count - _tickRequestIndex;
         public int RetainedSourceCount => _completedSources.Count;
 
-        public ActionExecutionSystem(IExecutionWorld world)
+        public ActionExecutionSystem(IExecutionWorld world, ActorRegistry actors = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
+            _actorRegistry = actors;
         }
 
         public void RegisterActor(int ownerHash)
@@ -64,10 +66,12 @@ namespace Game.Core
 
         public void RemoveActor(int ownerHash)
         {
+            using GroupMutation mutation = new GroupMutation(this);
             if (!_actors.Remove(ownerHash))
             {
                 return;
             }
+            CancelActorGroups(ownerHash);
             RemovePendingRequests(request => request.request.ownerHash == ownerHash);
             List<Instance> removed = new List<Instance>();
             foreach (KeyValuePair<long, Instance> pair in _instances)
@@ -82,6 +86,7 @@ namespace Game.Core
             for (int i = 0; i < removed.Count; i++)
             {
                 _instances.Remove(removed[i].execution.instanceId);
+                DetachGroupMember(removed[i], true);
                 hadGameplay |= !removed[i].execution.definition.motionOnly;
                 hadStatefulAction |= AffectsActState(removed[i].execution.definition);
             }
@@ -96,6 +101,7 @@ namespace Game.Core
             for (int i = 0; i < sources.Count; i++)
             {
                 _completedSources.Remove(sources[i]);
+                _completedSourceGroups.Remove(sources[i]);
                 _interruptedSources.Remove(sources[i]);
                 _pendingSourceNotifications.Remove(sources[i]);
             }
@@ -138,6 +144,7 @@ namespace Game.Core
 
         public bool UnregisterDefinition(int id)
         {
+            using GroupMutation mutation = new GroupMutation(this);
             if (!_definitions.Remove(id))
             {
                 return false;
@@ -164,14 +171,23 @@ namespace Game.Core
 
         public bool TryStart(ActionRequest request, out long instanceId)
         {
-            return TryStart(request, out instanceId, false);
+            return TryStart(request, out instanceId, out _, false);
         }
 
-        private bool TryStart(ActionRequest request, out long instanceId, bool allowInterruptedSource)
+        public bool TryStart(ActionRequest request, out long instanceId, out long groupId)
         {
+            return TryStart(request, out instanceId, out groupId, false);
+        }
+
+        private bool TryStart(ActionRequest request, out long instanceId, out long groupId, bool allowInterruptedSource,
+            long completedSourceId = 0)
+        {
+            using GroupMutation mutation = new GroupMutation(this);
             instanceId = 0;
-            if (_disposed || (_notificationDepth > 0 && !request.forced) || !_actors.ContainsKey(request.ownerHash)
-                || !_definitions.TryGetValue(request.definitionId, out ActionDefinitionData definition)
+            groupId = 0;
+            if (_disposed || (_notificationDepth > 0 && !request.forced) || !PrepareRequestReferences(ref request)
+                || !_actors.ContainsKey(request.ownerHash)
+                || !_definitions.TryGetValue(request.definitionId, out ActionDefinitionSnapshot definition)
                 || !_world.TryGetActor(request.ownerHash, out ActionActorState actor)
                 || !ValidSource(request.ownerHash, request.sourceInstanceId, allowInterruptedSource))
             {
@@ -184,6 +200,8 @@ namespace Game.Core
                 {
                     return false;
                 }
+                if (!request.forced && actor.flags.IsVanished
+                    && !IsCostFreeRequiredContinuation(request, definition)) { return false; }
                 if (!request.forced && (Blocked(definition, actor) || IsReaction(actor.flags.ActState)))
                 {
                     return false;
@@ -211,6 +229,22 @@ namespace Game.Core
                 conflicts.Add(pair.Key);
             }
 
+            if (completedSourceId != 0)
+            {
+                if (!_instances.TryGetValue(completedSourceId, out Instance source)
+                    || source.execution.ownerHash != request.ownerHash) { return false; }
+                conflicts ??= new List<long>();
+                if (!conflicts.Contains(completedSourceId)) { conflicts.Add(completedSourceId); }
+            }
+            if (!CollectGroupReplacement(request, definition, ref conflicts, out ExecutionGroup replaced)
+                || !ResolveRequestGroup(ref request, out ExecutionGroup group)) { return false; }
+            groupId = group.id;
+            if (replaced != null)
+            {
+                replaced.cancelRequested = true;
+                replaced.wasCancelled = true;
+                RemovePendingRequests(queued => queued.request.groupId == replaced.id);
+            }
             List<Instance> ended = null;
             if (conflicts != null)
             {
@@ -220,8 +254,11 @@ namespace Game.Core
                     long id = conflicts[i];
                     Instance previous = _instances[id];
                     _instances.Remove(id);
+                    bool completed = id == completedSourceId;
+                    DetachGroupMember(previous, !completed && previous.execution.groupId != groupId);
                     _completedSources[id] = request.ownerHash;
-                    _interruptedSources.Add(id);
+                    _completedSourceGroups[id] = previous.execution.groupId;
+                    if (!completed) { _interruptedSources.Add(id); }
                     _pendingSourceNotifications.Add(id);
                     ended.Add(previous);
                 }
@@ -232,17 +269,20 @@ namespace Game.Core
             {
                 execution = new ActionExecution
                 {
-                    instanceId = instanceId, ownerHash = request.ownerHash, definitionId = definition.id,
-                    targetHash = request.targetHash, direction = request.direction,
+                    instanceId = instanceId, groupId = groupId,
+                    ownerHash = request.ownerHash, ownerRef = request.ownerRef, definitionId = definition.id,
+                    targetHash = request.targetHash, targetRef = request.targetRef, direction = request.direction,
                     targetPosition = request.targetPosition, speedMultiplier = request.speedMultiplier == 0f ? 1f : request.speedMultiplier,
+                    chargeMultiplier = request.chargeMultiplier,
                     forced = request.forced, sourceInstanceId = request.sourceInstanceId, definition = definition,
                     phase = definition.anticipationDuration > 0f ? AnimationPhase.Anticipation : AnimationPhase.Active,
                 },
-                armorConsumed = definition.effects.Length > 0 ? new float[definition.effects.Length] : Array.Empty<float>(),
-                triggeredTransitions = definition.transitions.Length > 0 ? new bool[definition.transitions.Length] : Array.Empty<bool>(),
-                pendingTransitions = definition.transitions.Length > 0 ? new bool[definition.transitions.Length] : Array.Empty<bool>(),
+                armorConsumed = definition.effects.Count > 0 ? new float[definition.effects.Count] : Array.Empty<float>(),
+                triggeredTransitions = definition.transitions.Count > 0 ? new bool[definition.transitions.Count] : Array.Empty<bool>(),
+                pendingTransitions = definition.transitions.Count > 0 ? new bool[definition.transitions.Count] : Array.Empty<bool>(),
             };
             _instances.Add(instanceId, state);
+            group.members.Add(instanceId);
             if (!definition.motionOnly)
             {
                 actor.vitals.currentStamina = Math.Max(0f, actor.vitals.currentStamina - definition.staminaCost);
@@ -255,7 +295,14 @@ namespace Game.Core
             {
                 for (int i = 0; i < ended.Count; i++)
                 {
-                    Notify(ended[i], ActionSignalKind.Interrupted);
+                    Instance previous = ended[i];
+                    if (previous.execution.instanceId == completedSourceId)
+                    {
+                        _completionBarriers[completedSourceId] = instanceId;
+                        try { Notify(previous, ActionSignalKind.Completed); }
+                        finally { _completionBarriers.Remove(completedSourceId); }
+                    }
+                    else { Notify(previous, ActionSignalKind.Interrupted); }
                 }
             }
             if (!_instances.ContainsKey(instanceId))
@@ -274,20 +321,29 @@ namespace Game.Core
 
         public void Queue(ActionRequest request)
         {
+            using GroupMutation mutation = new GroupMutation(this);
             Queue(request, false);
         }
 
         private void Queue(ActionRequest request, bool allowInterruptedSource)
         {
-            if (!_disposed && _actors.TryGetValue(request.ownerHash, out int version)
+            long barrier = 0;
+            if (!request.detached && _completionBarriers.TryGetValue(request.sourceInstanceId, out barrier))
+            {
+                request.sourceInstanceId = barrier;
+            }
+            if (!_disposed && PrepareRequestReferences(ref request)
+                && _actors.TryGetValue(request.ownerHash, out int version)
                 && _definitionVersions.TryGetValue(request.definitionId, out int definitionVersion)
-                && ValidSource(request.ownerHash, request.sourceInstanceId, allowInterruptedSource))
+                && ValidSource(request.ownerHash, request.sourceInstanceId, allowInterruptedSource)
+                && ResolveRequestGroup(ref request, out ExecutionGroup group))
             {
                 _requests.Enqueue(new QueuedRequest
                 {
                     request = request, actorVersion = version, definitionVersion = definitionVersion,
-                    allowInterruptedSource = allowInterruptedSource,
+                    allowInterruptedSource = allowInterruptedSource, waitForInstanceId = barrier,
                 });
+                group.pending++;
             }
         }
 
@@ -316,6 +372,7 @@ namespace Game.Core
 
         public int CancelPendingFrom(long sourceId)
         {
+            using GroupMutation mutation = new GroupMutation(this);
             if (sourceId <= 0)
             {
                 return 0;
@@ -327,6 +384,7 @@ namespace Game.Core
 
         public void Tick(float deltaTime)
         {
+            using GroupMutation mutation = new GroupMutation(this);
             if (_disposed || deltaTime < 0f || _notificationDepth > 0)
             {
                 return;
@@ -338,12 +396,23 @@ namespace Game.Core
             while (_tickRequestIndex < _tickRequests.Count)
             {
                 QueuedRequest queued = _tickRequests[_tickRequestIndex++];
-                if (_actors.TryGetValue(queued.request.ownerHash, out int version) && version == queued.actorVersion
+                bool current = _actors.TryGetValue(queued.request.ownerHash, out int version) && version == queued.actorVersion
                     && _definitionVersions.TryGetValue(queued.request.definitionId, out int definitionVersion)
-                    && definitionVersion == queued.definitionVersion)
+                    && definitionVersion == queued.definitionVersion;
+                if (current && queued.waitForInstanceId != 0 && _instances.ContainsKey(queued.waitForInstanceId))
                 {
-                    TryStart(queued.request, out _, queued.allowInterruptedSource);
+                    _requests.Enqueue(queued);
+                    continue;
                 }
+                bool accepted = false;
+                try
+                {
+                    if (current)
+                    {
+                        accepted = TryStart(queued.request, out _, out _, queued.allowInterruptedSource);
+                    }
+                }
+                finally { ReleaseQueuedGroup(queued, !accepted); }
             }
             _tickRequests.Clear();
             _tickRequestIndex = 0;
@@ -361,6 +430,7 @@ namespace Game.Core
 
         public bool Release(long instanceId)
         {
+            using GroupMutation mutation = new GroupMutation(this);
             if (!_instances.TryGetValue(instanceId, out Instance state) || state.execution.released)
             {
                 return false;
@@ -388,6 +458,7 @@ namespace Game.Core
 
         public bool Signal(long instanceId, ActionSignalKind kind, int signalId = 0)
         {
+            using GroupMutation mutation = new GroupMutation(this);
             if (!_instances.TryGetValue(instanceId, out Instance state))
             {
                 return false;
@@ -499,7 +570,7 @@ namespace Game.Core
                 return false;
             }
             ActionExecution active = selected.execution;
-            ActionDefinitionData definition = active.definition;
+            ActionDefinitionSnapshot definition = active.definition;
             if ((definition.gameplay & ActionGameplayFlags.Move) != 0 && active.elapsed >= definition.moveStartTime
                 && (definition.moveDuration <= 0f || active.elapsed < definition.moveStartTime + definition.moveDuration))
             {
@@ -524,8 +595,8 @@ namespace Game.Core
                 combined.hasGuardAttackEffect |= value.hasGuardAttackEffect;
                 combined.hasKnockbackImmunity |= value.hasKnockbackImmunity;
                 combined.damageReduction = Math.Max(combined.damageReduction, value.damageReduction);
-                ActionEffect[] effects = state.execution.definition.effects;
-                for (int i = 0; i < effects.Length; i++)
+                IReadOnlyList<ActionEffect> effects = state.execution.definition.effects;
+                for (int i = 0; i < effects.Count; i++)
                 {
                     if (effects[i].type == ActionEffectType.Armor && effects[i].IsActive(state.execution.elapsed))
                     {
@@ -548,8 +619,8 @@ namespace Game.Core
                 {
                     continue;
                 }
-                ActionEffect[] effects = state.execution.definition.effects;
-                for (int i = 0; i < effects.Length; i++)
+                IReadOnlyList<ActionEffect> effects = state.execution.definition.effects;
+                for (int i = 0; i < effects.Count; i++)
                 {
                     if (effects[i].type == ActionEffectType.Armor && effects[i].IsActive(state.execution.elapsed))
                     {
@@ -574,8 +645,8 @@ namespace Game.Core
                 {
                     continue;
                 }
-                ActionEffect[] effects = state.execution.definition.effects;
-                for (int i = 0; i < effects.Length; i++)
+                IReadOnlyList<ActionEffect> effects = state.execution.definition.effects;
+                for (int i = 0; i < effects.Count; i++)
                 {
                     if (effects[i].type == ActionEffectType.Armor && effects[i].IsActive(state.execution.elapsed))
                     {
@@ -588,18 +659,25 @@ namespace Game.Core
 
         public void Dispose()
         {
+            using GroupMutation mutation = new GroupMutation(this);
             if (_disposed)
             {
                 return;
             }
             _disposed = true;
+            foreach (ExecutionGroup group in _groups.Values)
+            {
+                group.cancelRequested = true;
+                group.wasCancelled = true;
+            }
             List<long> active = new List<long>(_instances.Keys);
             for (int i = 0; i < active.Count; i++)
             {
                 End(active[i], ActionSignalKind.Interrupted);
             }
-            _requests.Clear();
+            RemovePendingRequests(_ => true);
             _completedSources.Clear();
+            _completedSourceGroups.Clear();
             _interruptedSources.Clear();
             _pendingSourceNotifications.Clear();
             _actors.Clear();
@@ -617,6 +695,11 @@ namespace Game.Core
                 return;
             }
             ActionExecution active = state.execution;
+            if (!IsCurrentExecutionOwner(active))
+            {
+                CancelGroup(active.groupId);
+                return;
+            }
             if (!active.definition.motionOnly)
             {
                 if (!_world.TryGetActor(active.ownerHash, out ActionActorState actor)
@@ -711,7 +794,7 @@ namespace Game.Core
 
         private void CompleteFixedIfExpired(Instance state)
         {
-            ActionDefinitionData definition = state.execution.definition;
+            ActionDefinitionSnapshot definition = state.execution.definition;
             if (definition.endMode == ActionEndMode.Timed && definition.durationMode == ActionDurationMode.Fixed
                 && state.execution.elapsed >= definition.duration)
             {
@@ -723,7 +806,7 @@ namespace Game.Core
         {
             state.execution.phase = phase;
             state.execution.phaseElapsed = elapsed;
-            if (!state.execution.definition.motionOnly)
+            if (!state.execution.definition.motionOnly && IsCurrentExecutionOwner(state.execution))
             {
                 CommitDerivedState(state.execution.ownerHash, !AffectsActState(state.execution.definition));
             }
@@ -732,21 +815,24 @@ namespace Game.Core
 
         private bool End(long id, ActionSignalKind kind)
         {
+            using GroupMutation mutation = new GroupMutation(this);
             if (!_instances.TryGetValue(id, out Instance state))
             {
                 return false;
             }
             _instances.Remove(id);
+            DetachGroupMember(state, kind == ActionSignalKind.Interrupted);
             if (_actors.ContainsKey(state.execution.ownerHash))
             {
                 _completedSources[id] = state.execution.ownerHash;
+                _completedSourceGroups[id] = state.execution.groupId;
                 _pendingSourceNotifications.Add(id);
                 if (kind == ActionSignalKind.Interrupted)
                 {
                     _interruptedSources.Add(id);
                 }
             }
-            if (!state.execution.definition.motionOnly)
+            if (!state.execution.definition.motionOnly && IsCurrentExecutionOwner(state.execution))
             {
                 CommitDerivedState(state.execution.ownerHash, !AffectsActState(state.execution.definition));
             }
@@ -786,8 +872,8 @@ namespace Game.Core
 
         private void ProcessTransitions(Instance state, ActionSignalKind kind, int signalId)
         {
-            ActionTransition[] transitions = state.execution.definition.transitions;
-            for (int i = 0; i < transitions.Length; i++)
+            IReadOnlyList<ActionTransition> transitions = state.execution.definition.transitions;
+            for (int i = 0; i < transitions.Count; i++)
             {
                 if (state.triggeredTransitions[i])
                 {
@@ -810,9 +896,13 @@ namespace Game.Core
                 Queue(new ActionRequest
                 {
                     ownerHash = state.execution.ownerHash, definitionId = transition.nextDefinitionId,
-                    targetHash = state.execution.targetHash, targetPosition = state.execution.targetPosition,
+                    ownerRef = state.execution.ownerRef,
+                    targetHash = state.execution.targetHash, targetRef = state.execution.targetRef,
+                    targetPosition = state.execution.targetPosition,
                     direction = state.execution.direction, speedMultiplier = state.execution.speedMultiplier,
+                    chargeMultiplier = state.execution.chargeMultiplier,
                     sourceInstanceId = state.execution.instanceId,
+                    detached = transition.detached,
                 }, kind == ActionSignalKind.Interrupted);
                 return;
             }
@@ -825,7 +915,7 @@ namespace Game.Core
                     && (allowInterruptedSource || !_interruptedSources.Contains(source)));
         }
 
-        private static bool CanReplace(ActionRequest request, ActionDefinitionData definition, ActionExecution existing)
+        private static bool CanReplace(ActionRequest request, ActionDefinitionSnapshot definition, ActionExecution existing)
         {
             if (definition.motionOnly && !existing.definition.motionOnly)
             {
@@ -842,7 +932,7 @@ namespace Game.Core
             return !existing.forced && definition.priority >= existing.definition.priority && existing.canCancel;
         }
 
-        private static bool Blocked(ActionDefinitionData definition, ActionActorState actor)
+        private static bool Blocked(ActionDefinitionSnapshot definition, ActionActorState actor)
         {
             return actor.statusEffects.BlocksActions
                 || ((definition.gameplay & ActionGameplayFlags.Cast) != 0 && actor.statusEffects.BlocksCasting)
@@ -883,7 +973,7 @@ namespace Game.Core
             return HigherPriority(candidate, current);
         }
 
-        private static bool AffectsActState(ActionDefinitionData definition)
+        private static bool AffectsActState(ActionDefinitionSnapshot definition)
         {
             return !definition.motionOnly
                 && (definition.resources != ActionResources.None || definition.actState != ActState.Neutral);
@@ -962,6 +1052,7 @@ namespace Game.Core
                 for (int i = 0; i < removed.Count; i++)
                 {
                     _completedSources.Remove(removed[i]);
+                    _completedSourceGroups.Remove(removed[i]);
                     _interruptedSources.Remove(removed[i]);
                 }
             }
@@ -980,6 +1071,7 @@ namespace Game.Core
                 }
                 else
                 {
+                    ReleaseQueuedGroup(request, true);
                     removed++;
                 }
             }
@@ -987,6 +1079,7 @@ namespace Game.Core
             {
                 if (matches(_tickRequests[i]))
                 {
+                    ReleaseQueuedGroup(_tickRequests[i], true);
                     _tickRequests.RemoveAt(i);
                     removed++;
                 }
@@ -994,33 +1087,10 @@ namespace Game.Core
             return removed;
         }
 
-        private static ActionDefinitionData SnapshotDefinition(ActionDefinitionData data)
+        private static ActionDefinitionSnapshot SnapshotDefinition(ActionDefinitionData data)
         {
-            if (!FiniteNonNegative(data.staminaCost) || data.mpCost < 0 || !FiniteNonNegative(data.staminaPerSecond)
-                || !FiniteNonNegative(data.anticipationDuration) || !FiniteNonNegative(data.activeDuration)
-                || !FiniteNonNegative(data.recoveryDuration) || !FiniteNonNegative(data.moveStartTime)
-                || !FiniteNonNegative(data.moveDuration) || !FiniteNonNegative(data.moveSpeed)
-                || !FiniteNonNegative(data.duration)
-                || float.IsNaN(data.cancelAfter) || float.IsInfinity(data.cancelAfter)
-                || float.IsNaN(data.cancelPoint) || float.IsInfinity(data.cancelPoint) || data.cancelPoint > 1f
-                || !Enum.IsDefined(typeof(ActionEndMode), data.endMode)
-                || !Enum.IsDefined(typeof(ActionDurationMode), data.durationMode))
-            {
-                throw new ArgumentException("Invalid action definition.", nameof(data));
-            }
-            data.effects = data.effects != null ? (ActionEffect[])data.effects.Clone() : Array.Empty<ActionEffect>();
-            data.transitions = data.transitions != null ? (ActionTransition[])data.transitions.Clone() : Array.Empty<ActionTransition>();
-            for (int i = 0; i < data.effects.Length; i++)
-            {
-                if (!FiniteNonNegative(data.effects[i].startTime) || !FiniteNonNegative(data.effects[i].duration)
-                    || !FiniteNonNegative(data.effects[i].value))
-                {
-                    throw new ArgumentException("Invalid timed action effect.", nameof(data));
-                }
-            }
-            return data;
+            ActionDefinitionValidator.Validate(data);
+            return new ActionDefinitionSnapshot(data);
         }
-
-        private static bool FiniteNonNegative(float value) => value >= 0f && !float.IsInfinity(value);
     }
 }

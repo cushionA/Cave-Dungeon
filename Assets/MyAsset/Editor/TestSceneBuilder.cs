@@ -71,9 +71,9 @@ namespace Game.Editor
             AttackInfo[] enemyAttacks = CreateEnemyAttackInfos(placeholderAnimController);
             AttackInfo[] bossAttacks = CreateBossAttackInfos(placeholderAnimController);
             AttackInfo[] companionAttacks = CreateCompanionAttackInfos(placeholderAnimController);
-            AIInfo basicEnemyAI = CreateBasicEnemyAIInfo();
-            AIInfo bossAI = CreateBossAIInfo();
-            AIInfo companionAI = CreateCompanionAIInfo();
+            AIInfo basicEnemyAI = CreateBasicEnemyAIInfo(enemyAttacks[0]);
+            AIInfo bossAI = CreateBossAIInfo(bossAttacks[0]);
+            AIInfo companionAI = CreateCompanionAIInfo(companionAttacks[0]);
 
             // ===== システム =====
             GameObject gmObj = new GameObject("GameManager");
@@ -359,8 +359,10 @@ namespace Game.Editor
 
         // ===== AIInfo アセット自動生成 =====
 
-        private static AIInfo CreateBasicEnemyAIInfo()
+        private static AIInfo CreateBasicEnemyAIInfo(AttackInfo attack)
         {
+            attack.RefreshPersistentId();
+            EditorUtility.SetDirty(attack);
             string path = "Assets/MyAsset/Data/PLACEHOLDER_BasicEnemyAI.asset";
             // 常に再生成（パラメータ変更を反映するため）
             AIInfo existing = AssetDatabase.LoadAssetAtPath<AIInfo>(path);
@@ -378,6 +380,7 @@ namespace Game.Editor
                 {
                     actName = "BasicAttack",
                     actType = ActType.Attack,
+                    actionDefinitionId = attack.PersistentId,
                     attackInfoIndex = 0,
                     weight = 80f,
                     coolTime = 2f,
@@ -446,8 +449,10 @@ namespace Game.Editor
             return ai;
         }
 
-        private static AIInfo CreateBossAIInfo()
+        private static AIInfo CreateBossAIInfo(AttackInfo attack)
         {
+            attack.RefreshPersistentId();
+            EditorUtility.SetDirty(attack);
             string path = "Assets/MyAsset/Data/PLACEHOLDER_BossAI.asset";
             AIInfo existing = AssetDatabase.LoadAssetAtPath<AIInfo>(path);
             if (existing != null)
@@ -464,6 +469,7 @@ namespace Game.Editor
                 {
                     actName = "BossSlam",
                     actType = ActType.Attack,
+                    actionDefinitionId = attack.PersistentId,
                     attackInfoIndex = 0,
                     weight = 90f,
                     coolTime = 1.5f,
@@ -506,8 +512,10 @@ namespace Game.Editor
             return ai;
         }
 
-        private static AIInfo CreateCompanionAIInfo()
+        private static AIInfo CreateCompanionAIInfo(AttackInfo attack)
         {
+            attack.RefreshPersistentId();
+            EditorUtility.SetDirty(attack);
             string path = "Assets/MyAsset/Data/PLACEHOLDER_CompanionAI.asset";
             AIInfo existing = AssetDatabase.LoadAssetAtPath<AIInfo>(path);
             if (existing != null)
@@ -524,6 +532,7 @@ namespace Game.Editor
                 {
                     actName = "CompanionAttack",
                     actType = ActType.Attack,
+                    actionDefinitionId = attack.PersistentId,
                     attackInfoIndex = 0,
                     weight = 70f,
                     coolTime = 1.5f,

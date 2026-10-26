@@ -10,6 +10,7 @@ namespace Game.Core
     public class GameManagerCore : IDisposable
     {
         private SoACharaDataDic _data;
+        private readonly ActorRegistry _actors = new ActorRegistry();
         private GameEvents _events;
         private StatusEffectSystem _statusEffects;
         private EquipmentStore _equipment;
@@ -19,16 +20,18 @@ namespace Game.Core
         private bool _disposed;
 
         public SoACharaDataDic Data => _data;
+        public ActorRegistry Actors => _actors;
         public GameEvents Events => _events;
         public StatusEffectSystem StatusEffects => _statusEffects;
         public EquipmentStore Equipment => _equipment;
+        public CharacterStatsSystem Stats => _equipment?.Stats;
         public ActionExecutionSystem Actions => _actions;
         public bool IsInitialized => _initialized;
 
         public GameManagerCore()
         {
             _subManagers = new List<IGameSubManager>();
-            _events = new GameEvents();
+            _events = new GameEvents(_actors);
         }
 
         /// <summary>
@@ -42,9 +45,9 @@ namespace Game.Core
             }
 
             _data = new SoACharaDataDic(containerCapacity);
-            _statusEffects = new StatusEffectSystem(_data, _events);
-            _equipment = new EquipmentStore(_events);
-            _actions = new ActionExecutionSystem(new SoAExecutionWorld(_data));
+            _statusEffects = new StatusEffectSystem(_data, _events, _actors);
+            _equipment = new EquipmentStore(_events, new SoAEquipmentWorld(_data));
+            _actions = new ActionExecutionSystem(new SoAExecutionWorld(_data), _actors);
 
             // InitOrder昇順でソートして初期化
             _subManagers.Sort((a, b) => a.InitOrder.CompareTo(b.InitOrder));
@@ -85,8 +88,10 @@ namespace Game.Core
         private int RegisterCharacterData(int hash, in CharacterBaseStats basis, in CharacterGrowth growth,
             CharacterVitals vitals, CharacterFlags flags, ManagedCharacter managed, CharacterDefenseState defenseState)
         {
+            if (hash == 0) { throw new ArgumentOutOfRangeException(nameof(hash)); }
             int index = _data.Add(hash, vitals, basis.combat, flags, basis.movement,
                 default, default, default, managed);
+            _actors.Register(hash);
             _data.GetBaseStats(hash) = basis;
             _data.GetGrowth(hash) = growth;
             defenseState.maxArmor = vitals.maxArmor;
@@ -102,16 +107,16 @@ namespace Game.Core
 
         public void ApplyCharacterGrowth(int hash, in CharacterGrowth growth)
         {
-            CharacterVitals vitals = CharacterStatCalculator.RecalculateVitals(
-                _data.GetBaseStats(hash), growth, _data.GetVitals(hash));
-            _data.GetGrowth(hash) = growth;
-            _data.GetVitals(hash) = vitals;
-            _events.FireCharacterStatsChanged(hash);
+            if (!Stats.ApplyGrowth(hash, growth))
+            {
+                throw new KeyNotFoundException($"Character {hash} is not registered.");
+            }
         }
 
         /// <summary>キャラクター削除</summary>
         public void UnregisterCharacter(int hash)
         {
+            _actors.Unregister(hash);
             _actions.RemoveActor(hash);
             _statusEffects.Unregister(hash);
             _equipment.Unregister(hash);
@@ -136,6 +141,7 @@ namespace Game.Core
             _statusEffects?.Dispose();
             _data?.Dispose();
             _events?.Dispose();
+            _actors.Clear();
             _subManagers.Clear();
             _initialized = false;
             _disposed = true;

@@ -6,7 +6,7 @@ namespace Game.Core
     /// 戦闘データ取得の共通ヘルパー。
     /// DamageDealer/HitBoxで重複していたロジックを一元化。
     /// </summary>
-    public static class CombatDataHelper
+    public static partial class CombatDataHelper
     {
         private const int k_DefaultMaxHitCount = 1;
 
@@ -41,19 +41,6 @@ namespace Game.Core
                 inputWindow = info.inputWindow,
                 justGuardResistance = info.justGuardResistance
             };
-        }
-
-        /// <summary>
-        /// 指定ハッシュのキャラクターの攻撃ステータスを取得する。
-        /// キャラクターが存在しない場合はdefaultを返す。
-        /// </summary>
-        public static ElementalStatus GetAttackStats(SoACharaDataDic data, int ownerHash)
-        {
-            if (data == null || !data.TryGetValue(ownerHash, out int _))
-            {
-                return default;
-            }
-            return data.GetCombatStats(ownerHash).attack;
         }
 
         /// <summary>

@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 55a1ec93ce0944c47887ddab2ae86a7a, type: 3}
   m_Name: PLACEHOLDER_PlayerSlash
   m_EditorClassIdentifier: Game.Core::Game.Core.AttackInfo
+  persistentId: c5a0625aaf84a3446a91977bf3d08602
   attackName: PLACEHOLDER_PlayerSlash
   category: 0
   motion: {fileID: 11400000, guid: dfe5114fd6f64a47ad43b99922d3e1ed, type: 2}

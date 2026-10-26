@@ -2,10 +2,22 @@ using System;
 
 namespace Game.Core
 {
+    public interface IReadOnlyEquipmentHolder
+    {
+        IEquippable Weapon { get; }
+        IEquippable Shield { get; }
+        IEquippable Core { get; }
+        bool HasWeapon { get; }
+        bool HasShield { get; }
+        bool HasCore { get; }
+        AbilityFlag GetCombinedAbilityFlags();
+        int GetTotalWeight();
+    }
+
     /// <summary>
     /// 装備スロット管理のピュアロジック。3スロット（Weapon/Shield/Core）を管理。
     /// </summary>
-    public class EquipmentHolder
+    public class EquipmentHolder : IReadOnlyEquipmentHolder
     {
         private IEquippable _weapon;
         private IEquippable _shield;

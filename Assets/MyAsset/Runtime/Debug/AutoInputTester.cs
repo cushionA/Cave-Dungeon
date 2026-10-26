@@ -56,7 +56,6 @@ namespace Game.Runtime
         private PlayerInputHandler _inputHandler;
         private BaseCharacter _baseCharacter;
         private ActionExecutorController _actionExecutor;
-        private Rigidbody2D _rb;
 
         private bool _isRunning;
         private int _testIndex;
@@ -147,7 +146,6 @@ namespace Game.Runtime
             _inputHandler = _player.GetComponent<PlayerInputHandler>();
             _baseCharacter = _player.GetComponent<BaseCharacter>();
             _actionExecutor = _player.GetComponent<ActionExecutorController>();
-            _rb = _player.GetComponent<Rigidbody2D>();
 
             if (_inputHandler == null)
             {
@@ -292,9 +290,8 @@ namespace Game.Runtime
         {
             if (_player != null)
             {
-                _player.transform.position = new Vector3(-6f, 2f, 0f);
-                _rb.linearVelocity = Vector2.zero;
-                _rb.angularVelocity = 0f;
+                _player.SetPhysicsPosition(new Vector2(-6f, 2f));
+                _player.ResetPhysicsMotion();
 
                 // ActionExecutorの実行状態をクリア
                 if (_actionExecutor != null && _actionExecutor.IsExecuting)
@@ -409,10 +406,10 @@ namespace Game.Runtime
             VitalsSnapshot snap = GetVitalsSnapshot(_baseCharacter.ObjectHash);
             if (snap.isValid)
             {
-                WriteLog($"[AutoInputTester] 周回リセット確認: pos={_player.transform.position} " +
+                WriteLog($"[AutoInputTester] 周回リセット確認: pos={_player.PhysicsPosition} " +
                          $"grounded={_baseCharacter.IsGrounded} hp={snap.currentHp}/{snap.maxHp} " +
                          $"stamina={snap.currentStamina:F1}/{snap.maxStamina:F1} " +
-                         $"vel={_rb.linearVelocity}");
+                         $"vel={_player.PhysicsVelocity}");
             }
         }
 

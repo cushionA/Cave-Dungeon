@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace Game.Core
@@ -5,11 +6,19 @@ namespace Game.Core
     public class Projectile
     {
         public int CasterHash { get; private set; }
+        public ActorRef CasterRef { get; private set; }
+        public ActorRef TargetRef { get; private set; }
         public int RemainingHits { get; private set; }
         public BulletProfile Profile { get; private set; }
         public float ElapsedTime { get; private set; }
         public bool IsAlive { get; private set; }
-        public int TargetHash { get; set; }
+        private int _targetHash;
+        /// <summary>互換入口。世代付き経路はTrySetTargetを使う。</summary>
+        public int TargetHash
+        {
+            get => _targetHash;
+            set { _targetHash = value; TargetRef = default; }
+        }
         public float LastEmitTime { get; set; }
         public Vector2 InitialDirection { get; private set; }
         public Vector2 Position { get; set; }
@@ -22,8 +31,12 @@ namespace Game.Core
         /// <summary>遅延中は true。Controller 側で可視性・当たり判定を制御するために参照する。</summary>
         public bool IsSpawnDelayed => SpawnDelayRemaining > 0f;
 
+        /// <summary>世代を持たない呼出しの互換入口。RuntimeはActorRef版で初期化する。</summary>
         public void Initialize(int casterHash, BulletProfile profile, Vector2 position, Vector2 direction)
         {
+            CasterRef = default;
+            TargetRef = default;
+            _targetHash = 0;
             CasterHash = casterHash;
             Profile = profile;
             RemainingHits = profile.hitLimit > 0 ? profile.hitLimit : 1;
@@ -33,6 +46,37 @@ namespace Game.Core
             InitialDirection = direction.normalized;
             Velocity = InitialDirection * profile.speed;
             SpawnDelayRemaining = profile.spawnDelay > 0f ? profile.spawnDelay : 0f;
+        }
+
+        public void Initialize(ActorRef caster, BulletProfile profile, Vector2 position, Vector2 direction)
+        {
+            if (!caster.IsValid) { throw new ArgumentException("A projectile needs an actor generation.", nameof(caster)); }
+            Initialize(caster.Hash, profile, position, direction);
+            CasterRef = caster;
+        }
+
+        public bool TrySetTarget(ActorRef target, ActorRegistry actors)
+        {
+            if (!target.IsValid && target != default) { return false; }
+            if (target.IsValid && (actors == null || !actors.IsCurrent(target))) { return false; }
+            TargetRef = target;
+            _targetHash = target.Hash;
+            return true;
+        }
+
+        public bool RefreshTarget(ActorRegistry actors)
+        {
+            if (!TargetRef.IsValid) { return false; }
+            if (actors != null && actors.IsCurrent(TargetRef)) { return true; }
+            TargetRef = default;
+            _targetHash = 0;
+            return false;
+        }
+
+        public bool CanHit(ActorRef target, ActorRegistry actors)
+        {
+            return actors != null && actors.IsCurrent(target) && target != CasterRef
+                && (!TargetRef.IsValid || target.Hash != TargetRef.Hash || target == TargetRef);
         }
 
         public void Tick(float deltaTime)
@@ -111,6 +155,7 @@ namespace Game.Core
         {
             IsAlive = false;
             CasterHash = 0;
+            CasterRef = default;
             TargetHash = 0;
             LastEmitTime = 0f;
             RemainingHits = 0;

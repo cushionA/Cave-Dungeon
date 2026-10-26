@@ -10,6 +10,8 @@ namespace Game.Core
     /// </summary>
     public class GameEvents : IDisposable
     {
+        private readonly ActorRegistry _actors;
+        public GameEvents(ActorRegistry actors = null) { _actors = actors; }
         private readonly Subject<ActionExecutionEvent> _onActionExecution = new();
         private readonly Subject<ActionRequest> _onActionRequested = new();
         public Observable<ActionExecutionEvent> OnActionExecution => _onActionExecution;
@@ -39,12 +41,14 @@ namespace Game.Core
         // ===== 戦闘 =====
         private readonly Subject<(DamageResult result, int attackerHash, int defenderHash)> _onDamageDealt = new();
         private readonly Subject<(int deadHash, int killerHash)> _onCharacterDeath = new();
+        private readonly Subject<ActorDeathEvent> _onCharacterDeathResolved = new();
         private readonly Subject<(int defenderHash, int attackerHash, GuardResult result)> _onGuardEvent = new();
         private readonly Subject<(int targetHash, StatusEffectId effectId)> _onStatusEffectApplied = new();
         private readonly Subject<(int targetHash, StatusEffectId effectId, StatusEffectChangeKind kind)> _onStatusEffectChanged = new();
         private readonly Subject<int> _onConfusionCleared = new();
         public Observable<(DamageResult result, int attackerHash, int defenderHash)> OnDamageDealt => _onDamageDealt;
         public Observable<(int deadHash, int killerHash)> OnCharacterDeath => _onCharacterDeath;
+        public Observable<ActorDeathEvent> OnCharacterDeathResolved => _onCharacterDeathResolved;
         public Observable<(int defenderHash, int attackerHash, GuardResult result)> OnGuardEvent => _onGuardEvent;
         public Observable<(int targetHash, StatusEffectId effectId)> OnStatusEffectApplied => _onStatusEffectApplied;
         public Observable<(int targetHash, StatusEffectId effectId, StatusEffectChangeKind kind)> OnStatusEffectChanged => _onStatusEffectChanged;
@@ -128,14 +132,53 @@ namespace Game.Core
 
         public void FireDamageDealt(DamageResult result, int attackerHash, int defenderHash)
         {
+            if (result.attackerRef.IsValid) { attackerHash = LiveHash(result.attackerRef); }
+            else if (_actors != null)
+            {
+                _actors.TryGet(attackerHash, out result.attackerRef);
+                attackerHash = LiveHash(result.attackerRef);
+            }
+            if (result.defenderRef.IsValid) { defenderHash = LiveHash(result.defenderRef); }
+            else if (_actors != null)
+            {
+                _actors.TryGet(defenderHash, out result.defenderRef);
+                defenderHash = LiveHash(result.defenderRef);
+            }
             _onDamageDealt.OnNext((result, attackerHash, defenderHash));
+            if (result.attackerRef.IsValid) { attackerHash = LiveHash(result.attackerRef); }
+            if (result.defenderRef.IsValid) { defenderHash = LiveHash(result.defenderRef); }
             OnDamageDealtEvent?.Invoke(result, attackerHash, defenderHash);
         }
         public void FireCharacterDeath(int deadHash, int killerHash)
         {
+            ActorRef dead = default;
+            ActorRef killer = default;
+            if (_actors != null)
+            {
+                _actors.TryGet(deadHash, out dead);
+                _actors.TryGet(killerHash, out killer);
+                deadHash = LiveHash(dead);
+                killerHash = LiveHash(killer);
+            }
+            _onCharacterDeathResolved.OnNext(new ActorDeathEvent(dead, killer));
+            if (dead.IsValid) { deadHash = LiveHash(dead); }
+            if (killer.IsValid) { killerHash = LiveHash(killer); }
             _onCharacterDeath.OnNext((deadHash, killerHash));
+            if (dead.IsValid) { deadHash = LiveHash(dead); }
+            if (killer.IsValid) { killerHash = LiveHash(killer); }
             OnCharacterDeathEvent?.Invoke(deadHash, killerHash);
         }
+        public void FireCharacterDeath(ActorRef dead, ActorRef killer)
+        {
+            _onCharacterDeathResolved.OnNext(new ActorDeathEvent(dead, killer));
+            int deadHash = LiveHash(dead);
+            int killerHash = LiveHash(killer);
+            _onCharacterDeath.OnNext((deadHash, killerHash));
+            deadHash = LiveHash(dead);
+            killerHash = LiveHash(killer);
+            OnCharacterDeathEvent?.Invoke(deadHash, killerHash);
+        }
+        private int LiveHash(ActorRef actor) => _actors != null && _actors.IsCurrent(actor) ? actor.Hash : 0;
         public void FireGuardEvent(int defenderHash, int attackerHash, GuardResult result)
             => _onGuardEvent.OnNext((defenderHash, attackerHash, result));
         public void FireStatusEffectApplied(int targetHash, StatusEffectId effectId)
@@ -185,6 +228,7 @@ namespace Game.Core
             _onSceneLoadCompleted.Dispose();
             _onDamageDealt.Dispose();
             _onCharacterDeath.Dispose();
+            _onCharacterDeathResolved.Dispose();
             _onGuardEvent.Dispose();
             _onStatusEffectApplied.Dispose();
             _onStatusEffectChanged.Dispose();

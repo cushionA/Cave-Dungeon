@@ -11,7 +11,7 @@ namespace Game.Runtime
     /// Singleton。static Data/Eventsでゲーム全体からアクセスする。
     /// </summary>
     [DefaultExecutionOrder(-100)]
-    public class GameManager : MonoBehaviour
+    public class GameManager : MonoBehaviour, ISimulationTickWorld
     {
         /// <summary>
         /// SoAコンテナ初期容量。同時登録キャラクター数（プレイヤー+仲間+敵+召喚+混乱+その他）を包含する。
@@ -28,6 +28,10 @@ namespace Game.Runtime
 
         private GameManagerCore _core;
         private GameActionRuntime _actions;
+        private AIObservationCoordinator _observations;
+        private readonly List<int> _simulationHashes = new List<int>();
+        private readonly List<ActorRef> _simulationActors = new List<ActorRef>();
+        private readonly SimulationTickRunner _simulation = new SimulationTickRunner();
         [SerializeField] private StatusEffectCatalog _statusEffectCatalog;
         private StatusEffectPresentationController _statusEffectPresentation;
 
@@ -43,6 +47,10 @@ namespace Game.Runtime
         public static GameEvents Events => Instance != null ? Instance._core.Events : null;
         public static StatusEffectSystem StatusEffects => Instance != null ? Instance._core.StatusEffects : null;
         public static EquipmentStore Equipment => Instance != null ? Instance._core.Equipment : null;
+        public static ActorRegistry Actors => Instance != null ? Instance._core.Actors : null;
+        public static CharacterStatsSystem Stats => Instance != null ? Instance._core.Stats : null;
+        public static AIObservationContext Observation => Instance != null ? Instance._observations?.Observation : null;
+        public static AITargetRelations TargetRelations => Instance != null ? Instance._observations?.Targets : null;
         public static GameActionRuntime Actions => Instance != null ? Instance._actions : null;
         public static StatusEffectCatalog StatusEffectCatalog => Instance != null ? Instance._statusEffectCatalog : null;
 
@@ -105,16 +113,101 @@ namespace Game.Runtime
             _core = new GameManagerCore();
             _core.Initialize(k_InitialContainerCapacity);
             _actions = new GameActionRuntime(_core.Data, _core.Events, _core.Actions);
+            _observations = new AIObservationCoordinator(_core.Data, _core.Actors, _core.Events);
             _statusEffectPresentation = new StatusEffectPresentationController(_core.Data, _core.StatusEffects.Store, _statusEffectCatalog);
 
             InitializeSubManagers();
         }
 
-        private void FixedUpdate()
+        private void FixedUpdate() => SimulationTick(Time.fixedDeltaTime, Time.fixedTime);
+
+        /// <summary>物理観測→入力公開→共有実行/観測→全キャラ制御→物理適用を同じ固定tickで実行する。</summary>
+        public void SimulationTick(float deltaTime, float currentTime)
         {
-            _core.StatusEffects.Tick(Time.fixedDeltaTime);
-            _core.Actions.Tick(Time.fixedDeltaTime);
+            if (_core == null || _core.Data == null) { return; }
+            _simulation.Run(this, deltaTime, currentTime);
+        }
+
+        void ISimulationTickWorld.CaptureSimulationActors()
+        {
+            _simulationHashes.Clear();
+            _core.Data.GetAllHashes(_simulationHashes);
+            _simulationActors.Clear();
+            for (int i = 0; i < _simulationHashes.Count; i++)
+            {
+                if (_core.Actors.TryGet(_simulationHashes[i], out ActorRef actor)) { _simulationActors.Add(actor); }
+            }
+        }
+
+        void ISimulationTickWorld.CaptureSimulationPhysics()
+        {
+            for (int i = 0; i < _simulationActors.Count; i++)
+            {
+                if (TryGetSimulationCharacter(i, false, out BaseCharacter character)) { character.CaptureSimulationPhysics(); }
+            }
+        }
+
+        void ISimulationTickWorld.PrepareSimulationInputs(float currentTime)
+        {
+            for (int i = 0; i < _simulationActors.Count; i++)
+            {
+                if (TryGetSimulationCharacter(i, true, out BaseCharacter character)) { character.PrepareSimulationInput(currentTime); }
+            }
+        }
+
+        void ISimulationTickWorld.AdvanceSharedSimulation(float deltaTime, float currentTime)
+        {
+            _observations.BeginTick(currentTime);
+            _core.StatusEffects.Tick(deltaTime);
+            _core.Actions.Tick(deltaTime);
             _actions.Tick();
+            ProjectileManager projectiles = Projectiles;
+            if (projectiles != null) { projectiles.SimulationTick(deltaTime); }
+            for (int i = 0; i < _simulationActors.Count; i++)
+            {
+                if (TryGetSimulationCharacter(i, false, out BaseCharacter character)) { character.PrepareObservationTick(deltaTime); }
+            }
+        }
+
+        void ISimulationTickWorld.CaptureSimulationObservation(long tick, float currentTime) => _observations.Capture(tick, currentTime);
+
+        void ISimulationTickWorld.SimulateCharacters(float deltaTime, float currentTime)
+        {
+            for (int i = 0; i < _simulationActors.Count; i++)
+            {
+                if (TryGetSimulationCharacter(i, true, out BaseCharacter character)) { character.SimulateCharacterTick(deltaTime, currentTime); }
+            }
+        }
+
+        void ISimulationTickWorld.ApplySimulationPhysics()
+        {
+            for (int i = 0; i < _simulationActors.Count; i++)
+            {
+                if (TryGetSimulationCharacter(i, true, out BaseCharacter character)) { character.ApplySimulationPhysics(); }
+            }
+        }
+
+        private bool TryGetSimulationCharacter(int index, bool requireEnabled, out BaseCharacter character)
+        {
+            character = null;
+            ActorRef actor = _simulationActors[index];
+            if (!_core.Actors.IsCurrent(actor) || !_core.Data.TryGetValue(actor.Hash, out _)) { return false; }
+            character = _core.Data.GetManaged(actor.Hash) as BaseCharacter;
+            return character != null && character.gameObject.activeInHierarchy && (!requireEnabled || character.isActiveAndEnabled);
+        }
+
+        public static bool TryGetObservation(int ownerHash, out AIObservationContext observation)
+        {
+            observation = Observation;
+            return observation != null && Actors != null && Actors.TryGet(ownerHash, out ActorRef actor)
+                && observation.Contains(actor);
+        }
+
+        public static Vector2 ObservedPosition(int hash, Vector2 fallback)
+        {
+            AIObservationContext observation = Observation;
+            return observation != null && observation.TryGetActor(hash, out AIActorObservation actor)
+                ? actor.vitals.position : fallback;
         }
 
         private void LateUpdate()
@@ -238,6 +331,7 @@ namespace Game.Runtime
         {
             if (Instance == this)
             {
+                _observations?.Dispose();
                 _statusEffectPresentation?.Dispose();
                 _actions?.Dispose();
                 _core?.Dispose();

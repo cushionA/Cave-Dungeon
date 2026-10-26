@@ -75,6 +75,50 @@ namespace Game.Tests.EditMode
             Assert.IsTrue(observed);
         }
 
+        [TestCase(30f, 30, 4, false, 26f, 86)]
+        [TestCase(2f, 30, 4, true, 0f, 0)]
+        [TestCase(0f, 0, 0, false, 0f, 0)]
+        public void ActionExecution_Start_PublishesSynchronizedMpRatio(float currentMp, int maxMp,
+            int cost, bool forced, float expectedMp, int expectedRatio)
+        {
+            ActionActorState actor = _world.actors[k_Owner];
+            actor.vitals.currentMp = currentMp;
+            actor.vitals.maxMp = maxMp;
+            _world.actors[k_Owner] = actor;
+            ActionDefinitionData definition = Definition();
+            definition.mpCost = cost;
+            int id = _system.RegisterDefinition(definition);
+            int notifications = 0;
+            _system.Changed += change =>
+            {
+                if (change.kind != ActionSignalKind.Started) { return; }
+                notifications++;
+                Assert.AreEqual(expectedMp, _world.actors[k_Owner].vitals.currentMp);
+                Assert.AreEqual(expectedRatio, _world.actors[k_Owner].vitals.mpRatio);
+            };
+
+            Assert.IsTrue(Start(id, out _, forced));
+            Assert.AreEqual(1, notifications);
+        }
+
+        [Test]
+        public void ActionExecution_InsufficientMp_LeavesSharedResourceAndRatioUnchanged()
+        {
+            ActionActorState actor = _world.actors[k_Owner];
+            actor.vitals.currentMp = 2.5f;
+            actor.vitals.maxMp = 30;
+            _world.actors[k_Owner] = actor;
+            ActionDefinitionData definition = Definition();
+            definition.mpCost = 4;
+            int id = _system.RegisterDefinition(definition);
+
+            Assert.IsFalse(Start(id, out _));
+
+            Assert.AreEqual(2.5f, _world.actors[k_Owner].vitals.currentMp);
+            Assert.AreEqual(8, _world.actors[k_Owner].vitals.mpRatio);
+            Assert.AreEqual(0, _system.ActiveCount);
+        }
+
         [Test]
         public void ActionExecution_NonConflictingActions_RunTogetherAndMotionOnlyDoesNotChangeGameplay()
         {

@@ -89,6 +89,12 @@ namespace Game.Core
         public static StatusEffectId Apply(StatusEffectApplicationData[] applications,
             int sourceHash, int hitTargetHash, GuardResult guardResult, float statusCut, IStatusEffectWriter writer,
             StatusEffectApplicationData[] equipmentApplications = null)
+            => Apply<IStatusEffectWriter>(applications, sourceHash, hitTargetHash, guardResult,
+                statusCut, writer, equipmentApplications);
+
+        public static StatusEffectId Apply<TWriter>(StatusEffectApplicationData[] applications,
+            int sourceHash, int hitTargetHash, GuardResult guardResult, float statusCut, TWriter writer,
+            StatusEffectApplicationData[] equipmentApplications = null) where TWriter : IStatusEffectWriter
         {
             StatusEffectId first = ApplyGroup(applications, sourceHash, hitTargetHash, guardResult, statusCut, writer);
             StatusEffectId equipmentFirst = ApplyGroup(equipmentApplications, sourceHash, hitTargetHash,
@@ -96,8 +102,9 @@ namespace Game.Core
             return first != StatusEffectId.None ? first : equipmentFirst;
         }
 
-        private static StatusEffectId ApplyGroup(StatusEffectApplicationData[] applications,
-            int sourceHash, int hitTargetHash, GuardResult guardResult, float statusCut, IStatusEffectWriter writer)
+        private static StatusEffectId ApplyGroup<TWriter>(StatusEffectApplicationData[] applications,
+            int sourceHash, int hitTargetHash, GuardResult guardResult, float statusCut, TWriter writer)
+            where TWriter : IStatusEffectWriter
         {
             StatusEffectId firstApplied = StatusEffectId.None;
             if (applications == null)

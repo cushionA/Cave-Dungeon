@@ -29,7 +29,7 @@ namespace Game.Core
         {
             ActState currentState = flags.ActState;
             ActionEffectProcessor.EffectState effects = context.actionEffects;
-            if (vitals.currentHp <= 0 || currentState == ActState.Dead
+            if (vitals.currentHp <= 0 || currentState == ActState.Dead || flags.IsVanished
                 || effects.isInvincible || WakeUpLogic.IsWakeUpState(currentState))
             {
                 return new HitResolution { ignored = true };
@@ -91,7 +91,6 @@ namespace Game.Core
             {
                 defense.armorRecoveryTimer = defense.armorRecoveryDelay;
             }
-            vitals.hpRatio = vitals.maxHp > 0 ? (byte)(100L * vitals.currentHp / vitals.maxHp) : (byte)0;
 
             return new HitResolution
             {

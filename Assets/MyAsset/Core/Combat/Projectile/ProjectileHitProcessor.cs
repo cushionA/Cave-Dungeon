@@ -23,14 +23,16 @@ namespace Game.Core
         /// Attack: receiver.ReceiveDamage経由で共通パイプラインを通す。
         /// Recover/Support: receiver.ObjectHash から SoA を直接書き換える。
         /// </summary>
-        /// <param name="projectile">飛翔体(生存・キャスター有効性は呼び出し側で保証)</param>
+        /// <param name="projectile">飛翔体。捕捉済み攻撃は射手消失後も元個体の入力で成立する。</param>
         /// <param name="receiver">被弾側 IDamageable (通常 DamageReceiver)。null はスキップ</param>
         /// <param name="data">SoAコンテナ(Recover/Support で必要)</param>
         /// <param name="magic">魔法定義</param>
-        /// <param name="events">Recover系のイベント発火(Attack系はDamageReceiverが発火)</param>
+        /// <param name="events">互換引数。Attack系のイベントはDamageReceiverが発火する。</param>
+        /// <param name="actors">Runtimeの世代照合。省略はhashだけの既存呼出しの互換経路。</param>
+        /// <param name="observedTarget">接触・範囲検索時に観測した対象個体。</param>
         public static HitResult ProcessHit(Projectile projectile, IDamageable receiver,
             SoACharaDataDic data, MagicDefinition magic, GameEvents events = null,
-            StatusEffectSystem statusEffects = null)
+            StatusEffectSystem statusEffects = null, ActorRegistry actors = null, ActorRef observedTarget = default)
         {
             HitResult result = new HitResult { magicType = magic.magicType };
 
@@ -39,7 +41,8 @@ namespace Game.Core
                 return result;
             }
 
-            if (data == null || !data.TryGetValue(projectile.CasterHash, out int _))
+            bool captured = magic.attackContext.IsCaptured;
+            if (data == null || (!captured && !data.TryGetValue(projectile.CasterHash, out int _)))
             {
                 return result;
             }
@@ -49,10 +52,19 @@ namespace Game.Core
             {
                 return result;
             }
+            if (data.GetFlags(targetHash).IsVanished) { return result; }
+            ActorRef targetRef = observedTarget;
+            if (captured || projectile.CasterRef.IsValid || actors != null)
+            {
+                if (actors == null || !captured || magic.attackContext.Owner != projectile.CasterRef) { return result; }
+                if (!targetRef.IsValid && !actors.TryGet(targetHash, out targetRef)) { return result; }
+                if (targetRef.Hash != targetHash || !projectile.CanHit(targetRef, actors)) { return result; }
+            }
 
-            bool appliesEffects = magic.magicType != MagicType.Attack
-                && ((magic.statusEffects != null && magic.statusEffects.Length > 0)
-                    || (magic.equipmentStatusEffects != null && magic.equipmentStatusEffects.Length > 0));
+            bool appliesEffects = magic.magicType != MagicType.Attack && (captured
+                ? magic.attackContext.HasStatusEffects
+                : ((magic.statusEffects != null && magic.statusEffects.Length > 0)
+                    || (magic.equipmentStatusEffects != null && magic.equipmentStatusEffects.Length > 0)));
             if (appliesEffects && statusEffects == null)
             {
                 throw new InvalidOperationException("Configured magic effects require a StatusEffectSystem.");
@@ -65,6 +77,7 @@ namespace Game.Core
                     // IDamageable経由でガード/無敵/HitReaction/イベント発火まで一括処理
                     DamageData damageData = BuildProjectileDamageData(
                         projectile.CasterHash, targetHash, magic, data);
+                    if (captured) { magic.attackContext.ApplyTo(ref damageData, targetRef); }
 
                     DamageResult damageResult = receiver.ReceiveDamage(damageData);
                     result.damage = damageResult.totalDamage;
@@ -96,8 +109,15 @@ namespace Game.Core
             if (appliesEffects)
             {
                 float statusCut = data.GetCombatStats(targetHash).guardStats.statusCut;
-                statusEffects.ApplyApplications(magic.statusEffects, projectile.CasterHash,
-                    targetHash, GuardResult.NoGuard, statusCut, magic.equipmentStatusEffects);
+                if (captured)
+                {
+                    statusEffects.ApplyApplications(magic.attackContext, targetHash, GuardResult.NoGuard, statusCut);
+                }
+                else
+                {
+                    statusEffects.ApplyApplications(magic.statusEffects, projectile.CasterHash,
+                        targetHash, GuardResult.NoGuard, statusCut, magic.equipmentStatusEffects);
+                }
             }
 
             // 総ヒット数の消費 (Projectile.RegisterHit) は ProjectileController.TryRegisterHit 側で
@@ -114,7 +134,8 @@ namespace Game.Core
         private static DamageData BuildProjectileDamageData(
             int attackerHash, int defenderHash, MagicDefinition magic, SoACharaDataDic data)
         {
-            ElementalStatus attackStats = CombatDataHelper.GetAttackStats(data, attackerHash);
+            ElementalStatus attackStats = magic.attackContext.IsCaptured
+                ? magic.attackContext.AttackStats : CombatDataHelper.GetAttackStats(data, attackerHash);
             return new DamageData
             {
                 actionInstanceId = magic.actionInstanceId,

@@ -21,11 +21,15 @@ namespace Game.Core
         public bool requiresHit;
         [Min(0f)] public float minElapsed;
         public bool onCompletion;
+        public bool detached;
     }
 
     [CreateAssetMenu(fileName = "Action", menuName = "Game/Action Definition")]
     public class ActionDefinition : ScriptableObject
     {
+        [SerializeField] private string persistentId;
+        public string PersistentId => persistentId;
+
         public MotionDefinition motion;
         [Min(0f)] public float staminaCost;
         [Min(0)] public int mpCost;
@@ -48,5 +52,23 @@ namespace Game.Core
         [Min(0f)] public float chargeDamageMultiplier;
 
         public MotionInfo GetMotion() => motion != null ? motion.info : default;
+
+#if UNITY_EDITOR
+        protected virtual void OnValidate() => RefreshPersistentId();
+
+        /// <summary>アセット作成後のGUIDを永続参照として確定するEditor専用入口。</summary>
+        public void RefreshPersistentId()
+        {
+            string path = UnityEditor.AssetDatabase.GetAssetPath(this);
+            if (!string.IsNullOrEmpty(path))
+            {
+                persistentId = UnityEditor.AssetDatabase.AssetPathToGUID(path);
+            }
+        }
+#endif
+
+#if UNITY_INCLUDE_TESTS
+        public void SetPersistentIdForTest(string id) { persistentId = id; }
+#endif
     }
 }

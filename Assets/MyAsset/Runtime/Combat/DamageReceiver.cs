@@ -7,7 +7,6 @@ namespace Game.Runtime
     {
         private BaseCharacter _character;
         private int _objectHash;
-        private Rigidbody2D _rb;
         private SituationalBonusConfig _bonusConfig = SituationalBonusConfig.Default;
 
         public int ObjectHash => _objectHash;
@@ -17,7 +16,6 @@ namespace Game.Runtime
         {
             _objectHash = gameObject.GetHashCode();
             _character = GetComponent<BaseCharacter>();
-            _rb = GetComponent<Rigidbody2D>();
         }
 
         private void Start()
@@ -78,7 +76,7 @@ namespace Game.Runtime
             _bonusConfig = config;
         }
 
-        private void Update()
+        public void TickRecovery(float deltaTime)
         {
             int hash = ObjectHash;
             if (!GameManager.IsCharacterValid(hash))
@@ -87,7 +85,7 @@ namespace Game.Runtime
             }
             HitResolver.TickRecovery(ref GameManager.Data.GetVitals(hash),
                 GameManager.Data.GetFlags(hash).ActState,
-                ref GameManager.Data.GetDefenseState(hash), Time.deltaTime);
+                ref GameManager.Data.GetDefenseState(hash), deltaTime);
         }
 
         public DamageResult ReceiveDamage(DamageData attack)
@@ -97,6 +95,13 @@ namespace Game.Runtime
             {
                 return default;
             }
+            ActorRegistry actors = GameManager.Actors;
+            ActorRef targetRef = default;
+            if (actors != null) { actors.TryGet(hash, out targetRef); }
+            if (attack.defenderRef.IsValid && (actors == null || attack.defenderRef != targetRef)) { return default; }
+            if (attack.attackerRef.IsValid && !attack.attackContext.IsCaptured
+                && (actors == null || !actors.IsCurrent(attack.attackerRef))) { return default; }
+            if (attack.attackContext.IsCaptured) { attack.attackContext.ApplyTo(ref attack, targetRef); }
 
             SoACharaDataDic data = GameManager.Data;
             CharacterDefenseState defense = data.GetDefenseState(hash);
@@ -107,7 +112,8 @@ namespace Game.Runtime
             {
                 actionEffects = GameManager.Actions.Execution.EvaluateEffects(hash),
                 targetEffects = data.GetStatusEffects(hash),
-                attackerAttackMultiplier = GameManager.IsCharacterValid(attack.attackerHash)
+                attackerAttackMultiplier = attack.attackContext.IsCaptured ? attack.attackContext.AttackMultiplier
+                    : GameManager.IsCharacterValid(attack.attackerHash)
                     ? data.GetStatusEffects(attack.attackerHash).AttackMultiplier : 1f,
                 isAttackFromFront = IsAttackFromFront(attack),
                 currentTime = Time.time,
@@ -123,6 +129,9 @@ namespace Game.Runtime
             }
 
             DamageResult result = resolution.result;
+            result.attackerRef = attack.attackContext.IsCaptured ? attack.attackContext.Owner : attack.attackerRef;
+            if (!result.attackerRef.IsValid && actors != null) { actors.TryGet(attack.attackerHash, out result.attackerRef); }
+            result.defenderRef = targetRef;
             GameManager.Actions.Execution.ConsumeArmor(hash, result.actionArmorDamage);
             defense.actionArmorConsumed = GameManager.Actions.Execution.GetConsumedArmor(hash);
             data.GetDefenseState(hash) = defense;
@@ -130,9 +139,18 @@ namespace Game.Runtime
             {
                 GameManager.Actions.React(hash, result.hitReaction);
             }
-            result.appliedEffect = GameManager.StatusEffects.ApplyApplications(
-                attack.statusEffects, attack.attackerHash, hash, result.guardResult,
-                combat.guardStats.statusCut, attack.equipmentStatusEffects);
+            bool sameTarget = !targetRef.IsValid || (actors != null && actors.IsCurrent(targetRef));
+            if (sameTarget && attack.attackContext.IsCaptured)
+            {
+                result.appliedEffect = GameManager.StatusEffects.ApplyApplications(
+                    attack.attackContext, hash, result.guardResult, combat.guardStats.statusCut);
+            }
+            else if (sameTarget)
+            {
+                result.appliedEffect = GameManager.StatusEffects.ApplyApplications(
+                    attack.statusEffects, attack.attackerHash, hash, result.guardResult,
+                    combat.guardStats.statusCut, attack.equipmentStatusEffects);
+            }
 
             GameEvents events = GameManager.Events;
             if (events != null)
@@ -140,16 +158,19 @@ namespace Game.Runtime
                 events.FireDamageDealt(result, attack.attackerHash, hash);
                 if (result.guardResult != GuardResult.NoGuard)
                 {
-                    events.FireGuardEvent(hash, attack.attackerHash, result.guardResult);
+                    events.FireGuardEvent(hash, attack.attackContext.IsCaptured
+                        ? attack.attackContext.GetLiveSourceHash(actors) : attack.attackerHash, result.guardResult);
                 }
                 if (result.isKill)
                 {
-                    events.FireCharacterDeath(hash, attack.attackerHash);
+                    if (targetRef.IsValid) { events.FireCharacterDeath(targetRef, result.attackerRef); }
+                    else { events.FireCharacterDeath(hash, attack.attackerHash); }
                 }
             }
-            if (_rb != null && resolution.knockback.sqrMagnitude > 0f)
+            if (_character != null && resolution.knockback.sqrMagnitude > 0f
+                && (!targetRef.IsValid || (actors != null && actors.IsCurrent(targetRef))))
             {
-                _rb.AddForce(resolution.knockback, ForceMode2D.Impulse);
+                _character.ApplyPhysicsImpulse(resolution.knockback);
             }
             return result;
         }

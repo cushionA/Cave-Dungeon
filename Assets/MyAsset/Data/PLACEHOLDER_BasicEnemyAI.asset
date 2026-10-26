@@ -34,6 +34,7 @@ MonoBehaviour:
   actDataList:
   - actName: BasicAttack
     actType: 0
+    actionDefinitionId: 37c664d32e75e93439f3e6ec6a0da093
     attackInfoIndex: 0
     weight: 80
     coolTime: 2

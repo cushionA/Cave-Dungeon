@@ -106,6 +106,53 @@ namespace Game.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator MotionPresentation_AuthoringChangedAfterCapture_UsesCapturedClipAndLoop()
+        {
+            CharacterAnimationController controller = CreateController();
+            MotionDefinition motion = CreateMotion();
+            motion.loop = true;
+            MotionPresentationData captured = MotionPresentationData.Capture(motion, motion.info);
+            motion.loop = false;
+            motion.info = default;
+
+            controller.Present(Execution(1, 1.25f), captured);
+            yield return null;
+            yield return null;
+
+            Assert.IsTrue(controller.HasMotion(1));
+            Assert.AreEqual(0.25f, controller.transform.GetChild(0).localPosition.x, 0.01f);
+            controller.EndExecution(1);
+            Assert.IsFalse(controller.HasActiveGraph);
+        }
+
+        [UnityTest]
+        public IEnumerator MotionPresentation_AuthoringDestroyedAfterCapture_ContinuesAndRecreatesFromSnapshot()
+        {
+            CharacterAnimationController controller = CreateController();
+            MotionDefinition motion = CreateMotion();
+            MotionPresentationData captured = MotionPresentationData.Capture(motion, motion.info);
+            Object.Destroy(motion);
+            yield return null;
+
+            controller.Present(Execution(1, 0.5f), captured);
+            yield return null;
+            yield return null;
+            Assert.IsTrue(controller.HasMotion(1));
+            Assert.AreEqual(0.5f, controller.transform.GetChild(0).localPosition.x, 0.01f);
+
+            controller.enabled = false;
+            Assert.IsFalse(controller.HasActiveGraph);
+            controller.enabled = true;
+            controller.Present(Execution(2, 0.75f), captured);
+            yield return null;
+            yield return null;
+
+            Assert.AreEqual(1, controller.ActiveMotionCount);
+            Assert.IsTrue(controller.HasMotion(2));
+            Assert.AreEqual(0.75f, controller.transform.GetChild(0).localPosition.x, 0.01f);
+        }
+
+        [UnityTest]
         public IEnumerator MotionPresentation_Disable_ReleasesGraphAndAllowsRecreation()
         {
             CharacterAnimationController controller = CreateController();

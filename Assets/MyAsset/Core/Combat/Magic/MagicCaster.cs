@@ -9,6 +9,7 @@ namespace Game.Core
     [Serializable]
     public struct MagicDefinition
     {
+        public AttackContext attackContext;
         public long actionInstanceId;
         public string magicName;
         public int magicId;

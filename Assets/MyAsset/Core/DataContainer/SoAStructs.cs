@@ -21,8 +21,11 @@ namespace Game.Core
         public int level;
         public float staminaRecoveryRate;     // スタミナ回復速度(/秒)
         public float staminaRecoveryDelay;    // 消費後回復開始遅延(秒)
-        public byte hpRatio;                  // HP割合(0-100) AI判定用キャッシュ
-        public byte mpRatio;                  // MP割合(0-100) AI判定用キャッシュ
+        // 割合の正本は現在値と最大値。独立したキャッシュの書き戻しは持たない。
+        public byte hpRatio => maxHp > 0
+            ? (byte)Math.Min(100L, Math.Max(0L, 100L * currentHp / maxHp)) : (byte)0;
+        public byte mpRatio => maxMp > 0
+            ? (byte)Math.Min(100f, Math.Max(0f, 100f * currentMp / maxMp)) : (byte)0;
     }
 
     [Serializable]
@@ -101,11 +104,18 @@ namespace Game.Core
     ///   [24-35] RecognizeObjectType (12 bits)
     ///   [36-43] BrainEventFlagType (8 bits)
     ///   [44-59] AbilityFlag (16 bits)
-    ///   [60-63] Reserved (4 bits)
+    ///   [60]    Vanished (1 bit)
+    ///   [61-63] Reserved (3 bits)
     /// </summary>
     public struct CharacterFlags
     {
         public ulong flags;
+
+        public bool IsVanished
+        {
+            get => (flags & (1UL << 60)) != 0;
+            set => flags = value ? flags | (1UL << 60) : flags & ~(1UL << 60);
+        }
 
         // Belong: bits 0-2 (3 bits)
         public CharacterBelong Belong
@@ -208,6 +218,7 @@ namespace Game.Core
         public ElementalStatus finalAttack;
         public ElementalStatus finalDefense;
         public GuardStats finalGuardStats;
+        public StatModifier attributeModifiers;
         public AbilityFlag activeFlags;
         public float weightRatio;
         public float totalWeight;

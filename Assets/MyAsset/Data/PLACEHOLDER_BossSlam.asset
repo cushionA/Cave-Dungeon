@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 55a1ec93ce0944c47887ddab2ae86a7a, type: 3}
   m_Name: PLACEHOLDER_BossSlam
   m_EditorClassIdentifier: Game.Core::Game.Core.AttackInfo
+  persistentId: b2fbfb737dfe37246b7a19cc89dae813
   attackName: PLACEHOLDER_BossSlam
   category: 0
   motion: {fileID: 11400000, guid: 549c342f49104da4991b557b74b17bdf, type: 2}

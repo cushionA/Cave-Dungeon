@@ -34,6 +34,7 @@ MonoBehaviour:
   actDataList:
   - actName: CompanionAttack
     actType: 0
+    actionDefinitionId: d6cfdb17113aec94bb0bad55adeaf1b3
     attackInfoIndex: 0
     weight: 70
     coolTime: 1.5

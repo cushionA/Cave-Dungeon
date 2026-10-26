@@ -12,13 +12,8 @@ namespace Game.Runtime
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
     [RequireComponent(typeof(BoxCollider2D))]
-    public class BaseCharacter : ManagedCharacter
+    public partial class BaseCharacter : ManagedCharacter
     {
-        private const float k_GroundCheckDistance = 0.1f;
-        private const float k_GroundCheckWidthRatio = 0.9f;
-        private const float k_WallCheckExtend = 0.05f;
-        private const float k_WallCheckHeightRatio = 0.9f;
-
         [SerializeField] protected CharacterInfo _characterInfo;
 
         protected Rigidbody2D _rb;
@@ -76,10 +71,7 @@ namespace Game.Runtime
             _actionController = GetComponent<ActionExecutorController>();
             _objectHash = gameObject.GetHashCode();
 
-            // 物理設定
-            _rb.gravityScale = GameConstants.k_GravityScale;
-            _rb.constraints = RigidbodyConstraints2D.FreezeRotation;
-            _rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            InitializeCharacterPhysics();
         }
 
         protected virtual void Start()
@@ -128,6 +120,7 @@ namespace Game.Runtime
             {
                 GameManager.Instance.UnregisterCharacter(_objectHash);
             }
+            _physicsBackend?.Dispose();
         }
 
         protected MoveParams GetEffectiveMoveParams(float fallbackSpeed = 0f)
@@ -147,6 +140,7 @@ namespace Game.Runtime
         public virtual void OnPoolReturn()
         {
             GameManager.Actions?.StopActor(_objectHash);
+            ResetPhysicsTransientState();
             if (_isRegistered && GameManager.Instance != null)
             {
                 GameManager.Instance.UnregisterCharacter(_objectHash);
@@ -191,46 +185,14 @@ namespace Game.Runtime
         protected bool CheckWallContact(float facingDir, out int wallColliderId)
         {
             wallColliderId = AdvancedMovementLogic.k_NoWallId;
-            if (_collider == null)
-            {
-                return false;
-            }
-
-            Bounds bounds = _collider.bounds;
-            Vector2 origin = new Vector2(
-                bounds.center.x + facingDir * (bounds.extents.x + k_WallCheckExtend),
-                bounds.center.y);
-            Vector2 size = new Vector2(k_WallCheckExtend, bounds.size.y * k_WallCheckHeightRatio);
-
-            Collider2D hit = Physics2D.OverlapBox(origin, size, 0f, _groundLayer);
-            if (hit == null)
-            {
-                return false;
-            }
-
-            wallColliderId = hit.GetHashCode();
-            return true;
+            return _physicsBackend != null && _physicsBackend.QueryWall(facingDir, _groundLayer, out wallColliderId);
         }
 
-        /// <summary>
-        /// BoxCast接地判定。FixedUpdateで呼ぶ。
-        /// </summary>
+        /// <summary>接地情報を物理境界から一度取得する。</summary>
         public void UpdateGroundCheck()
         {
-            Vector2 origin = (Vector2)transform.position + _collider.offset;
-            origin.y -= _collider.size.y * 0.5f;
-
-            Vector2 size = new Vector2(
-                _collider.size.x * k_GroundCheckWidthRatio,
-                0.05f);
-
-            RaycastHit2D hit = Physics2D.BoxCast(
-                origin, size, 0f, Vector2.down, k_GroundCheckDistance, _groundLayer);
-
-            _isGrounded = hit.collider != null;
-            _groundInfo = hit.collider != null
-                ? new GroundInfo { isGrounded = true, normal = hit.normal }
-                : GroundInfo.NotGrounded;
+            _groundInfo = _physicsBackend != null ? _physicsBackend.QueryGround(_groundLayer) : GroundInfo.NotGrounded;
+            _isGrounded = _groundInfo.isGrounded;
         }
 
         protected static void BridgeAIActionToExecutor(
@@ -320,6 +282,36 @@ namespace Game.Runtime
         /// <summary>
         /// SoAコンテナの位置情報を同期する。
         /// </summary>
+        public void PublishPositionForObservation()
+        {
+            if (GameManager.IsCharacterValid(_objectHash))
+            {
+                GameManager.Data.GetVitals(_objectHash).position = PhysicsPosition;
+            }
+        }
+
+        /// <summary>共有固定更新が、全キャラクターの判断より前に入力を確定する。</summary>
+        public virtual void PrepareSimulationInput(float currentTime) { }
+
+        /// <summary>共有固定更新が一度だけ呼ぶキャラクター制御。</summary>
+        public virtual void SimulateCharacterTick(float deltaTime, float currentTime) { }
+
+        public virtual void PrepareObservationTick(float deltaTime)
+        {
+            if (_damageReceiver != null && _damageReceiver.isActiveAndEnabled) { _damageReceiver.TickRecovery(deltaTime); }
+        }
+
+        /// <summary>前の物理ステップで確定した位置と接地を、全キャラの判断前に公開する。</summary>
+        public virtual void CaptureSimulationPhysics()
+        {
+            _hasSimulationVelocity = false;
+            PublishPositionForObservation();
+            UpdateGroundCheck();
+        }
+
+        /// <summary>全キャラの判断後、同じUnity物理ステップに間に合う位置で適用する。</summary>
+        public virtual void ApplySimulationPhysics() => SyncPositionToData();
+
         protected void SyncPositionToData()
         {
             if (!GameManager.IsCharacterValid(_objectHash))
@@ -328,20 +320,20 @@ namespace Game.Runtime
             }
             if (GameManager.Actions != null)
             {
-                if (!GameManager.Actions.IsMovementBlocked(_objectHash)
+                if (_hasSimulationVelocity && !GameManager.Actions.IsMovementBlocked(_objectHash)
                     && !(_actionController != null && _actionController.HasMovementRequest))
                 {
-                    float speed = Mathf.Abs(_rb.linearVelocity.x);
-                    GameManager.Actions.SetLocomotion(_objectHash, new Vector2(Mathf.Sign(_rb.linearVelocity.x), 0f), speed);
+                    float speed = Mathf.Abs(PhysicsVelocity.x);
+                    GameManager.Actions.SetLocomotion(_objectHash, new Vector2(Mathf.Sign(PhysicsVelocity.x), 0f), speed);
                 }
-                GameManager.Actions.ApplyMovement(_objectHash, _rb);
+                GameManager.Actions.ApplyMovement(_objectHash, this);
                 if (_collisionController != null)
                 {
                     _collisionController.SetInvincible(GameManager.Actions.Execution.EvaluateEffects(_objectHash).isInvincible);
                 }
             }
             ref CharacterVitals vitals = ref GameManager.Data.GetVitals(_objectHash);
-            vitals.position = (Vector2)transform.position;
+            vitals.position = PhysicsPosition;
         }
     }
 }

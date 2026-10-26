@@ -61,13 +61,19 @@ namespace Game.Runtime
 
         public bool HasMotion(long instanceId) => _layers.ContainsKey(instanceId);
 
+        /// <summary>旧呼出向けの変換入口。共有実行器は登録済みの表示snapshotを渡す。</summary>
         public void Present(ActionExecution execution, MotionDefinition asset, MotionInfo snapshot)
+        {
+            Present(execution, MotionPresentationData.Capture(asset, snapshot));
+        }
+
+        public void Present(ActionExecution execution, MotionPresentationData presentation)
         {
             if (!isActiveAndEnabled)
             {
                 return;
             }
-            AnimationClip clip = SelectClip(execution.phase, snapshot);
+            AnimationClip clip = SelectClip(execution.phase, presentation.Motion);
             if (clip == null)
             {
                 EndExecution(execution.instanceId);
@@ -83,8 +89,8 @@ namespace Game.Runtime
                 rebuild = true;
             }
 
-            int animatorLayer = asset != null ? asset.animatorLayer : 0;
-            AvatarMask mask = asset != null ? asset.mask : null;
+            int animatorLayer = presentation.AnimatorLayer;
+            AvatarMask mask = presentation.Mask;
             if (layer.animatorLayer != animatorLayer || layer.priority != execution.definition.priority || layer.mask != mask)
             {
                 layer.animatorLayer = animatorLayer;
@@ -100,12 +106,12 @@ namespace Game.Runtime
                 layer.playable.SetSpeed(0d);
                 layer.playable.SetDuration(double.MaxValue);
                 layer.blendStartElapsed = execution.elapsed - execution.phaseElapsed;
-                layer.blendDuration = asset != null ? asset.blendDuration : 0f;
+                layer.blendDuration = presentation.BlendDuration;
                 rebuild = true;
             }
 
             bool loop = execution.phase == AnimationPhase.Active
-                && ((asset != null && asset.loop) || execution.definition.endMode == ActionEndMode.Held);
+                && (presentation.Loop || execution.definition.endMode == ActionEndMode.Held);
             double phaseTime = System.Math.Max(0d, execution.phaseElapsed);
             double clipTime = clip.length > 0f && loop ? phaseTime % clip.length : System.Math.Min(phaseTime, clip.length);
             layer.playable.SetTime(clipTime);

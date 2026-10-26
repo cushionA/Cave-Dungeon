@@ -51,6 +51,7 @@ namespace Game.Core
         PreserveVelocity = 16,
     }
 
+    /// <summary>検証・登録前の編集可能な定義。実行時は不変のActionDefinitionSnapshotへ捕捉する。</summary>
     [Serializable]
     public struct ActionDefinitionData
     {
@@ -88,18 +89,27 @@ namespace Game.Core
         public bool requiresHit;
         public float minElapsed;
         public bool onCompletion;
+        /// <summary>独立した行動グループを開始する。省略時は元の行動全体に寿命を結び付ける。</summary>
+        public bool detached;
     }
 
     public struct ActionRequest
     {
         public int ownerHash;
+        public ActorRef ownerRef;
         public int definitionId;
         public int targetHash;
+        public ActorRef targetRef;
         public Vector2 direction;
         public Vector2 targetPosition;
         public float speedMultiplier;
         public bool forced;
         public long sourceInstanceId;
+        public long groupId;
+        /// <summary>新しいrootを受理できる場合だけ、指定した既存グループ全体を置換する。</summary>
+        public long replaceGroupId;
+        public bool detached;
+        public float chargeMultiplier;
     }
 
     public struct ActionActorState
@@ -118,12 +128,16 @@ namespace Game.Core
     public struct ActionExecution
     {
         public long instanceId;
+        public long groupId;
         public int ownerHash;
+        public ActorRef ownerRef;
         public int definitionId;
         public int targetHash;
+        public ActorRef targetRef;
         public Vector2 direction;
         public Vector2 targetPosition;
         public float speedMultiplier;
+        public float chargeMultiplier;
         public float elapsed;
         public float phaseElapsed;
         public float normalizedTime;
@@ -132,7 +146,7 @@ namespace Game.Core
         public bool forced;
         public bool released;
         public long sourceInstanceId;
-        public ActionDefinitionData definition;
+        public ActionDefinitionSnapshot definition;
     }
 
     public struct ActionExecutionEvent
@@ -140,5 +154,19 @@ namespace Game.Core
         public ActionSignalKind kind;
         public ActionExecution execution;
         public int signalId;
+    }
+
+    public enum ActionGroupSignalKind : byte
+    {
+        Completed,
+        Cancelled,
+    }
+
+    public struct ActionGroupEvent
+    {
+        public long groupId;
+        public int ownerHash;
+        public ActorRef ownerRef;
+        public ActionGroupSignalKind kind;
     }
 }

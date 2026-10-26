@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Game.Core
 {
     /// <summary>
@@ -27,7 +29,10 @@ namespace Game.Core
         /// - DamageReduction: 最大値
         /// - SuperArmor/Invincible/GuardPoint: OR
         /// </summary>
-        public static EffectState Evaluate(ActionEffect[] effects, float elapsedTime)
+        public static EffectState Evaluate(ActionEffect[] effects, float elapsedTime) =>
+            Evaluate((IReadOnlyList<ActionEffect>)effects, elapsedTime);
+
+        public static EffectState Evaluate(IReadOnlyList<ActionEffect> effects, float elapsedTime)
         {
             EffectState state = default;
 
@@ -36,7 +41,7 @@ namespace Game.Core
                 return state;
             }
 
-            for (int i = 0; i < effects.Length; i++)
+            for (int i = 0; i < effects.Count; i++)
             {
                 if (!effects[i].IsActive(elapsedTime))
                 {
@@ -78,7 +83,10 @@ namespace Game.Core
         /// <summary>
         /// 指定の効果タイプが現在アクティブかどうかを判定する。
         /// </summary>
-        public static bool HasActiveEffect(ActionEffect[] effects, float elapsedTime,
+        public static bool HasActiveEffect(ActionEffect[] effects, float elapsedTime, ActionEffectType type) =>
+            HasActiveEffect((IReadOnlyList<ActionEffect>)effects, elapsedTime, type);
+
+        public static bool HasActiveEffect(IReadOnlyList<ActionEffect> effects, float elapsedTime,
             ActionEffectType type)
         {
             if (effects == null)
@@ -86,7 +94,7 @@ namespace Game.Core
                 return false;
             }
 
-            for (int i = 0; i < effects.Length; i++)
+            for (int i = 0; i < effects.Count; i++)
             {
                 if (effects[i].type == type && effects[i].IsActive(elapsedTime))
                 {
@@ -100,7 +108,10 @@ namespace Game.Core
         /// <summary>
         /// 指定の効果タイプの現在のvalue合計を取得する。
         /// </summary>
-        public static float GetActiveValue(ActionEffect[] effects, float elapsedTime,
+        public static float GetActiveValue(ActionEffect[] effects, float elapsedTime, ActionEffectType type) =>
+            GetActiveValue((IReadOnlyList<ActionEffect>)effects, elapsedTime, type);
+
+        public static float GetActiveValue(IReadOnlyList<ActionEffect> effects, float elapsedTime,
             ActionEffectType type)
         {
             float total = 0f;
@@ -110,7 +121,7 @@ namespace Game.Core
                 return total;
             }
 
-            for (int i = 0; i < effects.Length; i++)
+            for (int i = 0; i < effects.Count; i++)
             {
                 if (effects[i].type == type && effects[i].IsActive(elapsedTime))
                 {

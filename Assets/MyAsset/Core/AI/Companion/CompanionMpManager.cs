@@ -8,7 +8,6 @@ namespace Game.Core
         private readonly int _ownerHash;
         private readonly CompanionMpSettings _settings;
         private float _reserveMp;
-        private bool _isVanished;
         private bool _isRecovering;
         private bool _disposed;
 
@@ -16,7 +15,7 @@ namespace Game.Core
         public float MaxMp => TryGetActor(out ActionActorState actor) ? actor.vitals.maxMp : 0f;
         public float ReserveMp => _reserveMp;
         public int MaxReserveMp => _settings.maxReserveMp;
-        public bool IsVanished => _isVanished;
+        public bool IsVanished => TryGetActor(out ActionActorState actor) && actor.flags.IsVanished;
         public bool IsRecovering => _isRecovering;
 
         public event Action OnVanish;
@@ -32,7 +31,7 @@ namespace Game.Core
 
         public float ConsumeMp(float amount)
         {
-            if (amount <= 0f || _isVanished || !TryGetActor(out ActionActorState actor)) { return 0f; }
+            if (amount <= 0f || IsVanished || !TryGetActor(out ActionActorState actor)) { return 0f; }
             float consumed = Math.Min(amount, actor.vitals.currentMp);
             actor.vitals.currentMp -= consumed;
             _world.CommitActor(_ownerHash, actor);
@@ -41,7 +40,7 @@ namespace Game.Core
 
         public void ApplyBarrierDamage(float mpCost)
         {
-            if (_isVanished || !TryGetActor(out _)) { return; }
+            if (IsVanished || !TryGetActor(out _)) { return; }
             ConsumeMp(mpCost);
             if (CurrentMp <= 0f) { EnterVanishState(); }
         }
@@ -49,27 +48,26 @@ namespace Game.Core
         public void Tick(float deltaTime)
         {
             if (!TryGetActor(out ActionActorState actor)) { return; }
-            if (!_isVanished && actor.vitals.currentMp <= 0f) { EnterVanishState(); }
+            if (!actor.flags.IsVanished && actor.vitals.currentMp <= 0f) { EnterVanishState(); }
             if (!TryGetActor(out actor)) { return; }
 
+            bool vanished = actor.flags.IsVanished;
             float rate = _settings.baseRecoveryRate + (_isRecovering ? _settings.mpRecoverActionRate : 0f);
-            if (_isVanished) { rate *= _settings.vanishRecoveryMultiplier; }
+            if (vanished) { rate *= _settings.vanishRecoveryMultiplier; }
             float recovery = Math.Min(Math.Max(0f, rate * deltaTime),
                 Math.Min(_reserveMp, Math.Max(0f, actor.vitals.maxMp - actor.vitals.currentMp)));
             actor.vitals.currentMp += recovery;
             _reserveMp -= recovery;
+            bool returned = vanished && actor.vitals.maxMp > 0
+                && actor.vitals.currentMp >= actor.vitals.maxMp * _settings.returnThresholdRatio;
+            if (returned) { actor.flags.IsVanished = false; }
             _world.CommitActor(_ownerHash, actor);
-
-            if (_isVanished && actor.vitals.maxMp > 0 && actor.vitals.currentMp >= actor.vitals.maxMp * _settings.returnThresholdRatio)
-            {
-                _isVanished = false;
-                OnReturn?.Invoke();
-            }
+            if (returned) { OnReturn?.Invoke(); }
         }
 
         public void StartMpRecovery()
         {
-            if (!_isVanished && TryGetActor(out _)) { _isRecovering = true; }
+            if (!IsVanished && TryGetActor(out _)) { _isRecovering = true; }
         }
 
         public void StopMpRecovery() => _isRecovering = false;
@@ -82,7 +80,7 @@ namespace Game.Core
         private void EnterVanishState()
         {
             if (!TryGetActor(out ActionActorState actor)) { return; }
-            _isVanished = true;
+            actor.flags.IsVanished = true;
             _isRecovering = false;
             actor.vitals.currentMp = 0f;
             _world.CommitActor(_ownerHash, actor);

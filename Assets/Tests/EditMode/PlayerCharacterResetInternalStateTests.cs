@@ -42,38 +42,6 @@ namespace Game.Tests.EditMode
         // =========================================================================
 
         [Test]
-        public void PlayerCharacter_ResetInternalState_WhenIsDivingAttackIsTrue_ResetsToFalse()
-        {
-            SetPrivate(_player, "_isDivingAttack", true);
-            _player.ResetInternalState();
-            Assert.IsFalse(GetPrivate<bool>(_player, "_isDivingAttack"));
-        }
-
-        [Test]
-        public void PlayerCharacter_ResetInternalState_WhenIsDivingLandingIsTrue_ResetsToFalse()
-        {
-            SetPrivate(_player, "_isDivingLanding", true);
-            _player.ResetInternalState();
-            Assert.IsFalse(GetPrivate<bool>(_player, "_isDivingLanding"));
-        }
-
-        [Test]
-        public void PlayerCharacter_ResetInternalState_WhenDivingLandingTimerNonZero_ResetsToZero()
-        {
-            SetPrivate(_player, "_divingLandingTimer", 0.55f);
-            _player.ResetInternalState();
-            Assert.AreEqual(0f, GetPrivate<float>(_player, "_divingLandingTimer"));
-        }
-
-        [Test]
-        public void PlayerCharacter_ResetInternalState_WhenIsAirAttackingIsTrue_ResetsToFalse()
-        {
-            SetPrivate(_player, "_isAirAttacking", true);
-            _player.ResetInternalState();
-            Assert.IsFalse(GetPrivate<bool>(_player, "_isAirAttacking"));
-        }
-
-        [Test]
         public void PlayerCharacter_ResetInternalState_WhenAerialComboUsedIsTrue_ResetsToFalse()
         {
             SetPrivate(_player, "_aerialComboUsed", true);
@@ -135,14 +103,6 @@ namespace Game.Tests.EditMode
             SetPrivate(_player, "_isCharging", true);
             _player.ResetInternalState();
             Assert.IsFalse(GetPrivate<bool>(_player, "_isCharging"));
-        }
-
-        [Test]
-        public void PlayerCharacter_ResetInternalState_WhenWasDodgingIsTrue_ResetsToFalse()
-        {
-            SetPrivate(_player, "_wasDodging", true);
-            _player.ResetInternalState();
-            Assert.IsFalse(GetPrivate<bool>(_player, "_wasDodging"));
         }
 
         // Rigidbody2D.gravityScale のリセット検証は EditMode では Awake 後の _rb 参照が

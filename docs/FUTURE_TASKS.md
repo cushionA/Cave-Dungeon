@@ -56,9 +56,41 @@ PRレビューや実装中に発生した「今すぐではないが後で対応
 
 ## 3D化前のデータフロー整合（2026-10-26）
 
-敵・プレイヤー・シスターさんで入力元が異なっても、共通データの生成・反映・参照の契約を揃える。3D化とは分けて一項目ずつ進める。DF-00/01は実装・純ロジック検証済み、次はDF-02の装備変更から共有能力値への反映を接続する。数式やバランス値が未確定の項目は、既存設定の意味を確認してから実装する。
+敵・プレイヤー・シスターさんで入力元が異なっても、共通データの生成・反映・参照の契約を揃える。3D化とは分けて一項目ずつ進める。DF-00/01は実装・純ロジック検証済み。DF-02は装備付与フラグ・総重量に加え、攻防・6能力・最大HP/MP/SP/アーマーを共有データへ接続し、DF-05は共通実行側への入力転送を実装済み（Unity上の実行確認は保留）。DF-02の残りは重量上限・持ち方による性能の契約と接続。数式やバランス値が未確定の項目は、既存設定の意味を確認してから実装する。
 
 各項目は設定元→共有データ→利用先の呼び出し経路と検証範囲を `designs/call-paths.json`・機能DBへ記録する。純ロジックのテスト成功、Unity連携のコンパイル成功、Unity上の動作確認は区別する。
+
+### 共有実行・観測の構造整理（2026-10-26、未コミット）
+
+- 行動要求は`ActionCommand`へ明示変換し、技の永続ID・標的・チャージ倍率・実行variantを保持する。旧`ActionSlot`/配列番号はID空の既存保存だけの互換入口。新規作者データ・UI・builderは永続IDを保存する。未知IDで番号へ戻さず、未実装行動はUnsupportedとする。
+- 共通実行は`groupId`で必須activeとqueued後続を管理し、一度だけ全体完了を通知する。Detachedは独立寿命。全group置換は全メンバーの占有/優先度/キャンセル可否を検証してから原子的に受理し、拒否時は旧行動・費用を保持する。自然接地はCompleted＋同group Recoveryへ原子継続し、元Completed後続はRecovery終了まで待機する。Player独自の空中・落下・着地タイマーと状態boolを除去した。
+- `ActorRef(hash,generation)`を登録・キュー・弾・標的・継続効果・型付き死亡通知へ接続。`AttackContext`が発射時の攻撃値/倍率/陣営/技・装備効果を固定し、子弾も継承する。旧射手を再利用個体へ帰属させず、世代不一致targetを拒否する。通知中の再登録でも未解決legacy hashを新個体へ付け替えない。
+- 中央`SimulationTick`で全位置公開→状態効果/共通実行/弾/資源更新→観測確定を実行。AI判断・移動方向は同じtickの`AIObservationContext`を読む。DamageScore・実標的数・LastAttackerを接続し、未取得の感覚/地形/イベントはUnknownとして0と分ける。
+- 能力の再導出・恒久能力・変更通知の正本を`CharacterStatsSystem`/`CharacterStatCalculator.CalculateDerived`へ移した。装備の公開viewはreadonly。HP/MP割合は現在値と最大値からの読取専用プロパティとし、各ドメインの手動同期キャッシュを除去した。
+- 消滅状態は共有`CharacterFlags.IsVanished`を正本とする。新root・通常被弾・候補・身体移動を制限し、既受理行動/無料required継続/正当な内部Cast発射は維持する。body colliderとFreezeAllで身体を止め、子HitBoxのsimulationは維持する。AI componentだけのDisableでは共有消滅を解除せず、GO終了/プール返却で物理設定を復元する。HP→MPバリア計算と復帰位置の新仕様はまだ変更しない。
+- **検証**: 純Coreをリンクする外部.NET/C#9回帰197件成功（HitResolver既存全クラスのうち今回追加した消滅拒否1件だけを追加実行）、通知境界の新規2件は修正前失敗→修正後成功。Unityの値型/属性の最小代替とNative classからのvalue宣言抽出は検証用であり、Unityの型/APIコンパイル・物理・ライフサイクルの実行成功には数えない。証拠は`/workspace/.cave-dungeon/action-flow-harness/`、経路と実行済みSHA-256は`designs/call-paths.json`へ記録。
+- **残件**: 個体別知覚・地形/環境物/弾接近・AIイベント履歴の入力、解放キーの旧番号からの保存移行、未使用の作者charge設定と入力側設定元の統合、表示資源の解放/明示的な再読込契約、重量/持ち方性能、HPとMPバリアの仕様確定。これらを実装済み・検証済み扱いにしない。
+
+### キャラクター物理境界と固定更新（2026-10-26、未コミット）
+
+- 共通基底`BaseCharacter`へキャラの物理APIを集約し、`ICharacterPhysics2D`と`CreateCharacterPhysics()`を差替え口にする。Rigidbody2D/Collider2D/Physics2Dの操作は既存backend内へ移し、Player/Enemy/Companion・共通行動・ノックバック・運搬・デバッグ位置リセットを接続した。既存ステージ物理は維持する。Projectileとlegacy SimpleEnemyBrainは別経路。
+- 中央`SimulationTickRunner`で、対象世代固定→物理観測→全入力公開→共有処理/資源/AI観測→全キャラ判断→共通移動の最終補正を実行し、その後Unity物理へ渡す。各キャラの独立FixedUpdateを廃止。世代変更・pool返却は後段から除外し、component無効時は観測を維持して入力/制御を止める。
+- 物理setterはread-after-write互換のため即時反映する。全書込みを遅延するバッファではない。明示速度入力なしのtickで受理済みHeldMoveを旧速度で上書きしない。消滅時の一時停止/復元と床すり抜け中のlayer更新もbackendが管理する。
+- 入力はInputSystemのDynamic/Fixed更新内で取得し、単調時計を共有して同tickへ公開。Attack/Dodge/Jumpを受理時だけ消費し、長押しと拒否時の先行入力は維持。global updateModeやUnity物理シミュレーション方式は変更しない。
+- **検証**: 外部.NET/C#9の純ロジック・変換279件成功（既存265＋固定tick runner8＋入力時計/チャージ6）、source変更0。runner未実装時の8件失敗と、時計初版の逆行回帰1件失敗を保存。変更C#119ファイル×3構成の構文確認成功。Native回帰23件を追加したが、Unity型/API・物理・InputSystem・ライフサイクルの実行は未確認。証拠は`/workspace/.cave-dungeon/action-flow-harness/physics-final-*`と`syntax/physics-results.json`。
+- **接続の限界**: 運搬`SyncCarriedPosition`の内側は対応したが、元からRuntime呼出元がなく自動更新は未接続。真の3D化/DOTS Physicsでは座標とステージCollider・接地・一方通行床等も併せて移行する。実機入力遅延・衝突挙動の計測、完全な遅延書込みは未実施。
+
+### SOから不変実行定義への変換（2026-10-26、未コミット）
+
+- `ActionCatalog` が全到達グラフを先に検証・捕捉し、IDを解決してから公開する。循環を許容し、不正な子定義・遷移・数値で既存の登録を壊さない。variant・着地Recoveryも初回の捕捉値を継承する。
+- `ActionDefinitionSnapshot` の値と効果/遷移の読取専用ビューを共有し、実行照会5経路・通知からの配列書換えを防ぐ。読取りごとの配列コピーは増やさず、派生登録用の編集可能コピーと実行ごとの技packetだけを分離する。
+- 表示のレイヤー/ブレンド/ループ/マスク、Playerの入力受付窓/空中物理、Runtimeの弾有無判定を捕捉値へ接続。0秒で完了する技も登録済みの設定を取得する。UnityObjectの内容や寿命を不変化したものではない。
+- **検証**: 実Core・実SO宣言・実ActionCatalogをリンクした外部.NET/C#9で265件成功（既存197＋新規46＋既存ActionEffectProcessor22）。配列公開の旧実装で6件失敗、定義検証の旧実装で12件失敗、派生値overflowの追加2件も修正前失敗→修正後成功。変更C#106ファイル×3構成の構文確認も成功。UnityObjectは不活性な検証用参照、破棄はno-opのため、Unityの型/API・fake-null・物理・シリアライズ・表示/入力のNative実行は未検証。Native回帰7件を追加したが実行成功には数えない。
+- **記録**: `designs/systems/WeaponSystem.md` / `designs/call-paths.json`。実行証拠は `/workspace/.cave-dungeon/action-flow-harness/definitions-final-*` と `syntax/definitions-results.json`。以前の197件の証拠も保持する。
+- **次段階**: 書込みコマンドの収集/確定境界、AI/弾の観測配列と近傍検索の共有、装備定義flags/weight/StatModifiersの捕捉契約。Jobs/Burst・BlobAssetの導入は未実施で、Unity上の性能計測を前提に対象を選ぶ。作者charge設定の統合と明示的な再読込も未実装。
+
+
+2026-10-26の残修正では、行動・仲間MP・従来の詠唱でのMP消費／回復と、継続ダメージ・回復弾のHP更新後に、共有データの `mpRatio` / `hpRatio` を通知前に同期するよう修正した。外部.NETハーネスで行動・仲間MP・装備の純ロジック86件が成功し、MP比率7件と装備通知再入2件は旧実装で失敗することも確認済み。Unityの値型・属性には検証用代替を使用し、実SoA・物理・入力・ライフサイクルは実行していない。Pythonの機能DB回帰13件も成功。今回追加・変更したUnity依存テストとアダプタは、Unity環境でのコンパイル・実行確認を残す。
 
 - [x] 🟡✓ **DF-00 シスターのMP正本を統一（予備MPは独立）** — 魔法消費・回復・バリアAPI・消滅が同じ現在MPを使う
   - **背景**: 共通行動はSoAの `CharacterVitals.currentMp` を消費する一方、`CompanionMpManager._currentMp` が別に回復・バリア・消滅を管理し、同じシスターに二つの現在MPがある。
@@ -73,13 +105,18 @@ PRレビューや実装中に発生した「今すぐではないが後で対応
   - **対象ファイル**: `Assets/MyAsset/Core/ScriptableObjects/CharacterInfo.cs:12` / `Assets/MyAsset/Core/LevelUp/LevelUpLogic.cs:55` / `Assets/MyAsset/Runtime/GameManager.cs:186` / `Assets/MyAsset/Core/GameManager/GameManagerCore.cs:66` / `Assets/MyAsset/Data/PlayerInfo.asset` / `Assets/MyAsset/Data/BasicEnemyInfo.asset` / `Assets/MyAsset/Data/CompanionInfo.asset`
   - **関連PR**: -
   - **実施結果（2026-10-26）**: 基礎・成長のSoA列、共通登録・反映API、導出後通知を実装。成長再計算は基礎値専用の型を必須にし、低レベル追加時のレベルも共通化。新規純ロジック5件と既存成長6件を含む回帰313件成功、5アセンブリのコンパイル成功。実SoA結合5件・Runtime/プール2件は追加・コンパイルのみで、Unity実行は保留。
-  - **未接続の範囲**: 経験値報酬・成長UI・SaveManagerへの登録・シスターの自動レベル同期は今回の登録契約とは別で未接続。LevelUpLogicのGrowthから共通更新APIへ渡す入口を用意した段階。次はDF-02で装備由来の導出を接続する。
+  - **未接続の範囲**: 経験値報酬・成長UI・SaveManagerへの登録・シスターの自動レベル同期は今回の登録契約とは別で未接続。LevelUpLogicのGrowthから共通更新APIへ渡す入口を用意した段階。DF-02で装備込みの再導出を接続し、成長更新時も装備補正を維持する。
 
 - [ ] 🟡🔶 **DF-02 装備変更→SoA書き戻しパイプラインを接続** — 基礎値と全装備から最終能力値を一箇所で再導出する
-  - **背景**: 旧「装備変更→SoA書き戻しパイプライン未実装」項目を本項へ統合。`EquipmentDefinition : IEquippable` と命中時追加効果は接続済みだが、装備変更から攻防・重量・能力を再計算する経路は未接続。`EquipmentStatus.finalAttack` と `CombatStats.attack` などの正本も整理が必要。
+  - **背景**: 旧「装備変更→SoA書き戻しパイプライン未実装」項目を本項へ統合。`EquipmentDefinition : IEquippable` と命中時追加効果に対し、装備変更から攻防・重量・能力を再計算する経路が不足していた。`EquipmentStatus.finalAttack` と `CombatStats.attack` などの利用値も揃える必要があった。
   - **仕様**: DF-01を前提に、差分ロールバックではなく基礎値＋全装備から再計算し、戦闘・移動・UI・AIが同じ導出結果を読む。装備なしの敵も同じ契約で扱う。装備能力、重量、持ち方、攻防、状態効果との合成順と更新責任を確定し、着脱を繰り返しても値が累積しないことを検証する。既存方針のアイテム定義を原本とする方式・セット用差替えデータ参照を維持し、未確定の補正式は勝手に新設しない。
   - **対象ファイル**: `Assets/MyAsset/Core/Equipment/EquipmentStore.cs:44` / `Assets/MyAsset/Core/Equipment/EquipmentHolder.cs:9` / `Assets/MyAsset/Core/Equipment/EquipmentStatCalculator.cs:7` / `Assets/MyAsset/Core/ScriptableObjects/EquipmentDefinition.cs:7` / `Assets/MyAsset/Core/DataContainer/SoAStructs.cs:154`
   - **関連PR**: -
+  - **第一段階実装（2026-10-26、未コミット）**: 着脱のたびに全スロットから装備付与フラグと総重量を再集計し、素体の能力フラグとORした結果をSoAへ反映してから変更通知する。恒久獲得は `EquipmentStore.GrantAbilityFlags` で素体側の原本へ追加し、同じ能力を装備中に獲得しても解除時に失わない。着脱はStore経由とし、`GetHolder` は参照用とする。再登録・プール返却で前の装備を残さない。
+  - **第一段階の検証**: FakeWorldで反復着脱・重複フラグ・恒久獲得・通知順・再入・再登録を検証する新規9件と、既存装備12件が成功（上記86件に含む）。装備選択UIからStore入口への接続は従来どおり未完。
+  - **攻防・能力値反映（2026-10-26、未コミット）**: `EquipmentDefinition` のゼロ既定 `EquipmentStatModifiers` と任意の `IEquipmentStatsProvider` を追加。基礎・成長・全装備から攻防・6能力・最大リソースを一度だけ再導出し、`CombatStats` と `EquipmentStatus.final*` を同値へ書き戻す。装備のVIT/MNDには既存HP×10・MP×5を使い、基礎能力を再加算しない。装備攻撃加算は最終STR/DEX/INTと明示係数から既存の線形式でスケールし、防御は全装備の加算を合成する。盾ガードは明示設定時だけ上書きする。現在値・位置・ガード時間・状態異常を保持し、状態効果の倍率は命中時に一度だけ適用する。成長更新も同じ再計算入口を使う。HPを持つキャラの最大HPは最低1とし、死亡済みは復活させない。詳細は `designs/systems/EquipmentSystem.md` を参照。
+  - **攻防接続の検証**: 純計算19件・FakeWorldのStore11件・実HitResolverまで通す戦闘結合3件を含む外部.NET回帰118件が成功。旧実装のまま再現した浮動小数点境界の既存テストは、141.4→141の安定した切り捨て検証へ修正（旧計算式は維持）。HP下限・履歴非依存の回帰も追加。実SoA登録結合は6件へ拡充したが、Unity未導入のためコンパイル・実行は未確認。検証範囲・結果・SHA-256は `designs/call-paths.json` と `/workspace/.cave-dungeon/equipment-stats-harness/` に記録。
+  - **残りの仕様確認**: 重量上限の入力・STR/END等からの算出式、持ち方と重量による性能差は未接続のまま。既存の重量比率・持ち方を保持する。技ごとの武器・盾参照元と威力入力はDF-03、装備選択UI・見た目の切替は別項目として扱う。
 
 - [ ] 🟡🔶 **DF-03 通常攻撃・魔法の威力入力契約を統一** — 作者が編集する値と実際のダメージ式を一致させる
   - **背景**: `AttackInfo.baseDamage` はEditorに表示されるが実ダメージへ運ばれず、近接・魔法へのキャラ能力値や装備の影響が分かりにくい。シスターさんの能力値が魔法へどう反映されるかも明文化されていない。
@@ -87,23 +124,28 @@ PRレビューや実装中に発生した「今すぐではないが後で対応
   - **対象ファイル**: `Assets/MyAsset/Core/ScriptableObjects/AttackInfo.cs:21` / `Assets/MyAsset/Core/Common/CombatDataHelper.cs:17` / `Assets/MyAsset/Core/Combat/Projectile/ProjectileHitProcessor.cs:117` / `Assets/MyAsset/Core/Damage/HitResolver.cs` / `Assets/MyAsset/Runtime/Combat/ActionCatalog.cs` / `Assets/MyAsset/Editor/AttackInfoEditor.cs:35`
   - **関連PR**: -
 
-- [ ] 🟡✓ **DF-04 世代付きキャラ参照を共通化** — プール再利用後の別個体へ古い弾・遅延命令を適用しない
+- [x] 🟡✓ **DF-04 世代付きキャラ参照を共通化** — プール再利用後の別個体へ古い弾・遅延命令を適用しない
   - **背景**: GameObjectのhashはプール返却・再取得でも同じ。行動実行には登録世代があるが、弾や他ドメインはhashだけを参照し、旧敵の弾が新個体の攻撃力・攻撃者帰属で成立する経路がある。
   - **仕様**: IDと生成世代を組にした参照をキャラ登録・弾・標的・遅延イベント・外部AI命令で共有し、観測時点の個体と適用先が一致するか境界で確認する。発射済み弾の存続方針と攻撃データの固定時点はDF-03と整合させ、射手が消失・再生成された場合をテストする。
   - **対象ファイル**: `Assets/MyAsset/Runtime/Character/BaseCharacter.cs:77` / `Assets/MyAsset/Runtime/AI/EnemySpawnerManager.cs:355` / `Assets/MyAsset/Core/GameManager/GameManagerCore.cs` / `Assets/MyAsset/Core/Combat/Projectile/Projectile.cs:7` / `Assets/MyAsset/Core/Combat/Projectile/ProjectileHitProcessor.cs:42` / `Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs`
   - **関連PR**: -
 
-- [ ] 🟡✓ **DF-05 プレイヤー入力側の二重キャンセル判定を解消** — 入力は要求と先行入力を渡し、実行可否を共通側で決める
+  - **実装結果**: ActorRegistryの登録世代、ActionRequest/Projectile/target/DOTの参照と型付き死亡を接続。発射済み攻撃のAttackContextを固定し、owner再利用・古いtarget・子弾継承を純回帰で確認。Native/Runtime実行は未確認。
+
+- [x] 🟡✓ **DF-05 プレイヤー入力側の二重キャンセル判定を解消** — 入力は要求と先行入力を渡し、実行可否を共通側で決める
   - **背景**: 共通実行系に占有・優先度・キャンセル時刻がある一方、Player側も回避入力を消し、攻撃終了まで次の要求を出さない。定義上キャンセル可能でも入力が届かない。
   - **仕様**: 入力受付・先行入力と、占有・コスト・キャンセル可否の判断を分離する。共通実行系の定義だけで回復後半の回避キャンセルなどを設定でき、拒否された要求で現在の行動やコストが壊れないことを検証する。
   - **対象ファイル**: `Assets/MyAsset/Runtime/Character/PlayerCharacter.cs:218` / `Assets/MyAsset/Runtime/Character/PlayerCharacter.cs:543` / `Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs` / `Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs`
   - **関連PR**: -
+  - **実装結果（2026-10-26、未コミット）**: 移動占有中も回避要求と入力方向を共通実行へ渡し、攻撃・コンボ・強攻撃の可否も共通側へ委ねる。拒否時は入力を保持し、受理後だけ入力と攻撃の補助状態を消費・解除する。公開済み入力の消費により、同じボタン入力が複数FixedUpdateで再発火する問題も修正。`PlayerActionCancellationTests` に5件追加、Unity未導入のためコンパイル・実行は未確認。DF-06の落下攻撃・着地硬直の独自寿命は本項と分けて継続する。
 
-- [ ] 🟡✓ **DF-06 空中・落下攻撃・着地硬直の寿命を共通実行へ移行** — 共有状態ではNeutralなのに操作不能という不一致をなくす
+- [x] 🟡✓ **DF-06 空中・落下攻撃・着地硬直の寿命を共通実行へ移行** — 共有状態ではNeutralなのに操作不能という不一致をなくす
   - **背景**: `_airHangTimer` / `_isDivingAttack` / `_divingLandingTimer` が独自に寿命と操作制限を管理し、共通行動終了後も着地硬直が残る。
   - **仕様**: DF-05を前提に、空中・落下はManual/Heldなどの共通寿命、接地は終了通知、着地硬直は後続行動として表す。物理計算はアダプタに残し、実行IDへ結び付ける。強制被弾・死亡・プール返却時の解除と、他キャラからの状態照会を検証する。
   - **対象ファイル**: `Assets/MyAsset/Runtime/Character/PlayerCharacter.cs:826` / `Assets/MyAsset/Runtime/Character/PlayerCharacter.cs:845` / `Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs` / `Assets/MyAsset/Core/Actions/ExecutionTypes.cs`
   - **関連PR**: -
+
+  - **実装結果**: Playerの空中/落下/着地独自寿命を共有execution/groupへ移行。接地は原子的Completed→Recovery、硬直は共通資源占有。強制割込/disable/poolの物理cleanupとNative回帰を追加、Unity実行は未確認。
 
 - [ ] 🟡🔶 **DF-07 シミュレーションの更新段階を統一** — 同じ判断で新旧の位置・行動・効果時刻を混在させない
   - **背景**: 行動・状態異常はFixedUpdate、弾はUpdate、位置公開は各キャラのFixedUpdate、回復はDamageReceiver.Updateに分かれている。
@@ -111,11 +153,15 @@ PRレビューや実装中に発生した「今すぐではないが後で対応
   - **対象ファイル**: `Assets/MyAsset/Runtime/GameManager.cs:113` / `Assets/MyAsset/Runtime/Character/BaseCharacter.cs:344` / `Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs:168` / `Assets/MyAsset/Runtime/Combat/DamageReceiver.cs:81`
   - **関連PR**: -
 
-- [ ] 🟡✓ **DF-08 標的関係を共有データへ登録** — 狙う相手と狙われている人数を同じ関係から参照する
+  - **現在の範囲**: 中央SimulationTickと観測版、弾/防御/仲間資源の更新責任は実装済み。Unity物理境界・可変フレーム実行による確認は未実施。
+
+- [x] 🟡✓ **DF-08 標的関係を共有データへ登録** — 狙う相手と狙われている人数を同じ関係から参照する
   - **背景**: 標的はJudgmentLoopのprivate値に留まり、`TargetingCount` は実際の標的人数ではなく認識ビット数を数えている。統率・護衛・集中攻撃の判断に使える情報が不足する。
   - **仕様**: DF-04を前提に、owner→targetの関係と標的変更通知を共通化し、逆引き・狙われ人数を外側で集約する。解除・死亡・プール再利用で古い関係が残らないことを検証し、TargetSelectorと個別AIが同じ値を読む。
   - **対象ファイル**: `Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs:19` / `Assets/MyAsset/Core/AI/Core/TargetSelector.cs:223` / `Assets/MyAsset/Core/GameManager/GameEvents.cs`
   - **関連PR**: -
+
+  - **実装結果**: 世代付きAITargetRelationsを共通観測へ接続。実target人数を集計し、死亡/再登録/消滅で古い関係を除去。JudgmentLoopの標的変更と同じ関係を使う。
 
 - [ ] 🟡🔶 **DF-09 ゲーム通知からAI用イベントを生成** — 粒度を変えて購読できる階層分類・複数ラベルと履歴を持たせる
   - **背景**: GameEventsの型別即時通知と、判断器が読む8bit `BrainEventFlags` の間に書き込み経路がない。低頻度判断・外部AI・AIカスタムへイベントの意味を渡せない。
@@ -129,11 +175,15 @@ PRレビューや実装中に発生した「今すぐではないが後で対応
   - **対象ファイル**: `Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs:96` / `Assets/MyAsset/Core/AI/Core/ConditionEvaluator.cs:16` / `Assets/MyAsset/Core/AI/Core/SensorSystem.cs` / `Assets/MyAsset/Core/AI/Core/DamageScoreTracker.cs` / `Assets/MyAsset/Runtime/Character/BaseCharacter.cs:259`
   - **関連PR**: -
 
-- [ ] 🟡✓ **DF-11 AIカスタムの行動参照を永続ID化** — UIと実行側の配列並びで別の技を選ばない
+  - **現在の範囲**: Runtimeは共通観測を使用し、人数/score/last source/targetingを取得。地形・個体別感覚・イベント履歴はUnknownのままで未接続。
+
+- [x] 🟡✓ **DF-11 AIカスタムの行動参照を永続ID化** — UIと実行側の配列並びで別の技を選ばない
   - **背景**: AI設定UIはカタログの配列位置をparamIdにし、実行側は別配列の同じ位置を解決する。カタログの並び替えや将来の設定保存で意味が変わる。
   - **仕様**: 共通行動定義に対応する永続IDをUI・AI設定・保存データの参照に使い、実行時登録IDとは区別する。並び替え・未解決参照・定義削除を境界で扱い、同じ設定が同じ行動へ解決されることを検証する。
   - **対象ファイル**: `Assets/MyAsset/Runtime/UI/CompanionAISettingsController.Dialogs.ActionPicker.cs:312` / `Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs:88` / `Assets/MyAsset/Core/ScriptableObjects/ActionDefinition.cs` / `Assets/MyAsset/Runtime/Combat/ActionCatalog.cs` / `Assets/MyAsset/Core/Common/Structs.cs`
   - **関連PR**: -
+
+  - **実装結果**: 新UI/AIInfo/作者変換/builderの技参照をPersistentIdへ統一。未知IDは拒否し、旧indexはID空の互換入口だけ。旧unlockキーの番号ルールは別の移行残件として保持。
 
 - [ ] 🟢✓ **DF-12 行動照会の所有者別索引を実測して整備** — 一体の照会で全キャラの行動を毎回走査しない
   - **背景**: CopyActive・GetPrimary・EvaluateEffectsなどが全実行を走査し、キャラ数増加に対して不利な構造。現状のボトルネックかは未計測。
@@ -146,6 +196,8 @@ PRレビューや実装中に発生した「今すぐではないが後で対応
   - **仕様**: HPの有無、盾軽減・ジャストガード後のMP消費、最後のMPで開始済みの行動、消滅中の実行・被弾・標的候補・移動・表示、復帰位置を確認して定義する。共通被弾計算を再利用し、HPとMPを二重に減らさない。消滅/復帰状態を共通データとイベントへ公開し、個別の透明度だけで状態を表さない。
   - **対象ファイル**: `Assets/MyAsset/Runtime/Combat/DamageReceiver.cs` / `Assets/MyAsset/Runtime/Character/CompanionCharacter.cs` / `Assets/MyAsset/Core/AI/Companion/CompanionMpManager.cs` / `Assets/MyAsset/Core/Damage/HitResolver.cs` / `designs/systems/CompanionAI_Basic.md`
   - **関連PR**: -
+
+  - **現在の範囲**: 共有IsVanished・候補/通常被弾/身体移動/表示・既受理行動維持を接続済み。通常HP被弾をMPバリアへ置き換える仕様と復帰位置は未決定。
 
 ---
 

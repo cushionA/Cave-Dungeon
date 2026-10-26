@@ -58,6 +58,53 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(70f, mgr.CurrentMp, 0.01f);
         }
 
+        [TestCase(19.5f, 100, 0.25f, 19.25f, 19)]
+        [TestCase(40f, 100, 100f, 0f, 0)]
+        [TestCase(0f, 0, 1f, 0f, 0)]
+        public void MpManager_ConsumeMp_UpdatesSharedRatio(float currentMp, int maxMp,
+            float cost, float expectedMp, int expectedRatio)
+        {
+            ActionActorState actor = _world.actors[k_Owner];
+            actor.vitals.currentMp = currentMp;
+            actor.vitals.maxMp = maxMp;
+            _world.actors[k_Owner] = actor;
+            CompanionMpManager mgr = new CompanionMpManager(_world, k_Owner, 50, DefaultSettings());
+
+            mgr.ConsumeMp(cost);
+
+            Assert.AreEqual(expectedMp, _world.actors[k_Owner].vitals.currentMp);
+            Assert.AreEqual(expectedRatio, _world.actors[k_Owner].vitals.mpRatio);
+        }
+
+        [Test]
+        public void MpManager_VanishAndReturn_PublishSynchronizedSharedRatios()
+        {
+            ActionActorState actor = _world.actors[k_Owner];
+            actor.vitals.currentMp = 0f;
+            _world.actors[k_Owner] = actor;
+            CompanionMpManager mgr = new CompanionMpManager(_world, k_Owner, 100, DefaultSettings());
+            int vanished = 0;
+            int returned = 0;
+            mgr.OnVanish += () =>
+            {
+                vanished++;
+                Assert.AreEqual(0, _world.actors[k_Owner].vitals.mpRatio);
+            };
+            mgr.OnReturn += () =>
+            {
+                returned++;
+                Assert.AreEqual(52, _world.actors[k_Owner].vitals.mpRatio);
+            };
+
+            mgr.Tick(8f);
+
+            Assert.AreEqual(1, vanished);
+            Assert.AreEqual(1, returned);
+            Assert.AreEqual(52f, mgr.CurrentMp);
+            Assert.AreEqual(52, _world.actors[k_Owner].vitals.mpRatio);
+            Assert.AreEqual(100f, mgr.CurrentMp + mgr.ReserveMp);
+        }
+
         [Test]
         public void MpManager_ConsumeMp_WhenInsufficient_ConsumesRemaining()
         {
@@ -71,13 +118,61 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
+        public void MpManager_SharedVanishState_IsCommittedBeforeVanishAndReturnNotifications()
+        {
+            ActionActorState actor = _world.actors[k_Owner];
+            actor.vitals.currentMp = 0f;
+            _world.actors[k_Owner] = actor;
+            using CompanionMpManager manager = new CompanionMpManager(_world, k_Owner, 100, DefaultSettings());
+            int vanished = 0;
+            int returned = 0;
+            manager.OnVanish += () =>
+            {
+                Assert.IsTrue(_world.actors[k_Owner].flags.IsVanished);
+                vanished++;
+            };
+            manager.OnReturn += () =>
+            {
+                Assert.IsFalse(_world.actors[k_Owner].flags.IsVanished);
+                returned++;
+            };
+
+            manager.Tick(0f);
+            Assert.IsTrue(manager.IsVanished);
+            manager.Tick(8f);
+
+            Assert.IsFalse(manager.IsVanished);
+            Assert.AreEqual(1, vanished);
+            Assert.AreEqual(1, returned);
+        }
+
+        [Test]
+        public void MpManager_ExternalSharedVanishState_IsTheOnlyPresenceAuthority()
+        {
+            using CompanionMpManager manager = new CompanionMpManager(_world, k_Owner, 50, DefaultSettings());
+            ActionActorState actor = _world.actors[k_Owner];
+            actor.flags.IsVanished = true;
+            _world.actors[k_Owner] = actor;
+            Assert.IsTrue(manager.IsVanished);
+            Assert.AreEqual(0f, manager.ConsumeMp(10f));
+
+            actor.flags.IsVanished = false;
+            _world.actors[k_Owner] = actor;
+            Assert.IsFalse(manager.IsVanished);
+            Assert.AreEqual(10f, manager.ConsumeMp(10f));
+        }
+
+        [Test]
         public void MpManager_ConsumeMp_ZeroOrNegative_ReturnsZero()
         {
+            ActionActorState actor = _world.actors[k_Owner];
+            _world.actors[k_Owner] = actor;
             CompanionMpManager mgr = new CompanionMpManager(_world, k_Owner, 50, DefaultSettings());
 
             Assert.AreEqual(0f, mgr.ConsumeMp(0f));
             Assert.AreEqual(0f, mgr.ConsumeMp(-5f));
             Assert.AreEqual(100f, mgr.CurrentMp, 0.01f);
+            Assert.AreEqual(100, _world.actors[k_Owner].vitals.mpRatio);
         }
 
         [Test]

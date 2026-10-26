@@ -81,17 +81,33 @@ namespace Game.Runtime
         }
 
         /// <summary>
-        /// 飛翔体を1発生成する。targetHashでホーミング対象を指定可能（0で自動検索）。
+        /// hashから現在個体を解決する互換入口。遅延命令はActorRef版を使う。
+        /// targetHashでホーミング対象を指定可能（0で自動検索）。
         /// BulletProfile.spawnOffset は発射方向ローカル(x=forward, y=up)に変換して position に加算する。
         /// </summary>
         public ProjectileController SpawnProjectile(int casterHash, MagicDefinition magic,
             Vector2 position, Vector2 direction, int targetHash = 0)
         {
-            // 子弾は親の装備スナップショットを引き継ぎ、途中の装備変更を再反映しない。
-            if (magic.equipmentStatusEffects == null)
-            {
-                magic.equipmentStatusEffects = GameManager.Equipment.GetOnHitEffects(casterHash, magic.equipmentSource);
-            }
+            ActorRef caster = magic.attackContext.Owner;
+            if (!caster.IsValid && (GameManager.Actors == null || !GameManager.Actors.TryGet(casterHash, out caster))) { return null; }
+            if (caster.Hash != casterHash) { return null; }
+            ActorRef target = default;
+            if (targetHash != 0 && GameManager.Actors != null) { GameManager.Actors.TryGet(targetHash, out target); }
+            return SpawnProjectile(caster, magic, position, direction, target);
+        }
+
+        public ProjectileController SpawnProjectile(ActorRef caster, MagicDefinition magic,
+            Vector2 position, Vector2 direction, ActorRef target = default)
+        {
+            if (!CanBeginPublicShot(caster)) { return null; }
+            if (!TryCaptureAttack(caster, ref magic)) { return null; }
+            return SpawnCapturedProjectile(caster, magic, position, direction, target);
+        }
+
+        private ProjectileController SpawnCapturedProjectile(ActorRef caster, MagicDefinition magic,
+            Vector2 position, Vector2 direction, ActorRef target)
+        {
+            if (!magic.attackContext.IsCaptured || magic.attackContext.Owner != caster) { return null; }
             // Issue #78 M5 撤回: MagicDefinition / BulletProfile はいずれも struct (値型) のため
             // null 比較は不可能 (CS0019)。NRE 起因の「弾が出ない」silent bug は元々発生し得ないため
             // 入口 null チェックは不要 (struct はデフォルト値で初期化される)。
@@ -101,8 +117,8 @@ namespace Game.Runtime
             Vector2 spawnPosition = ApplyLocalSpawnOffset(position, direction, magic.bulletProfile.spawnOffset);
 
             Projectile core = _corePool.Get();
-            core.Initialize(casterHash, magic.bulletProfile, spawnPosition, direction);
-            core.TargetHash = targetHash;
+            core.Initialize(caster, magic.bulletProfile, spawnPosition, direction);
+            core.TrySetTarget(target, GameManager.Actors);
 
             ProjectileController controller = GetOrCreateController();
             controller.Activate(core, magic, this);
@@ -116,6 +132,28 @@ namespace Game.Runtime
             }
 
             return controller;
+        }
+
+        private bool CanBeginPublicShot(ActorRef caster) => GameManager.Actors != null
+            && GameManager.Actors.IsCurrent(caster) && GameManager.IsCharacterValid(caster.Hash)
+            && !GameManager.Data.GetFlags(caster.Hash).IsVanished;
+
+        private bool TryCaptureAttack(ActorRef caster, ref MagicDefinition magic, bool acceptedExecution = false)
+        {
+            if (magic.attackContext.IsCaptured) { return magic.attackContext.Owner == caster; }
+            if (GameManager.Actors == null || !GameManager.Actors.IsCurrent(caster)
+                || !GameManager.IsCharacterValid(caster.Hash)) { return false; }
+            if (!acceptedExecution && GameManager.Data.GetFlags(caster.Hash).IsVanished) { return false; }
+            if (magic.equipmentStatusEffects == null)
+            {
+                magic.equipmentStatusEffects = GameManager.Equipment.GetOnHitEffects(caster.Hash, magic.equipmentSource);
+            }
+            magic.attackContext = AttackContext.Capture(caster,
+                GameManager.Data.GetCombatStats(caster.Hash).attack,
+                GameManager.Data.GetStatusEffects(caster.Hash).AttackMultiplier,
+                GameManager.Data.GetFlags(caster.Hash).Belong,
+                magic.equipmentStatusEffects, magic.statusEffects);
+            return true;
         }
 
         /// <summary>
@@ -145,9 +183,42 @@ namespace Game.Runtime
             Vector2 position, Vector2 baseDirection, int count, float spreadAngle,
             int targetHash = 0)
         {
+            ActorRef caster = magic.attackContext.Owner;
+            if (!caster.IsValid && (GameManager.Actors == null || !GameManager.Actors.TryGet(casterHash, out caster))) { return; }
+            if (caster.Hash != casterHash) { return; }
+            ActorRef target = default;
+            if (targetHash != 0 && GameManager.Actors != null) { GameManager.Actors.TryGet(targetHash, out target); }
+            SpawnSpread(caster, magic, position, baseDirection, count, spreadAngle, target);
+        }
+
+        public void SpawnSpread(ActorRef caster, MagicDefinition magic,
+            Vector2 position, Vector2 baseDirection, int count, float spreadAngle, ActorRef target = default)
+        {
+            if (!CanBeginPublicShot(caster)) { return; }
+            if (!TryCaptureAttack(caster, ref magic)) { return; }
+            SpawnCapturedSpread(caster, magic, position, baseDirection, count, spreadAngle, target);
+        }
+
+        internal void SpawnSpreadFromExecution(in ActionExecution source, MagicDefinition magic,
+            Vector2 position, Vector2 baseDirection, int count, float spreadAngle, ActorRef target = default)
+        {
+            if (GameManager.Actions == null || GameManager.Actors == null
+                || !GameManager.Actors.IsCurrent(source.ownerRef)
+                || !GameManager.Actions.Execution.TryGetInstance(source.instanceId, out ActionExecution current)
+                || current.groupId != source.groupId || current.ownerRef != source.ownerRef
+                || magic.actionInstanceId != current.instanceId
+                || !AttackContext.CanFinishAcceptedCast(source.ownerRef, current)
+                || !GameManager.Actions.Execution.CanApplyExecutionEffects(current.instanceId)) { return; }
+            if (!TryCaptureAttack(current.ownerRef, ref magic, true)) { return; }
+            SpawnCapturedSpread(current.ownerRef, magic, position, baseDirection, count, spreadAngle, target);
+        }
+
+        private void SpawnCapturedSpread(ActorRef caster, MagicDefinition magic,
+            Vector2 position, Vector2 baseDirection, int count, float spreadAngle, ActorRef target)
+        {
             if (count <= 1)
             {
-                SpawnProjectile(casterHash, magic, position, baseDirection, targetHash);
+                SpawnCapturedProjectile(caster, magic, position, baseDirection, target);
                 return;
             }
 
@@ -161,11 +232,11 @@ namespace Game.Runtime
                 float rad = angle * Mathf.Deg2Rad;
                 Vector2 dir = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
 
-                SpawnProjectile(casterHash, magic, position, dir, targetHash);
+                SpawnCapturedProjectile(caster, magic, position, dir, target);
             }
         }
 
-        private void Update()
+        public void SimulationTick(float deltaTime)
         {
             if (_activeControllers == null || _activeControllers.Count == 0)
             {
@@ -176,7 +247,7 @@ namespace Game.Runtime
             UpdateHomingTargets();
 
             // Core一括移動更新
-            ProjectileMovement.UpdateAll(_corePool, Time.deltaTime, Vector2.zero);
+            ProjectileMovement.UpdateAll(_corePool, deltaTime, Vector2.zero);
 
             // 特殊効果処理（重力等）+ OnTimerチェック
             // NOTE: SpawnChildProjectilesで_activeControllers末尾にAddされるが、
@@ -195,7 +266,7 @@ namespace Game.Runtime
                     continue;
                 }
 
-                BulletFeatureProcessor.ProcessFeatures(core, Time.deltaTime);
+                BulletFeatureProcessor.ProcessFeatures(core, deltaTime);
 
                 // OnTimerトリガー: emitInterval経過で子弾を生成
                 MagicDefinition magic = _activeControllers[i].Magic;
@@ -272,12 +343,20 @@ namespace Game.Runtime
 
             List<int> targets = BulletFeatureProcessor.GetExplosionTargets(
                 projectile.Position, radius, _allHashesBuffer, GameManager.Data);
+            ActorRef[] observedTargets = new ActorRef[targets.Count];
+            for (int i = 0; i < targets.Count; i++)
+            {
+                if (GameManager.Actors != null) { GameManager.Actors.TryGet(targets[i], out observedTargets[i]); }
+            }
 
             for (int i = 0; i < targets.Count; i++)
             {
                 int targetHash = targets[i];
+                ActorRef target = observedTargets[i];
+                if (!projectile.CanHit(target, GameManager.Actors)) { continue; }
+                if (GameManager.Data.GetFlags(targetHash).IsVanished) { continue; }
                 // キャスター自身は爆発ダメージ対象外
-                if (targetHash == projectile.CasterHash)
+                if (target == projectile.CasterRef)
                 {
                     continue;
                 }
@@ -290,7 +369,8 @@ namespace Game.Runtime
                 }
 
                 ProjectileHitProcessor.ProcessHit(
-                    projectile, receiver, GameManager.Data, magic, GameManager.Events, GameManager.StatusEffects);
+                    projectile, receiver, GameManager.Data, magic, GameManager.Events, GameManager.StatusEffects,
+                    GameManager.Actors, target);
             }
         }
 
@@ -344,7 +424,13 @@ namespace Game.Runtime
                 }
 
                 // TargetHashが指定されている場合はそのキャラの位置を直接参照
-                if (core.TargetHash != 0 && GameManager.IsCharacterValid(core.TargetHash))
+                bool currentTarget = core.RefreshTarget(GameManager.Actors);
+                if (currentTarget && GameManager.Data.GetFlags(core.TargetHash).IsVanished)
+                {
+                    core.TrySetTarget(default, GameManager.Actors);
+                    currentTarget = false;
+                }
+                if (currentTarget && GameManager.IsCharacterValid(core.TargetHash))
                 {
                     ref CharacterVitals targetVitals = ref GameManager.Data.GetVitals(core.TargetHash);
                     core.TargetPosition = targetVitals.position;
@@ -352,7 +438,7 @@ namespace Game.Runtime
                 else
                 {
                     // TargetHash未指定 or ターゲット死亡→陣営ベースで最寄り敵を検索
-                    core.TargetPosition = FindNearestEnemyPosition(core);
+                    core.TargetPosition = FindNearestEnemyPosition(core, _activeControllers[i].Magic.attackContext);
                 }
             }
         }
@@ -362,15 +448,16 @@ namespace Game.Runtime
         /// 弾丸の進行方向と敵への方向のドット積（cos角度）で最小角度の敵を選択する。
         /// 敵が見つからない場合は弾丸の現在位置を返す（直進継続）。
         /// </summary>
-        private Vector2 FindNearestEnemyPosition(Projectile projectile)
+        private Vector2 FindNearestEnemyPosition(Projectile projectile, AttackContext attackContext)
         {
             SoACharaDataDic data = GameManager.Data;
-            if (!data.TryGetValue(projectile.CasterHash, out int _))
+            if (!attackContext.IsCaptured && !data.TryGetValue(projectile.CasterHash, out int _))
             {
                 return projectile.Position;
             }
 
-            CharacterBelong casterBelong = data.GetFlags(projectile.CasterHash).Belong;
+            CharacterBelong casterBelong = attackContext.IsCaptured
+                ? attackContext.Belong : data.GetFlags(projectile.CasterHash).Belong;
             Vector2 flyDir = projectile.Velocity.normalized;
 
             // 速度がほぼゼロの場合は距離ベースにフォールバック
@@ -386,12 +473,15 @@ namespace Game.Runtime
             for (int i = 0; i < _allHashesBuffer.Count; i++)
             {
                 int hash = _allHashesBuffer[i];
-                if (hash == projectile.CasterHash)
+                ActorRef target = default;
+                if (GameManager.Actors == null || !GameManager.Actors.TryGet(hash, out target)) { continue; }
+                if (target == projectile.CasterRef)
                 {
                     continue;
                 }
 
                 CharacterBelong targetBelong = data.GetFlags(hash).Belong;
+                if (data.GetFlags(hash).IsVanished || data.GetVitals(hash).currentHp <= 0) { continue; }
 
                 // 同陣営はスキップ
                 if (targetBelong == casterBelong)
@@ -498,7 +588,7 @@ namespace Game.Runtime
 
         /// <summary>
         /// 親弾の位置・方向から子弾を生成する。
-        /// 子弾は親のCasterHash・TargetHashを継承し、childBulletは強制nullで無限再帰を防止する。
+        /// 子弾は親の個体参照と攻撃snapshotを継承し、childBulletはnullで無限再帰を防止する。
         /// </summary>
         internal void SpawnChildProjectiles(Projectile parent, MagicDefinition parentMagic)
         {
@@ -509,6 +599,11 @@ namespace Game.Runtime
             }
 
             MagicDefinition childMagic = ChildBulletHelper.CreateChildMagic(parentMagic, config);
+            ActorRef caster = parent.CasterRef;
+            if (!caster.IsValid && (GameManager.Actors == null || !GameManager.Actors.TryGet(parent.CasterHash, out caster))) { return; }
+            ActorRef target = parent.TargetRef;
+            if (!target.IsValid && parent.TargetHash != 0 && GameManager.Actors != null)
+            { GameManager.Actors.TryGet(parent.TargetHash, out target); }
 
             // 現在の速度方向を優先。静止弾(Set等)は初期方向にフォールバック
             Vector2 direction = parent.Velocity.sqrMagnitude > 0.001f
@@ -519,14 +614,15 @@ namespace Game.Runtime
 
             if (config.count <= 1 || config.spreadAngle <= 0f)
             {
-                SpawnProjectile(parent.CasterHash, childMagic,
-                    parent.Position, direction, parent.TargetHash);
+                if (childMagic.attackContext.IsCaptured)
+                { SpawnCapturedProjectile(caster, childMagic, parent.Position, direction, target); }
+                else { SpawnProjectile(caster, childMagic, parent.Position, direction, target); }
             }
             else
             {
-                SpawnSpread(parent.CasterHash, childMagic,
-                    parent.Position, direction, config.count, config.spreadAngle,
-                    parent.TargetHash);
+                if (childMagic.attackContext.IsCaptured)
+                { SpawnCapturedSpread(caster, childMagic, parent.Position, direction, config.count, config.spreadAngle, target); }
+                else { SpawnSpread(caster, childMagic, parent.Position, direction, config.count, config.spreadAngle, target); }
             }
         }
 

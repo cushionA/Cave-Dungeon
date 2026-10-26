@@ -16,11 +16,54 @@ namespace Game.Core
         private SoACharaDataDic _data;
         private int _ownerHash;
         private AIMode _currentMode;
+        // 旧SoA互換経路だけで使用。Runtimeの標的正本はAITargetRelations。
         private int _currentTargetHash;
         private float _targetJudgeTimer;
         private float _actionJudgeTimer;
+        private AIObservationContext _observation;
+        private AITargetRelations _targets;
+        private ActorRef _owner;
 
-        public int CurrentTargetHash => _currentTargetHash;
+
+        public int CurrentTargetHash => _targets != null
+            ? (_targets.TryGetTarget(_owner, out ActorRef target) ? target.Hash : 0)
+            : _currentTargetHash;
+        public long ObservationTick => _observation != null ? _observation.Tick : 0;
+
+        public void ResetActorLifetime()
+        {
+            SetTarget(0);
+            _executor.CancelCurrent();
+            _owner = default;
+            _observation = null;
+            _targets = null;
+            _currentTargetHash = 0;
+            _targetJudgeTimer = _actionJudgeTimer = 0f;
+        }
+
+        public bool UseObservation(AIObservationContext observation, AITargetRelations targets)
+        {
+            if (observation == null || targets == null || !observation.TryGetActor(_ownerHash, out AIActorObservation owner)
+                || (_owner.IsValid && !_owner.Equals(owner.actor))) { return false; }
+            _owner = owner.actor;
+            _observation = observation;
+            _targets = targets;
+            return true;
+        }
+
+        private void SetTarget(int hash)
+        {
+            if (_targets == null) { _currentTargetHash = hash; return; }
+            ActorRef target = hash != 0 && _observation.TryGetActor(hash, out AIActorObservation value) ? value.actor : default;
+            _targets.SetTarget(_owner, target);
+        }
+
+        private bool EvaluateConditions(AICondition[] conditions, float currentTime)
+        {
+            return _observation != null
+                ? ConditionEvaluator.EvaluateAll(conditions, _ownerHash, CurrentTargetHash, _observation)
+                : ConditionEvaluator.EvaluateAll(conditions, _ownerHash, CurrentTargetHash, _data, currentTime);
+        }
         public ActionExecutor Executor => _executor;
 
         public JudgmentLoop(ActionExecutor executor, SoACharaDataDic data, int ownerHash)
@@ -55,6 +98,7 @@ namespace Game.Core
         {
             _targetJudgeTimer = 0f;
             _actionJudgeTimer = 0f;
+            SetTarget(0);
             _executor.CancelCurrent();
         }
 
@@ -63,6 +107,9 @@ namespace Game.Core
         /// </summary>
         public void Tick(float deltaTime, List<int> candidates, float currentTime)
         {
+            if (_targets != null && !_targets.IsCurrent(_owner)) { _executor.CancelCurrent(); return; }
+            if (_targets == null && _currentTargetHash != 0 && (!_data.TryGetValue(_currentTargetHash, out _)
+                || _data.GetVitals(_currentTargetHash).currentHp <= 0)) { _currentTargetHash = 0; }
             _targetJudgeTimer -= deltaTime;
             _actionJudgeTimer -= deltaTime;
             _executor.Tick(deltaTime);
@@ -93,18 +140,15 @@ namespace Game.Core
             for (int i = 0; i < _currentMode.targetRules.Length; i++)
             {
                 AIRule rule = _currentMode.targetRules[i];
-                if (ConditionEvaluator.EvaluateAll(rule.conditions, _ownerHash, _currentTargetHash, _data, currentTime))
+                if (EvaluateConditions(rule.conditions, currentTime))
                 {
                     int selectIndex = rule.actionIndex;
                     if (selectIndex >= 0 && selectIndex < _currentMode.targetSelects.Length)
                     {
-                        int target = TargetSelector.SelectTarget(
-                            _currentMode.targetSelects[selectIndex],
-                            _ownerHash, candidates, _data, currentTime);
-                        if (target != 0)
-                        {
-                            _currentTargetHash = target;
-                        }
+                        int target = _observation != null
+                            ? TargetSelector.SelectTarget(_currentMode.targetSelects[selectIndex], _ownerHash, _observation, candidates)
+                            : TargetSelector.SelectTarget(_currentMode.targetSelects[selectIndex], _ownerHash, candidates, _data, currentTime);
+                        SetTarget(target);
                     }
                     return;
                 }
@@ -125,12 +169,12 @@ namespace Game.Core
             for (int i = 0; i < _currentMode.actionRules.Length; i++)
             {
                 AIRule rule = _currentMode.actionRules[i];
-                if (ConditionEvaluator.EvaluateAll(rule.conditions, _ownerHash, _currentTargetHash, _data, currentTime))
+                if (EvaluateConditions(rule.conditions, currentTime))
                 {
                     int actionIdx = rule.actionIndex;
                     if (actionIdx >= 0 && actionIdx < _currentMode.actions.Length)
                     {
-                        _executor.Execute(_ownerHash, _currentTargetHash, _currentMode.actions[actionIdx]);
+                        _executor.Execute(_ownerHash, CurrentTargetHash, _currentMode.actions[actionIdx]);
                     }
                     return;
                 }
@@ -138,7 +182,7 @@ namespace Game.Core
 
             if (_currentMode.defaultActionIndex >= 0 && _currentMode.defaultActionIndex < _currentMode.actions.Length)
             {
-                _executor.Execute(_ownerHash, _currentTargetHash, _currentMode.actions[_currentMode.defaultActionIndex]);
+                _executor.Execute(_ownerHash, CurrentTargetHash, _currentMode.actions[_currentMode.defaultActionIndex]);
             }
         }
     }

@@ -92,7 +92,7 @@ namespace Game.Core
                     int idx = modeData.availableActIndices[i];
                     if (idx >= 0 && idx < actDataList.Length)
                     {
-                        actions.Add(ConvertActToSlot(actDataList[idx]));
+                        actions.Add(ConvertAction(actDataList[idx]));
                         validOriginalIndices.Add(idx);
                     }
                 }
@@ -161,7 +161,8 @@ namespace Game.Core
             };
         }
 
-        private static ActionSlot ConvertActToSlot(ActData act)
+        /// <summary>作者向け行動種別を共通実行の識別子と引数へ変換する。</summary>
+        public static ActionSlot ConvertAction(in ActData act)
         {
             ActionExecType execType = MapActType(act.actType);
 
@@ -177,7 +178,8 @@ namespace Game.Core
             return new ActionSlot
             {
                 execType = execType,
-                paramId = act.attackInfoIndex,
+                actionDefinitionId = execType == ActionExecType.Attack || execType == ActionExecType.Cast ? act.actionDefinitionId : null,
+                paramId = MapActionParameter(act.actType, act.attackInfoIndex),
                 paramValue = paramValue,
                 displayName = act.actName,
             };
@@ -193,10 +195,25 @@ namespace Game.Core
                 case ActType.Heal:        return ActionExecType.Cast;
                 case ActType.Buff:        return ActionExecType.Broadcast;
                 case ActType.Wait:        return ActionExecType.Sustained;
-                case ActType.Flee:        return ActionExecType.Instant;
+                case ActType.Flee:        return ActionExecType.Sustained;
                 case ActType.Move:        return ActionExecType.Sustained;
                 case ActType.FeintCancel: return ActionExecType.Instant;
-                default:                  return ActionExecType.Attack;
+                default:                  return ActionExecType.Broadcast;
+            }
+        }
+
+        private static int MapActionParameter(ActType type, int legacyAttackIndex)
+        {
+            switch (type)
+            {
+                case ActType.Attack:
+                case ActType.Heal: return legacyAttackIndex;
+                case ActType.Guard: return (int)SustainedAction.Guard;
+                case ActType.Wait: return (int)SustainedAction.Idle;
+                case ActType.Move: return (int)SustainedAction.MoveToTarget;
+                case ActType.Flee: return (int)SustainedAction.Flee;
+                case ActType.Dodge: return (int)InstantAction.Dodge;
+                default: return -1;
             }
         }
 

@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 55a1ec93ce0944c47887ddab2ae86a7a, type: 3}
   m_Name: PLACEHOLDER_PlayerCombo3
   m_EditorClassIdentifier: Game.Core::Game.Core.AttackInfo
+  persistentId: 69bff095b05f0044f9b34e29cb5c3ac4
   attackName: Light_Combo3_Finish
   category: 0
   motion: {fileID: 11400000, guid: 0bc3bbdcd8b042a78d18ca71f35c0569, type: 2}

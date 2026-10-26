@@ -91,6 +91,8 @@ namespace Game.Tests.PlayMode
             CompanionMpManager previous = _companion.AIController.MpManager;
             previous.ApplyBarrierDamage(previous.CurrentMp);
             Assert.IsTrue(previous.IsVanished);
+            Assert.AreEqual(1f, _companion.GetComponent<SpriteRenderer>().color.a, 0.001f);
+            _companion.enabled = true;
             Assert.AreEqual(0.3f, _companion.GetComponent<SpriteRenderer>().color.a, 0.001f);
             _companion.OnPoolReturn();
             Assert.IsFalse(GameManager.IsCharacterValid(owner));

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 using Game.Core;
 using CharacterInfo = Game.Core.CharacterInfo;
 
@@ -25,6 +26,7 @@ namespace Game.Runtime
         private PlayerInput _playerInput;
         private BaseCharacter _character;
         private MovementInfo _currentInput;
+        private readonly InputSamplingClock _samplingClock = new InputSamplingClock();
 
         // CharacterInfoから読み込む入力設定値（Awakeでキャッシュ）
         private float _inputBufferDuration;
@@ -54,6 +56,7 @@ namespace Game.Runtime
         private float _attackBuffer;
         private AttackButtonId _bufferedAttackButtonId;
         private bool _bufferedIsCharging;
+        private float _bufferedChargeMultiplier = 1f;
 
         // 攻撃ボタン直接ポーリング用
         private InputAction _attackAction;
@@ -82,6 +85,7 @@ namespace Game.Runtime
 
         /// <summary>
         /// 自動テスト用: 入力をオーバーライドする。実入力を無視してこの値を返す。
+        /// 攻撃・回避の単発入力は受理後に消費するため、次の入力は改めて設定する。
         /// </summary>
         public void SetOverrideInput(MovementInfo input)
         {
@@ -99,11 +103,32 @@ namespace Game.Runtime
 
         /// <summary>
         /// 攻撃入力を消費する。PlayerCharacterが攻撃実行後に呼ぶ。
-        /// バッファをクリアして同一入力で複数攻撃が出るのを防ぐ。
+        /// 公開済みの入力もクリアし、Update間の複数FixedUpdateで再発火させない。
         /// </summary>
         public void ConsumeAttackInput()
         {
             _attackBuffer = 0f;
+            _bufferedChargeMultiplier = 1f;
+            _currentInput.attackInput = null;
+            _currentInput.chargeMultiplier = 1f;
+            _overrideInput.attackInput = null;
+            _overrideInput.chargeMultiplier = 1f;
+        }
+
+        /// <summary>回避が受理された時だけバッファと公開済み入力を消費する。</summary>
+        public void ConsumeDodgeInput()
+        {
+            _dodgeBuffer = 0f;
+            _currentInput.dodgePressed = false;
+            _overrideInput.dodgePressed = false;
+        }
+
+        /// <summary>ジャンプが受理された時だけ単発入力を消費し、保持状態は維持する。</summary>
+        public void ConsumeJumpInput()
+        {
+            _jumpBuffer = 0f;
+            _currentInput.jumpPressed = false;
+            _overrideInput.jumpPressed = false;
         }
 
         private void Awake()
@@ -112,6 +137,7 @@ namespace Game.Runtime
             _character = GetComponent<BaseCharacter>();
             _chargeLogic = new ChargeAttackLogic();
             _chargeHandler = new ChargeInputHandler(_chargeLogic);
+            _samplingClock.Reset(Time.time);
 
             // CharacterInfoから入力設定値をキャッシュ（フォールバック付き）
             CharacterInfo info = _character != null ? _character.CharacterInfoRef : null;
@@ -122,24 +148,47 @@ namespace Game.Runtime
 
         private void OnEnable()
         {
-            // InputActionを直接取得してポーリング用に保持
+            _samplingClock.Reset(Time.time);
+            // InputSystem自身の更新phase内でだけ読むInputActionを保持
             if (_playerInput != null && _playerInput.actions != null)
             {
                 _attackAction = _playerInput.actions[k_AttackActionName];
                 _heavyAttackAction = _playerInput.actions[k_HeavyAttackActionName];
                 _sprintAction = _playerInput.actions[k_SprintActionName];
             }
+            InputSystem.onAfterUpdate += OnAfterInputUpdate;
+        }
+
+        private void OnDisable()
+        {
+            InputSystem.onAfterUpdate -= OnAfterInputUpdate;
+            _chargeHandler?.CancelCharge();
+            _attackAction = _heavyAttackAction = _sprintAction = null;
+            _attackHeldLastFrame = _heavyHeldLastFrame = _sprintHeldLastFrame = false;
+            _isHoldingButton = _jumpHeld = _guardHeld = _sprintHeld = false;
+            _moveDirection = default;
+            _jumpBuffer = _dodgeBuffer = _interactBuffer = _weaponSwitchBuffer = _gripSwitchBuffer = 0f;
+            _cooperationBuffer = _menuBuffer = _mapBuffer = _attackBuffer = 0f;
+            _bufferedChargeMultiplier = 1f;
+            _bufferedIsCharging = false;
+            _currentInput = default;
+            _overrideInput = default;
+            _overrideActive = false;
         }
 
         // --- InputSystem Callbacks (Message mode) ---
 
         public void OnMove(InputValue value)
         {
+            if (!isActiveAndEnabled) { return; }
+            AdvanceSampling(Time.time);
             _moveDirection = InputConverter.NormalizeDirection(value.Get<Vector2>());
         }
 
         public void OnJump(InputValue value)
         {
+            if (!isActiveAndEnabled) { return; }
+            AdvanceSampling(Time.time);
             if (value.isPressed)
             {
                 _jumpBuffer = _inputBufferDuration;
@@ -151,31 +200,40 @@ namespace Game.Runtime
             }
         }
 
-        // OnSprint: 長押し判定はUpdateのポーリングで行うため、ここでは何もしない。
+        // OnSprint: 長押し判定は入力更新後のポーリングで行うため、ここでは何もしない。
         // SendMessagesではcanceledが来ないためポーリング必須。
 
         public void OnSkill(InputValue value)
         {
+            if (!isActiveAndEnabled) { return; }
+            AdvanceSampling(Time.time);
             if (value.isPressed)
             {
                 _chargeHandler.CancelCharge();
+                _isHoldingButton = false;
                 _attackBuffer = _inputBufferDuration;
                 _bufferedAttackButtonId = AttackButtonId.Skill;
                 _bufferedIsCharging = false;
+                _bufferedChargeMultiplier = 1f;
             }
         }
 
         public void OnGuard(InputValue value)
         {
+            if (!isActiveAndEnabled) { return; }
+            AdvanceSampling(Time.time);
             _guardHeld = value.isPressed;
             if (value.isPressed)
             {
                 _chargeHandler.CancelCharge();
+                _isHoldingButton = false;
             }
         }
 
         public void OnInteract(InputValue value)
         {
+            if (!isActiveAndEnabled) { return; }
+            AdvanceSampling(Time.time);
             if (value.isPressed)
             {
                 _interactBuffer = _inputBufferDuration;
@@ -184,6 +242,8 @@ namespace Game.Runtime
 
         public void OnWeaponSwitch(InputValue value)
         {
+            if (!isActiveAndEnabled) { return; }
+            AdvanceSampling(Time.time);
             if (value.isPressed)
             {
                 _weaponSwitchBuffer = _inputBufferDuration;
@@ -192,6 +252,8 @@ namespace Game.Runtime
 
         public void OnGripSwitch(InputValue value)
         {
+            if (!isActiveAndEnabled) { return; }
+            AdvanceSampling(Time.time);
             if (value.isPressed)
             {
                 _gripSwitchBuffer = _inputBufferDuration;
@@ -200,6 +262,8 @@ namespace Game.Runtime
 
         public void OnCooperation(InputValue value)
         {
+            if (!isActiveAndEnabled) { return; }
+            AdvanceSampling(Time.time);
             if (value.isPressed)
             {
                 _cooperationBuffer = _inputBufferDuration;
@@ -208,6 +272,8 @@ namespace Game.Runtime
 
         public void OnMenu(InputValue value)
         {
+            if (!isActiveAndEnabled) { return; }
+            AdvanceSampling(Time.time);
             if (value.isPressed)
             {
                 _menuBuffer = _inputBufferDuration;
@@ -216,6 +282,8 @@ namespace Game.Runtime
 
         public void OnMap(InputValue value)
         {
+            if (!isActiveAndEnabled) { return; }
+            AdvanceSampling(Time.time);
             if (value.isPressed)
             {
                 _mapBuffer = _inputBufferDuration;
@@ -224,23 +292,33 @@ namespace Game.Runtime
 
         private void Update()
         {
-            if (_chargeHandler == null)
-            {
-                return;
-            }
+            PrepareSimulationInput(Time.time);
+        }
 
-            float dt = Time.deltaTime;
+        /// <summary>既に処理済みの入力を同じ固定tickの制御へ公開する。InputSystem自体は更新しない。</summary>
+        public void PrepareSimulationInput(float currentTime)
+        {
+            if (!isActiveAndEnabled || _chargeHandler == null) { return; }
+            AdvanceSampling(currentTime);
+            PublishInput();
+        }
 
-            // --- 攻撃ボタン直接ポーリング（SendMessagesのcanceled未到達を回避）---
-            PollAttackButtons(dt);
+        private void OnAfterInputUpdate()
+        {
+            InputUpdateType updateType = InputState.currentUpdateType;
+            if (!isActiveAndEnabled || (updateType != InputUpdateType.Dynamic && updateType != InputUpdateType.Fixed)) { return; }
+            AdvanceSampling(Time.time);
+            // IsPressed/WasPressedはInputSystemが更新したphaseだけで読む。
+            PollAttackButtons();
+            PollSprintButton();
+            PublishInput();
+        }
 
-            // --- スプリント/回避ポーリング ---
-            PollSprintButton(dt);
-
-            // チャージ更新
-            _chargeHandler.UpdateHold(dt);
-
-            // バッファタイマー減算
+        private void AdvanceSampling(float currentTime)
+        {
+            if (_chargeHandler == null) { return; }
+            float dt = _samplingClock.Advance(currentTime);
+            if (dt <= 0f) { return; }
             _jumpBuffer -= dt;
             _dodgeBuffer -= dt;
             _interactBuffer -= dt;
@@ -250,6 +328,20 @@ namespace Game.Runtime
             _menuBuffer -= dt;
             _mapBuffer -= dt;
             _attackBuffer -= dt;
+
+            // 前のサンプルから既に保持していたボタンだけ進め、押下前の時間を加算しない。
+            if (_isHoldingButton)
+            {
+                if (_holdingButtonId == AttackButtonId.Light) { _attackHoldTime += dt; }
+                else if (_holdingButtonId == AttackButtonId.Heavy) { _heavyHoldTime += dt; }
+            }
+            _chargeHandler.UpdateHold(dt);
+            if (_sprintHeldLastFrame) { _sprintHoldTime += dt; }
+            _sprintHeld = _sprintHeldLastFrame && _sprintHoldTime >= _sprintHoldThreshold;
+        }
+
+        private void PublishInput()
+        {
 
             // 攻撃入力変換
             AttackInputType? attackInput = null;
@@ -276,7 +368,7 @@ namespace Game.Runtime
                 gripSwitchPressed = _gripSwitchBuffer > 0f,
                 menuPressed = _menuBuffer > 0f,
                 mapPressed = _mapBuffer > 0f,
-                chargeMultiplier = _chargeHandler.ChargeMultiplier
+                chargeMultiplier = _bufferedChargeMultiplier
             };
         }
 
@@ -284,10 +376,31 @@ namespace Game.Runtime
         /// 攻撃ボタンをポーリングして押下/リリースを検出する。
         /// 短押し=即攻撃、長押し(>_chargeThreshold)=ため攻撃（リリースで発動）。
         /// </summary>
-        private void PollAttackButtons(float dt)
+        private void PollAttackButtons()
         {
-            // Light Attack
             bool attackHeld = _attackAction != null && _attackAction.IsPressed();
+            bool shortLightTap = !attackHeld && !_attackHeldLastFrame && _attackAction != null
+                && _attackAction.WasPressedThisFrame() && _attackAction.WasReleasedThisFrame();
+            if (shortLightTap)
+            {
+                ProcessLightButton(true);
+                ProcessLightButton(false);
+            }
+            else { ProcessLightButton(attackHeld); }
+
+            bool heavyHeld = _heavyAttackAction != null && _heavyAttackAction.IsPressed();
+            bool shortHeavyTap = !heavyHeld && !_heavyHeldLastFrame && _heavyAttackAction != null
+                && _heavyAttackAction.WasPressedThisFrame() && _heavyAttackAction.WasReleasedThisFrame();
+            if (shortHeavyTap)
+            {
+                ProcessHeavyButton(true);
+                ProcessHeavyButton(false);
+            }
+            else { ProcessHeavyButton(heavyHeld); }
+        }
+
+        private void ProcessLightButton(bool attackHeld)
+        {
             if (attackHeld && !_attackHeldLastFrame)
             {
                 // 押下開始
@@ -299,6 +412,7 @@ namespace Game.Runtime
                 _attackBuffer = _inputBufferDuration;
                 _bufferedAttackButtonId = AttackButtonId.Light;
                 _bufferedIsCharging = false;
+                _bufferedChargeMultiplier = 1f;
             }
             else if (!attackHeld && _attackHeldLastFrame)
             {
@@ -312,6 +426,7 @@ namespace Game.Runtime
                         _attackBuffer = _inputBufferDuration;
                         _bufferedAttackButtonId = AttackButtonId.Light;
                         _bufferedIsCharging = true;
+                        _bufferedChargeMultiplier = _chargeHandler.ChargeMultiplier;
                         _chargeHandler.ConsumeAttack();
                     }
                     else
@@ -322,15 +437,11 @@ namespace Game.Runtime
                     _isHoldingButton = false;
                 }
             }
-            else if (attackHeld && _isHoldingButton && _holdingButtonId == AttackButtonId.Light)
-            {
-                _attackHoldTime += dt;
-            }
             _attackHeldLastFrame = attackHeld;
+        }
 
-            // Heavy Attack — リリース時確定方式
-            // 押下: ホールド計測開始のみ。リリース: 秒数で通常/ため攻撃を確定
-            bool heavyHeld = _heavyAttackAction != null && _heavyAttackAction.IsPressed();
+        private void ProcessHeavyButton(bool heavyHeld)
+        {
             if (heavyHeld && !_heavyHeldLastFrame)
             {
                 _holdingButtonId = AttackButtonId.Heavy;
@@ -348,6 +459,7 @@ namespace Game.Runtime
                         _attackBuffer = _inputBufferDuration;
                         _bufferedAttackButtonId = AttackButtonId.Heavy;
                         _bufferedIsCharging = true;
+                        _bufferedChargeMultiplier = _chargeHandler.ChargeMultiplier;
                         _chargeHandler.ConsumeAttack();
                     }
                     else
@@ -356,13 +468,10 @@ namespace Game.Runtime
                         _attackBuffer = _inputBufferDuration;
                         _bufferedAttackButtonId = AttackButtonId.Heavy;
                         _bufferedIsCharging = false;
+                        _bufferedChargeMultiplier = 1f;
                     }
                     _isHoldingButton = false;
                 }
-            }
-            else if (heavyHeld && _isHoldingButton && _holdingButtonId == AttackButtonId.Heavy)
-            {
-                _heavyHoldTime += dt;
             }
             _heavyHeldLastFrame = heavyHeld;
         }
@@ -371,18 +480,25 @@ namespace Game.Runtime
         /// スプリントボタンをポーリング。
         /// 短押し(&lt;_sprintHoldThreshold)=回避、長押し=スプリント。
         /// </summary>
-        private void PollSprintButton(float dt)
+        private void PollSprintButton()
         {
             bool held = _sprintAction != null && _sprintAction.IsPressed();
+            bool shortTap = !held && !_sprintHeldLastFrame && _sprintAction != null
+                && _sprintAction.WasPressedThisFrame() && _sprintAction.WasReleasedThisFrame();
+            if (shortTap)
+            {
+                ProcessSprintButton(true);
+                ProcessSprintButton(false);
+            }
+            else { ProcessSprintButton(held); }
+        }
 
+        private void ProcessSprintButton(bool held)
+        {
             if (held && !_sprintHeldLastFrame)
             {
                 // 押下開始
                 _sprintHoldTime = 0f;
-            }
-            else if (held)
-            {
-                _sprintHoldTime += dt;
             }
 
             if (!held && _sprintHeldLastFrame)

@@ -28,7 +28,6 @@ namespace Game.Tests.EditMode
                 maxHp = 100,
                 position = Vector2.zero,
                 level = 5,
-                hpRatio = 100
             };
             CharacterFlags ownerFlags = CharacterFlags.Pack(
                 CharacterBelong.Enemy, CharacterFeature.Minion, ActState.Neutral, AbilityFlag.None);
@@ -41,7 +40,6 @@ namespace Game.Tests.EditMode
                 maxHp = 100,
                 position = new Vector2(3f, 0f),
                 level = 10,
-                hpRatio = 80
             };
             CharacterFlags playerFlags = CharacterFlags.Pack(
                 CharacterBelong.Ally, CharacterFeature.Player, ActState.Neutral, AbilityFlag.None);
@@ -54,7 +52,6 @@ namespace Game.Tests.EditMode
                 maxHp = 100,
                 position = new Vector2(5f, 0f),
                 level = 8,
-                hpRatio = 100
             };
             CharacterFlags companionFlags = CharacterFlags.Pack(
                 CharacterBelong.Ally, CharacterFeature.Companion, ActState.Neutral, AbilityFlag.None);
@@ -186,7 +183,6 @@ namespace Game.Tests.EditMode
             // HP=20/100 (20%) に変更 → 遷移あり
             ref CharacterVitals ownerVitals = ref _data.GetVitals(k_OwnerHash);
             ownerVitals.currentHp = 20;
-            ownerVitals.hpRatio = 20;
 
             modeController.EvaluateTransitions(k_OwnerHash, k_PlayerHash, _data, 1f);
             Assert.AreEqual(1, modeController.CurrentModeIndex);

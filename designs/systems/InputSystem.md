@@ -8,6 +8,14 @@ Unity Input Systemを使用した入力管理。キーボード/ゲームパッ�
 - 入力: Unity Input System（com.unity.inputsystem）
 - 出力: MovementInfo（各フレームの入力結果）
 
+## 現在の入力公開契約（2026-10-26）
+
+`PlayerInputHandler`は`InputSystem.onAfterUpdate`のDynamic/Fixed更新内でだけInputActionをポーリングする。入力イベント処理後に公開し、中央固定tickの`PrepareSimulationInput(currentTime)`で最新接地に応じた入力を同じtickの制御へ渡す。Update・callback・固定tickは`InputSamplingClock`の単調時計を共有し、バッファとチャージを二重に進めない。過去のfixedTimeで時計を巻き戻さない。
+
+Attack/Dodge/Jumpの押下は受理後に消費する。Jump長押しは別に保持し、拒否中の先行入力は有効期限まで残す。DisableでInputSystem購読・保持・公開/override入力を解除し、disabledなcallbackは受け付けない。
+
+global updateModeの変更や手動`InputSystem.Update()`は追加しない。処理済み入力から物理への追加tick待ちを作らない構成であり、入力到着から表示までの遅延ゼロは保証しない。実機でupdateMode・固定刻み・描画補間を含めて計測する。
+
 ## コンポーネント構成
 | コンポーネント | 責務 | MonoBehaviour? |
 |--------------|------|---------------|

@@ -170,7 +170,15 @@ namespace Game.Core
 
         public StatModifier GetAttributes(int hash)
         {
-            return CharacterStatCalculator.CalculateAttributes(GetBaseStats(hash), GetGrowth(hash));
+            StatModifier attributes = CharacterStatCalculator.CalculateAttributes(GetBaseStats(hash), GetGrowth(hash));
+            StatModifier equipment = GetEquipmentStatus(hash).attributeModifiers;
+            attributes.str += equipment.str;
+            attributes.dex += equipment.dex;
+            attributes.intel += equipment.intel;
+            attributes.vit += equipment.vit;
+            attributes.mnd += equipment.mnd;
+            attributes.end += equipment.end;
+            return attributes;
         }
 
         public ref CharacterDefenseState GetDefenseState(int hash)

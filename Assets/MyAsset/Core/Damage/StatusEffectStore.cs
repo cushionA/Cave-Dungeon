@@ -5,6 +5,8 @@ namespace Game.Core
 {
     public struct StatusEffectTick
     {
+        public ActorRef targetRef;
+        public ActorRef sourceRef;
         public int instanceId;
         public int targetHash;
         public int sourceHash;
@@ -21,6 +23,8 @@ namespace Game.Core
         private int[] _instanceIds;
         private int[] _targetHashes;
         private int[] _sourceHashes;
+        private ActorRef[] _sourceRefs;
+        private ActorRef[] _targetRefs;
         private StatusEffectId[] _effectIds;
         private float[] _accumulations;
         private float[] _remainingTimes;
@@ -43,6 +47,8 @@ namespace Game.Core
             _instanceIds = new int[length];
             _targetHashes = new int[length];
             _sourceHashes = new int[length];
+            _sourceRefs = new ActorRef[length];
+            _targetRefs = new ActorRef[length];
             _effectIds = new StatusEffectId[length];
             _accumulations = new float[length];
             _remainingTimes = new float[length];
@@ -151,6 +157,13 @@ namespace Game.Core
         }
 
         public bool Accumulate(int targetHash, StatusEffectInfo info, float statusCut, int sourceHash = 0)
+            => AccumulateInternal(targetHash, info, statusCut, sourceHash, default, default);
+
+        public bool Accumulate(ActorRef target, StatusEffectInfo info, float statusCut, ActorRef source)
+            => AccumulateInternal(target.Hash, info, statusCut, source.Hash, target, source);
+
+        private bool AccumulateInternal(int targetHash, StatusEffectInfo info, float statusCut,
+            int sourceHash, ActorRef targetRef, ActorRef sourceRef)
         {
             if (!CharacterStatusEffects.IsValidId(info.effect) || info.duration <= 0f)
             {
@@ -162,10 +175,10 @@ namespace Game.Core
             {
                 return false;
             }
-            int index = FindRow(targetHash, info.effect, sourceHash);
+            int index = FindRow(targetHash, info.effect, sourceHash, targetRef, sourceRef);
             if (index < 0)
             {
-                index = AddRow(targetHash, info.effect, sourceHash);
+                index = AddRow(targetHash, info.effect, sourceHash, targetRef, sourceRef);
             }
             _accumulations[index] += amount;
             if (GetAccumulation(targetHash, info.effect) < StatusEffectManager.k_DefaultThreshold)
@@ -183,19 +196,26 @@ namespace Game.Core
                     }
                 }
             }
-            return Apply(targetHash, info, sourceHash);
+            return ApplyInternal(targetHash, info, sourceHash, targetRef, sourceRef);
         }
 
         public bool Apply(int targetHash, StatusEffectInfo info, int sourceHash = 0)
+            => ApplyInternal(targetHash, info, sourceHash, default, default);
+
+        public bool Apply(ActorRef target, StatusEffectInfo info, ActorRef source)
+            => ApplyInternal(target.Hash, info, source.Hash, target, source);
+
+        private bool ApplyInternal(int targetHash, StatusEffectInfo info, int sourceHash,
+            ActorRef targetRef, ActorRef sourceRef)
         {
             if (!CharacterStatusEffects.IsValidId(info.effect) || info.duration <= 0f)
             {
                 return false;
             }
-            int index = FindRow(targetHash, info.effect, sourceHash);
+            int index = FindRow(targetHash, info.effect, sourceHash, targetRef, sourceRef);
             if (index < 0)
             {
-                index = AddRow(targetHash, info.effect, sourceHash);
+                index = AddRow(targetHash, info.effect, sourceHash, targetRef, sourceRef);
             }
             bool wasActive = _stackCounts[index] > 0;
             int maxStack = Math.Max(1, (int)info.maxStack);
@@ -266,6 +286,8 @@ namespace Game.Core
                         instanceId = _instanceIds[i],
                         targetHash = _targetHashes[i],
                         sourceHash = _sourceHashes[i],
+                        targetRef = _targetRefs[i],
+                        sourceRef = _sourceRefs[i],
                         effectId = _effectIds[i],
                         damage = damage,
                     });
@@ -392,6 +414,8 @@ namespace Game.Core
                 instanceId = _instanceIds[index],
                 targetHash = _targetHashes[index],
                 sourceHash = _sourceHashes[index],
+                targetRef = _targetRefs[index],
+                sourceRef = _sourceRefs[index],
                 id = _effectIds[index],
                 accumulation = _accumulations[index],
                 remainTime = _remainingTimes[index],
@@ -405,11 +429,12 @@ namespace Game.Core
             };
         }
 
-        private int FindRow(int targetHash, StatusEffectId id, int sourceHash)
+        private int FindRow(int targetHash, StatusEffectId id, int sourceHash, ActorRef targetRef, ActorRef sourceRef)
         {
             for (int i = 0; i < _count; i++)
             {
-                if (_targetHashes[i] == targetHash && _effectIds[i] == id && _sourceHashes[i] == sourceHash)
+                if (_targetHashes[i] == targetHash && _effectIds[i] == id && _sourceHashes[i] == sourceHash
+                    && _targetRefs[i] == targetRef && _sourceRefs[i] == sourceRef)
                 {
                     return i;
                 }
@@ -417,7 +442,7 @@ namespace Game.Core
             return -1;
         }
 
-        private int AddRow(int targetHash, StatusEffectId id, int sourceHash)
+        private int AddRow(int targetHash, StatusEffectId id, int sourceHash, ActorRef targetRef, ActorRef sourceRef)
         {
             if (_count == _instanceIds.Length)
             {
@@ -427,6 +452,8 @@ namespace Game.Core
             _instanceIds[index] = _nextInstanceId++;
             _targetHashes[index] = targetHash;
             _sourceHashes[index] = sourceHash;
+            _targetRefs[index] = targetRef;
+            _sourceRefs[index] = sourceRef;
             _effectIds[index] = id;
             _accumulations[index] = 0f;
             _remainingTimes[index] = 0f;
@@ -452,6 +479,8 @@ namespace Game.Core
             _instanceIds[index] = _instanceIds[last];
             _targetHashes[index] = _targetHashes[last];
             _sourceHashes[index] = _sourceHashes[last];
+            _targetRefs[index] = _targetRefs[last];
+            _sourceRefs[index] = _sourceRefs[last];
             _effectIds[index] = _effectIds[last];
             _accumulations[index] = _accumulations[last];
             _remainingTimes[index] = _remainingTimes[last];
@@ -470,6 +499,8 @@ namespace Game.Core
             Array.Resize(ref _instanceIds, capacity);
             Array.Resize(ref _targetHashes, capacity);
             Array.Resize(ref _sourceHashes, capacity);
+            Array.Resize(ref _targetRefs, capacity);
+            Array.Resize(ref _sourceRefs, capacity);
             Array.Resize(ref _effectIds, capacity);
             Array.Resize(ref _accumulations, capacity);
             Array.Resize(ref _remainingTimes, capacity);
