@@ -12,6 +12,8 @@ namespace Game.Core
     {
         private const int k_MaxPresets = 40;
         private readonly Dictionary<string, AIMode> _modes = new Dictionary<string, AIMode>();
+        private readonly Dictionary<string, ulong> _versions = new Dictionary<string, ulong>();
+        private ulong _nextVersion;
 
         /// <summary>モード更新時のカスケード通知。引数: (modeId, 更新後のAIMode)</summary>
         public event Action<string, AIMode> OnModeUpdated;
@@ -32,7 +34,8 @@ namespace Game.Core
 
             string modeId = Guid.NewGuid().ToString("N");
             mode.modeId = modeId;
-            _modes[modeId] = mode;
+            _modes[modeId] = AIConfigurationCopy.Clone(mode);
+            _versions[modeId] = ++_nextVersion;
             return modeId;
         }
 
@@ -48,8 +51,21 @@ namespace Game.Core
             }
 
             mode.modeId = modeId;
-            _modes[modeId] = mode;
-            OnModeUpdated?.Invoke(modeId, mode);
+            AIMode captured = AIConfigurationCopy.Clone(mode);
+            _modes[modeId] = captured;
+            ulong version = ++_nextVersion;
+            _versions[modeId] = version;
+            Action<string, AIMode> listeners = OnModeUpdated;
+            if (listeners != null)
+            {
+                Delegate[] callbacks = listeners.GetInvocationList();
+                for (int i = 0; i < callbacks.Length; i++)
+                {
+                    // 同期購読から再更新・削除された場合、古い内容を後続購読者へ公開しない。
+                    if (!_versions.TryGetValue(modeId, out ulong currentVersion) || currentVersion != version) { break; }
+                    ((Action<string, AIMode>)callbacks[i])(modeId, AIConfigurationCopy.Clone(captured));
+                }
+            }
             return true;
         }
 
@@ -62,7 +78,7 @@ namespace Game.Core
             {
                 return null;
             }
-            return mode;
+            return AIConfigurationCopy.Clone(mode);
         }
 
         /// <summary>
@@ -75,6 +91,7 @@ namespace Game.Core
             {
                 return false;
             }
+            _versions.Remove(modeId);
             return _modes.Remove(modeId);
         }
 
@@ -82,7 +99,8 @@ namespace Game.Core
         public AIMode[] GetAll()
         {
             AIMode[] result = new AIMode[_modes.Count];
-            _modes.Values.CopyTo(result, 0);
+            int index = 0;
+            foreach (AIMode mode in _modes.Values) { result[index++] = AIConfigurationCopy.Clone(mode); }
             return result;
         }
     }

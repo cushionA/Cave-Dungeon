@@ -170,8 +170,8 @@ namespace Game.Core
             if (observation != null && observation.TryGetActor(_companionHash, out AIActorObservation observedCompanion)
                 && observation.TryGetActor(_playerHash, out AIActorObservation observedPlayer))
             {
-                companionPosition = observedCompanion.vitals.position;
-                playerPosition = observedPlayer.vitals.position;
+                companionPosition = observedCompanion.position;
+                playerPosition = observedPlayer.position;
             }
             FollowState followState = _followBehavior.Evaluate(companionPosition, playerPosition);
 

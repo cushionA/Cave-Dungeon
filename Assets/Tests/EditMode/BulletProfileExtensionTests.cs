@@ -112,8 +112,8 @@ namespace Game.Tests.EditMode
             ProjectileMovement.UpdateAll(pool, 0.3f, Vector2.zero);
 
             Assert.IsFalse(p.IsSpawnDelayed, "遅延終了");
-            // 遅延終了時に ElapsedTime=0 リセットされる仕様なので、
-            // この Update フレームでは移動せず次フレーム以降に移動開始する。
+            Assert.AreEqual(1f, p.Position.x, 0.0001f, "遅延を超えた残り 0.1 秒も同じステップで移動");
+            Assert.AreEqual(0.1f, p.ElapsedTime, 0.0001f);
             ProjectileMovement.UpdateAll(pool, 0.1f, Vector2.zero);
             Assert.Greater(p.Position.x, 0f, "遅延終了後フレームで前進");
 

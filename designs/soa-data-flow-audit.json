@@ -1,0 +1,3482 @@
+{
+  "format_version": 1,
+  "recorded_at_utc": "2026-10-27T01:52:21.497530+00:00",
+  "scope": "独自component単位SoA＋GameObject/Physics2Dの登録・更新・参照・破棄。Unity.Entitiesは未導入。",
+  "baseline": {
+    "branch": "claude/resolve-issues-F7VAG",
+    "head": "439e429a44d23c41beea91c4566ddc274e687a15",
+    "preexisting_worktree_changes_preserved": true,
+    "start_manifest": "/workspace/.cave-dungeon/soa-audit/start-manifest.json"
+  },
+  "responsibility_matrix": [
+    {
+      "role": "schema / generator / Native値境界",
+      "agent": "audit_soa_schema"
+    },
+    {
+      "role": "基礎値・成長・装備・資源の正本",
+      "agent": "audit_soa_stats"
+    },
+    {
+      "role": "アクション・作者定義・命令packet",
+      "agent": "audit_soa_actions"
+    },
+    {
+      "role": "AI・設定・観測・target",
+      "agent": "audit_soa_ai"
+    },
+    {
+      "role": "戦闘・状態異常・弾・通知",
+      "agent": "audit_soa_combat"
+    },
+    {
+      "role": "再現試験・純ロジック・証拠",
+      "agent": "audit_soa_verification"
+    },
+    {
+      "role": "物理・入力・正本統合・レビュー統合",
+      "agent": "root"
+    }
+  ],
+  "native_value_boundary": {
+    "registered_value_types": 10,
+    "intentional_managed_sidecars": [
+      "ManagedCharacter"
+    ],
+    "unexpected_managed_references_found": false,
+    "meaning": "宣言10型と再帰field検査の一致。Native ABI・Unity・Burst/Jobsの実行成功を示さない。",
+    "pinned_generator_commit": "2991db197cfdfbbe8eb2d4f20ee55a30cc18c7fd",
+    "layout": "componentごとの64B整列native領域とUnsafeList<T>。ManagedCharacterは別managed配列。field単位のEntities chunk実装ではない。",
+    "types": [
+      {
+        "type": "Game.Core.CharacterVitals",
+        "contains_managed_references": false,
+        "clr_size_bytes_reference_only": 52,
+        "leaf_fields": [
+          {
+            "path": "CharacterVitals.currentHp",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterVitals.maxHp",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterVitals.currentMp",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterVitals.maxMp",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterVitals.currentStamina",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterVitals.maxStamina",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterVitals.currentArmor",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterVitals.maxArmor",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterVitals.position.x",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterVitals.position.y",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterVitals.level",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterVitals.staminaRecoveryRate",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterVitals.staminaRecoveryDelay",
+            "type": "System.Single",
+            "is_reference": false
+          }
+        ]
+      },
+      {
+        "type": "Game.Core.CombatStats",
+        "contains_managed_references": false,
+        "clr_size_bytes_reference_only": 288,
+        "leaf_fields": [
+          {
+            "path": "CombatStats.attack.slash",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.attack.strike",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.attack.pierce",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.attack.fire",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.attack.thunder",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.attack.light",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.attack.dark",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.defense.slash",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.defense.strike",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.defense.pierce",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.defense.fire",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.defense.thunder",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.defense.light",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.defense.dark",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.guardStats.slashCut",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.guardStats.strikeCut",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.guardStats.pierceCut",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.guardStats.fireCut",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.guardStats.thunderCut",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.guardStats.lightCut",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.guardStats.darkCut",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.guardStats.guardStrength",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.guardStats.statusCut",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.guardStats.guardDirection",
+            "type": "Game.Core.GuardDirection",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.commonReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.thresholdMultiplierBonus",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.poison.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.poison.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.poison.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.burn.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.burn.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.burn.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.bleed.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.bleed.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.bleed.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.stun.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.stun.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.stun.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.freeze.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.freeze.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.freeze.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.paralyze.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.paralyze.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.paralyze.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.slow.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.slow.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.slow.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.blind.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.blind.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.blind.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.silence.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.silence.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.silence.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.weakness.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.weakness.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.weakness.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.curse.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.curse.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.curse.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.confusion.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.confusion.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.confusion.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.attackUp.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.attackUp.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.attackUp.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.defenseUp.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.defenseUp.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.defenseUp.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.speedUp.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.speedUp.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.statusDefense.speedUp.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CombatStats.knockbackResistance",
+            "type": "System.Single",
+            "is_reference": false
+          }
+        ]
+      },
+      {
+        "type": "Game.Core.CharacterFlags",
+        "contains_managed_references": false,
+        "clr_size_bytes_reference_only": 8,
+        "leaf_fields": [
+          {
+            "path": "CharacterFlags.flags",
+            "type": "System.UInt64",
+            "is_reference": false
+          }
+        ]
+      },
+      {
+        "type": "Game.Core.MoveParams",
+        "contains_managed_references": false,
+        "clr_size_bytes_reference_only": 52,
+        "leaf_fields": [
+          {
+            "path": "MoveParams.moveSpeed",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "MoveParams.jumpForce",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "MoveParams.dashSpeed",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "MoveParams.dashDuration",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "MoveParams.gravityScale",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "MoveParams.weightRatio",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "MoveParams.jumpStaminaCost",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "MoveParams.dodgeStaminaCost",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "MoveParams.sprintStaminaPerSecond",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "MoveParams.dodgeDuration",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "MoveParams.dodgeSpeedMultiplier",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "MoveParams.sprintSpeedMultiplier",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "MoveParams.coyoteTime",
+            "type": "System.Single",
+            "is_reference": false
+          }
+        ]
+      },
+      {
+        "type": "Game.Core.EquipmentStatus",
+        "contains_managed_references": false,
+        "clr_size_bytes_reference_only": 64,
+        "leaf_fields": [
+          {
+            "path": "EquipmentStatus.weaponId",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "EquipmentStatus.shieldId",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "EquipmentStatus.coreId",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "EquipmentStatus.gripMode",
+            "type": "Game.Core.GripMode",
+            "is_reference": false
+          },
+          {
+            "path": "EquipmentStatus.attributeModifiers.str",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "EquipmentStatus.attributeModifiers.dex",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "EquipmentStatus.attributeModifiers.intel",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "EquipmentStatus.attributeModifiers.vit",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "EquipmentStatus.attributeModifiers.mnd",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "EquipmentStatus.attributeModifiers.end",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "EquipmentStatus.activeFlags",
+            "type": "Game.Core.AbilityFlag",
+            "is_reference": false
+          },
+          {
+            "path": "EquipmentStatus.weightRatio",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "EquipmentStatus.totalWeight",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "EquipmentStatus.maxWeightCapacity",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "EquipmentStatus.justGuardStartTime",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "EquipmentStatus.justGuardDuration",
+            "type": "System.Single",
+            "is_reference": false
+          }
+        ]
+      },
+      {
+        "type": "Game.Core.CharacterStatusEffects",
+        "contains_managed_references": false,
+        "clr_size_bytes_reference_only": 32,
+        "leaf_fields": [
+          {
+            "path": "CharacterStatusEffects._activeMask",
+            "type": "System.UInt64",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterStatusEffects._activeCount",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterStatusEffects._moveSpeedMultiplier",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterStatusEffects._attackMultiplier",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterStatusEffects._defenseMultiplier",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterStatusEffects._damageTakenMultiplier",
+            "type": "System.Single",
+            "is_reference": false
+          }
+        ]
+      },
+      {
+        "type": "Game.Core.AnimationStateData",
+        "contains_managed_references": false,
+        "clr_size_bytes_reference_only": 12,
+        "leaf_fields": [
+          {
+            "path": "AnimationStateData.normalizedTime",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "AnimationStateData.framesUntilActionable",
+            "type": "System.Int16",
+            "is_reference": false
+          },
+          {
+            "path": "AnimationStateData.currentPhase",
+            "type": "Game.Core.AnimationPhase",
+            "is_reference": false
+          },
+          {
+            "path": "AnimationStateData.currentMoveId",
+            "type": "System.Byte",
+            "is_reference": false
+          },
+          {
+            "path": "AnimationStateData.isCancelable",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "AnimationStateData.isCommitted",
+            "type": "System.Boolean",
+            "is_reference": false
+          }
+        ]
+      },
+      {
+        "type": "Game.Core.CharacterDefenseState",
+        "contains_managed_references": false,
+        "clr_size_bytes_reference_only": 36,
+        "leaf_fields": [
+          {
+            "path": "CharacterDefenseState.isGuarding",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterDefenseState.guardElapsedTime",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterDefenseState.continuousJustGuardUntil",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterDefenseState.actionElapsedTime",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterDefenseState.actionArmorConsumed",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterDefenseState.armorRecoveryTimer",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterDefenseState.armorRecoveryDelay",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterDefenseState.armorRecoveryRate",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterDefenseState.previousActState",
+            "type": "Game.Core.ActState",
+            "is_reference": false
+          }
+        ]
+      },
+      {
+        "type": "Game.Core.CharacterBaseStats",
+        "contains_managed_references": false,
+        "clr_size_bytes_reference_only": 392,
+        "leaf_fields": [
+          {
+            "path": "CharacterBaseStats.maxHp",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.maxMp",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.maxStamina",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.maxArmor",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.staminaRecoveryRate",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.staminaRecoveryDelay",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.attributes.str",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.attributes.dex",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.attributes.intel",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.attributes.vit",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.attributes.mnd",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.attributes.end",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.attack.slash",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.attack.strike",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.attack.pierce",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.attack.fire",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.attack.thunder",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.attack.light",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.attack.dark",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.defense.slash",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.defense.strike",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.defense.pierce",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.defense.fire",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.defense.thunder",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.defense.light",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.defense.dark",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.guardStats.slashCut",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.guardStats.strikeCut",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.guardStats.pierceCut",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.guardStats.fireCut",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.guardStats.thunderCut",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.guardStats.lightCut",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.guardStats.darkCut",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.guardStats.guardStrength",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.guardStats.statusCut",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.guardStats.guardDirection",
+            "type": "Game.Core.GuardDirection",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.commonReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.thresholdMultiplierBonus",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.poison.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.poison.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.poison.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.burn.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.burn.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.burn.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.bleed.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.bleed.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.bleed.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.stun.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.stun.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.stun.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.freeze.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.freeze.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.freeze.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.paralyze.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.paralyze.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.paralyze.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.slow.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.slow.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.slow.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.blind.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.blind.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.blind.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.silence.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.silence.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.silence.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.weakness.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.weakness.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.weakness.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.curse.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.curse.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.curse.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.confusion.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.confusion.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.confusion.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.attackUp.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.attackUp.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.attackUp.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.defenseUp.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.defenseUp.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.defenseUp.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.speedUp.accumulationReduction",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.speedUp.threshold",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.statusDefense.speedUp.immune",
+            "type": "System.Boolean",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.combat.knockbackResistance",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.movement.moveSpeed",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.movement.jumpForce",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.movement.dashSpeed",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.movement.dashDuration",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.movement.gravityScale",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.movement.weightRatio",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.movement.jumpStaminaCost",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.movement.dodgeStaminaCost",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.movement.sprintStaminaPerSecond",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.movement.dodgeDuration",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.movement.dodgeSpeedMultiplier",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.movement.sprintSpeedMultiplier",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.movement.coyoteTime",
+            "type": "System.Single",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterBaseStats.abilityFlags",
+            "type": "Game.Core.AbilityFlag",
+            "is_reference": false
+          }
+        ]
+      },
+      {
+        "type": "Game.Core.CharacterGrowth",
+        "contains_managed_references": false,
+        "clr_size_bytes_reference_only": 28,
+        "leaf_fields": [
+          {
+            "path": "CharacterGrowth.level",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterGrowth.allocatedStats.str",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterGrowth.allocatedStats.dex",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterGrowth.allocatedStats.intel",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterGrowth.allocatedStats.vit",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterGrowth.allocatedStats.mnd",
+            "type": "System.Int32",
+            "is_reference": false
+          },
+          {
+            "path": "CharacterGrowth.allocatedStats.end",
+            "type": "System.Int32",
+            "is_reference": false
+          }
+        ]
+      }
+    ],
+    "remaining_package_boundaries": [
+      "generatedの直接ref/view/ByHash APIにはDispose/変更versionガードがない。現在のRuntimeはCompat入口だがJobs導入前に借用期間を定義する必要あり。",
+      "最大10000件のstack保護コメントと実装は一致しない。実生成物にstackallocはなく容量はnative/managed領域の制限。",
+      "ActorRegistry世代枯渇時の全登録transactionは今回追加しない。"
+    ]
+  },
+  "source_of_truth_decisions": [
+    {
+      "data": "現在HP/MP/SP/アーマー・各現在上限",
+      "authority": "CharacterVitals",
+      "keep_separate": "CharacterBaseStats/Growthは再導出入力。位置はphysics観測。"
+    },
+    {
+      "data": "現在攻撃/防御/ガード/状態異常耐性",
+      "authority": "CombatStats",
+      "removed": [
+        "EquipmentStatus.finalAttack",
+        "EquipmentStatus.finalDefense",
+        "EquipmentStatus.finalGuardStats"
+      ]
+    },
+    {
+      "data": "アーマー回復上限",
+      "authority": "CharacterVitals.maxArmor",
+      "removed": [
+        "CharacterDefenseState.maxArmor"
+      ],
+      "initialization": "回復設定はCharacterInfo.CreateRegistrationの一度捕捉。"
+    },
+    {
+      "data": "恒久能力と装備能力",
+      "authority": "BaseStats.abilityFlags / EquipmentStatus.activeFlags",
+      "keep_separate": "CharacterFlags.AbilityFlagsは合成された公開値。着脱で恒久能力を失わないため役割を分ける。"
+    },
+    {
+      "data": "状態異常の個別instance/蓄積/寿命",
+      "authority": "StatusEffectStore",
+      "keep_separate": "CharacterStatusEffectsは毎変更時の値型要約、AI/移動/攻防の読取用。"
+    },
+    {
+      "data": "AIの一tick観測",
+      "authority": "AIObservationContext snapshot",
+      "keep_separate": "SoA正本との重複は観測時点固定のため。全CombatStatsコピーはcold項目分離の性能検討候補。"
+    },
+    {
+      "data": "攻撃発生時の数値・装備効果",
+      "authority": "AttackContext private snapshot",
+      "keep_separate": "現在の装備/陣営とは時点が異なる。公開装備効果はreadonly、public projectile照会はcoldcopy。"
+    },
+    {
+      "data": "ActorRegistry世代とActionExecutionローカルversion",
+      "authority": "各所有者",
+      "keep_separate": "物理個体の再登録と同個体Stop/再始動は別の寿命。"
+    }
+  ],
+  "implemented_fix_groups": [
+    {
+      "id": "SCHEMA-REGISTER",
+      "title": "重複/不正防御値の登録をSoA書込み前に拒否",
+      "verification": "native_tests_added_not_run"
+    },
+    {
+      "id": "SCHEMA-MANAGED",
+      "title": "TryGetManagedの破棄済みUnity参照を正規化",
+      "verification": "native_tests_added_not_run"
+    },
+    {
+      "id": "ROOT-ARMOR",
+      "title": "最大アーマーの正本をVitalsへ統一",
+      "verification": "pure_red_green_native_pending"
+    },
+    {
+      "id": "ACTION-NUMERIC",
+      "title": "命令/入力/tick/速度演算の非有限値とoverflowを拒否",
+      "verification": "pure_red_green_native_pending"
+    },
+    {
+      "id": "STATS-02",
+      "title": "公開装備効果をcold cached read-only viewへ統一",
+      "verification": "pure_red_green"
+    },
+    {
+      "id": "STATS-03",
+      "title": "EquipmentStatusの攻撃/防御/ガード重複コピー3項目を削除",
+      "verification": "pure_semantic_compile_native_ABI_pending"
+    },
+    {
+      "id": "AI-01",
+      "title": "UI/保存済み設定の入れ子配列共有とcancel漏れを修正",
+      "verification": "pure_red_green"
+    },
+    {
+      "id": "AI-02",
+      "title": "実行mode入力/照会を所有済みsnapshot境界へ分離",
+      "verification": "native_tests_added_not_run"
+    },
+    {
+      "id": "AI-03",
+      "title": "購読者の改変/再入通知による巻戻りを防止",
+      "verification": "pure_red_green"
+    },
+    {
+      "id": "COMBAT-01",
+      "title": "弾の公開照会から内部子弾設定への参照漏れを防止",
+      "verification": "pure_red_green_native_pending"
+    },
+    {
+      "id": "COMBAT-02",
+      "title": "被弾後callbackを跨ぐGuard通知の個体世代を再照合",
+      "verification": "native_tests_added_not_run"
+    },
+    {
+      "id": "COMBAT-03",
+      "title": "Changed後のApplied通知の個体世代を再照合",
+      "verification": "native_tests_added_not_run"
+    },
+    {
+      "id": "COMBAT-12",
+      "title": "低水準Storeで状態異常入力の非有限値を拒否",
+      "verification": "pure_red_green"
+    },
+    {
+      "id": "COMBAT-13",
+      "title": "TickAll再入時の期限通知buffer破壊を防止",
+      "verification": "pure_red_green"
+    }
+  ],
+  "root_physics_input_findings": [
+    {
+      "id": "ROOT-ARMOR",
+      "severity": "P1",
+      "status": "fixed_pure_verified_native_pending",
+      "title": "最大アーマーと回復設定の二重正本",
+      "flow": "登録snapshot→Vitals派生上限 / Start・pool再取得→live SO再読込→DefenseState.maxArmor→回復だけ別上限",
+      "resolution": "DefenseState.maxArmorを削除。回復はVitals.maxArmorだけを参照。Start/pool再取得でSOを再読込しない。",
+      "tests": [
+        "Assets/Tests/EditMode/ArmorRecoveryAuthorityTests.cs",
+        "Assets/Tests/PlayMode/ArmorRecoveryRegistrationPlayTests.cs"
+      ],
+      "evidence": [
+        {
+          "file": "Assets/MyAsset/Core/Damage/HitResolver.cs",
+          "symbol": "HitResolver.TickRecovery",
+          "fact": "利用時のVitals.maxArmorを参照"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Character/BaseCharacter.cs",
+          "symbol": "BaseCharacter.Start / OnPoolAcquire",
+          "fact": "登録snapshot後の回復設定再読込を除去"
+        }
+      ]
+    },
+    {
+      "id": "ROOT-INPUT-UNCONNECTED",
+      "severity": "P2",
+      "status": "unconnected",
+      "title": "公開入力の6項目にゲーム処理のconsumerがない",
+      "fields": [
+        "MovementInfo.interactPressed",
+        "MovementInfo.cooperationPressed",
+        "MovementInfo.weaponSwitchPressed",
+        "MovementInfo.gripSwitchPressed",
+        "MovementInfo.menuPressed",
+        "MovementInfo.mapPressed"
+      ],
+      "flow": "InputSystem callbacks→PlayerInputHandler buffers→MovementInfo / AutoInputTester writes。現在のGameplay consumerへ届かない。",
+      "evidence": [
+        {
+          "file": "Assets/MyAsset/Runtime/Input/PlayerInputHandler.cs",
+          "symbol": "PlayerInputHandler.BuildMovementInfo",
+          "fact": "6値を書き出す"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs",
+          "symbol": "StatusEffectSystem.RestrictInput",
+          "fact": "interact/cooperationをfalseにする処理はconsumerではなく制限用writer"
+        }
+      ],
+      "recommendation": "各入力の適用先と受理/消費時点を定義して接続する。未実装機能の入力を削除したり成功扱いにしない。"
+    },
+    {
+      "id": "ROOT-PHYSICS-SNAPSHOT",
+      "severity": "info",
+      "status": "intentional",
+      "title": "物理位置とSoA位置はauthoritative bodyとtick観測の役割差",
+      "flow": "RigidbodyCharacterPhysics2D→CaptureSimulationPhysics→Vitals.position→AI/action snapshot→ApplySimulationPhysics→Unity solver",
+      "recommendation": "ICharacterPhysics2Dはmanaged橋渡し側に保持。SoA位置を別の物理積分正本にしない。"
+    },
+    {
+      "id": "ROOT-INPUT-VALUE",
+      "severity": "info",
+      "status": "intentional",
+      "title": "MovementInfoは値型の入力snapshot",
+      "fact": "attackInputはnullable enumでありクラス参照ではない。CurrentInput/overrideは別入力源、入力buffer/charge handlerはmanaged境界に保持する。"
+    },
+    {
+      "id": "ROOT-MOVE-UNCONNECTED",
+      "severity": "P3",
+      "status": "unconnected",
+      "title": "MoveParamsの予備入力",
+      "fields": [
+        "MoveParams.dashDuration",
+        "MoveParams.gravityScale",
+        "MoveParams.weightRatio"
+      ],
+      "fact": "dashDuration/gravityScaleは登録時に書かれるが現在の移動制御は独自回避durationやphysics backendを使用。weightRatioは宣言だけ。",
+      "recommendation": "dash/回避・重力・重量の役割を確定して接続または廃止。現在有効な値と混同しない。"
+    }
+  ],
+  "highest_priority_open_items": [
+    "AI-04: UI現在戦術の保存から実行companionへのpublish経路が未接続。",
+    "AI-08: 必要MP/SPの絶対量を割合条件へ変換する単位の混在。",
+    "AI-09: 未対応triggerの変換で条件が捨てられる/不成立になる。",
+    "AI-05/06: probabilityや弱点関連設定が実評価へ届かない。",
+    "STATS-04: OnUnequipからの再入操作のtransaction契約。標準callbackはno-opだが公開拡張では不整合が起こり得る。",
+    "ROOT-INPUT-UNCONNECTED: interaction/cooperation/weapon/grip/menu/mapの共有入力consumerが未接続。"
+  ],
+  "integration_candidates": [
+    "命中payloadをコスト/移動/コンボ等の未読fieldから分離し、共通ActionDefinitionSnapshot/AttackExecutionSettingsへ責務を寄せる。",
+    "近接/弾両packetを毎回生成する処理を必要側だけにする。",
+    "旧MagicCaster/ComboManager、ConfusionProcessor/AIOverride等を現行共通実行/Storeへ統合するかlegacyとして明示隔離する。",
+    "unused作者設定は既存asset値の意味を確認して接続または移行廃止する。単純削除や未定義ダメージ式への接続は行わない。",
+    "CombatStats/CharacterBaseStatsのhot/cold分離とAI用小型combat観測を性能計測後に検討する。"
+  ],
+  "agent_reports": {
+    "schema_generator": {
+      "package_commit": "2991db197cfdfbbe8eb2d4f20ee55a30cc18c7fd",
+      "generator_download": "official GitHub pinned raw (GitHub plugin rejects binary)",
+      "kind": "source_generation_and_CLR_value_layout_only_no_Unity_compile_or_Native_execution",
+      "source_sha256": {
+        "Assets/MyAsset/Core/DataContainer/SoACharaDataDic.cs": "b72eea5a73665e414125eef51433fdcdd6abc620ca41a51455c95cce41c4389c",
+        "Assets/MyAsset/Core/DataContainer/ManagedCharacter.cs": "2da6ff142d7f9fa5c1dc6095875f9f8d0a92e04b46b8daeefda323268e319d0c",
+        "Packages/manifest.json": "195d5832514f91679835bdd05e95bae0aa2e2e538a4eb24f4bf4103d1e15e88f",
+        "Packages/packages-lock.json": "a55228e09dbf6aff0d38349ac934c6a46464adc62a14558b9b61820b7cf9299d"
+      },
+      "artifact_sha256": {
+        "odc-pinned/ToolAttribute.dll": "8c0ebefae263f859c2626da78d9c7e5b331f9b16a62eef2f9f9cd31d12986c4c",
+        "odc-pinned/ToolCodeGenerator.dll": "797daaf0b55f7d12ccc5b163c0b0a2b050b73a02e28719f032dbacdc7b0cd05a",
+        "generator-inspect/Program.cs": "ae6b73c78ed7345bc801502e2a0d7f6ba4561738b437cb95abe9c192e730bdd5",
+        "generator-inspect/Inspect.csproj": "e144d34fb4ad25b7f4f3ef13886941411acb60263c83dcfc77d4044e67cad4a0",
+        "generated-pinned/SoACharaDataDic.Container.g.cs": "ec9d2576a818903d69254369a68d60a14d7664fac21c277e0c43e93e7dacf85f",
+        "schema-inventory.json": "de3e639eff22c6a120889ce06c67eaf172025811770888e476960164bce988c4",
+        "generator-report.json": "f826aaea67c15ceb022334ee4e31ab22a71a764451e65b4444cc201e31a22362"
+      },
+      "limitations": [
+        "input compilation contains unresolved MonoBehaviour and partial Dispose diagnostics before generator runs",
+        "actual Unity value ABI, allocator calls, container methods, swapback and Native tests were not executed",
+        "inventory assembly uses actual game value declarations with minimal Unity Vector2/math boundary"
+      ]
+    },
+    "stats": {
+      "kind": "read-only stats data-flow audit plus root-authorized focused corrections",
+      "recorded_at_utc": "2026-10-27T01:41:03.612172+00:00",
+      "scope": "registration / basis-growth-derived stats / equipment / resource ownership / managed authoring boundary",
+      "limits": "No Unity/native execution. rg occurrence counts were classified manually by owner and actual call path; tests/assets/reflection checked separately. Final pure suite belongs to audit_soa_verification.",
+      "findings": [
+        {
+          "id": "STATS-01",
+          "severity": "P1",
+          "status": "fixed_by_root",
+          "title": "Armor regeneration had an independent maximum and re-read live authoring after registration",
+          "refs": [
+            {
+              "file": "Assets/MyAsset/Core/Damage/HitResolver.cs",
+              "line": 141,
+              "evidence": "Recovery now consumes CharacterVitals.maxArmor; previous code consumed CharacterDefenseState.maxArmor."
+            },
+            {
+              "file": "Assets/MyAsset/Core/ScriptableObjects/CharacterInfo.cs",
+              "line": 290,
+              "evidence": "Registration is the single source of armorRecoveryRate/Delay."
+            },
+            {
+              "file": "Assets/MyAsset/Runtime/Character/BaseCharacter.cs",
+              "line": 96,
+              "evidence": "Start/PoolAcquire previously called SetArmorRecoveryParams after synchronous registration notification; root removed those re-reads."
+            }
+          ],
+          "flow": "CreateRegistration -> Core.RegisterCharacterData -> Equipment/Stats -> CharacterVitals.maxArmor -> HitResolver.TickRecovery",
+          "repro": "OnCharacterRegistered equips armor bonus. Previous Start continuation overwrote only defense.maxArmor with info.maxArmor; regeneration capped at the old value. Changing info recovery config during the notification also affected only the late re-read.",
+          "verification": "Root owns pure and Native regression; this audit did not execute Unity."
+        },
+        {
+          "id": "STATS-02",
+          "severity": "P2",
+          "status": "fixed_pure_verified",
+          "title": "Public equipment effect getters exposed the private mutable array",
+          "refs": [
+            {
+              "file": "Assets/MyAsset/Core/Equipment/EquipmentHolder.cs",
+              "line": 153,
+              "evidence": "Now returns cached IReadOnlyList views with ReadOnlyCollection backing."
+            },
+            {
+              "file": "Assets/MyAsset/Core/Equipment/EquipmentHolder.cs",
+              "line": 164,
+              "evidence": "View allocation occurs at equipment changes, not each getter or attack."
+            },
+            {
+              "file": "Assets/MyAsset/Core/Damage/AttackContext.cs",
+              "line": 49,
+              "evidence": "Immutable view is copied once into private attack snapshot."
+            },
+            {
+              "file": "Assets/Tests/EditMode/EquipmentReadOnlyEffectTests.cs",
+              "line": 1,
+              "evidence": "3 mutation rejection cases and 1 stable-view/replacement case."
+            }
+          ],
+          "flow": "IEquippable.OnHitEffects -> private input copy -> equipment cold view -> packet IReadOnlyList -> AttackContext private array -> common application",
+          "repro": "Before fix cast GetOnHitEffects result to IList and assign element zero; future attacks received modified equipment effects. Current getters reject the write.",
+          "verification": "soa-audit-reviewed-* full suite603/603 passed, source changes0. EquipmentReadOnlyEffectTests4/4 passed; preserved old real getter yielded3 assertion failures/1 pass. Unity/native execution remains unverified."
+        },
+        {
+          "id": "STATS-03",
+          "severity": "P2",
+          "status": "fixed_pure_verified",
+          "title": "EquipmentStatus duplicated three canonical combat channels without a gameplay reader",
+          "removed_fields": [
+            "finalAttack",
+            "finalDefense",
+            "finalGuardStats"
+          ],
+          "refs": [
+            {
+              "file": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
+              "line": 213,
+              "evidence": "EquipmentStatus no longer stores the three mirrors."
+            },
+            {
+              "file": "Assets/MyAsset/Core/LevelUp/CharacterStatsSystem.cs",
+              "line": 89,
+              "evidence": "Commit writes derived combat only into actor.combat."
+            },
+            {
+              "file": "Assets/Tests/EditMode/Integration_EquipmentDamageFlowTests.cs",
+              "line": 1,
+              "evidence": "Old cache-driven handmade fixture changed to read CombatStats.attack."
+            }
+          ],
+          "reader_classification": {
+            "production_reader_count": 0,
+            "production_writer": "CharacterStatsSystem.Commit only",
+            "test_reader_files": [
+              "CharacterStatsSystemTests.cs",
+              "EquipmentDataFlowTests.cs",
+              "Integration_EquipmentRegistrationTests.cs",
+              "Integration_EquipmentDamageFlowTests.cs"
+            ],
+            "serialized_assets": [],
+            "reflection_field_names": [],
+            "save_bridge_readers": []
+          },
+          "generator_impact": "Schema agent ran pinned actual generator: whole UnsafeList<EquipmentStatus>, layout uses C# sizeof(T) plus 64-byte alignment. No manual nested-field offset changes; actual native ABI size changes and Unity/native build was not run.",
+          "verification": "soa-audit-reviewed-* full suite603/603 passed, source changes0. EquipmentReadOnlyEffectTests4/4 passed; preserved old real getter yielded3 assertion failures/1 pass. Unity/native execution remains unverified."
+        },
+        {
+          "id": "STATS-04",
+          "severity": "P2",
+          "status": "deferred_contract_choice",
+          "title": "Equipment OnUnequip callbacks can reenter before the old slot is detached",
+          "refs": [
+            {
+              "file": "Assets/MyAsset/Core/Equipment/EquipmentHolder.cs",
+              "line": 76,
+              "evidence": "previous.OnUnequip runs before the slot assignment."
+            },
+            {
+              "file": "Assets/MyAsset/Core/Equipment/EquipmentStore.cs",
+              "line": 56,
+              "evidence": "IsCurrentHolder is checked only after holder.Equip returns."
+            }
+          ],
+          "repro": "A.OnUnequip triggers Equip(C) once while outer Equip(B) is in progress. Inner C receives OnEquip, outer B overwrites C without C.OnUnequip. Unconditional reentry can repeatedly call A.OnUnequip. Standard EquipmentDefinition callbacks are no-op, so this is an extensibility/lifecycle edge, not observed gameplay failure.",
+          "recommendation": "Choose a slot-version/transaction or explicit reentry rejection contract before refactoring. Root explicitly deferred this scope."
+        },
+        {
+          "id": "STATS-05",
+          "severity": "P2",
+          "status": "deferred_snapshot_reload_contract",
+          "title": "Equipment callbacks and authoring modifiers use mixed capture lifetimes",
+          "refs": [
+            {
+              "file": "Assets/MyAsset/Core/Equipment/EquipmentHolder.cs",
+              "line": 65,
+              "evidence": "OnHitEffects are copied at Equip."
+            },
+            {
+              "file": "Assets/MyAsset/Core/LevelUp/CharacterStatsSystem.cs",
+              "line": 103,
+              "evidence": "StatModifiers are re-read from IEquipmentStatsProvider at each derived-stat recalculation."
+            },
+            {
+              "file": "Assets/MyAsset/Core/Equipment/EquipmentHolder.cs",
+              "line": 193,
+              "evidence": "Weight and GrantedFlags are also queried from live equipped objects."
+            }
+          ],
+          "repro": "Modify equipped ScriptableObject after Equip. Effects retain their old snapshot, modifiers/flags/weight change at the next recalc. Reading holder.GetTotalWeight can see the new value before EquipmentStatus.totalWeight is republished.",
+          "recommendation": "Define explicit reload vs Equip-time immutable EquipmentSnapshot. Keep managed object references as callback/presentation/authoring handles, not Native payload."
+        },
+        {
+          "id": "STATS-06",
+          "severity": "P2",
+          "status": "unconnected_planned_modules",
+          "title": "Growth and grip utility modules are not connected into gameplay input/save flow",
+          "refs": [
+            {
+              "file": "Assets/MyAsset/Core/LevelUp/LevelUpLogic.cs",
+              "line": 46,
+              "evidence": "Instance owns exp/level/points/allocatedStats and exposes Growth transfer value."
+            },
+            {
+              "file": "Assets/MyAsset/Runtime/GameManager.cs",
+              "line": 287,
+              "evidence": "ApplyCharacterGrowth public bridge exists, but has no gameplay caller."
+            },
+            {
+              "file": "Assets/MyAsset/Core/Equipment/GripManager.cs",
+              "line": 1,
+              "evidence": "Pure grip utility has no Runtime construction/call."
+            },
+            {
+              "file": "Assets/MyAsset/Core/Equipment/EquipmentVisualState.cs",
+              "line": 1,
+              "evidence": "Pure visual dirty-state utility has no Runtime consumer."
+            }
+          ],
+          "recommendation": "Keep source-of-truth CharacterGrowth in SoA and route any future LevelUp/save adapter into CharacterStatsSystem. Do not start a second live growth owner; do not delete planned helpers merely because tests are currently their consumers."
+        },
+        {
+          "id": "STATS-07",
+          "severity": "P2",
+          "status": "boundary_hardening_candidate",
+          "title": "Some numeric growth/stat entry points still bypass normal caps and use unchecked arithmetic",
+          "refs": [
+            {
+              "file": "Assets/MyAsset/Core/LevelUp/CharacterStatCalculator.cs",
+              "line": 138,
+              "evidence": "Public RecalculateVitals uses int base+growth multiplication; derived equipment path uses long/clamping."
+            },
+            {
+              "file": "Assets/MyAsset/Core/LevelUp/CharacterStatCalculator.cs",
+              "line": 156,
+              "evidence": "Base/allocated attribute sums are unchecked ints."
+            },
+            {
+              "file": "Assets/MyAsset/Core/LevelUp/CharacterStatsSystem.cs",
+              "line": 45,
+              "evidence": "ApplyGrowth accepts arbitrary CharacterGrowth; LevelUpLogic cap validation is not called here."
+            }
+          ],
+          "recommendation": "If external save/mod/debug inputs are supported, validate CharacterGrowth and finite equipment modifiers at their input boundary and centralize saturating stat arithmetic. Current valid game values do not establish a production failure; no balance formula changes made."
+        }
+      ],
+      "field_inventory": [
+        {
+          "owner": "CharacterBaseStats",
+          "field": "maxHp",
+          "classification": "legitimate_captured_basis",
+          "writer": "CharacterInfo.CreateRegistration / legacy FromValues",
+          "reader": "CharacterStatCalculator / CharacterStatsSystem",
+          "notes": "Basis authoring/growth input, distinct from derived live vitals/combat. Preserve."
+        },
+        {
+          "owner": "CharacterBaseStats",
+          "field": "maxMp",
+          "classification": "legitimate_captured_basis",
+          "writer": "CharacterInfo.CreateRegistration / legacy FromValues",
+          "reader": "CharacterStatCalculator / CharacterStatsSystem",
+          "notes": "Basis authoring/growth input, distinct from derived live vitals/combat. Preserve."
+        },
+        {
+          "owner": "CharacterBaseStats",
+          "field": "maxStamina",
+          "classification": "legitimate_captured_basis",
+          "writer": "CharacterInfo.CreateRegistration / legacy FromValues",
+          "reader": "CharacterStatCalculator / CharacterStatsSystem",
+          "notes": "Basis authoring/growth input, distinct from derived live vitals/combat. Preserve."
+        },
+        {
+          "owner": "CharacterBaseStats",
+          "field": "maxArmor",
+          "classification": "legitimate_captured_basis",
+          "writer": "CharacterInfo.CreateRegistration / legacy FromValues",
+          "reader": "CharacterStatCalculator / CharacterStatsSystem",
+          "notes": "Basis authoring/growth input, distinct from derived live vitals/combat. Preserve."
+        },
+        {
+          "owner": "CharacterBaseStats",
+          "field": "staminaRecoveryRate",
+          "classification": "legitimate_captured_basis",
+          "writer": "CharacterInfo.CreateRegistration / legacy FromValues",
+          "reader": "CharacterStatCalculator / CharacterStatsSystem",
+          "notes": "Basis authoring/growth input, distinct from derived live vitals/combat. Preserve."
+        },
+        {
+          "owner": "CharacterBaseStats",
+          "field": "staminaRecoveryDelay",
+          "classification": "legitimate_captured_basis",
+          "writer": "CharacterInfo.CreateRegistration / legacy FromValues",
+          "reader": "CharacterStatCalculator / CharacterStatsSystem",
+          "notes": "Basis authoring/growth input, distinct from derived live vitals/combat. Preserve."
+        },
+        {
+          "owner": "CharacterBaseStats",
+          "field": "attributes",
+          "classification": "legitimate_captured_basis",
+          "writer": "CharacterInfo.CreateRegistration / legacy FromValues",
+          "reader": "CharacterStatCalculator / CharacterStatsSystem",
+          "notes": "Basis authoring/growth input, distinct from derived live vitals/combat. Preserve."
+        },
+        {
+          "owner": "CharacterBaseStats",
+          "field": "combat",
+          "classification": "legitimate_captured_basis",
+          "writer": "CharacterInfo.CreateRegistration / legacy FromValues",
+          "reader": "CharacterStatCalculator / CharacterStatsSystem",
+          "notes": "Basis authoring/growth input, distinct from derived live vitals/combat. Preserve."
+        },
+        {
+          "owner": "CharacterBaseStats",
+          "field": "movement",
+          "classification": "legitimate_captured_basis",
+          "writer": "CharacterInfo.CreateRegistration / legacy FromValues",
+          "reader": "CharacterStatCalculator / CharacterStatsSystem",
+          "notes": "Basis authoring/growth input, distinct from derived live vitals/combat. Preserve."
+        },
+        {
+          "owner": "CharacterBaseStats",
+          "field": "abilityFlags",
+          "classification": "legitimate_captured_basis",
+          "writer": "CharacterInfo.CreateRegistration / legacy FromValues",
+          "reader": "CharacterStatCalculator / CharacterStatsSystem",
+          "notes": "Basis authoring/growth input, distinct from derived live vitals/combat. Preserve."
+        },
+        {
+          "owner": "CharacterGrowth",
+          "field": "level",
+          "classification": "canonical_shared_growth",
+          "writer": "Core registration / CharacterStatsSystem.ApplyGrowth",
+          "reader": "CharacterStatCalculator",
+          "notes": "Plain value; LevelUpLogic is a currently isolated managed adapter, not Native state."
+        },
+        {
+          "owner": "CharacterGrowth",
+          "field": "allocatedStats",
+          "classification": "canonical_shared_growth",
+          "writer": "Core registration / CharacterStatsSystem.ApplyGrowth",
+          "reader": "CharacterStatCalculator",
+          "notes": "Plain value; LevelUpLogic is a currently isolated managed adapter, not Native state."
+        },
+        {
+          "owner": "CharacterVitals",
+          "field": "currentHp",
+          "classification": "canonical_live_resources",
+          "writer": "Combat/actions/movement/current physics capture",
+          "reader": "Runtime character/control/UI/AI",
+          "notes": "Current values have no parallel mutable cached resource owner in CompanionMpManager; reserve MP is a separate resource."
+        },
+        {
+          "owner": "CharacterVitals",
+          "field": "currentMp",
+          "classification": "canonical_live_resources",
+          "writer": "Combat/actions/movement/current physics capture",
+          "reader": "Runtime character/control/UI/AI",
+          "notes": "Current values have no parallel mutable cached resource owner in CompanionMpManager; reserve MP is a separate resource."
+        },
+        {
+          "owner": "CharacterVitals",
+          "field": "currentStamina",
+          "classification": "canonical_live_resources",
+          "writer": "Combat/actions/movement/current physics capture",
+          "reader": "Runtime character/control/UI/AI",
+          "notes": "Current values have no parallel mutable cached resource owner in CompanionMpManager; reserve MP is a separate resource."
+        },
+        {
+          "owner": "CharacterVitals",
+          "field": "currentArmor",
+          "classification": "canonical_live_resources",
+          "writer": "Combat/actions/movement/current physics capture",
+          "reader": "Runtime character/control/UI/AI",
+          "notes": "Current values have no parallel mutable cached resource owner in CompanionMpManager; reserve MP is a separate resource."
+        },
+        {
+          "owner": "CharacterVitals",
+          "field": "position",
+          "classification": "canonical_live_resources",
+          "writer": "Combat/actions/movement/current physics capture",
+          "reader": "Runtime character/control/UI/AI",
+          "notes": "Current values have no parallel mutable cached resource owner in CompanionMpManager; reserve MP is a separate resource."
+        },
+        {
+          "owner": "CharacterVitals",
+          "field": "maxHp",
+          "classification": "derived_live_cap_or_level",
+          "writer": "CharacterStatsSystem derived commit",
+          "reader": "Combat/actions/resources/UI/AI",
+          "notes": "Expected basis->derived duplication. maxArmor is now the one recovery cap; level is a derived growth mirror, not independent allocation ownership."
+        },
+        {
+          "owner": "CharacterVitals",
+          "field": "maxMp",
+          "classification": "derived_live_cap_or_level",
+          "writer": "CharacterStatsSystem derived commit",
+          "reader": "Combat/actions/resources/UI/AI",
+          "notes": "Expected basis->derived duplication. maxArmor is now the one recovery cap; level is a derived growth mirror, not independent allocation ownership."
+        },
+        {
+          "owner": "CharacterVitals",
+          "field": "maxStamina",
+          "classification": "derived_live_cap_or_level",
+          "writer": "CharacterStatsSystem derived commit",
+          "reader": "Combat/actions/resources/UI/AI",
+          "notes": "Expected basis->derived duplication. maxArmor is now the one recovery cap; level is a derived growth mirror, not independent allocation ownership."
+        },
+        {
+          "owner": "CharacterVitals",
+          "field": "maxArmor",
+          "classification": "derived_live_cap_or_level",
+          "writer": "CharacterStatsSystem derived commit",
+          "reader": "Combat/actions/resources/UI/AI",
+          "notes": "Expected basis->derived duplication. maxArmor is now the one recovery cap; level is a derived growth mirror, not independent allocation ownership."
+        },
+        {
+          "owner": "CharacterVitals",
+          "field": "level",
+          "classification": "derived_live_cap_or_level",
+          "writer": "CharacterStatsSystem derived commit",
+          "reader": "Combat/actions/resources/UI/AI",
+          "notes": "Expected basis->derived duplication. maxArmor is now the one recovery cap; level is a derived growth mirror, not independent allocation ownership."
+        },
+        {
+          "owner": "CharacterVitals",
+          "field": "hpRatio",
+          "classification": "computed_views",
+          "writer": "none (properties)",
+          "reader": "UI/AI predicates",
+          "notes": "No stored ratio cache to invalidate."
+        },
+        {
+          "owner": "CharacterVitals",
+          "field": "mpRatio",
+          "classification": "computed_views",
+          "writer": "none (properties)",
+          "reader": "UI/AI predicates",
+          "notes": "No stored ratio cache to invalidate."
+        },
+        {
+          "owner": "CombatStats",
+          "field": "attack",
+          "classification": "canonical_live_combat",
+          "writer": "CharacterStatsSystem / registration",
+          "reader": "Common damage/target/status/AI logic",
+          "notes": "All value types. StatusDefense is derived from basis+all gear and read at application time."
+        },
+        {
+          "owner": "CombatStats",
+          "field": "defense",
+          "classification": "canonical_live_combat",
+          "writer": "CharacterStatsSystem / registration",
+          "reader": "Common damage/target/status/AI logic",
+          "notes": "All value types. StatusDefense is derived from basis+all gear and read at application time."
+        },
+        {
+          "owner": "CombatStats",
+          "field": "guardStats",
+          "classification": "canonical_live_combat",
+          "writer": "CharacterStatsSystem / registration",
+          "reader": "Common damage/target/status/AI logic",
+          "notes": "All value types. StatusDefense is derived from basis+all gear and read at application time."
+        },
+        {
+          "owner": "CombatStats",
+          "field": "statusDefense",
+          "classification": "canonical_live_combat",
+          "writer": "CharacterStatsSystem / registration",
+          "reader": "Common damage/target/status/AI logic",
+          "notes": "All value types. StatusDefense is derived from basis+all gear and read at application time."
+        },
+        {
+          "owner": "CombatStats",
+          "field": "knockbackResistance",
+          "classification": "canonical_live_combat",
+          "writer": "CharacterStatsSystem / registration",
+          "reader": "Common damage/target/status/AI logic",
+          "notes": "All value types. StatusDefense is derived from basis+all gear and read at application time."
+        },
+        {
+          "owner": "EquipmentStatus",
+          "field": "finalAttack",
+          "classification": "removed_redundant_mirror",
+          "writer": "previously Stats.Commit",
+          "reader": "previously tests only",
+          "notes": "No Runtime read, no serialized asset/reflection/save reader. Now canonical CombatStats only."
+        },
+        {
+          "owner": "EquipmentStatus",
+          "field": "finalDefense",
+          "classification": "removed_redundant_mirror",
+          "writer": "previously Stats.Commit",
+          "reader": "previously tests only",
+          "notes": "No Runtime read, no serialized asset/reflection/save reader. Now canonical CombatStats only."
+        },
+        {
+          "owner": "EquipmentStatus",
+          "field": "finalGuardStats",
+          "classification": "removed_redundant_mirror",
+          "writer": "previously Stats.Commit",
+          "reader": "previously tests only",
+          "notes": "No Runtime read, no serialized asset/reflection/save reader. Now canonical CombatStats only."
+        },
+        {
+          "owner": "EquipmentStatus",
+          "field": "attributeModifiers",
+          "classification": "legitimate_derived_query_input",
+          "writer": "Stats.Commit",
+          "reader": "SoACharaDataDic.GetAttributes",
+          "notes": "GetAttributes is currently a public query and tests; no other Runtime caller found. Useful future UI boundary, retain."
+        },
+        {
+          "owner": "EquipmentStatus",
+          "field": "activeFlags",
+          "classification": "derived_equipment_subset",
+          "writer": "Stats.Commit",
+          "reader": "Stats.Commit intrinsic|equipment publication",
+          "notes": "Required distinction from permanent base abilityFlags. Retain while publication uses this field."
+        },
+        {
+          "owner": "EquipmentStatus",
+          "field": "totalWeight",
+          "classification": "writer_only_derived_summary",
+          "writer": "Stats.Commit",
+          "reader": "tests only",
+          "notes": "No gameplay consumer; holder has live managed query. Weight rules remain planned, retain/annotate pending integration."
+        },
+        {
+          "owner": "EquipmentStatus",
+          "field": "weaponId",
+          "classification": "declared_unconnected_native_fields",
+          "writer": "none",
+          "reader": "tests / none",
+          "notes": "No gameplay write/read. IDs/grip/weight/JG overlap planned modules and defense state concepts; choose integration or retire later, no blind deletion."
+        },
+        {
+          "owner": "EquipmentStatus",
+          "field": "shieldId",
+          "classification": "declared_unconnected_native_fields",
+          "writer": "none",
+          "reader": "tests / none",
+          "notes": "No gameplay write/read. IDs/grip/weight/JG overlap planned modules and defense state concepts; choose integration or retire later, no blind deletion."
+        },
+        {
+          "owner": "EquipmentStatus",
+          "field": "coreId",
+          "classification": "declared_unconnected_native_fields",
+          "writer": "none",
+          "reader": "tests / none",
+          "notes": "No gameplay write/read. IDs/grip/weight/JG overlap planned modules and defense state concepts; choose integration or retire later, no blind deletion."
+        },
+        {
+          "owner": "EquipmentStatus",
+          "field": "gripMode",
+          "classification": "declared_unconnected_native_fields",
+          "writer": "none",
+          "reader": "tests / none",
+          "notes": "No gameplay write/read. IDs/grip/weight/JG overlap planned modules and defense state concepts; choose integration or retire later, no blind deletion."
+        },
+        {
+          "owner": "EquipmentStatus",
+          "field": "weightRatio",
+          "classification": "declared_unconnected_native_fields",
+          "writer": "none",
+          "reader": "tests / none",
+          "notes": "No gameplay write/read. IDs/grip/weight/JG overlap planned modules and defense state concepts; choose integration or retire later, no blind deletion."
+        },
+        {
+          "owner": "EquipmentStatus",
+          "field": "maxWeightCapacity",
+          "classification": "declared_unconnected_native_fields",
+          "writer": "none",
+          "reader": "tests / none",
+          "notes": "No gameplay write/read. IDs/grip/weight/JG overlap planned modules and defense state concepts; choose integration or retire later, no blind deletion."
+        },
+        {
+          "owner": "EquipmentStatus",
+          "field": "justGuardStartTime",
+          "classification": "declared_unconnected_native_fields",
+          "writer": "none",
+          "reader": "tests / none",
+          "notes": "No gameplay write/read. IDs/grip/weight/JG overlap planned modules and defense state concepts; choose integration or retire later, no blind deletion."
+        },
+        {
+          "owner": "EquipmentStatus",
+          "field": "justGuardDuration",
+          "classification": "declared_unconnected_native_fields",
+          "writer": "none",
+          "reader": "tests / none",
+          "notes": "No gameplay write/read. IDs/grip/weight/JG overlap planned modules and defense state concepts; choose integration or retire later, no blind deletion."
+        },
+        {
+          "owner": "MoveParams",
+          "field": "weightRatio",
+          "classification": "declared_unconnected_native_field",
+          "writer": "none",
+          "reader": "tests / pure helper parameters only",
+          "notes": "Duplicates EquipmentStatus.weightRatio concept; neither feeds active locomotion."
+        },
+        {
+          "owner": "CharacterInfo",
+          "field": "rank",
+          "classification": "serialized_authoring_without_runtime_connection",
+          "writer": "SO YAML / editor builders",
+          "reader": "none in Runtime/current registration",
+          "notes": "Existing Player/Companion/Enemy SOs persist these fields. walkSpeed values 3,2.5,1.5 are nonzero. weakPoint selection uses CombatStats.defense<=0 instead, attack element comes from AttackInfo, flying also has a CharacterFeature flag; explicit design decision before wiring/removal."
+        },
+        {
+          "owner": "CharacterInfo",
+          "field": "canFly",
+          "classification": "serialized_authoring_without_runtime_connection",
+          "writer": "SO YAML / editor builders",
+          "reader": "none in Runtime/current registration",
+          "notes": "Existing Player/Companion/Enemy SOs persist these fields. walkSpeed values 3,2.5,1.5 are nonzero. weakPoint selection uses CombatStats.defense<=0 instead, attack element comes from AttackInfo, flying also has a CharacterFeature flag; explicit design decision before wiring/removal."
+        },
+        {
+          "owner": "CharacterInfo",
+          "field": "targetingLimit",
+          "classification": "serialized_authoring_without_runtime_connection",
+          "writer": "SO YAML / editor builders",
+          "reader": "none in Runtime/current registration",
+          "notes": "Existing Player/Companion/Enemy SOs persist these fields. walkSpeed values 3,2.5,1.5 are nonzero. weakPoint selection uses CombatStats.defense<=0 instead, attack element comes from AttackInfo, flying also has a CharacterFeature flag; explicit design decision before wiring/removal."
+        },
+        {
+          "owner": "CharacterInfo",
+          "field": "weakPoint",
+          "classification": "serialized_authoring_without_runtime_connection",
+          "writer": "SO YAML / editor builders",
+          "reader": "none in Runtime/current registration",
+          "notes": "Existing Player/Companion/Enemy SOs persist these fields. walkSpeed values 3,2.5,1.5 are nonzero. weakPoint selection uses CombatStats.defense<=0 instead, attack element comes from AttackInfo, flying also has a CharacterFeature flag; explicit design decision before wiring/removal."
+        },
+        {
+          "owner": "CharacterInfo",
+          "field": "attackElement",
+          "classification": "serialized_authoring_without_runtime_connection",
+          "writer": "SO YAML / editor builders",
+          "reader": "none in Runtime/current registration",
+          "notes": "Existing Player/Companion/Enemy SOs persist these fields. walkSpeed values 3,2.5,1.5 are nonzero. weakPoint selection uses CombatStats.defense<=0 instead, attack element comes from AttackInfo, flying also has a CharacterFeature flag; explicit design decision before wiring/removal."
+        },
+        {
+          "owner": "CharacterInfo",
+          "field": "walkSpeed",
+          "classification": "serialized_authoring_without_runtime_connection",
+          "writer": "SO YAML / editor builders",
+          "reader": "none in Runtime/current registration",
+          "notes": "Existing Player/Companion/Enemy SOs persist these fields. walkSpeed values 3,2.5,1.5 are nonzero. weakPoint selection uses CombatStats.defense<=0 instead, attack element comes from AttackInfo, flying also has a CharacterFeature flag; explicit design decision before wiring/removal."
+        },
+        {
+          "owner": "CharacterInfo",
+          "field": "physicalResistance",
+          "classification": "serialized_authoring_without_runtime_connection",
+          "writer": "SO YAML / editor builders",
+          "reader": "none in Runtime/current registration",
+          "notes": "Existing Player/Companion/Enemy SOs persist these fields. walkSpeed values 3,2.5,1.5 are nonzero. weakPoint selection uses CombatStats.defense<=0 instead, attack element comes from AttackInfo, flying also has a CharacterFeature flag; explicit design decision before wiring/removal."
+        },
+        {
+          "owner": "CharacterInfo",
+          "field": "statCaps",
+          "classification": "authoring_reference_array_outside_native",
+          "writer": "field initializer / editor authoring",
+          "reader": "LevelUpLogic accepts a caps argument but no Runtime passes this CharacterInfo field",
+          "notes": "Expected managed authoring array, not Native contamination; growth UI/save flow unconnected."
+        },
+        {
+          "owner": "CharacterInfo",
+          "field": "statusResistance",
+          "classification": "legacy_compatibility_input",
+          "writer": "legacy SO/API",
+          "reader": "CreateRegistration -> statusDefense.thresholdMultiplierBonus",
+          "notes": "Hidden old scalar remains a one-time additive threshold-multiplier input; do not delete while serialized name compatibility is needed."
+        },
+        {
+          "owner": "CharacterInfo",
+          "field": "jumpBufferTime",
+          "classification": "legitimate_runtime_configuration_capture",
+          "writer": "SO authoring",
+          "reader": "PlayerCharacter / PlayerInputHandler copied config",
+          "notes": "Controller-local timers/settings are not duplicate live resource maxima."
+        },
+        {
+          "owner": "CharacterInfo",
+          "field": "jumpReleaseVelocityDamping",
+          "classification": "legitimate_runtime_configuration_capture",
+          "writer": "SO authoring",
+          "reader": "PlayerCharacter / PlayerInputHandler copied config",
+          "notes": "Controller-local timers/settings are not duplicate live resource maxima."
+        },
+        {
+          "owner": "CharacterInfo",
+          "field": "moveInputDeadzone",
+          "classification": "legitimate_runtime_configuration_capture",
+          "writer": "SO authoring",
+          "reader": "PlayerCharacter / PlayerInputHandler copied config",
+          "notes": "Controller-local timers/settings are not duplicate live resource maxima."
+        },
+        {
+          "owner": "CharacterInfo",
+          "field": "staminaExhaustionPenalty",
+          "classification": "legitimate_runtime_configuration_capture",
+          "writer": "SO authoring",
+          "reader": "PlayerCharacter / PlayerInputHandler copied config",
+          "notes": "Controller-local timers/settings are not duplicate live resource maxima."
+        },
+        {
+          "owner": "CharacterInfo",
+          "field": "staminaExhaustionRecoveryRatio",
+          "classification": "legitimate_runtime_configuration_capture",
+          "writer": "SO authoring",
+          "reader": "PlayerCharacter / PlayerInputHandler copied config",
+          "notes": "Controller-local timers/settings are not duplicate live resource maxima."
+        },
+        {
+          "owner": "CharacterInfo",
+          "field": "inputBufferDuration",
+          "classification": "legitimate_runtime_configuration_capture",
+          "writer": "SO authoring",
+          "reader": "PlayerCharacter / PlayerInputHandler copied config",
+          "notes": "Controller-local timers/settings are not duplicate live resource maxima."
+        },
+        {
+          "owner": "CharacterInfo",
+          "field": "chargeThreshold",
+          "classification": "legitimate_runtime_configuration_capture",
+          "writer": "SO authoring",
+          "reader": "PlayerCharacter / PlayerInputHandler copied config",
+          "notes": "Controller-local timers/settings are not duplicate live resource maxima."
+        },
+        {
+          "owner": "CharacterInfo",
+          "field": "sprintHoldThreshold",
+          "classification": "legitimate_runtime_configuration_capture",
+          "writer": "SO authoring",
+          "reader": "PlayerCharacter / PlayerInputHandler copied config",
+          "notes": "Controller-local timers/settings are not duplicate live resource maxima."
+        }
+      ],
+      "managed_boundaries_to_retain": [
+        "CharacterInfo ScriptableObject and statCaps array (authoring)",
+        "EquipmentHolder IEquippable object handles and cold effect views (managed equipment state)",
+        "AttackContext private cloned effect arrays (captured attack packet, not a Native SoA schema item)",
+        "SaveSlotData Dictionary<string,object> (serialization boundary; no current character growth save adapter)"
+      ],
+      "source_sha256_at_report": {
+        "Assets/MyAsset/Core/Equipment/EquipmentHolder.cs": "6645eddec65ac8ed2fa84dcb83be87bec704414eba9f6a8870b30a6b8293483f",
+        "Assets/MyAsset/Core/Equipment/EquipmentStore.cs": "f452d4a4c89b9befaf0a34fe4790779024415b82de6240d563b9a106dde5a8b2",
+        "Assets/MyAsset/Core/Common/Structs.cs": "a8f7b08292306d3a795aecca18b78729730a1031f8c4573ff12939a55f871dfe",
+        "Assets/MyAsset/Core/Combat/Magic/MagicCaster.cs": "e630c6c97fc27c863c1bca484ed3c9806bbd6742056d244368d152e6024f43eb",
+        "Assets/MyAsset/Core/Common/CombatDataHelper.cs": "0a3cde3071ea1bc5e8c79b94568e933978ef45e0c0b523d433bb380404bc1b37",
+        "Assets/MyAsset/Core/Damage/AttackContext.cs": "d6e3c5293aebe85f2a4dac590a41c27b2b318ad0252a8262a7540443242b1f7f",
+        "Assets/MyAsset/Core/Damage/StatusEffectApplication.cs": "f978aaa1d722d7bbc9f757f0ecd0d00092a6f209d6482e25fba451e6e01ad790",
+        "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs": "2d471e9052d40e8b067f34411c98bac7eece5fee5e80c52daaf438b8d33ca89a",
+        "Assets/MyAsset/Core/Combat/Projectile/ProjectileHitProcessor.cs": "12ddeed2a027b52dca4294534263ca732ba50d6375336ab4e1078100b9920461",
+        "Assets/MyAsset/Runtime/Combat/ActionCatalog.cs": "9f2d2c4b23aa99b43d50eaf7088af4445ece4761304bafd7ec6558d80d939a7a",
+        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "d16549dbc172632b2113347eb6308cc6e6e2604d65d37d44e7842ad5343ba8d4",
+        "Assets/MyAsset/Core/LevelUp/CharacterStatsSystem.cs": "19721f467b7c96680264ba777e65f799ff28b4b62ca0fab52c2bd084a39ce0a3"
+      },
+      "implementation_scope": {
+        "production_files": [
+          "Assets/MyAsset/Core/Equipment/EquipmentHolder.cs",
+          "Assets/MyAsset/Core/Equipment/EquipmentStore.cs",
+          "Assets/MyAsset/Core/Common/Structs.cs",
+          "Assets/MyAsset/Core/Combat/Magic/MagicCaster.cs",
+          "Assets/MyAsset/Core/Common/CombatDataHelper.cs",
+          "Assets/MyAsset/Core/Damage/AttackContext.cs",
+          "Assets/MyAsset/Core/Damage/StatusEffectApplication.cs",
+          "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs",
+          "Assets/MyAsset/Core/Combat/Projectile/ProjectileHitProcessor.cs",
+          "Assets/MyAsset/Runtime/Combat/ActionCatalog.cs",
+          "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
+          "Assets/MyAsset/Core/LevelUp/CharacterStatsSystem.cs"
+        ],
+        "existing_tests_updated": [
+          "Assets/Tests/EditMode/EquipmentEffectTests.cs",
+          "Assets/Tests/EditMode/CharacterStatsSystemTests.cs",
+          "Assets/Tests/EditMode/EquipmentDataFlowTests.cs",
+          "Assets/Tests/EditMode/Integration_EquipmentRegistrationTests.cs",
+          "Assets/Tests/EditMode/Integration_EquipmentDamageFlowTests.cs"
+        ],
+        "new_tests": "Assets/Tests/EditMode/EquipmentReadOnlyEffectTests.cs"
+      }
+    },
+    "actions": {
+      "recorded_utc": "2026-10-27T01:37:01.614394+00:00",
+      "kind": "manual_source_and_serialized_reference_audit_not_Unity_or_semantic_analysis",
+      "source_hashes": {
+        "Assets/MyAsset/Core/Actions/ActionCommand.cs": "d9c97f5414cc1bbe6c8b423255310f7023616809b12a51e260d8761a37e5fbff",
+        "Assets/MyAsset/Core/Actions/ExecutionTypes.cs": "57263a1efed59fba81c7793983f8aa36371d63736c5090050dfd11ab8f68fed7",
+        "Assets/MyAsset/Core/Actions/ActionDefinitionSnapshot.cs": "5980bfc2424e6c7c97140b359c6b2d7a57b8a0a7e55727eae711e64d9145f154",
+        "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "0b3ae6b2c6c1b43e5e049ae69c44bb3ec2b2d294fd68ee80a7188edf7b8ff391",
+        "Assets/MyAsset/Core/Actions/ActionExecutionSystem.Groups.cs": "4b8fb6a0eae95a439123daae1fe9eab3cc57e139ef4a67bf0ccaaab7ae2d6595",
+        "Assets/MyAsset/Core/Actions/SoAExecutionWorld.cs": "61a61668639775706708b0e2126590ab488c1f495f2339a19b3d66ff8a33faae",
+        "Assets/MyAsset/Core/Actions/AttackExecutionSettings.cs": "991e2ca154716db2cfdc1d2fdd26ab110d0204406e5160f930dc447392898546",
+        "Assets/MyAsset/Core/Animation/MotionPresentationData.cs": "98da66959ba2b3fd410ad34ffd5548d08ae8a91fd85d2ac8e7042d3be2f08ece",
+        "Assets/MyAsset/Core/ScriptableObjects/ActionDefinition.cs": "c8e687e19a93bb22c78d09992243761b5d85bb817a0367d9b50f04a292730944",
+        "Assets/MyAsset/Core/ScriptableObjects/AttackInfo.cs": "63ee11189923fb6257cd16a03ebd84acc698dd3b1483d1a1210ee95494baf86b",
+        "Assets/MyAsset/Core/ScriptableObjects/MotionDefinition.cs": "abd9ccc62cce0c45468a6476745e629424242f30b86dbff7b086ce6807d6a097",
+        "Assets/MyAsset/Core/Common/Structs.cs": "a8f7b08292306d3a795aecca18b78729730a1031f8c4573ff12939a55f871dfe",
+        "Assets/MyAsset/Core/Common/CombatDataHelper.cs": "0a3cde3071ea1bc5e8c79b94568e933978ef45e0c0b523d433bb380404bc1b37",
+        "Assets/MyAsset/Core/Combat/Magic/MagicCaster.cs": "e630c6c97fc27c863c1bca484ed3c9806bbd6742056d244368d152e6024f43eb",
+        "Assets/MyAsset/Runtime/Combat/ActionCatalog.cs": "9f2d2c4b23aa99b43d50eaf7088af4445ece4761304bafd7ec6558d80d939a7a",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "1d5a7166ea3ff183ea0f23693f48376ccc6214e6318ad9cbe47e3c46a8008c3e",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "5f16ee6819408a7a4683bdd124bec8e9df78d85403cac977421dd82dc8c7c2a6",
+        "Assets/MyAsset/Runtime/Character/PlayerCharacter.cs": "f735995f9085597b35f0a3eb35ebf2f80eab70589c8e3b6483337c41d0cad391",
+        "Assets/MyAsset/Runtime/Animation/CharacterAnimationController.cs": "e4af896da50ca1197d4ece526c9cd6e0ecc2e7b814065daa305f5b485b430882",
+        "Assets/MyAsset/Editor/AttackInfoEditor.cs": "4584d04b857f6687f08c5cef28bff2acdba4bd8508168c0bebe782d76ad24425",
+        "Assets/MyAsset/Editor/TestSceneBuilder.cs": "b773a5714ae2357135f2247ecb150ca4a15d372fbc06506b2b746b5659048b42"
+      },
+      "managed_boundaries": [
+        {
+          "type": "ActionCommand",
+          "members": [
+            "attack.definitionId:string"
+          ],
+          "location": "managed dispatch/request boundary, not NativeSoA"
+        },
+        {
+          "type": "ActionExecution",
+          "members": [
+            "definition -> ActionDefinitionSnapshot -> arrays/ReadOnlyCollection"
+          ],
+          "location": "managed ActionExecutionSystem.Instance/Dictionary; SoAExecutionWorld commits Vitals/Flags only"
+        },
+        {
+          "type": "MotionPresentationData",
+          "members": [
+            "MotionInfo.AnimationClip references",
+            "AvatarMask"
+          ],
+          "location": "managed presentation resource boundary, intentionally not deep-cloned Unity object contents"
+        },
+        {
+          "type": "AttackExecutionSettings",
+          "members": [
+            "LandingSound:AudioClip"
+          ],
+          "location": "managed registered player settings/presentation boundary"
+        },
+        {
+          "type": "AttackMotionData/MagicDefinition/DamageData",
+          "members": [
+            "statusEffects arrays",
+            "equipmentStatusEffects readonly-list references",
+            "string labels",
+            "Unity prefab refs",
+            "AttackContext private effect snapshots"
+          ],
+          "location": "managed combat packets; native/job transfer requires conversion, not current direct SoA columns"
+        }
+      ],
+      "fields": [
+        {
+          "fields": [
+            "ActionDefinition.chargeTimeMin",
+            "ActionDefinition.chargeTimeMax",
+            "ActionDefinition.chargeDamageMultiplier"
+          ],
+          "classification": "serialized_authoring_unconnected",
+          "evidence": "Declared in ActionDefinition only; actual charge input/multiplier comes from player input + ChargeAttackLogic; all8trackedattackassets serialize zero. Do not delete without serialization migration."
+        },
+        {
+          "fields": [
+            "AttackInfo.baseDamage"
+          ],
+          "classification": "editor_display_and_builder_write_only",
+          "evidence": "AttackInfoEditor35/58 displays/warns; TestSceneBuilder194+ writes; CombatDataHelper.BuildMotionData does not capture baseDamage; damage uses character attack snapshot times motionValue. 8trackedattackassets carry values."
+        },
+        {
+          "fields": [
+            "AttackInfo.isParriable",
+            "AIAttackEvaluation.isParriable"
+          ],
+          "classification": "serialized_unconnected_duplicate_semantic",
+          "evidence": "Builder and assets set AttackInfo.isParriable; no Runtime reader. Actual parry immunity is AttackFeature.JustGuardImmune. AIAttackEvaluation has no gameplay readers."
+        },
+        {
+          "fields": [
+            "AIAttackEvaluation.effectiveRangeMin",
+            "AIAttackEvaluation.effectiveRangeMax",
+            "AIAttackEvaluation.threatLevel",
+            "AIAttackEvaluation.isBlockable",
+            "AIAttackEvaluation.isParriable",
+            "AIAttackEvaluation.totalWindupTime",
+            "AIAttackEvaluation.preferredUseHpThreshold",
+            "AIAttackEvaluation.priority"
+          ],
+          "classification": "serialized_authoring_unconnected",
+          "evidence": "Declarations and nested serialized values in 8attackassets; AI runtime uses separate ActionSlot/TargetFilter/observation data, not this evaluation object."
+        },
+        {
+          "fields": [
+            "KnockbackInfo.stunDuration",
+            "KnockbackInfo.groundBounce",
+            "KnockbackInfo.wallBounce",
+            "KnockbackInfo.gravityScale"
+          ],
+          "classification": "serialized_authoring_unconnected",
+          "evidence": "BuildMotionData captures hasKnockback/force only. PlayerHeavy/BossSlam assets have stunDuration .3/.5 but reaction timings use HitReactionLogic constants."
+        },
+        {
+          "fields": [
+            "EffectSoundInfo.hitEffect",
+            "EffectSoundInfo.castEffect",
+            "EffectSoundInfo.chargeEffect",
+            "EffectSoundInfo.trailEffect",
+            "EffectSoundInfo.attackSound",
+            "EffectSoundInfo.hitSound",
+            "EffectSoundInfo.chargeSound",
+            "EffectSoundInfo.chargeCompleteSound",
+            "MotionInfo.chargeLoopClip"
+          ],
+          "classification": "presentation_authoring_unconnected",
+          "evidence": "Declarations/serialization without runtime consumers; landingSound alone is captured by AttackExecutionSettings and used by Player. pre/active/recovery clips are connected."
+        },
+        {
+          "fields": [
+            "AttackInfo.isAutoChain",
+            "AttackInfo.isChainEndPoint"
+          ],
+          "classification": "serialized_authoring_unconnected",
+          "evidence": "Builder/editor/CombatDataHelper write/copy flags, but Player combo control does not read them. Player uses own step/queue/window + configured attack arrays."
+        },
+        {
+          "fields": [
+            "AttackMotionData.actionName",
+            "AttackMotionData.staminaCost",
+            "AttackMotionData.mpCost",
+            "AttackMotionData.attackMoveDistance",
+            "AttackMotionData.attackMoveDuration",
+            "AttackMotionData.contactType",
+            "AttackMotionData.isAutoChain",
+            "AttackMotionData.isChainEndPoint",
+            "AttackMotionData.inputWindow",
+            "AttackMotionData.actionEffects"
+          ],
+          "classification": "runtime_packet_redundant_or_unconsumed",
+          "evidence": "Common current Runtime reads only hitpayload fields; cost/movement owned by ActionDefinitionSnapshot; contactType by Catalog.Entry; inputWindow by AttackExecutionSettings. actionEffects is not assigned by BuildMotionData. Legacy/test usage is separate."
+        },
+        {
+          "fields": [
+            "MagicDefinition.magicName",
+            "MagicDefinition.magicId",
+            "MagicDefinition.mpCost",
+            "MagicDefinition.cooldownDuration",
+            "MagicDefinition.castType",
+            "MagicDefinition.fireType",
+            "MagicDefinition.castTime"
+          ],
+          "classification": "legacy_or_unconsumed_packet",
+          "evidence": "magicId/mpCost/cooldownDuration/castTime used by old MagicCaster only; no production new MagicCaster/OnFired subscription. castType/fireType/magicName have no functional consumer. Shared cast costs/timing owned by ActionExecutionSystem."
+        }
+      ],
+      "safe_invariants": [
+        "ActionDefinitionSnapshot arrays are privately cloned with ReadOnlyCollection views; ToData defensive copies.",
+        "ActionCatalog clones technique statusEffects arrays per packet; equipment effect lists are captured as readonly snapshots by Entry. Source SO references serve as identity after registration.",
+        "ActorRegistry generation and execution local actorVersion are distinct lifetimes (StopActor can reset execution without physical re-registration)."
+      ],
+      "integration_candidates": [
+        "Shrink AttackMotionData to hitpayload; preserve legacy authoring/serialized fields explicitly until migration.",
+        "Share immutable common combat payload between melee and projectile and build only used packet; HandleExecution currently builds both.",
+        "Isolate standalone MagicCaster/ComboManager legacy utilities instead of treating their configuration as shared runtime behavior."
+      ],
+      "integration_notes_after_parallel_repairs": "Parallel equipment audit converted equipmentStatusEffects from mutable arrays to readonly lists. This classification was updated after reviewing the current Entry capture/copy methods; intent remains a managed combat boundary.",
+      "final_source_hashes": {
+        "Assets/MyAsset/Core/Actions/ActionCommand.cs": "d9c97f5414cc1bbe6c8b423255310f7023616809b12a51e260d8761a37e5fbff",
+        "Assets/MyAsset/Core/Actions/ExecutionTypes.cs": "57263a1efed59fba81c7793983f8aa36371d63736c5090050dfd11ab8f68fed7",
+        "Assets/MyAsset/Core/Actions/ActionDefinitionSnapshot.cs": "5980bfc2424e6c7c97140b359c6b2d7a57b8a0a7e55727eae711e64d9145f154",
+        "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "0b3ae6b2c6c1b43e5e049ae69c44bb3ec2b2d294fd68ee80a7188edf7b8ff391",
+        "Assets/MyAsset/Core/Actions/ActionExecutionSystem.Groups.cs": "4b8fb6a0eae95a439123daae1fe9eab3cc57e139ef4a67bf0ccaaab7ae2d6595",
+        "Assets/MyAsset/Core/Actions/SoAExecutionWorld.cs": "61a61668639775706708b0e2126590ab488c1f495f2339a19b3d66ff8a33faae",
+        "Assets/MyAsset/Core/Actions/AttackExecutionSettings.cs": "991e2ca154716db2cfdc1d2fdd26ab110d0204406e5160f930dc447392898546",
+        "Assets/MyAsset/Core/Animation/MotionPresentationData.cs": "98da66959ba2b3fd410ad34ffd5548d08ae8a91fd85d2ac8e7042d3be2f08ece",
+        "Assets/MyAsset/Core/ScriptableObjects/ActionDefinition.cs": "c8e687e19a93bb22c78d09992243761b5d85bb817a0367d9b50f04a292730944",
+        "Assets/MyAsset/Core/ScriptableObjects/AttackInfo.cs": "63ee11189923fb6257cd16a03ebd84acc698dd3b1483d1a1210ee95494baf86b",
+        "Assets/MyAsset/Core/ScriptableObjects/MotionDefinition.cs": "abd9ccc62cce0c45468a6476745e629424242f30b86dbff7b086ce6807d6a097",
+        "Assets/MyAsset/Core/Common/Structs.cs": "a8f7b08292306d3a795aecca18b78729730a1031f8c4573ff12939a55f871dfe",
+        "Assets/MyAsset/Core/Common/CombatDataHelper.cs": "0a3cde3071ea1bc5e8c79b94568e933978ef45e0c0b523d433bb380404bc1b37",
+        "Assets/MyAsset/Core/Combat/Magic/MagicCaster.cs": "e630c6c97fc27c863c1bca484ed3c9806bbd6742056d244368d152e6024f43eb",
+        "Assets/MyAsset/Runtime/Combat/ActionCatalog.cs": "9f2d2c4b23aa99b43d50eaf7088af4445ece4761304bafd7ec6558d80d939a7a",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "1d5a7166ea3ff183ea0f23693f48376ccc6214e6318ad9cbe47e3c46a8008c3e",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "5f16ee6819408a7a4683bdd124bec8e9df78d85403cac977421dd82dc8c7c2a6",
+        "Assets/MyAsset/Runtime/Character/PlayerCharacter.cs": "f735995f9085597b35f0a3eb35ebf2f80eab70589c8e3b6483337c41d0cad391",
+        "Assets/MyAsset/Runtime/Animation/CharacterAnimationController.cs": "e4af896da50ca1197d4ece526c9cd6e0ecc2e7b814065daa305f5b485b430882",
+        "Assets/MyAsset/Editor/AttackInfoEditor.cs": "4584d04b857f6687f08c5cef28bff2acdba4bd8508168c0bebe782d76ad24425",
+        "Assets/MyAsset/Editor/TestSceneBuilder.cs": "b773a5714ae2357135f2247ecb150ca4a15d372fbc06506b2b746b5659048b42"
+      },
+      "final_reviewed_utc": "2026-10-27T01:43:05.345428+00:00"
+    },
+    "ai": {
+      "generated_at_utc": "2026-10-27T01:40:47.025673+00:00",
+      "scope": "AI authoring/configuration/preset -> snapshot observation -> target selection -> action execution/lifetime",
+      "source_hashes": {
+        "Assets/MyAsset/Core/AI/Companion/CompanionController.cs": "3638383e33258ccf06f4d560a879ee484c99978e8e4e1cbc6d14cdd6bc97a53d",
+        "Assets/MyAsset/Core/AI/Confusion/ConfusionAIOverride.cs": "91f7b9af36490f380d1a187e2c1aaa1df33f6293392df3442d793316e5bb295d",
+        "Assets/MyAsset/Core/AI/Confusion/ConfusionEffectProcessor.cs": "bc998c10e5ae885ae683fbf68fcffa25f9dce2a6393e2d69907b2e992204f9fb",
+        "Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs": "6e1b233c3986e2e14b934f4ce598cb6b4853935b12099e414c81ce9fd1df8ecf",
+        "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": "859f33bc232fb9f880759ea2d166ce549f2ff541c0f4be9ba252599a01194395",
+        "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs": "ee8d60ef903fcf58f9ef90a842ae6f3ee868b4643b40af8b5a62f073c1bfb833",
+        "Assets/MyAsset/Core/AI/Core/AITargetRelations.cs": "71791495df08210e3ef02cceedf90895596e5ecd9fcca29d7442f789548d0456",
+        "Assets/MyAsset/Core/AI/Core/DamageScoreConnector.cs": "766fbb020dfd86f5261ca30e4cc4f1fadd956064efe1ae384a40e7434eaf3a75",
+        "Assets/MyAsset/Core/AI/Core/DeliberationBuffer.cs": "93aeb1e611190147125ce25265e35894682163ffc45566b7034fc66af06ed4ff",
+        "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "1be3cb1b57843adfa32f1e2eec147cfee49202e55890128e218174f3a4dd7817",
+        "Assets/MyAsset/Core/AI/Core/ModeController.cs": "3419790f552a1d3d96ebbc30c557892c89d0d813922e1770e5ab7005fd94ff16",
+        "Assets/MyAsset/Core/AI/Core/SensorSystem.cs": "ad17edb6341e5f055aa8a0d96e093f7d5919bf2f4e032a4c1a928cd1d85cacc7",
+        "Assets/MyAsset/Core/AI/Core/SpatialTargetRegistry.cs": "48d782f5cc948c50e419d64789563df0bc8b9eb6c431bbb33d2463780c4dd379",
+        "Assets/MyAsset/Core/AI/Core/TargetSelector.cs": "3f0254fe4e876652218f54e02c8c5875859262f1120c67a65f830ea9fb3c05ee",
+        "Assets/MyAsset/Core/AI/Enemy/EnemyController.cs": "f2962bb519f9be8273bac8ab9ca7a6c80f5c03b371cacf338350d3510b31cb10",
+        "Assets/MyAsset/Core/AI/RuleBuilder/AIConfigurationCopy.cs": "1f2de269b7d0670b61d2789b6af93eb87021d161ed127b06b05acf486ee0523a",
+        "Assets/MyAsset/Core/AI/RuleBuilder/ModePresetRegistry.cs": "249ffa6824269763339dadf36157f337571b4d034c22575e20ef530f2917540b",
+        "Assets/MyAsset/Core/AI/RuleBuilder/ModeTransitionEditor.cs": "f932e075254d9812551cdd0504731859b7086e186a7c87d5dc5e8175397bfdd4",
+        "Assets/MyAsset/Core/AI/RuleBuilder/PresetManager.cs": "581f65ebbcc9d7c3e8ac8b28e1bc09c0d6fb4de3f03c882ec3c9f27e641f99ef",
+        "Assets/MyAsset/Core/AI/RuleBuilder/RuleEditorLogic.cs": "64daa02cee2fa6b5c7d6087fbb1da6c8dce4e6d975de026e4d3c7fc7a6b0537e",
+        "Assets/MyAsset/Core/AI/RuleBuilder/TacticalPresetRegistry.cs": "4a9984ff9f1807355e9ecaf493907e977760b238e2a9bfb3a5915517b75664eb",
+        "Assets/MyAsset/Core/Common/Section2Structs.cs": "0ef35fe3fdb237a9813e5e0a56d6897dd17c1a5513d5daa558cd2e0c8049f301",
+        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "d16549dbc172632b2113347eb6308cc6e6e2604d65d37d44e7842ad5343ba8d4",
+        "Assets/MyAsset/Core/GameManager/GameEvents.cs": "09aea469299bcf75a8b6dd8373bac430ecc12425eb2e5dad8e9bdd294d795054",
+        "Assets/MyAsset/Core/ScriptableObjects/AIInfo.cs": "dcf14029922193be0f86392b2110ffb32ed1b89d698d6f35aaf2944547e7849c",
+        "Assets/MyAsset/Core/UI/CompanionAISettingsLogic.cs": "49e857b6983fc5ff409c89dca9075448672462e97fed0e87b14b0b7136debb18",
+        "Assets/MyAsset/Data/PLACEHOLDER_BasicEnemyAI.asset": "bf358ffaf547e46a8c1837950a9af5355f8fba5ef8752324b3b6c77ec8eaab17",
+        "Assets/MyAsset/Runtime/Character/CompanionCharacter.cs": "46f42d659de0402f0657a6a5bd010007543ae875bb98988dc29afd25929efe43",
+        "Assets/MyAsset/Runtime/UI/CompanionAISettingsController.Dialogs.TargetFilter.cs": "5428536f3cc232898d850d195dc4cc349483582a5bb85d1d822ebb6508364e4c",
+        "Assets/MyAsset/Runtime/UI/CompanionAISettingsController.Dialogs.cs": "691590acbf52ff511a9c892a041c282242a8ed823bdfe23f97b98b60c313f71b",
+        "Assets/MyAsset/Runtime/UI/CompanionAISettingsController.cs": "e93930797e4c316e0ceb58a419b13b6be0b052486e19a80d0564c8bb28b9ae1b",
+        "Assets/Tests/EditMode/AICore_JudgmentProbabilityTests.cs": "f21fc2c2d26c3add34d7edea77632f02ba0cb9cad497cf06c53141fa7f24cf2c"
+      },
+      "limits": [
+        "Unity Editor/Native SoA/API compilation not available",
+        "Static source/asset/UI tracing; no field was called unused only from occurrence counts",
+        "Actual registry/UI/helper/RuleEditor source linked by audit_soa_verification; pure603 suite passed, AI new11 plus existing86 all passed.",
+        "Runtime controller boundary tests require Unity type resolution and are not reported as executed"
+      ],
+      "valid_separations": [
+        {
+          "types": [
+            "AIActorObservation",
+            "CharacterVitals",
+            "CombatStats",
+            "CharacterFlags"
+          ],
+          "classification": "value observation snapshot",
+          "reason": "Observation value fields have no mutable managed references; snapshot duplicates are deliberate read models of one tick, not second writable SoA authority."
+        },
+        {
+          "types": [
+            "AIObservationContext",
+            "AIObservationCoordinator",
+            "AITargetRelations"
+          ],
+          "classification": "managed owner/index/projection",
+          "reason": "Dictionaries, scoretracking refs, List buffers and subscriptions sit outside Native SoA; AITargetRelations owns runtime target edges and observation only projects counts."
+        },
+        {
+          "types": [
+            "AIMode",
+            "AIRule",
+            "ActionSlot",
+            "CompanionAIConfig"
+          ],
+          "classification": "managed authoring configuration",
+          "reason": "strings and nested arrays are intentional on authoring/editing side. They are not NativeArray payloads; new ownership-boundary deepcopies prevent alias propagation."
+        },
+        {
+          "types": [
+            "JudgmentLoop._currentTargetHash"
+          ],
+          "classification": "legacy compatibility fallback",
+          "reason": "Runtime with observations/relations reads authoritative AITargetRelations; hash field is only fallback when shared relations absent."
+        },
+        {
+          "types": [
+            "CompanionAISettingsLogic.EditingBuffer"
+          ],
+          "classification": "UI-owned mutable working view",
+          "reason": "Intentionally editable working buffer. CurrentTactic/storage outputs are separated by the new deepcopy boundary."
+        }
+      ],
+      "hot_path_check": {
+        "clone_locations": "explicit configuration save/load/public query only; Controller SwitchMode uses internal captured mode, JudgmentLoop.Tick has no clone call",
+        "production_CurrentMode_reads": "none outside declaration found",
+        "UI_Update_or_FixedUpdate": "no such methods in CompanionAISettingsController partial files; Registry GetAll/GetById/CurrentTactic used in explicit refresh/dialog callbacks",
+        "performance_measurement": "not measured in Unity"
+      },
+      "findings": [
+        {
+          "key": "AI-01",
+          "severity": "P1",
+          "status": "fixed",
+          "title": "編集・保存済みモードの入れ子配列alias",
+          "evidence": [
+            {
+              "file": "Assets/MyAsset/Core/UI/CompanionAISettingsLogic.cs",
+              "line": 570,
+              "fact": "旧CloneConfigは外側modes/transition配列だけをコピーし、AIRule.conditions等は共有していた。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/AI/RuleBuilder/ModePresetRegistry.cs",
+              "line": 30,
+              "fact": "旧Save/GetById/GetAllは配列入りstructをそのまま保存/返却していた。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/AI/RuleBuilder/TacticalPresetRegistry.cs",
+              "line": 35,
+              "fact": "旧戦術レジストリも同じalias。現在はAIConfigurationCopyで境界copy。"
+            }
+          ],
+          "flow": "UI編集→ApplyBufferToCurrentTactic/保存→CloneConfig/Registry→次編集/破棄→保存済み値へ漏れ",
+          "recommendation": "共通AIConfigurationCopyへdeepcopyを集約。編集バッファはUI所有、保存・返却・実行境界は別配列。",
+          "tests": [
+            "Assets/Tests/EditMode/AIConfigurationBoundaryTests.cs"
+          ]
+        },
+        {
+          "key": "AI-02",
+          "severity": "P1",
+          "status": "fixed_pending_Unity_execution",
+          "title": "実行モード入力/照会が可変配列を共有",
+          "evidence": [
+            {
+              "file": "Assets/MyAsset/Core/AI/Core/ModeController.cs",
+              "line": 46,
+              "fact": "SetModesは現在deepcopy、CurrentModeも境界copy。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs",
+              "line": 80,
+              "fact": "公開SetModeはcopy、内部SetCapturedModeは所有済みsnapshotを受けてhot pathで再copyしない。"
+            }
+          ],
+          "flow": "SetAIModes→ModeController.SetModes→JudgmentLoop→callerの配列変更で実行ルールが変化",
+          "recommendation": "入力とpublic出力だけcopyし、毎tick/モード切替は内部所有snapshot。empty設定では旧判断/実行を止める。",
+          "tests": [
+            "Assets/Tests/EditMode/AIControllerSnapshotTests.cs"
+          ]
+        },
+        {
+          "key": "AI-03",
+          "severity": "P1",
+          "status": "fixed",
+          "title": "購読者の改変/再入更新が後続戦術を巻き戻す",
+          "evidence": [
+            {
+              "file": "Assets/MyAsset/Core/AI/RuleBuilder/ModePresetRegistry.cs",
+              "line": 46,
+              "fact": "現在は購読者ごとにpayloadcopyし、mode別versionで古い再入通知を打ち切る。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/AI/RuleBuilder/TacticalPresetRegistry.cs",
+              "line": 126,
+              "fact": "cascade更新も戦術ごとにmodeをcopyする。"
+            }
+          ],
+          "flow": "ModePreset.UpdateById→subscriber1改変または再Update→subscriber2(TacticalPresetRegistry)が古い/改変値を受ける",
+          "recommendation": "coldな保存操作だけでcopy/versionguardを使う。毎tickのallocは追加しない。",
+          "tests": [
+            "Assets/Tests/EditMode/AIConfigurationBoundaryTests.cs"
+          ]
+        },
+        {
+          "key": "AI-04",
+          "severity": "P1",
+          "status": "unconnected",
+          "title": "UIの現在戦術は実行AIへ届かない",
+          "evidence": [
+            {
+              "file": "Assets/MyAsset/Runtime/UI/CompanionAISettingsController.cs",
+              "line": 1115,
+              "fact": "適用ボタンはlogic.ApplyBufferToCurrentTacticとRefresh/Toastだけ。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/UI/CompanionAISettingsLogic.cs",
+              "line": 329,
+              "fact": "UI内部_currentTacticだけ更新する。"
+            },
+            {
+              "file": "Assets/MyAsset/Runtime/Character/CompanionCharacter.cs",
+              "line": 112,
+              "fact": "実AI.SetAIModesはStart時AIInfo変換でのみ設定。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/GameManager/GameEvents.cs",
+              "line": 208,
+              "fact": "FireCustomRulesChanged定義はあるがproduction呼出元は見つからない。"
+            }
+          ],
+          "flow": "UI適用→内部CurrentTacticで止まる / 実AIはAIInfo→ConvertModes→SetAIModesの別入力",
+          "recommendation": "適用先のcompanion/refと適用tick境界を定義し、UIからvalidated configを明示publishする。今回新接続は行わない。",
+          "tests": []
+        },
+        {
+          "key": "AI-05",
+          "severity": "P2",
+          "status": "known_deferred_behavior",
+          "title": "AIRule.probabilityはUI表示・設定されるが実行ゲートで未使用",
+          "evidence": [
+            {
+              "file": "Assets/MyAsset/Core/Common/Section2Structs.cs",
+              "line": 112,
+              "fact": "確率field。"
+            },
+            {
+              "file": "Assets/MyAsset/Runtime/UI/CompanionAISettingsController.Dialogs.cs",
+              "line": 620,
+              "fact": "0〜100% sliderを編集。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs",
+              "line": 175,
+              "fact": "条件一致だけで実行しprobabilityを読まない。"
+            },
+            {
+              "file": "Assets/Tests/EditMode/AICore_JudgmentProbabilityTests.cs",
+              "line": 16,
+              "fact": "既存testsのcommentも将来拡張として未使用を明示。"
+            }
+          ],
+          "flow": "UI確率→AIRule保存→JudgmentLoopでreadなし",
+          "recommendation": "優先度weightと確率を別入力へ分離するか、UIを未対応表示へ。確率導入はAI挙動変更なので今回保留。",
+          "tests": []
+        },
+        {
+          "key": "AI-06",
+          "severity": "P2",
+          "status": "unconnected_and_role_overlap",
+          "title": "弱点条件の二つの入力とAND指定が不一致",
+          "evidence": [
+            {
+              "file": "Assets/MyAsset/Core/Common/Section2Structs.cs",
+              "line": 69,
+              "fact": "AITargetSelect.elementFilterとTargetFilter.weakPointが並存。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs",
+              "line": 104,
+              "fact": "Matchesはfilter.weakPointだけ、複数属性はANY固定。"
+            },
+            {
+              "file": "Assets/MyAsset/Runtime/UI/CompanionAISettingsController.Dialogs.TargetFilter.cs",
+              "line": 668,
+              "fact": "elementFilterを編集するUIがある。"
+            },
+            {
+              "file": "Assets/MyAsset/Runtime/UI/CompanionAISettingsController.Dialogs.TargetFilter.cs",
+              "line": 173,
+              "fact": "WeakPointAnd切替UIがあるが実判定で参照なし。"
+            }
+          ],
+          "flow": "UI弱点/AND→保存→TargetSelector/Matchesは一方とANYだけ使用",
+          "recommendation": "weakPointに統一しelementFilterを互換入力へ移行、AND/ORの意味を共通filterで実装する候補。値を無断削除しない。",
+          "tests": []
+        },
+        {
+          "key": "AI-07",
+          "severity": "P2",
+          "status": "unconnected",
+          "title": "AIInfoの未接続作者入力群",
+          "evidence": [
+            {
+              "file": "Assets/MyAsset/Core/ScriptableObjects/AIInfo.cs",
+              "line": 24,
+              "fact": "coolTimeDataはEditor要約/Builder以外のRuntime読者なし。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/ScriptableObjects/AIInfo.cs",
+              "line": 28,
+              "fact": "companionSettingのfollowDistance/maxLeashDistance/autoHeal等はRuntime読者なし。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/ScriptableObjects/AIInfo.cs",
+              "line": 72,
+              "fact": "retreatHpThreshold未使用。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/ScriptableObjects/AIInfo.cs",
+              "line": 131,
+              "fact": "maxUseCount未使用。targetJudgeもconverter未参照。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/ScriptableObjects/AIInfo.cs",
+              "line": 210,
+              "fact": "requireLineOfSight/requireGrounded未接続。"
+            },
+            {
+              "file": "Assets/MyAsset/Runtime/Character/CompanionCharacter.cs",
+              "line": 120,
+              "fact": "追従はComponentの_followDistance/_maxLeashDistanceを使用。"
+            },
+            {
+              "file": "Assets/MyAsset/Data/PLACEHOLDER_BasicEnemyAI.asset",
+              "line": 39,
+              "fact": "Attack.coolTime=2、coolTimeData.global=.5/attack=2は実assetに存在。"
+            }
+          ],
+          "flow": "AIInfo作者/asset→ConvertModesで一部だけ写す→残りの値はRuntimeへ未到達",
+          "recommendation": "AI定義の正本をCompanionAIConfig系へ寄せ、未対応入力を明示。SustainedのcoolTimeだけは持続時間に利用されるため単純未使用とは区別。",
+          "tests": []
+        },
+        {
+          "key": "AI-08",
+          "severity": "P2",
+          "status": "unit_mismatch",
+          "title": "必要MP/SPの絶対量を割合条件へ変換",
+          "evidence": [
+            {
+              "file": "Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs",
+              "line": 234,
+              "fact": "requiredStaminaをStaminaRatio.operandAへそのままコピー。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs",
+              "line": 246,
+              "fact": "requiredMpをMpRatio.operandAへそのままコピー。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs",
+              "line": 136,
+              "fact": "実観測値は0〜100の割合。"
+            }
+          ],
+          "flow": "requiredMp=20→MP15/50の30%が条件成立 / MP30/200の15%が不成立",
+          "recommendation": "絶対resource条件を定義するか型をratioへ改名してデータ移行する。割合と量の暗黙混在を避ける。",
+          "tests": []
+        },
+        {
+          "key": "AI-09",
+          "severity": "P2",
+          "status": "unsupported_authoring_silently_ignored",
+          "title": "未対応トリガーの意味が失われる",
+          "evidence": [
+            {
+              "file": "Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs",
+              "line": 281,
+              "fact": "CoolTimeReady/TargetStatusEffectはdefault AICondition.Noneへ。BuildActConditionsはNoneを追加せず条件が消える。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs",
+              "line": 332,
+              "fact": "TimerExpired遷移はNone条件のまま配列へ入り、観測では常にunknown→不成立。"
+            }
+          ],
+          "flow": "未対応trigger→一方は無条件化、もう一方は永久不成立",
+          "recommendation": "未対応をvalidationで拒否/明示unknownに揃え、情報源がある条件だけ有効設定として受理する候補。",
+          "tests": []
+        },
+        {
+          "key": "AI-10",
+          "severity": "P2",
+          "status": "filter_semantics_gap",
+          "title": "HP比率等の条件はincludeSelf以外のfilterを使わない",
+          "evidence": [
+            {
+              "file": "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs",
+              "line": 127,
+              "fact": "hash=includeSelf?owner:currentTargetを選び、Hp/Mp/Stamina/Armorを読む。belong/feature/距離は照合しない。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs",
+              "line": 307,
+              "fact": "AllyHpBelowはfilter.belong=Allyを設定するが読み手に反映されない。"
+            }
+          ],
+          "flow": "AllyHpBelow→global targetのHPを観測し、別の味方候補を探さない",
+          "recommendation": "特定target観測と候補集合の存在条件を分け、UIでfilterの有効範囲を明示する。現在の全条件へ無条件に新検索を入れない。",
+          "tests": []
+        },
+        {
+          "key": "AI-11",
+          "severity": "P2",
+          "status": "unconnected_and_duplicate",
+          "title": "混乱の蓄積・寿命の二重実装",
+          "evidence": [
+            {
+              "file": "Assets/MyAsset/Core/AI/Confusion/ConfusionEffectProcessor.cs",
+              "line": 10,
+              "fact": "独自dictionaryで蓄積/発症/残時間/解除を管理。production new/callなし。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/AI/Confusion/ConfusionAIOverride.cs",
+              "line": 10,
+              "fact": "独自HashSetの陣営反転wrapper、production new/callなし。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/AI/Enemy/EnemyController.cs",
+              "line": 50,
+              "fact": "OnConfusionClearedだけ購読。publisherは未接続processor。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
+              "line": 235,
+              "fact": "共通StatusEffectStore側のConfusionはsummarymaskに入り、Belong変更は行わない。"
+            }
+          ],
+          "flow": "攻撃Confusion→共通Store/summaryで止まる / 独立processor/override→Runtime未接続",
+          "recommendation": "蓄積/免疫/閾値/寿命は共通Storeを正本にし、Confusionは陣営projectionと必要な解除メタデータへ統合。独立processorをそのまま接続すると新耐性を迂回する。",
+          "tests": []
+        },
+        {
+          "key": "AI-12",
+          "severity": "P2",
+          "status": "unconnected_and_role_overlap",
+          "title": "手動モードoverrideの二つの状態機械",
+          "evidence": [
+            {
+              "file": "Assets/MyAsset/Core/AI/Companion/CompanionController.cs",
+              "line": 121,
+              "fact": "RequestModeSwitch/_manualOverrideTimerは自動遷移の一時抑制。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/AI/RuleBuilder/ModeTransitionEditor.cs",
+              "line": 40,
+              "fact": "shortcutoverrideは旧modeへ自動復帰する別timer。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/AI/Companion/CompanionController.cs",
+              "line": 187,
+              "fact": "Tickは自身のtimerだけ、ModeTransitionEditor.Tickは呼ばれない。"
+            }
+          ],
+          "flow": "shortcut設定→未接続editor / controller手動switch→独自timer",
+          "recommendation": "timeout時に元モード復帰か自動遷移解禁かを確定後、単一override管理へ寄せる。今は役割差があるので単純削除しない。",
+          "tests": []
+        },
+        {
+          "key": "AI-13",
+          "severity": "P2",
+          "status": "unconnected_utilities",
+          "title": "知覚/空間検索/熟考buffer/旧scoreconnectorが実AIへ未接続",
+          "evidence": [
+            {
+              "file": "Assets/MyAsset/Core/AI/Core/SensorSystem.cs",
+              "line": 13,
+              "fact": "productionのnew/UpdateDetection呼出なし。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/AI/Core/SpatialTargetRegistry.cs",
+              "line": 11,
+              "fact": "productionのnew/同期呼出なし。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/AI/Core/DeliberationBuffer.cs",
+              "line": 17,
+              "fact": "System.Action保持のmanaged遅延機構、productionのnew/Buffer呼出なし。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/AI/Core/DamageScoreConnector.cs",
+              "line": 12,
+              "fact": "旧score接続、現在はCoordinatorが同責務を担いproductionのnewなし。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs",
+              "line": 168,
+              "fact": "ProjectileNear/ObjectNearby/EventFiredは明示unknown。"
+            }
+          ],
+          "flow": "単体テスト/設計用utilityは存在→GameManager観測/AI判断へ未接続",
+          "recommendation": "知覚は観測Coordinatorへ接続してから利用。scoreconnectorはCoordinatorへ一本化候補。utility存在を機能接続済み扱いにしない。",
+          "tests": []
+        },
+        {
+          "key": "AI-14",
+          "severity": "P3",
+          "status": "legacy_managed_api_alias_remaining",
+          "title": "旧PresetManager/RuleEditorLogicにも可変配列のborrowed viewが残る",
+          "evidence": [
+            {
+              "file": "Assets/MyAsset/Core/AI/RuleBuilder/PresetManager.cs",
+              "line": 24,
+              "fact": "SystemPresets/CustomPresets/LoadPresetのnestedconfigは浅い保持。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/AI/RuleBuilder/RuleEditorLogic.cs",
+              "line": 46,
+              "fact": "Modes/AddMode/BuildConfigはnestedarraycopyなし。"
+            }
+          ],
+          "flow": "独立旧APIのcaller→配列入り設定を保存/取得→alias",
+          "recommendation": "実UI経路で新helperを導入済み。旧utilityのpublic互換契約は別途テスト確認後に同helperへ統合する。今回範囲外。",
+          "tests": []
+        },
+        {
+          "key": "AI-15",
+          "severity": "P3",
+          "status": "integration_candidate_not_changed",
+          "title": "AI観測のCombatStats丸ごとcopyを用途別projectionへ絞れる",
+          "evidence": [
+            {
+              "file": "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs",
+              "line": 11,
+              "fact": "AIActorObservation.combatは全CombatStatsを保持。現在のMatches/TryGetSortValueが使うのはattack/defenseだけで、新しいstatusDefense/guardStats/knockbackResistanceはAI読者がない。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs",
+              "line": 64,
+              "fact": "Captureごとに全CombatStatsをvaluecopyする。"
+            }
+          ],
+          "flow": "SoA全CombatStats→全actor観測へcopy→AI判断ではattack/defenseだけ参照",
+          "recommendation": "AICombatObservation(attack/defense)等の小さいvalueprojectionへ絞る候補。正本SoAとtick観測の二重化自体は意図的であり、統合してlive読みに戻さない。実Unityでの性能計測前に大幅なSoA組替えはしない。",
+          "tests": []
+        }
+      ],
+      "verification": {
+        "pure_suite": {
+          "passed": 603,
+          "failed": 0,
+          "source_changed_during_run": 0,
+          "evidence": "/workspace/.cave-dungeon/action-flow-harness/soa-audit-reviewed-*"
+        },
+        "ai_new_boundary_tests": {
+          "passed": 11,
+          "failed": 0,
+          "red": {
+            "failed": 11,
+            "kind": "verbatim pre-change registry/UI source; assertion failures; errors0",
+            "evidence": "/workspace/.cave-dungeon/action-flow-harness/soa-ai-behavior-red-*"
+          }
+        },
+        "ai_existing_regressions": {
+          "ModePresetRegistry": 12,
+          "TacticalPresetRegistry": 13,
+          "CompanionAISettingsLogic": 61,
+          "all_passed": 86
+        },
+        "controller_tests_added_not_executed": 5,
+        "syntax": {
+          "file_count": 9,
+          "configurations": 3,
+          "errors": 0,
+          "source_changed_during_parse": 0,
+          "evidence": "/workspace/.cave-dungeon/action-flow-harness/syntax/soa-ai-results.json"
+        }
+      }
+    },
+    "combat": {
+      "audited_at_utc": "2026-10-27T01:48:35.850040+00:00",
+      "scope": "combat/status/projectile/identity",
+      "native_execution": false,
+      "source_modified_by_this_agent": [
+        "Assets/MyAsset/Core/Combat/Projectile/ChildBulletHelper.cs",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileController.cs",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs (notification block only)",
+        "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs (PublishChange only)",
+        "Assets/MyAsset/Core/Damage/StatusEffectStore.cs"
+      ],
+      "tests_added": {
+        "pure": 23,
+        "native_edit": 2,
+        "native_play": 2
+      },
+      "findings": [
+        {
+          "id": "COMBAT-01",
+          "priority": "P2",
+          "title": "Projectile公開照会が内部child設定へ可変参照を返していた",
+          "location": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileController.cs:31",
+          "writer": "Activateが入力childをprivate reusable _childSnapshotへコピー",
+          "reader": "旧Magic getterがstruct越しにchild参照を公開、Managerが同じ参照をtimer/OnHit/OnDestroyで使用",
+          "cleanup": "Deactivateでprivate bindingをクリア",
+          "decision": "修正済み: public Magicはcold deep copy、Manager4経路はinternal CapturedMagicへ分離。定常tickにsnapshot配列cloneを導入しない。",
+          "status": "fixed",
+          "evidence": [
+            "ChildBulletHelper.DeepCopyForInspectionのpure3case、Native公開getter改変後のtimer発射1case追加"
+          ]
+        },
+        {
+          "id": "COMBAT-02",
+          "priority": "P2",
+          "title": "Damage通知callback後のguard通知が再利用個体へ誤帰属し得た",
+          "location": "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs:170",
+          "writer": "ReceiveDamageがtarget/source ActorRefを受理時に捕捉しDamageResultを生成",
+          "reader": "FireDamageDealtの同期購読後、旧実装はraw hashでFireGuardEvent",
+          "cleanup": "target死亡/Unregister/再登録がcallback内で可能",
+          "decision": "修正済み: Damage通知後targetのcurrentを再確認し、sourceは受理時ActorRefからlive hashへ変換。replacement target通知を抑制しreplacement sourceを0へ。",
+          "status": "fixed",
+          "evidence": [
+            "Native Play回帰2case: target再登録でguard通知0、source再登録でattackerHash0"
+          ]
+        },
+        {
+          "id": "COMBAT-03",
+          "priority": "P2",
+          "title": "Changed通知とApplied通知の間で対象世代が変わると新個体へApplied通知された",
+          "location": "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs:220",
+          "writer": "Store.Changed→PublishChangeがSoA summaryへ反映",
+          "reader": "FireStatusEffectChangedの同期購読→FireStatusEffectApplied",
+          "cleanup": "callback内Unregister/Registerで同hash別世代へ切替可能",
+          "decision": "修正済み: PublishChange入口でtarget ActorRefを観測しChanged通知後に再照合、旧個体のAppliedを抑制。",
+          "status": "fixed",
+          "evidence": [
+            "Native Edit回帰1case追加"
+          ]
+        },
+        {
+          "id": "COMBAT-04",
+          "priority": "P3",
+          "title": "CharacterDefenseState.actionElapsedTimeはRuntimeに意味ある読取がない",
+          "location": "Assets/MyAsset/Core/Damage/CharacterDefenseState.cs:11",
+          "writer": "GameActionRuntime.SyncDefenseでprimary.elapsedを書込、HitResolver.TickDefenseで旧互換加算",
+          "reader": "本番readなし。既存HitResolverTestsの1caseだけ読取",
+          "cleanup": "登録/Reset時defaultへ",
+          "decision": "削除またはcompat queryへ移動候補。現行ActionExecution.elapsedを唯一の時刻正本へ。legacy TickDefense API/testの扱いを確定してから除去。",
+          "status": "residual",
+          "evidence": [
+            "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs:476",
+            "Assets/MyAsset/Core/Damage/HitResolver.cs:125",
+            "Assets/Tests/EditMode/HitResolverTests.cs:318"
+          ]
+        },
+        {
+          "id": "COMBAT-05",
+          "priority": "P3",
+          "title": "MagicDefinitionに旧Casting用データと飛翔体packetが同居",
+          "location": "Assets/MyAsset/Core/Combat/Magic/MagicCaster.cs:11",
+          "writer": "ActionCatalog.Captureはprojectile用値のみ記入、MagicCasterはmpCost/castTime/cooldown/magicId等を使用",
+          "reader": "本番の共通詠唱はActionExecution/ActionCatalogを利用、Assets/MyAssetにnew MagicCasterの利用なし",
+          "cleanup": "MagicCaster.Disposeはlegacy単独処理",
+          "decision": "統合候補: active projectileのspawn packetとlegacy CastDefinitionの役割を分離し、不要になったMagicCasterは互換層へ。既存純tests/public APIがあるため即削除しない。",
+          "status": "residual",
+          "evidence": []
+        },
+        {
+          "id": "COMBAT-06",
+          "priority": "P2",
+          "title": "Confusionが共通Storeと未接続独自processorに分かれている",
+          "location": "Assets/MyAsset/Core/AI/Confusion/ConfusionEffectProcessor.cs:55",
+          "writer": "独自dictionaryで蓄積/ConfusionState、別に共通StatusEffectStoreがConfusion maskを保持",
+          "reader": "独自processor/overrideはRuntime呼出なし、共通maskからBelong変更への接続なし",
+          "cleanup": "独自ClearConfusionと共通Store.Removeが別",
+          "decision": "AI担当と確認済み。単純併用は新statusDefense免疫/閾値を迂回するため、共通Storeを正本として陣営projection/解除通知を統合する候補。機能追加判断が必要。",
+          "status": "residual",
+          "evidence": [
+            "独自processorはAssets/MyAssetの定義内参照のみ、OnConfusionCleared publisherも同未接続processorのみ"
+          ]
+        },
+        {
+          "id": "COMBAT-07",
+          "priority": "P3",
+          "title": "BulletProfile.spreadAngle/knockbackForceはlive経路で読まれない",
+          "location": "Assets/MyAsset/Core/Combat/Projectile/BulletProfile.cs:13",
+          "writer": "serializer/テスト/外部入力が設定できる",
+          "reader": "実発射spreadはActionCatalog.Entry.spreadAngleかChildBulletConfig.spreadAngle、実knockbackはMagicDefinition.knockbackForce",
+          "cleanup": "Projectile.ResetでProfileをdefault化",
+          "decision": "統合候補: spreadは発射layout側、knockbackはdamage payload側を正本にし、BulletProfile内の同名fieldはdeprecate/migration対象。serialized/public fieldなので参照数のみで削除しない。",
+          "status": "residual",
+          "evidence": [
+            "BulletProfile.cs:29",
+            "ProjectileManager SpawnCapturedSpread/ChildSpawn",
+            "ProjectileHitProcessor.BuildProjectileDamageData"
+          ]
+        },
+        {
+          "id": "COMBAT-08",
+          "priority": "P3",
+          "title": "旧AttackFeature一部とBulletFeature helperが実挙動に未接続",
+          "location": "Assets/MyAsset/Core/Common/Enums.cs:94",
+          "writer": "作者がSelfRecover/HitRecover/PositiveEffect/NegativeEffectを設定可能",
+          "reader": "4flagsはenum以外のAssets/MyAsset参照なし。Reflect/HasKnockbackはhelperのみ、Platform/Shield/AreaEffectのruntime実装なし",
+          "cleanup": "enum bit値はserialized契約",
+          "decision": "回復/自己付与は共通StatusEffectApplicationの効果/targetで表せる。未実装flagsは作者への診断/非推奨化候補、bit値は再利用/詰め替えしない。",
+          "status": "residual",
+          "evidence": [
+            "Assets/MyAsset/Core/Combat/Projectile/BulletFeatureProcessor.cs:58",
+            "Assets/MyAsset/Core/Combat/Projectile/BulletFeatureProcessor.cs:71"
+          ]
+        },
+        {
+          "id": "COMBAT-09",
+          "priority": "info",
+          "title": "参照を含むpacketは意図したmanaged境界でありNative componentではない",
+          "location": "Assets/MyAsset/Core/Damage/AttackContext.cs:6",
+          "writer": "Captureはeffect配列をprivate clone、authoring packetはUnity asset/string/child configを保持",
+          "reader": "Runtime GameAction/ProjectileController/Managerがmain threadで同期利用",
+          "cleanup": "active execution終了/Controller.Deactivate/scene cleanupで所有を解放",
+          "decision": "残す: AttackContext/DamageData/MagicDefinition/ProjectileStepはunmanagedやJob payloadとして扱わない。Nativeに渡すならID/valueだけの別snapshot変換を設ける。",
+          "status": "intentional",
+          "evidence": []
+        },
+        {
+          "id": "COMBAT-10",
+          "priority": "info",
+          "title": "StatusEffectStoreとCharacterStatusEffectsは正本と派生cacheの関係",
+          "location": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs:235",
+          "writer": "Store.Apply/Remove/Expire→StatusEffectSystem.PublishChangeでsummary再導出",
+          "reader": "移動/攻撃倍率/防御倍率/AIがSoA summaryを参照",
+          "cleanup": "UnregisterはStore.ClearAll→summary default→SoA Remove",
+          "decision": "残す: Store行は時刻/stack/source単位の正本、SoA summaryは参照を持たない集約read cache。別正本に増やさず直接summary書込は登録/bridgeに限定する。",
+          "status": "intentional",
+          "evidence": []
+        },
+        {
+          "id": "COMBAT-11",
+          "priority": "P3",
+          "title": "DamageResultに互換/表示専用metadataが残る",
+          "location": "Assets/MyAsset/Core/Common/Structs.cs:187",
+          "writer": "isCriticalは本番writerがtrueを書かず既定false、appliedEffectは最初に成功した効果のみを記録",
+          "reader": "DamagePopupControllerとIntegration/MasterAudioBridgeはisCriticalを表示分岐に使用",
+          "cleanup": "packetは同期通知後破棄",
+          "decision": "isCriticalは未実装機構の表示互換と明示し削除急がない。appliedEffectは全状態異常の正本に使わずStore/SoA summaryを参照する。",
+          "status": "residual",
+          "evidence": []
+        },
+        {
+          "id": "COMBAT-12",
+          "priority": "P2",
+          "title": "低水準Storeが非有限StatusEffectInfoを受け付けていた",
+          "location": "Assets/MyAsset/Core/Damage/StatusEffectStore.cs:174",
+          "writer": "public Apply/Accumulateは直接StatusEffectInfoを受け取る",
+          "reader": "info.duration<=0だけを検証、accumulateValue NaNはamount比較をすり抜け発症し得る。System.CanApplyもid/HPのみ",
+          "cleanup": "壊れたrowはClearAllでのみ回収",
+          "decision": "修正済み: IsValidInfoでduration/accumulateValue/tickDamage/tickInterval/modifierのNaN/Infを全Apply/Accumulateのrow変更・通知前にfalse拒否。有限負値の従来clampとinterval0の1秒fallbackは維持。",
+          "status": "fixed",
+          "evidence": [
+            "StatusEffectStoreBoundaryTestsの非有限15ケース＋有限互換2ケース。保存した旧実StoreとのbehaviorRed→現行Greenをverifierへ依頼。"
+          ]
+        },
+        {
+          "id": "COMBAT-13",
+          "priority": "P2",
+          "title": "TickAll再入でexpiry bufferと後続通知が失われていた",
+          "location": "Assets/MyAsset/Core/Damage/StatusEffectStore.cs:295",
+          "writer": "TickAllが_expiredをclearしてexpiry tupleを収集",
+          "reader": "Changed通知for loop中に購読先がTickAllを再入すると同bufferをclearし後続通知が欠落し得る",
+          "cleanup": "通常の中央SimulationTickRunnerは再入拒否するがStore/System public Tick自体は無guard",
+          "decision": "修正済み: TickAll wrapperがresults.Clear前にbool再入guardを確認しInvalidOperationExceptionを投げる。try/finallyで例外・早期return時も解除。expiry callbackが再入拒否をcatchすれば外側の全通知/結果を保持。",
+          "status": "fixed",
+          "evidence": [
+            "StatusEffectStoreBoundaryTestsの再入結果保持・例外後guard解除・早期return後解除3ケース。"
+          ]
+        },
+        {
+          "id": "COMBAT-14",
+          "priority": "P3",
+          "title": "hash互換fieldとActorRefのHashが重複保持されている",
+          "location": "Assets/MyAsset/Core/Combat/Projectile/Projectile.cs:13",
+          "writer": "ActorRef版Initialize/TrySetTargetは両fieldを同期、hash-only Initialize/TargetHash setterは互換入口",
+          "reader": "RuntimeはActorRef中心、旧純testsはhash-only、event payloadも旧hash併記",
+          "cleanup": "Resetで両方clear",
+          "decision": "段階統合候補: Runtime入力をActorRefへ限定後にlegacy wrapperだけhashを導出。現時点は世代のないAPI互換の意味があり、Native混入ではない。",
+          "status": "residual",
+          "evidence": []
+        }
+      ],
+      "source_hashes": {
+        "Assets/MyAsset/Core/AI/Confusion/ConfusionEffectProcessor.cs": "bc998c10e5ae885ae683fbf68fcffa25f9dce2a6393e2d69907b2e992204f9fb",
+        "Assets/MyAsset/Core/Combat/Magic/MagicCaster.cs": "e630c6c97fc27c863c1bca484ed3c9806bbd6742056d244368d152e6024f43eb",
+        "Assets/MyAsset/Core/Combat/Projectile/BulletProfile.cs": "85437634319a3738801fd34e51965bb83f780833518b5d16f2e497e255d2870f",
+        "Assets/MyAsset/Core/Combat/Projectile/Projectile.cs": "6b598edac6d9e63ed805d921490264fc53d86c98d4ec06d124d4944ed9488a7e",
+        "Assets/MyAsset/Core/Common/Enums.cs": "642ee2bbf3e0873f1a96b4568c344c859fe420f0f9886e2bcfb78a8e0c3cd9df",
+        "Assets/MyAsset/Core/Common/Structs.cs": "a8f7b08292306d3a795aecca18b78729730a1031f8c4573ff12939a55f871dfe",
+        "Assets/MyAsset/Core/Damage/AttackContext.cs": "d6e3c5293aebe85f2a4dac590a41c27b2b318ad0252a8262a7540443242b1f7f",
+        "Assets/MyAsset/Core/Damage/CharacterDefenseState.cs": "c6b3ed4beac2b10fe64887cbedfe150d70b5b8f8ad6e2bd71b3073af764bf16a",
+        "Assets/MyAsset/Core/Damage/StatusEffectStore.cs": "1849dd8d7bb9ec5dfb0740a7deaae22b17dc0f63ec5c96ff17cd7dadce147bf1",
+        "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs": "2d471e9052d40e8b067f34411c98bac7eece5fee5e80c52daaf438b8d33ca89a",
+        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "d16549dbc172632b2113347eb6308cc6e6e2604d65d37d44e7842ad5343ba8d4",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "c36c334942d72148b15322f48899674fcda58294500298f0324176538e526e0d",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileController.cs": "9781a7bb2f845e9abd529c0ed267c2df95c93c6d4e07395232633e8008e163c7"
+      },
+      "scope_boundaries": [
+        "Tick/TickAllへ渡すdeltaTimeのfinite保証は通常のSimulationTickRunnerに依存し、低水準直接APIのNaN dtは今回の追加2修正の対象外。",
+        "StatusEffectSystem.Tickのdamage event処理段階への直接再入はStore.TickAll guardの範囲外。通常の中央tickは再入拒否する。System-level再入仕様は将来の公開API整理候補。"
+      ],
+      "verification": {
+        "pure_final": {
+          "passed": 623,
+          "failed": 0,
+          "source_changes": 0,
+          "evidence": "/workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*"
+        },
+        "inspection_red": {
+          "passed": 1,
+          "failed": 2,
+          "kind": "initial shallow bridge behavior; not Unity Controller execution"
+        },
+        "store_red": {
+          "passed": 5,
+          "failed": 15,
+          "kind": "verbatim real pre-hardening Store source with new actual tests",
+          "evidence": "/workspace/.cave-dungeon/action-flow-harness/soa-store-boundary-behavior-red-*"
+        },
+        "syntax": {
+          "files": 11,
+          "configurations": 3,
+          "errors": 0,
+          "source_changes": 0,
+          "evidence": "/workspace/.cave-dungeon/soa-audit/combat-hardened-syntax.json"
+        },
+        "native_new_tests": 4,
+        "native_executed": false
+      }
+    }
+  },
+  "final_audited_source_hashes": {
+    "Assets/MyAsset/Core/AI/Companion/CompanionController.cs": "3638383e33258ccf06f4d560a879ee484c99978e8e4e1cbc6d14cdd6bc97a53d",
+    "Assets/MyAsset/Core/AI/Confusion/ConfusionAIOverride.cs": "91f7b9af36490f380d1a187e2c1aaa1df33f6293392df3442d793316e5bb295d",
+    "Assets/MyAsset/Core/AI/Confusion/ConfusionEffectProcessor.cs": "bc998c10e5ae885ae683fbf68fcffa25f9dce2a6393e2d69907b2e992204f9fb",
+    "Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs": "6e1b233c3986e2e14b934f4ce598cb6b4853935b12099e414c81ce9fd1df8ecf",
+    "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": "859f33bc232fb9f880759ea2d166ce549f2ff541c0f4be9ba252599a01194395",
+    "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs": "ee8d60ef903fcf58f9ef90a842ae6f3ee868b4643b40af8b5a62f073c1bfb833",
+    "Assets/MyAsset/Core/AI/Core/AITargetRelations.cs": "71791495df08210e3ef02cceedf90895596e5ecd9fcca29d7442f789548d0456",
+    "Assets/MyAsset/Core/AI/Core/DamageScoreConnector.cs": "766fbb020dfd86f5261ca30e4cc4f1fadd956064efe1ae384a40e7434eaf3a75",
+    "Assets/MyAsset/Core/AI/Core/DeliberationBuffer.cs": "93aeb1e611190147125ce25265e35894682163ffc45566b7034fc66af06ed4ff",
+    "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "1be3cb1b57843adfa32f1e2eec147cfee49202e55890128e218174f3a4dd7817",
+    "Assets/MyAsset/Core/AI/Core/ModeController.cs": "3419790f552a1d3d96ebbc30c557892c89d0d813922e1770e5ab7005fd94ff16",
+    "Assets/MyAsset/Core/AI/Core/SensorSystem.cs": "ad17edb6341e5f055aa8a0d96e093f7d5919bf2f4e032a4c1a928cd1d85cacc7",
+    "Assets/MyAsset/Core/AI/Core/SpatialTargetRegistry.cs": "48d782f5cc948c50e419d64789563df0bc8b9eb6c431bbb33d2463780c4dd379",
+    "Assets/MyAsset/Core/AI/Core/TargetSelector.cs": "3f0254fe4e876652218f54e02c8c5875859262f1120c67a65f830ea9fb3c05ee",
+    "Assets/MyAsset/Core/AI/Enemy/EnemyController.cs": "f2962bb519f9be8273bac8ab9ca7a6c80f5c03b371cacf338350d3510b31cb10",
+    "Assets/MyAsset/Core/AI/RuleBuilder/AIConfigurationCopy.cs": "1f2de269b7d0670b61d2789b6af93eb87021d161ed127b06b05acf486ee0523a",
+    "Assets/MyAsset/Core/AI/RuleBuilder/ModePresetRegistry.cs": "249ffa6824269763339dadf36157f337571b4d034c22575e20ef530f2917540b",
+    "Assets/MyAsset/Core/AI/RuleBuilder/ModeTransitionEditor.cs": "f932e075254d9812551cdd0504731859b7086e186a7c87d5dc5e8175397bfdd4",
+    "Assets/MyAsset/Core/AI/RuleBuilder/PresetManager.cs": "581f65ebbcc9d7c3e8ac8b28e1bc09c0d6fb4de3f03c882ec3c9f27e641f99ef",
+    "Assets/MyAsset/Core/AI/RuleBuilder/RuleEditorLogic.cs": "64daa02cee2fa6b5c7d6087fbb1da6c8dce4e6d975de026e4d3c7fc7a6b0537e",
+    "Assets/MyAsset/Core/AI/RuleBuilder/TacticalPresetRegistry.cs": "4a9984ff9f1807355e9ecaf493907e977760b238e2a9bfb3a5915517b75664eb",
+    "Assets/MyAsset/Core/Actions/ActionCommand.cs": "d9c97f5414cc1bbe6c8b423255310f7023616809b12a51e260d8761a37e5fbff",
+    "Assets/MyAsset/Core/Actions/ActionDefinitionSnapshot.cs": "5980bfc2424e6c7c97140b359c6b2d7a57b8a0a7e55727eae711e64d9145f154",
+    "Assets/MyAsset/Core/Actions/ActionExecutionSystem.Groups.cs": "4b8fb6a0eae95a439123daae1fe9eab3cc57e139ef4a67bf0ccaaab7ae2d6595",
+    "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "0b3ae6b2c6c1b43e5e049ae69c44bb3ec2b2d294fd68ee80a7188edf7b8ff391",
+    "Assets/MyAsset/Core/Actions/AttackExecutionSettings.cs": "991e2ca154716db2cfdc1d2fdd26ab110d0204406e5160f930dc447392898546",
+    "Assets/MyAsset/Core/Actions/ExecutionTypes.cs": "57263a1efed59fba81c7793983f8aa36371d63736c5090050dfd11ab8f68fed7",
+    "Assets/MyAsset/Core/Actions/SoAExecutionWorld.cs": "61a61668639775706708b0e2126590ab488c1f495f2339a19b3d66ff8a33faae",
+    "Assets/MyAsset/Core/Animation/MotionPresentationData.cs": "98da66959ba2b3fd410ad34ffd5548d08ae8a91fd85d2ac8e7042d3be2f08ece",
+    "Assets/MyAsset/Core/Combat/Magic/MagicCaster.cs": "e630c6c97fc27c863c1bca484ed3c9806bbd6742056d244368d152e6024f43eb",
+    "Assets/MyAsset/Core/Combat/Projectile/BulletProfile.cs": "85437634319a3738801fd34e51965bb83f780833518b5d16f2e497e255d2870f",
+    "Assets/MyAsset/Core/Combat/Projectile/ChildBulletHelper.cs": "bfc7d5e94e7430f4baddbf5810d61af72f605dba88330bd604a29c9b56bed6d7",
+    "Assets/MyAsset/Core/Combat/Projectile/Projectile.cs": "6b598edac6d9e63ed805d921490264fc53d86c98d4ec06d124d4944ed9488a7e",
+    "Assets/MyAsset/Core/Combat/Projectile/ProjectileHitProcessor.cs": "12ddeed2a027b52dca4294534263ca732ba50d6375336ab4e1078100b9920461",
+    "Assets/MyAsset/Core/Common/CombatDataHelper.cs": "0a3cde3071ea1bc5e8c79b94568e933978ef45e0c0b523d433bb380404bc1b37",
+    "Assets/MyAsset/Core/Common/Enums.cs": "642ee2bbf3e0873f1a96b4568c344c859fe420f0f9886e2bcfb78a8e0c3cd9df",
+    "Assets/MyAsset/Core/Common/Section2Structs.cs": "0ef35fe3fdb237a9813e5e0a56d6897dd17c1a5513d5daa558cd2e0c8049f301",
+    "Assets/MyAsset/Core/Common/Structs.cs": "a8f7b08292306d3a795aecca18b78729730a1031f8c4573ff12939a55f871dfe",
+    "Assets/MyAsset/Core/Damage/AttackContext.cs": "d6e3c5293aebe85f2a4dac590a41c27b2b318ad0252a8262a7540443242b1f7f",
+    "Assets/MyAsset/Core/Damage/CharacterDefenseState.cs": "c6b3ed4beac2b10fe64887cbedfe150d70b5b8f8ad6e2bd71b3073af764bf16a",
+    "Assets/MyAsset/Core/Damage/HitResolver.cs": "21351038fadbb0873c71fc6c4c7e4662742a181c8d5adfa25a18daaf96f26b96",
+    "Assets/MyAsset/Core/Damage/StatusEffectApplication.cs": "f978aaa1d722d7bbc9f757f0ecd0d00092a6f209d6482e25fba451e6e01ad790",
+    "Assets/MyAsset/Core/Damage/StatusEffectStore.cs": "1849dd8d7bb9ec5dfb0740a7deaae22b17dc0f63ec5c96ff17cd7dadce147bf1",
+    "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs": "2d471e9052d40e8b067f34411c98bac7eece5fee5e80c52daaf438b8d33ca89a",
+    "Assets/MyAsset/Core/DataContainer/ManagedCharacter.cs": "2da6ff142d7f9fa5c1dc6095875f9f8d0a92e04b46b8daeefda323268e319d0c",
+    "Assets/MyAsset/Core/DataContainer/SoACharaDataDic.Compat.cs": "163cd599ec2b4b9c44505afa7c19e8ee35782946c09bd6e7c77a62596fe72cf4",
+    "Assets/MyAsset/Core/DataContainer/SoACharaDataDic.cs": "b72eea5a73665e414125eef51433fdcdd6abc620ca41a51455c95cce41c4389c",
+    "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "d16549dbc172632b2113347eb6308cc6e6e2604d65d37d44e7842ad5343ba8d4",
+    "Assets/MyAsset/Core/Equipment/EquipmentHolder.cs": "6645eddec65ac8ed2fa84dcb83be87bec704414eba9f6a8870b30a6b8293483f",
+    "Assets/MyAsset/Core/Equipment/EquipmentStore.cs": "f452d4a4c89b9befaf0a34fe4790779024415b82de6240d563b9a106dde5a8b2",
+    "Assets/MyAsset/Core/Equipment/EquipmentVisualState.cs": "1215972000b8f9df2a4fa943fc7899bde86a8e1c403ffe8d14ed981db927640b",
+    "Assets/MyAsset/Core/Equipment/GripManager.cs": "91f55fcd96e932f93e52a7c50da1e76fd226c9cc5133d265fec24edd3645943e",
+    "Assets/MyAsset/Core/Equipment/SoAEquipmentWorld.cs": "68204caebf0ae4b30600e3b70bfdc0e503fd8bfaf641d4101e326998f678bc3f",
+    "Assets/MyAsset/Core/GameManager/GameEvents.cs": "09aea469299bcf75a8b6dd8373bac430ecc12425eb2e5dad8e9bdd294d795054",
+    "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "32b0b9e24b5e6acc0c8ae1d11b6730d259d88206d6b52682e83a0eebaa33b703",
+    "Assets/MyAsset/Core/GameManager/SimulationTickRunner.cs": "698c9231ebd51a65264b819d124dae65532a31c27d9531f952abe1459dcc74a4",
+    "Assets/MyAsset/Core/LevelUp/CharacterStatCalculator.cs": "4f24747ab6aba630c0611387ee2be2de7b7be9e9f416753474ca6ff0496cd6b4",
+    "Assets/MyAsset/Core/LevelUp/CharacterStatsSystem.cs": "19721f467b7c96680264ba777e65f799ff28b4b62ca0fab52c2bd084a39ce0a3",
+    "Assets/MyAsset/Core/LevelUp/LevelUpLogic.cs": "b224c5f2a0a58807f698430c129741c007b4dac268286bd25944ac1693be84e0",
+    "Assets/MyAsset/Core/ScriptableObjects/AIInfo.cs": "dcf14029922193be0f86392b2110ffb32ed1b89d698d6f35aaf2944547e7849c",
+    "Assets/MyAsset/Core/ScriptableObjects/ActionDefinition.cs": "c8e687e19a93bb22c78d09992243761b5d85bb817a0367d9b50f04a292730944",
+    "Assets/MyAsset/Core/ScriptableObjects/AttackInfo.cs": "63ee11189923fb6257cd16a03ebd84acc698dd3b1483d1a1210ee95494baf86b",
+    "Assets/MyAsset/Core/ScriptableObjects/CharacterInfo.cs": "5734ae42917396b70f2330bd6a7e6874a3febe50c2d980118a12f29c13fef8d0",
+    "Assets/MyAsset/Core/ScriptableObjects/MotionDefinition.cs": "abd9ccc62cce0c45468a6476745e629424242f30b86dbff7b086ce6807d6a097",
+    "Assets/MyAsset/Core/UI/CompanionAISettingsLogic.cs": "49e857b6983fc5ff409c89dca9075448672462e97fed0e87b14b0b7136debb18",
+    "Assets/MyAsset/Data/PLACEHOLDER_BasicEnemyAI.asset": "bf358ffaf547e46a8c1837950a9af5355f8fba5ef8752324b3b6c77ec8eaab17",
+    "Assets/MyAsset/Editor/AttackInfoEditor.cs": "4584d04b857f6687f08c5cef28bff2acdba4bd8508168c0bebe782d76ad24425",
+    "Assets/MyAsset/Editor/TestSceneBuilder.cs": "b773a5714ae2357135f2247ecb150ca4a15d372fbc06506b2b746b5659048b42",
+    "Assets/MyAsset/Runtime/Animation/CharacterAnimationController.cs": "e4af896da50ca1197d4ece526c9cd6e0ecc2e7b814065daa305f5b485b430882",
+    "Assets/MyAsset/Runtime/Character/BaseCharacter.Physics.cs": "7b46277213a4a974c3bc54c652f0a709a3faf2e6b685d6221f61fb379530cc86",
+    "Assets/MyAsset/Runtime/Character/BaseCharacter.cs": "a7b526dfa8b54867177b5f3237bcafcce3be2205ab66bbd9eef2a65d04d77485",
+    "Assets/MyAsset/Runtime/Character/CompanionCharacter.cs": "46f42d659de0402f0657a6a5bd010007543ae875bb98988dc29afd25929efe43",
+    "Assets/MyAsset/Runtime/Character/PlayerCharacter.cs": "f735995f9085597b35f0a3eb35ebf2f80eab70589c8e3b6483337c41d0cad391",
+    "Assets/MyAsset/Runtime/Combat/ActionCatalog.cs": "9f2d2c4b23aa99b43d50eaf7088af4445ece4761304bafd7ec6558d80d939a7a",
+    "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "5f16ee6819408a7a4683bdd124bec8e9df78d85403cac977421dd82dc8c7c2a6",
+    "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "c36c334942d72148b15322f48899674fcda58294500298f0324176538e526e0d",
+    "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "1d5a7166ea3ff183ea0f23693f48376ccc6214e6318ad9cbe47e3c46a8008c3e",
+    "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileController.cs": "9781a7bb2f845e9abd529c0ed267c2df95c93c6d4e07395232633e8008e163c7",
+    "Assets/MyAsset/Runtime/GameManager.cs": "ee91dd1a60ee1e1f426df13fc5fd506c07a08b18e3765c6f9d967199fbd3d288",
+    "Assets/MyAsset/Runtime/Input/PlayerInputHandler.cs": "a5b5112ff939ab254e6e4838359ed2811869eb9b9beffbef77927b0fff184312",
+    "Assets/MyAsset/Runtime/UI/CompanionAISettingsController.Dialogs.TargetFilter.cs": "5428536f3cc232898d850d195dc4cc349483582a5bb85d1d822ebb6508364e4c",
+    "Assets/MyAsset/Runtime/UI/CompanionAISettingsController.Dialogs.cs": "691590acbf52ff511a9c892a041c282242a8ed823bdfe23f97b98b60c313f71b",
+    "Assets/MyAsset/Runtime/UI/CompanionAISettingsController.cs": "e93930797e4c316e0ceb58a419b13b6be0b052486e19a80d0564c8bb28b9ae1b",
+    "Assets/Tests/EditMode/AICore_JudgmentProbabilityTests.cs": "f21fc2c2d26c3add34d7edea77632f02ba0cb9cad497cf06c53141fa7f24cf2c",
+    "Assets/Tests/EditMode/EquipmentReadOnlyEffectTests.cs": "c5cb59f19fd5871e859fa297915168caf6a420d64d308bb4d498c5f51069ddc4",
+    "Assets/Tests/EditMode/Integration_EquipmentDamageFlowTests.cs": "31c2b88e64972a0a9da5ff3ef776625cd085ee35e127fe8778e433e5717919e8"
+  },
+  "verification": {
+    "pure_passed": 623,
+    "pure_failed": 0,
+    "pure_breakdown": {
+      "prior_suite": 460,
+      "new_audit_regressions": 77,
+      "existing_ai_regressions_first_included_this_round": 86
+    },
+    "source_changed_during_run": [],
+    "proof_prefix": "/workspace/.cave-dungeon/action-flow-harness/soa-audit-final",
+    "readme": "/workspace/.cave-dungeon/action-flow-harness/SoAAuditFlow-README.txt",
+    "schema_static_coverage": "/workspace/.cave-dungeon/soa-audit/schema-value-test-coverage.json",
+    "native_regressions_added_this_audit": 16,
+    "native_execution": "not_run",
+    "syntax": {
+      "language": "CSharp9",
+      "kind": "syntax_only_no_semantic_or_Unity_API_validation",
+      "file_count": 90,
+      "configurations": [
+        "editor_tests",
+        "standalone_player",
+        "android_player"
+      ],
+      "error_count": 0,
+      "source_changed_during_parse": [],
+      "proof": "/workspace/.cave-dungeon/action-flow-harness/syntax/soa-audit-results.json"
+    },
+    "unity_meta": {
+      "new_cs_files": 28,
+      "valid_and_unique_guids": 28,
+      "issues": [],
+      "proof": "/workspace/.cave-dungeon/soa-audit/final-meta-validation.json"
+    },
+    "final_current_sha_check": {
+      "checked_sources": 134,
+      "mismatches": [],
+      "proof": "/workspace/.cave-dungeon/action-flow-harness/soa-audit-final-current-sha-check.json"
+    },
+    "call_path_manifest": {
+      "file": "designs/call-paths.json",
+      "total": 86,
+      "added_this_audit": 14,
+      "existing_logic_paths_refreshed": 25
+    },
+    "final_generator_evidence": "/workspace/.cave-dungeon/soa-audit/schema-generator-evidence-final.json",
+    "feature_db": {
+      "feature": "SoA_DataFlowAudit",
+      "status": "in_progress",
+      "tests_passed_increment": 163,
+      "breakdown": {
+        "new_audit_regressions": 77,
+        "existing_ai_first_included_this_round": 86
+      },
+      "total_unique_pure_suite": 623,
+      "native_passes_claimed": 0
+    }
+  },
+  "limits": [
+    "純harnessは実sourceをリンクするがUnity値/参照の最小adapterを使う。Native SoA/MonoBehaviour/Physics2D/Unity fake-nullを模造実行していない。",
+    "実pinned source generatorは動かして生成物を確認したが、入力の完全なUnity型解決/生成物のNativeコンパイルは行っていない。",
+    "検索に現れない外部consumer・保存形式・未導入アセットの振る舞いは完全には証明できない。未接続作者fieldは保存データを維持する。",
+    "各agent reportの行番号/中間SHAは報告時点。最終ソース照合はfinal_audited_source_hashesと最終検証証拠を参照する。"
+  ],
+  "follow_up_copy_reduction": {
+    "recorded_date": "2026-10-28",
+    "report": "designs/struct-copy-flow.json",
+    "note": "本監査の最終SHA/623件は監査完了時点の履歴。以後のコピー整理と現在の650件実行証拠はfollow-upを参照。前回の未接続/仕様未確定残件は継続。"
+  }
+}

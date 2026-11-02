@@ -122,11 +122,11 @@ namespace Game.Core
         /// <summary>編集対象のプリセットID。null なら「現在の戦術」を編集中。</summary>
         public string EditingConfigId => _editingConfigId;
 
-        /// <summary>編集中の戦術バッファ（読み取り専用ビュー）。UI側での参照用。</summary>
+        /// <summary>UIが所有する可変編集バッファ。保存済み・実行用の設定とは配列を共有しない。</summary>
         public CompanionAIConfig EditingBuffer => _editingBuffer;
 
         /// <summary>現在の戦術（ゲーム実行時の実値）。</summary>
-        public CompanionAIConfig CurrentTactic => _currentTactic;
+        public CompanionAIConfig CurrentTactic => AIConfigurationCopy.Clone(_currentTactic);
 
         /// <summary>モードレジストリ参照。UI側で一覧取得に使う。</summary>
         public ModePresetRegistry ModeRegistry => _modeRegistry;
@@ -210,7 +210,7 @@ namespace Game.Core
                     newModes[i] = _editingBuffer.modes[i];
                 }
             }
-            newModes[currentCount] = mode;
+            newModes[currentCount] = AIConfigurationCopy.Clone(mode);
             _editingBuffer.modes = newModes;
             // modes 数が増えた場合、既存 binding が新たに範囲内に収まる可能性はあるが、
             // 逆に範囲外が発生することはない。ただし shortcutModeBindings が null や
@@ -308,7 +308,7 @@ namespace Game.Core
             {
                 return false;
             }
-            _editingBuffer.modes[index] = updated;
+            _editingBuffer.modes[index] = AIConfigurationCopy.Clone(updated);
             _isDirty = true;
             return true;
         }
@@ -319,7 +319,7 @@ namespace Game.Core
         /// </summary>
         public void SetTransitionRulesInBuffer(ModeTransitionRule[] rules)
         {
-            _editingBuffer.modeTransitionRules = rules ?? new ModeTransitionRule[0];
+            _editingBuffer.modeTransitionRules = AIConfigurationCopy.CloneTransitions(rules) ?? new ModeTransitionRule[0];
             _isDirty = true;
         }
 
@@ -569,51 +569,10 @@ namespace Game.Core
         /// </summary>
         private static CompanionAIConfig CloneConfig(CompanionAIConfig source)
         {
-            CompanionAIConfig clone = new CompanionAIConfig
-            {
-                configId = source.configId,
-                configName = source.configName,
-                manualOverrideTimeoutSeconds = source.manualOverrideTimeoutSeconds,
-            };
-
-            if (source.modes != null)
-            {
-                clone.modes = new AIMode[source.modes.Length];
-                for (int i = 0; i < source.modes.Length; i++)
-                {
-                    clone.modes[i] = source.modes[i];
-                }
-            }
-            else
-            {
-                clone.modes = new AIMode[0];
-            }
-
-            if (source.modeTransitionRules != null)
-            {
-                clone.modeTransitionRules = new ModeTransitionRule[source.modeTransitionRules.Length];
-                for (int i = 0; i < source.modeTransitionRules.Length; i++)
-                {
-                    clone.modeTransitionRules[i] = source.modeTransitionRules[i];
-                }
-            }
-            else
-            {
-                clone.modeTransitionRules = new ModeTransitionRule[0];
-            }
-
-            if (source.shortcutModeBindings != null)
-            {
-                clone.shortcutModeBindings = new int[source.shortcutModeBindings.Length];
-                for (int i = 0; i < source.shortcutModeBindings.Length; i++)
-                {
-                    clone.shortcutModeBindings[i] = source.shortcutModeBindings[i];
-                }
-            }
-            else
-            {
-                clone.shortcutModeBindings = CreateDefaultShortcutBindings();
-            }
+            CompanionAIConfig clone = AIConfigurationCopy.Clone(source);
+            if (clone.modes == null) { clone.modes = new AIMode[0]; }
+            if (clone.modeTransitionRules == null) { clone.modeTransitionRules = new ModeTransitionRule[0]; }
+            if (clone.shortcutModeBindings == null) { clone.shortcutModeBindings = CreateDefaultShortcutBindings(); }
 
             return clone;
         }

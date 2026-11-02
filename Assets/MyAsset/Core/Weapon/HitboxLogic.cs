@@ -10,7 +10,7 @@ namespace Game.Core
     {
         private int _hitCount;
         private int _maxHitCount;
-        private HashSet<int> _hitTargets;
+        private HashSet<ActorRef> _hitTargets;
 
         public int HitCount => _hitCount;
         public bool IsExhausted => _hitCount >= _maxHitCount;
@@ -19,7 +19,7 @@ namespace Game.Core
         {
             _maxHitCount = maxHitCount;
             _hitCount = 0;
-            _hitTargets = new HashSet<int>();
+            _hitTargets = new HashSet<ActorRef>();
         }
 
         /// <summary>
@@ -40,13 +40,17 @@ namespace Game.Core
         /// <param name="targetHash">ターゲット識別ハッシュ。</param>
         /// <returns>ヒットが記録された場合true。上限到達または重複の場合false。</returns>
         public bool TryRegisterHit(int targetHash)
+            => TryRegisterHit(new ActorRef(targetHash, 0));
+
+        /// <summary>Runtime経路では登録世代ごとに重複を防ぐ。</summary>
+        public bool TryRegisterHit(ActorRef target)
         {
             if (_hitCount >= _maxHitCount)
             {
                 return false;
             }
 
-            if (!_hitTargets.Add(targetHash))
+            if (!_hitTargets.Add(target))
             {
                 return false;
             }

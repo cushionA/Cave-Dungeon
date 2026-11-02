@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Game.Core;
 using NUnit.Framework;
 using R3;
@@ -55,13 +56,13 @@ namespace Game.Tests.EditMode
             holder.Equip(new Item { Slot = EquipSlot.Shield, OnHitEffects = new[] { Effect(StatusEffectId.Stun) } });
             holder.Equip(new Item { Slot = EquipSlot.Core, OnHitEffects = new[] { Effect(StatusEffectId.Weakness) } });
 
-            StatusEffectApplicationData[] shield = holder.GetOnHitEffects(AttackEquipmentSource.Shield);
-            StatusEffectApplicationData[] independent = holder.GetOnHitEffects(AttackEquipmentSource.None);
+            IReadOnlyList<StatusEffectApplicationData> shield = holder.GetOnHitEffects(AttackEquipmentSource.Shield);
+            IReadOnlyList<StatusEffectApplicationData> independent = holder.GetOnHitEffects(AttackEquipmentSource.None);
 
-            Assert.AreEqual(2, shield.Length);
+            Assert.AreEqual(2, shield.Count);
             Assert.AreEqual(StatusEffectId.Stun, shield[0].info.effect);
             Assert.AreEqual(StatusEffectId.Weakness, shield[1].info.effect);
-            Assert.AreEqual(1, independent.Length);
+            Assert.AreEqual(1, independent.Count);
             Assert.AreEqual(StatusEffectId.Weakness, independent[0].info.effect);
         }
 
@@ -71,11 +72,11 @@ namespace Game.Tests.EditMode
             EquipmentHolder holder = new EquipmentHolder(1);
             Item first = new Item { Slot = EquipSlot.Weapon, OnHitEffects = new[] { Effect(StatusEffectId.Poison) } };
             holder.Equip(first);
-            StatusEffectApplicationData[] snapshot = holder.GetOnHitEffects(AttackEquipmentSource.Weapon);
+            IReadOnlyList<StatusEffectApplicationData> snapshot = holder.GetOnHitEffects(AttackEquipmentSource.Weapon);
             first.OnHitEffects[0] = Effect(StatusEffectId.Curse);
             holder.Equip(new Item { Slot = EquipSlot.Weapon, OnHitEffects = new[] { Effect(StatusEffectId.Burn) } });
 
-            StatusEffectApplicationData[] current = holder.GetOnHitEffects(AttackEquipmentSource.Weapon);
+            IReadOnlyList<StatusEffectApplicationData> current = holder.GetOnHitEffects(AttackEquipmentSource.Weapon);
 
             Assert.AreEqual(StatusEffectId.Poison, snapshot[0].info.effect);
             Assert.AreEqual(StatusEffectId.Burn, current[0].info.effect);
@@ -92,7 +93,7 @@ namespace Game.Tests.EditMode
             holder.Equip(weapon);
             holder.Equip(weapon);
 
-            Assert.AreEqual(1, holder.GetOnHitEffects(AttackEquipmentSource.Weapon).Length);
+            Assert.AreEqual(1, holder.GetOnHitEffects(AttackEquipmentSource.Weapon).Count);
             holder.Unequip(EquipSlot.Weapon);
             Assert.IsEmpty(holder.GetOnHitEffects(AttackEquipmentSource.Weapon));
         }
@@ -118,7 +119,7 @@ namespace Game.Tests.EditMode
         {
             EquipmentHolder holder = new EquipmentHolder(1);
             holder.Equip(new Item { Slot = EquipSlot.Core, OnHitEffects = new[] { Effect(StatusEffectId.Slow) } });
-            StatusEffectApplicationData[] old = holder.GetOnHitEffects(AttackEquipmentSource.Weapon);
+            IReadOnlyList<StatusEffectApplicationData> old = holder.GetOnHitEffects(AttackEquipmentSource.Weapon);
             holder.Equip(new Item { Slot = EquipSlot.Core, OnHitEffects = new[] { Effect(StatusEffectId.Burn) } });
 
             foreach (AttackEquipmentSource source in Enum.GetValues(typeof(AttackEquipmentSource)))
@@ -139,7 +140,7 @@ namespace Game.Tests.EditMode
             {
                 Assert.AreEqual(1, change.ownerHash);
                 Assert.AreEqual(EquipSlot.Weapon, change.slot);
-                int count = equipment.GetOnHitEffects(1, AttackEquipmentSource.Weapon).Length;
+                int count = equipment.GetOnHitEffects(1, AttackEquipmentSource.Weapon).Count;
                 Assert.AreEqual(notifications == 0 ? 1 : 0, count);
                 notifications++;
             });

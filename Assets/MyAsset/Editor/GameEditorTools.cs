@@ -126,8 +126,7 @@ namespace Game.Editor
                 }
                 if (info.projectileInfo.hasProjectile && info.projectileInfo.projectilePrefab == null)
                 {
-                    Debug.LogError($"[検証エラー] {path}: 飛翔体有効だが prefab 未設定", info);
-                    errorCount++;
+                    Debug.Log($"[検証情報] {path}: 飛翔体は ProjectileManager の既定Prefabを使用", info);
                 }
             }
 

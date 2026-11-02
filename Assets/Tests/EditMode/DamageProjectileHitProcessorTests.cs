@@ -33,7 +33,8 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(50, receiver.LastReceived.damage.fire);
             Assert.AreEqual(1.5f, receiver.LastReceived.attackContext.AttackMultiplier);
             _data.Add(_casterHash, new CharacterVitals { currentHp = 100, maxHp = 100 },
-                new CombatStats { attack = new ElementalStatus { fire = 999 } }, default, default);
+                new CombatStats { attack = new ElementalStatus { fire = 999 } },
+                CharacterFlags.Pack(CharacterBelong.Ally, CharacterFeature.Player, AbilityFlag.None), default);
             ActorRef replacement = actors.Register(_casterHash);
             ProjectileHitProcessor.ProcessHit(projectile, receiver, _data, magic, actors: actors, observedTarget: target);
             Assert.AreEqual(2, receiver.ReceiveCount);
@@ -207,6 +208,7 @@ namespace Game.Tests.EditMode
             MagicDefinition magic = new MagicDefinition
             {
                 magicType = magicType, healAmount = 5,
+                targetPolicy = new AttackTargetPolicy { overrideTargets = true, targets = AttackTargetRelation.Friendly },
                 statusEffects = new[]
                 {
                     new StatusEffectApplicationData
@@ -259,6 +261,7 @@ namespace Game.Tests.EditMode
             MagicDefinition magic = new MagicDefinition
             {
                 magicType = MagicType.Support,
+                targetPolicy = new AttackTargetPolicy { overrideTargets = true, targets = AttackTargetRelation.Friendly },
                 statusEffects = new[]
                 {
                     new StatusEffectApplicationData
@@ -390,7 +393,7 @@ namespace Game.Tests.EditMode
         [Test]
         public void ProjectileHitProcessor_RecoverMagic_HealsTarget()
         {
-            ref CharacterVitals v = ref _data.GetVitals(_targetHash);
+            ref CharacterVitals v = ref _data.GetVitals(_allyHash);
             v.currentHp = 50;
 
             Projectile projectile = CreateProjectile(_casterHash);
@@ -400,20 +403,20 @@ namespace Game.Tests.EditMode
                 healAmount = 30,
             };
             // Recover は ObjectHash だけ使用。IDamageable の実装は何でもOK
-            StubDamageable stub = new StubDamageable { ObjectHash = _targetHash };
+            StubDamageable stub = new StubDamageable { ObjectHash = _allyHash };
 
             ProjectileHitProcessor.HitResult result =
                 ProjectileHitProcessor.ProcessHit(projectile, stub, _data, magic);
 
             Assert.AreEqual(30, result.healAmount);
-            ref CharacterVitals after = ref _data.GetVitals(_targetHash);
+            ref CharacterVitals after = ref _data.GetVitals(_allyHash);
             Assert.AreEqual(80, after.currentHp, "HP50+回復30=HP80");
         }
 
         [Test]
         public void ProjectileHitProcessor_RecoverMagic_ClampsToMaxHp()
         {
-            ref CharacterVitals v = ref _data.GetVitals(_targetHash);
+            ref CharacterVitals v = ref _data.GetVitals(_allyHash);
             v.currentHp = 90;
 
             Projectile projectile = CreateProjectile(_casterHash);
@@ -422,11 +425,11 @@ namespace Game.Tests.EditMode
                 magicType = MagicType.Recover,
                 healAmount = 50,
             };
-            StubDamageable stub = new StubDamageable { ObjectHash = _targetHash };
+            StubDamageable stub = new StubDamageable { ObjectHash = _allyHash };
 
             ProjectileHitProcessor.ProcessHit(projectile, stub, _data, magic);
 
-            ref CharacterVitals after = ref _data.GetVitals(_targetHash);
+            ref CharacterVitals after = ref _data.GetVitals(_allyHash);
             Assert.AreEqual(100, after.currentHp, "maxHPを超えない");
         }
 

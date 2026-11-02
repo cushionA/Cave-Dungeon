@@ -20,6 +20,7 @@ namespace Game.Core
         private readonly List<(int targetHash, StatusEffectId effectId)> _expired = new List<(int, StatusEffectId)>();
         private int _count;
         private int _nextInstanceId = 1;
+        private bool _isTickingAll;
         private int[] _instanceIds;
         private int[] _targetHashes;
         private int[] _sourceHashes;
@@ -150,26 +151,35 @@ namespace Game.Core
             {
                 if (_targetHashes[i] == targetHash && _stackCounts[i] > 0)
                 {
-                    summary.Include(Snapshot(i));
+                    summary.Include(_effectIds[i], _modifiers[i], _stackCounts[i]);
                 }
             }
             return summary;
         }
 
         public bool Accumulate(int targetHash, StatusEffectInfo info, float statusCut, int sourceHash = 0)
-            => AccumulateInternal(targetHash, info, statusCut, sourceHash, default, default);
+            => Accumulate(targetHash, info, new StatusEffectDefense { accumulationReduction = statusCut }, sourceHash);
 
         public bool Accumulate(ActorRef target, StatusEffectInfo info, float statusCut, ActorRef source)
-            => AccumulateInternal(target.Hash, info, statusCut, source.Hash, target, source);
+            => Accumulate(target, info, new StatusEffectDefense { accumulationReduction = statusCut }, source);
 
-        private bool AccumulateInternal(int targetHash, StatusEffectInfo info, float statusCut,
+        public bool Accumulate(int targetHash, StatusEffectInfo info, in StatusEffectDefense defense, int sourceHash = 0)
+            => AccumulateInternal(targetHash, info, defense, sourceHash, default, default);
+
+        public bool Accumulate(ActorRef target, StatusEffectInfo info, in StatusEffectDefense defense, ActorRef source)
+            => AccumulateInternal(target.Hash, info, defense, source.Hash, target, source);
+
+        private bool AccumulateInternal(int targetHash, in StatusEffectInfo info, in StatusEffectDefense defense,
             int sourceHash, ActorRef targetRef, ActorRef sourceRef)
         {
-            if (!CharacterStatusEffects.IsValidId(info.effect) || info.duration <= 0f)
+            if (!IsValidInfo(info))
             {
                 return false;
             }
-            float resistance = Math.Min(1f, Math.Max(0f, statusCut));
+            ValidateDefense(defense);
+            if (defense.immune) { return false; }
+            float resistance = Math.Min(1f, Math.Max(0f, defense.accumulationReduction));
+            float threshold = defense.threshold == 0f ? StatusEffectManager.k_DefaultThreshold : Math.Max(1f, defense.threshold);
             float amount = Math.Max(0f, info.accumulateValue) * (1f - resistance);
             if (amount <= 0f)
             {
@@ -181,7 +191,7 @@ namespace Game.Core
                 index = AddRow(targetHash, info.effect, sourceHash, targetRef, sourceRef);
             }
             _accumulations[index] += amount;
-            if (GetAccumulation(targetHash, info.effect) < StatusEffectManager.k_DefaultThreshold)
+            if (GetAccumulation(targetHash, info.effect) < threshold)
             {
                 return false;
             }
@@ -205,10 +215,42 @@ namespace Game.Core
         public bool Apply(ActorRef target, StatusEffectInfo info, ActorRef source)
             => ApplyInternal(target.Hash, info, source.Hash, target, source);
 
-        private bool ApplyInternal(int targetHash, StatusEffectInfo info, int sourceHash,
+        public bool Apply(int targetHash, StatusEffectInfo info, in StatusEffectDefense defense, int sourceHash = 0)
+        {
+            if (!IsValidInfo(info)) { return false; }
+            ValidateDefense(defense);
+            return !defense.immune && ApplyInternal(targetHash, info, sourceHash, default, default);
+        }
+
+        public bool Apply(ActorRef target, StatusEffectInfo info, in StatusEffectDefense defense, ActorRef source)
+        {
+            if (!IsValidInfo(info)) { return false; }
+            ValidateDefense(defense);
+            return !defense.immune && ApplyInternal(target.Hash, info, source.Hash, target, source);
+        }
+
+        private static void ValidateDefense(in StatusEffectDefense defense)
+        {
+            if (float.IsNaN(defense.accumulationReduction) || float.IsInfinity(defense.accumulationReduction)
+                || float.IsNaN(defense.threshold) || float.IsInfinity(defense.threshold))
+            {
+                throw new ArgumentOutOfRangeException(nameof(defense), "Status defense must contain finite values.");
+            }
+        }
+
+        private static bool IsValidInfo(in StatusEffectInfo info)
+        {
+            return CharacterStatusEffects.IsValidId(info.effect) && info.duration > 0f
+                && IsFinite(info.duration) && IsFinite(info.accumulateValue)
+                && IsFinite(info.tickDamage) && IsFinite(info.tickInterval) && IsFinite(info.modifier);
+        }
+
+        private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+
+        private bool ApplyInternal(int targetHash, in StatusEffectInfo info, int sourceHash,
             ActorRef targetRef, ActorRef sourceRef)
         {
-            if (!CharacterStatusEffects.IsValidId(info.effect) || info.duration <= 0f)
+            if (!IsValidInfo(info))
             {
                 return false;
             }
@@ -263,6 +305,15 @@ namespace Game.Core
         }
 
         public void TickAll(float deltaTime, List<StatusEffectTick> results)
+        {
+            // Results and expiry observations belong to this invocation until all callbacks finish.
+            if (_isTickingAll) { throw new InvalidOperationException("Status effect ticking cannot be reentered."); }
+            _isTickingAll = true;
+            try { TickAllInternal(deltaTime, results); }
+            finally { _isTickingAll = false; }
+        }
+
+        private void TickAllInternal(float deltaTime, List<StatusEffectTick> results)
         {
             results.Clear();
             if (deltaTime <= 0f)

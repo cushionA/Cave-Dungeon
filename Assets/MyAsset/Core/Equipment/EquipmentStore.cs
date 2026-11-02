@@ -91,7 +91,7 @@ namespace Game.Core
         internal bool IsCurrentHolder(int ownerHash, EquipmentHolder holder) =>
             _holders.TryGetValue(ownerHash, out EquipmentHolder current) && ReferenceEquals(current, holder);
 
-        public StatusEffectApplicationData[] GetOnHitEffects(int ownerHash, AttackEquipmentSource source)
+        public IReadOnlyList<StatusEffectApplicationData> GetOnHitEffects(int ownerHash, AttackEquipmentSource source)
         {
             return _holders.TryGetValue(ownerHash, out EquipmentHolder holder)
                 ? holder.GetOnHitEffects(source) : Array.Empty<StatusEffectApplicationData>();

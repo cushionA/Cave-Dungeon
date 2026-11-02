@@ -30,7 +30,8 @@ namespace Game.Core
         private JudgmentLoop _judgmentLoop;
 
         public int CurrentModeIndex => _currentModeIndex;
-        public AIMode CurrentMode => _modes != null && _currentModeIndex < _modes.Length ? _modes[_currentModeIndex] : default;
+        public AIMode CurrentMode => _modes != null && _currentModeIndex < _modes.Length
+            ? AIConfigurationCopy.Clone(_modes[_currentModeIndex]) : default;
 
         public event Action<int> OnModeChanged;
 
@@ -44,11 +45,16 @@ namespace Game.Core
         /// </summary>
         public void SetModes(AIMode[] modes, ModeTransitionRule[] transitionRules)
         {
-            _modes = modes;
-            _transitionRules = transitionRules;
+            _modes = AIConfigurationCopy.CloneModes(modes);
+            _transitionRules = AIConfigurationCopy.CloneTransitions(transitionRules);
             if (_modes != null && _modes.Length > 0)
             {
                 SwitchMode(0);
+            }
+            else
+            {
+                _currentModeIndex = 0;
+                _judgmentLoop.SetCapturedMode(default);
             }
         }
 
@@ -104,7 +110,7 @@ namespace Game.Core
             }
 
             _currentModeIndex = modeIndex;
-            _judgmentLoop.SetMode(_modes[_currentModeIndex]);
+            _judgmentLoop.SetCapturedMode(_modes[_currentModeIndex]);
             OnModeChanged?.Invoke(_currentModeIndex);
         }
     }

@@ -11,6 +11,23 @@ namespace Game.Tests.EditMode
     [TestFixture]
     public class GroundMovementDataDrivenTests
     {
+        [Test]
+        public void TryStartJump_WhenStaminaAliasesJumpForce_ReturnsForceBeforeStaminaConsumption()
+        {
+            GroundMovementLogic logic = new GroundMovementLogic();
+            MoveParams moveParams = new MoveParams
+            {
+                jumpForce = 12f,
+                jumpStaminaCost = 3f,
+            };
+
+            float jumpForce = logic.TryStartJump(true, true, in moveParams, ref moveParams.jumpForce);
+
+            Assert.AreEqual(12f, jumpForce);
+            Assert.AreEqual(9f, moveParams.jumpForce);
+            Assert.AreEqual(3f, moveParams.jumpStaminaCost);
+        }
+
         /// <summary>
         /// MoveParams.dodgeDuration が 0 の場合、GroundMovementLogic は k_DodgeDuration (0.25f) を
         /// フォールバックとして使用し続ける。既存のハードコード挙動との互換性を保証する。

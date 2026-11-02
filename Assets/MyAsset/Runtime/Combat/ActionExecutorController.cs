@@ -295,7 +295,7 @@ namespace Game.Runtime
             _instanceId = _actionGroupId = 0;
         }
 
-        public void HandleExecution(ActionExecutionEvent notification, AttackMotionData motion, bool projectile)
+        public void HandleExecution(in ActionExecutionEvent notification, in AttackMotionData motion, bool projectile)
         {
             if (notification.kind == ActionSignalKind.Started)
             {

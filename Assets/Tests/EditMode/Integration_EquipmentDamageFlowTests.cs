@@ -30,8 +30,7 @@ namespace Game.Tests.EditMode
             };
             EquipmentStatus atkEquip = new EquipmentStatus
             {
-                weaponId = 1,
-                finalAttack = new ElementalStatus { slash = 100, fire = 30 }
+                weaponId = 1
             };
             CharacterFlags atkFlags = CharacterFlags.Pack(CharacterBelong.Ally, CharacterFeature.Player, AbilityFlag.None);
             _data.Add(k_AttackerHash, atkVitals, atkCombat, atkFlags, default, atkEquip);
@@ -69,13 +68,13 @@ namespace Game.Tests.EditMode
         [Test]
         public void EquipmentDamageFlow_WeaponEquipToHit_CalculatesDamageFromEquipmentStats()
         {
-            // Arrange: 装備のfinalAttackを使ってダメージ計算
-            EquipmentStatus equip = _data.GetEquipmentStatus(k_AttackerHash);
+            // Arrange: 共通CombatStatsの攻撃力を使ってダメージ計算
+            ElementalStatus attackStats = _data.GetCombatStats(k_AttackerHash).attack;
             ElementalStatus defenseStats = _data.GetCombatStats(k_DefenderHash).defense;
 
             // Act: motionValue=1.2で7属性ダメージ計算
             int totalDamage = DamageCalculator.CalculateTotalDamage(
-                equip.finalAttack,
+                attackStats,
                 1.2f,
                 defenseStats
             );
@@ -95,9 +94,9 @@ namespace Game.Tests.EditMode
         public void EquipmentDamageFlow_GuardedHit_ReducesDamage()
         {
             // Arrange: 生ダメージ計算
-            EquipmentStatus equip = _data.GetEquipmentStatus(k_AttackerHash);
+            ElementalStatus attackStats = _data.GetCombatStats(k_AttackerHash).attack;
             int rawDamage = DamageCalculator.CalculateTotalDamage(
-                equip.finalAttack,
+                attackStats,
                 1.0f,
                 _data.GetCombatStats(k_DefenderHash).defense
             );
@@ -124,7 +123,7 @@ namespace Game.Tests.EditMode
                 guardStrength = 80f
             };
             int guardedDamage = DamageCalculator.CalculateTotalDamageWithElementalCut(
-                equip.finalAttack, 1.0f,
+                attackStats, 1.0f,
                 _data.GetCombatStats(k_DefenderHash).defense,
                 guardStats, applyCuts: true);
 
@@ -173,9 +172,9 @@ namespace Game.Tests.EditMode
             bool damageEventFired = false;
             _events.OnDamageDealt.Subscribe(e => damageEventFired = true);
 
-            EquipmentStatus equip = _data.GetEquipmentStatus(k_AttackerHash);
+            ElementalStatus attackStats = _data.GetCombatStats(k_AttackerHash).attack;
             int totalDamage = DamageCalculator.CalculateTotalDamage(
-                equip.finalAttack,
+                attackStats,
                 1.2f,
                 _data.GetCombatStats(k_DefenderHash).defense
             );
@@ -215,7 +214,7 @@ namespace Game.Tests.EditMode
             // 防御者B: slash防御=50, fire防御=50（均等防御）
             // 攻撃者: slash=100, fire=30 → fire防御が低い相手にはfireチャネルが大きく通る
 
-            ElementalStatus atkStats = _data.GetEquipmentStatus(k_AttackerHash).finalAttack;
+            ElementalStatus atkStats = _data.GetCombatStats(k_AttackerHash).attack;
 
             ElementalStatus defLowFire = new ElementalStatus { slash = 50, fire = 5 };
             ElementalStatus defBalanced = new ElementalStatus { slash = 50, fire = 50 };

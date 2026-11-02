@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -86,15 +87,15 @@ namespace Game.Core
             return resolved;
         }
 
-        public static StatusEffectId Apply(StatusEffectApplicationData[] applications,
+        public static StatusEffectId Apply(IReadOnlyList<StatusEffectApplicationData> applications,
             int sourceHash, int hitTargetHash, GuardResult guardResult, float statusCut, IStatusEffectWriter writer,
-            StatusEffectApplicationData[] equipmentApplications = null)
+            IReadOnlyList<StatusEffectApplicationData> equipmentApplications = null)
             => Apply<IStatusEffectWriter>(applications, sourceHash, hitTargetHash, guardResult,
                 statusCut, writer, equipmentApplications);
 
-        public static StatusEffectId Apply<TWriter>(StatusEffectApplicationData[] applications,
+        public static StatusEffectId Apply<TWriter>(IReadOnlyList<StatusEffectApplicationData> applications,
             int sourceHash, int hitTargetHash, GuardResult guardResult, float statusCut, TWriter writer,
-            StatusEffectApplicationData[] equipmentApplications = null) where TWriter : IStatusEffectWriter
+            IReadOnlyList<StatusEffectApplicationData> equipmentApplications = null) where TWriter : IStatusEffectWriter
         {
             StatusEffectId first = ApplyGroup(applications, sourceHash, hitTargetHash, guardResult, statusCut, writer);
             StatusEffectId equipmentFirst = ApplyGroup(equipmentApplications, sourceHash, hitTargetHash,
@@ -102,7 +103,7 @@ namespace Game.Core
             return first != StatusEffectId.None ? first : equipmentFirst;
         }
 
-        private static StatusEffectId ApplyGroup<TWriter>(StatusEffectApplicationData[] applications,
+        private static StatusEffectId ApplyGroup<TWriter>(IReadOnlyList<StatusEffectApplicationData> applications,
             int sourceHash, int hitTargetHash, GuardResult guardResult, float statusCut, TWriter writer)
             where TWriter : IStatusEffectWriter
         {
@@ -112,7 +113,7 @@ namespace Game.Core
                 return firstApplied;
             }
             bool guardSucceeded = GuardJudgmentLogic.IsGuardSucceeded(guardResult);
-            for (int i = 0; i < applications.Length; i++)
+            for (int i = 0; i < applications.Count; i++)
             {
                 StatusEffectApplicationData application = applications[i];
                 if (guardSucceeded && application.guardRule == StatusEffectGuardRule.Block)

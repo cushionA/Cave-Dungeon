@@ -10,7 +10,7 @@ namespace Game.Core
     {
         public const int k_MinDamage = 1;
 
-        public static ElementalStatus ScaleStats(ElementalStatus stats, float multiplier)
+        public static ElementalStatus ScaleStats(in ElementalStatus stats, float multiplier)
         {
             return new ElementalStatus
             {
@@ -51,9 +51,9 @@ namespace Game.Core
         /// 各属性: CalculateBaseDamage(atk, motionValue, def)
         /// </summary>
         public static int CalculateTotalDamage(
-            ElementalStatus attackStats,
+            in ElementalStatus attackStats,
             float motionValue,
-            ElementalStatus defenseStats)
+            in ElementalStatus defenseStats)
         {
             int total = 0;
             total += CalculateChannelDamage(attackStats.slash, motionValue, defenseStats.slash);
@@ -86,10 +86,10 @@ namespace Game.Core
         /// 各チャネル: CalculateBaseDamage × (1 - xxxCut) を floor して合算。
         /// </summary>
         public static int CalculateTotalDamageWithElementalCut(
-            ElementalStatus attackStats,
+            in ElementalStatus attackStats,
             float motionValue,
-            ElementalStatus defenseStats,
-            GuardStats guardCuts,
+            in ElementalStatus defenseStats,
+            in GuardStats guardCuts,
             bool applyCuts)
         {
             int total = 0;

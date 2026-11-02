@@ -68,7 +68,7 @@ namespace Game.Runtime
             public readonly float MoveSpeed;
             public readonly AudioClip LandingSound;
 
-            public AerialPhysicsProfile(AttackExecutionSettings settings, ActionVariant variant)
+            public AerialPhysicsProfile(in AttackExecutionSettings settings, ActionVariant variant)
             {
                 Variant = variant;
                 HangDuration = settings.AirHangDuration;
@@ -504,7 +504,7 @@ namespace Game.Runtime
         //  攻撃・コンボ（ActionExecutorController経由）
         // ============================================================
 
-        private void HandleAttack(MovementInfo input, ref CharacterVitals vitals, float deltaTime)
+        private void HandleAttack(in MovementInfo input, ref CharacterVitals vitals, float deltaTime)
         {
             float dt = deltaTime;
             _comboWindowTimer -= dt;
@@ -795,7 +795,7 @@ namespace Game.Runtime
                 && execution.ownerHash == ObjectHash && execution.groupId == _aerialGroupId;
         }
 
-        private void TrackAerialExecution(AttackExecutionSettings settings, ActionVariant variant, long instanceId, long groupId)
+        private void TrackAerialExecution(in AttackExecutionSettings settings, ActionVariant variant, long instanceId, long groupId)
         {
             ClearAerialPhysics();
             if (variant == ActionVariant.Default || GameManager.Actions == null

@@ -5,7 +5,7 @@ namespace Game.Core
     /// <summary>確定した観測だけからAI条件を評価する。unknownは比較へ渡さない。</summary>
     public static partial class ConditionEvaluator
     {
-        public static bool Evaluate(AICondition condition, int ownerHash, int targetHash, AIObservationContext observation)
+        public static bool Evaluate(in AICondition condition, int ownerHash, int targetHash, AIObservationContext observation)
         {
             return observation != null
                 && observation.TryGetConditionValue(condition, ownerHash, targetHash, out float value)

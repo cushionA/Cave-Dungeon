@@ -15,7 +15,7 @@ namespace Game.Tests.EditMode
             public void CommitActor(int hash, in ActionActorState actor) { }
         }
 
-        private readonly List<ScriptableObject> _assets = new List<ScriptableObject>();
+        private readonly List<UnityEngine.Object> _assets = new List<UnityEngine.Object>();
         private ActionExecutionSystem _execution;
         private ActionCatalog _catalog;
 
@@ -215,6 +215,122 @@ namespace Game.Tests.EditMode
             {
                 attack.divingGravityMultiplier = float.MaxValue;
             }
+
+            Assert.Throws<ArgumentException>(() => _catalog.Register(attack));
+            Assert.AreEqual(0, _execution.DefinitionCount);
+        }
+
+        [TestCase(0f, false)]
+        [TestCase(2f, true)]
+        public void ActionCatalog_ProjectileRadius_EnablesExplosionAndPreservesFinitePierceCount(float radius, bool explodes)
+        {
+            AttackInfo attack = CreateAttack();
+            ProjectileInfo projectile = attack.projectileInfo;
+            projectile.aoeRadius = radius;
+            projectile.pierceCount = 2;
+            attack.projectileInfo = projectile;
+            int id = _catalog.Register(attack);
+            Assert.IsTrue(_catalog.TryGet(id, out ActionCatalog.Entry entry));
+            MagicDefinition magic = entry.CreateMagic();
+
+            Assert.AreEqual(radius, magic.bulletProfile.explodeRadius);
+            Assert.AreEqual(explodes ? BulletFeature.Explode : BulletFeature.None, magic.bulletProfile.features);
+            Assert.AreEqual(3, magic.bulletProfile.hitLimit);
+            Projectile core = new Projectile();
+            core.Initialize(1, magic.bulletProfile, Vector2.zero, Vector2.right);
+            core.RegisterHit();
+            core.RegisterHit();
+            Assert.IsTrue(core.IsAlive);
+            core.RegisterHit();
+            Assert.IsFalse(core.IsAlive);
+        }
+
+        [Test]
+        public void ActionCatalog_ProjectileAuthoringAndPacketChange_PreservesPrefabAndShotSnapshot()
+        {
+            GameObject prefab = new GameObject("Original projectile");
+            GameObject replacement = new GameObject("Replacement projectile");
+            _assets.Add(prefab);
+            _assets.Add(replacement);
+            AttackInfo attack = CreateAttack();
+            ProjectileInfo projectile = attack.projectileInfo;
+            projectile.projectilePrefab = prefab;
+            projectile.aoeRadius = 2f;
+            projectile.spreadAngle = 30f;
+            attack.projectileInfo = projectile;
+            int id = _catalog.Register(attack);
+            Assert.IsTrue(_catalog.TryGet(id, out ActionCatalog.Entry entry));
+
+            projectile.projectilePrefab = replacement;
+            projectile.aoeRadius = 0f;
+            projectile.projectileCount = 9;
+            projectile.spreadAngle = 180f;
+            attack.projectileInfo = projectile;
+            MagicDefinition packet = entry.CreateMagic();
+            packet.projectilePrefab = replacement;
+            packet.bulletProfile = default;
+            packet.bulletCount = 9;
+            MagicDefinition next = entry.CreateMagic();
+
+            Assert.AreSame(prefab, next.projectilePrefab);
+            Assert.AreEqual(2f, next.bulletProfile.explodeRadius);
+            Assert.AreEqual(BulletFeature.Explode, next.bulletProfile.features);
+            Assert.AreEqual(2, next.bulletCount);
+            Assert.AreEqual(30f, entry.spreadAngle);
+            Assert.IsFalse(next.attackContext.IsCaptured);
+        }
+
+        [TestCase(0, 1)]
+        [TestCase(3, 3)]
+        public void ActionCatalog_ProjectileCount_CapturesLegacyZeroDefault(int count, int expected)
+        {
+            AttackInfo attack = CreateAttack();
+            ProjectileInfo projectile = attack.projectileInfo;
+            projectile.projectileCount = count;
+            attack.projectileInfo = projectile;
+            int id = _catalog.Register(attack);
+
+            Assert.IsTrue(_catalog.TryGet(id, out ActionCatalog.Entry entry));
+            Assert.AreEqual(expected, entry.CreateMagic().bulletCount);
+            Assert.IsNull(entry.CreateMagic().projectilePrefab);
+        }
+
+        [TestCase("speed-negative")]
+        [TestCase("speed-nan")]
+        [TestCase("lifetime-infinity")]
+        [TestCase("radius-negative")]
+        [TestCase("radius-nan")]
+        [TestCase("homing-negative")]
+        [TestCase("homing-infinity")]
+        [TestCase("spread-negative")]
+        [TestCase("spread-overflow")]
+        [TestCase("spread-nan")]
+        [TestCase("pierce-negative")]
+        [TestCase("pierce-overflow")]
+        [TestCase("count-negative")]
+        [TestCase("trajectory")]
+        public void ActionCatalog_InvalidProjectileInput_RejectsBeforeRegistration(string field)
+        {
+            AttackInfo attack = CreateAttack();
+            ProjectileInfo projectile = attack.projectileInfo;
+            switch (field)
+            {
+                case "speed-negative": projectile.speed = -1f; break;
+                case "speed-nan": projectile.speed = float.NaN; break;
+                case "lifetime-infinity": projectile.lifetime = float.PositiveInfinity; break;
+                case "radius-negative": projectile.aoeRadius = -1f; break;
+                case "radius-nan": projectile.aoeRadius = float.NaN; break;
+                case "homing-negative": projectile.homingStrength = -1f; break;
+                case "homing-infinity": projectile.homingStrength = float.PositiveInfinity; break;
+                case "spread-negative": projectile.spreadAngle = -1f; break;
+                case "spread-overflow": projectile.spreadAngle = 361f; break;
+                case "spread-nan": projectile.spreadAngle = float.NaN; break;
+                case "pierce-negative": projectile.pierceCount = -1; break;
+                case "pierce-overflow": projectile.pierceCount = int.MaxValue; break;
+                case "count-negative": projectile.projectileCount = -1; break;
+                case "trajectory": projectile.trajectory = (BulletMoveType)255; break;
+            }
+            attack.projectileInfo = projectile;
 
             Assert.Throws<ArgumentException>(() => _catalog.Register(attack));
             Assert.AreEqual(0, _execution.DefinitionCount);

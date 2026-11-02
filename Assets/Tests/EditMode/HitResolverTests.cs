@@ -309,7 +309,7 @@ namespace Game.Tests.EditMode
             CharacterVitals vitals = Vitals(20f);
             CharacterDefenseState defense = new CharacterDefenseState
             {
-                isGuarding = true, maxArmor = 100f, armorRecoveryRate = 10f, armorRecoveryTimer = 0.5f,
+                isGuarding = true, armorRecoveryRate = 10f, armorRecoveryTimer = 0.5f,
             };
 
             HitResolver.TickDefense(ref vitals, ActState.Neutral, ref defense, 1f, true);

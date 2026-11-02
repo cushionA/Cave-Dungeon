@@ -76,7 +76,7 @@ namespace Game.Runtime
             float chargeMultiplier, ActionVariant variant, out long instanceId, out long groupId, long replaceGroupId = 0)
         {
             instanceId = groupId = 0;
-            if (!GameManager.IsCharacterValid(owner) || definition == null)
+            if (!GameManager.IsCharacterValid(owner) || definition == null || !Finite(direction))
             {
                 return false;
             }
@@ -156,7 +156,8 @@ namespace Game.Runtime
             ActorRef targetRef = default, long replaceGroupId = 0)
         {
             instanceId = 0;
-            if (!GameManager.IsCharacterValid(owner)) { return false; }
+            if (!GameManager.IsCharacterValid(owner) || !Finite(direction) || !Finite(speed) || speed < 0f
+                || !Finite(duration) || duration < 0f) { return false; }
             if (direction.sqrMagnitude <= 0.0001f || speed <= 0f)
             {
                 bool stopped = StartBuiltin(owner, Builtin.Stop, Vector2.zero, replaceGroupId: replaceGroupId);
@@ -307,7 +308,7 @@ namespace Game.Runtime
 
         public bool SetMovementOutput(int owner, long instanceId, Vector2 velocity)
         {
-            if (!Execution.TryGetInstance(instanceId, out ActionExecution current) || current.ownerHash != owner
+            if (!Finite(velocity) || !Execution.TryGetInstance(instanceId, out ActionExecution current) || current.ownerHash != owner
                 || current.definition.motionOnly || (current.definition.resources & ActionResources.HorizontalMovement) == 0)
             {
                 return false;
@@ -381,7 +382,7 @@ namespace Game.Runtime
 
         private void HandleExecution(ActionExecutionEvent notification)
         {
-            ActionExecution current = notification.execution;
+            ref readonly ActionExecution current = ref notification.execution;
             int owner = current.ownerHash;
             if (current.ownerRef.IsValid && (GameManager.Actors == null || !GameManager.Actors.IsCurrent(current.ownerRef)))
             {
@@ -392,16 +393,23 @@ namespace Game.Runtime
             if (notification.kind == ActionSignalKind.Started && _catalog.TryGet(current.definitionId, out ActionCatalog.Entry entry)
                 && entry.isAttack)
             {
-                AttackMotionData motion = entry.CreateAttack();
-                motion.actionInstanceId = current.instanceId;
-                motion.motionValue *= current.chargeMultiplier;
-                motion.equipmentStatusEffects = GameManager.Equipment.GetOnHitEffects(owner, entry.equipmentSource);
-                MagicDefinition magic = entry.CreateMagic();
-                magic.actionInstanceId = current.instanceId;
-                magic.motionValue *= current.chargeMultiplier;
-                // 発射時に攻撃力・倍率・装備効果を同じ時点で捕捉する。子弾は捕捉済みcontextを継承する。
-                magic.equipmentStatusEffects = null;
-                _combat[current.instanceId] = new CombatExecution { attack = motion, magic = magic, projectile = entry.projectile };
+                CombatExecution captured = new CombatExecution { projectile = entry.projectile };
+                if (entry.projectile)
+                {
+                    captured.magic = entry.CreateMagic();
+                    captured.magic.actionInstanceId = current.instanceId;
+                    captured.magic.motionValue *= current.chargeMultiplier;
+                    // 発射時に攻撃力・倍率・装備効果を同じ時点で捕捉する。子弾も継承する。
+                    captured.magic.equipmentStatusEffects = null;
+                }
+                else
+                {
+                    captured.attack = entry.CreateAttack();
+                    captured.attack.actionInstanceId = current.instanceId;
+                    captured.attack.motionValue *= current.chargeMultiplier;
+                    captured.attack.equipmentStatusEffects = GameManager.Equipment.GetOnHitEffects(owner, entry.equipmentSource);
+                }
+                _combat[current.instanceId] = captured;
                 if (_data.GetManaged(owner) is BaseCharacter actor && actor.CollisionController != null)
                 {
                     actor.CollisionController.SetCollisionMode(entry.contactType);
@@ -478,7 +486,8 @@ namespace Game.Runtime
         private bool StartBuiltin(int owner, Builtin kind, Vector2 direction, float speedMultiplier = 1f,
             bool forced = false, float duration = 0f, ActorRef targetRef = default, long replaceGroupId = 0)
         {
-            if (!GameManager.IsCharacterValid(owner)) { return false; }
+            if (!GameManager.IsCharacterValid(owner) || !Finite(direction) || !Finite(speedMultiplier)
+                || speedMultiplier < 0f || !Finite(duration) || duration < 0f) { return false; }
             int definitionId = Definition(owner, kind);
             if (kind != Builtin.Effects)
             {
@@ -517,7 +526,7 @@ namespace Game.Runtime
 
         private ActionDefinitionData BaseDefinition(int owner, Builtin kind)
         {
-            MoveParams move = _data.GetMoveParams(owner);
+            ref readonly MoveParams move = ref _data.GetMoveParams(owner);
             ActionDefinitionData value = new ActionDefinitionData
             {
                 cancelAfter = 0f, cancelPoint = -1f, endMode = ActionEndMode.Held,
@@ -568,6 +577,9 @@ namespace Game.Runtime
             }
             return value;
         }
+
+        private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+        private static bool Finite(Vector2 value) => Finite(value.x) && Finite(value.y);
 
         private void RemoveOwner(int owner)
         {

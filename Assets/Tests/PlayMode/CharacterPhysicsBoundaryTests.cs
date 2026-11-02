@@ -203,7 +203,7 @@ namespace Game.Tests.PlayMode
             Assert.AreEqual(new Vector2(-2f, -3f), original.linearVelocity);
             Assert.AreEqual(new Vector2(4f, 5f), GameManager.Data.GetVitals(character.ObjectHash).position);
             Assert.IsTrue(GameManager.Observation.TryGetActor(character.ObjectHash, out AIActorObservation observed));
-            Assert.AreEqual(new Vector2(4f, 5f), observed.vitals.position);
+            Assert.AreEqual(new Vector2(4f, 5f), observed.position);
         }
 
         [UnityTest]

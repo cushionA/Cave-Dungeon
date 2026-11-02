@@ -1,0 +1,326 @@
+{
+  "format_version": 1,
+  "recorded_at_utc": "2026-10-28T11:23:55.324495+00:00",
+  "scope": "独自SoA/managed実行境界を維持した構造体の不要な値コピー・同値再捕捉の削減",
+  "baseline": {
+    "head": "439e429a44d23c41beea91c4566ddc274e687a15",
+    "branch": "claude/resolve-issues-F7VAG",
+    "preserved_uncommitted_sources": 513,
+    "snapshot_manifest": "/workspace/.cave-dungeon/copy-flow/start-source-hashes.json",
+    "pure_passed": 623
+  },
+  "responsibilities": [
+    "AI投影と判断consumer",
+    "飛翔体の定常読取",
+    "Coreのreadonly/in/必要列導出",
+    "不変行動定義の共有と独立安全レビュー",
+    "純suite/IL/限定allocation検証",
+    "root Runtime統合・callback借用境界・最終確認"
+  ],
+  "changes": [
+    {
+      "area": "AI観測",
+      "detail": "readonlyの必要値projectionへ。位置・生存/割合・flags・攻防合計・現行弱点maskを捕捉。owner/candidateのDictionary再lookupを削減。"
+    },
+    {
+      "area": "行動定義",
+      "detail": "readonly wrapperはprivate immutable payload参照1本を共有。default/公開readonlyview/ToData編集copyを維持。同内容UpdateDefinitionは入力配列内容まで比較して既存capture再利用。"
+    },
+    {
+      "area": "実行選択",
+      "detail": "優先度比較/純移動計算の引数と局所参照をreadonlyにし、group primaryは選択後一度だけsnapshot化。"
+    },
+    {
+      "area": "Core能力/耐性/状態",
+      "detail": "readonly member28件とin引数で防御コピーを抑制。Vitals導出用の親BaseStats一式copyと上書き前CombatStats copyを削除。状態要約はid/modifier/stackCountのみ取得。"
+    },
+    {
+      "area": "飛翔体",
+      "detail": "tick/追尾照会のMagicDefinition全取得を必要な照会へ。Profileをcallbackなしの範囲だけreadonly借用。"
+    },
+    {
+      "area": "Runtime",
+      "detail": "近接/弾の必要なpacketのみ生成。表示/制御引数はowned snapshotからinで渡す。被弾は純Resolve中だけCombatStatsを借用し、後段用guard statusCutをfloat捕捉。"
+    }
+  ],
+  "clr_reference_layout_changes": [
+    {
+      "type": "Game.Core.AIActorObservation",
+      "before_clr_bytes": 368,
+      "after_clr_bytes": 72,
+      "delta_clr_bytes": -296
+    },
+    {
+      "type": "Game.Core.ActionDefinitionSnapshot",
+      "before_clr_bytes": 96,
+      "after_clr_bytes": 8,
+      "delta_clr_bytes": -88
+    },
+    {
+      "type": "Game.Core.ActionExecution",
+      "before_clr_bytes": 208,
+      "after_clr_bytes": 120,
+      "delta_clr_bytes": -88
+    },
+    {
+      "type": "Game.Core.ActionExecutionEvent",
+      "before_clr_bytes": 216,
+      "after_clr_bytes": 128,
+      "delta_clr_bytes": -88
+    }
+  ],
+  "native_schema": "Native10構造体のfield/順序は変更なし。readonly member変更のみ。CLR参照サイズはUnity Native ABIの証明ではない。",
+  "retained_copy_boundaries": [
+    "AIはlive SoAへのrefではなく同じtickの値snapshotを保持する。",
+    "行動の公開取得・通知は時点固定snapshot。内部Instanceへのrefを外へ貸さない。",
+    "装備/成長のread-modify-commit transaction snapshotは維持する。",
+    "実際に変化した定義と外部配列の初回受理は独立captureする。",
+    "公開編集用ToData/弾Magic照会のdeep copyを維持する。",
+    "発射時AttackContextと子弾継承を維持し、mutableな外部効果配列の保護copyは省略しない。",
+    "被弾/爆発/生成/pool返却のcallbackを跨ぐpacketはowned値として保持する。",
+    "_active Listからの公開snapshot取得とPlayer物理呼出後のref再取得は維持する。"
+  ],
+  "tradeoffs": [
+    "変更された定義のcaptureごとにprivate payload objectを1個追加する。その代わり実行/通知ごとの大きな不変定義の値コピーを削減する。",
+    "同じ定義のUpdateDefinitionはscalarと配列内容の比較を行い、同値なら新しいpayload/array/viewを確保しない。",
+    "ソース/IL上のコピー除去やCLR参考サイズは、Unity実機のCPU時間短縮・帯域・GC量を保証する数値ではない。",
+    "限定CLR probeでは実変更ごとのcaptureは72→184B（+112B/回）。一方、同値更新は空配列72→0B/回、非空配列256→0B/回。変更時の追加objectと定常再利用の利点を分けて扱う。"
+  ],
+  "verification": {
+    "pure_passed": 650,
+    "pure_failed": 0,
+    "breakdown": {
+      "prior_suite": 623,
+      "new_ai_meaning_regressions": 20,
+      "new_snapshot_meaning_and_reuse_regressions": 7
+    },
+    "source_changed_during_run": [],
+    "proof_prefix": "/workspace/.cave-dungeon/action-flow-harness/copy-flow-final",
+    "readme": "/workspace/.cave-dungeon/action-flow-harness/CopyFlow-README.txt",
+    "current_executed_source_sha_count": 134,
+    "syntax": {
+      "language": "CSharp9",
+      "file_count": 103,
+      "configurations": [
+        "editor_tests",
+        "standalone_player",
+        "android_player"
+      ],
+      "errors": 0,
+      "source_changes": [],
+      "proof": "/workspace/.cave-dungeon/action-flow-harness/syntax/copy-flow-results.json"
+    },
+    "meta": {
+      "cumulative_new_cs": 28,
+      "guid_issues": [],
+      "new_cs_this_task": 0
+    },
+    "il_comparison": "/workspace/.cave-dungeon/copy-flow/il-comparison-final.json",
+    "matches_field_coverage": "/workspace/.cave-dungeon/copy-flow/snapshot-matches-coverage.json",
+    "allocation_probe": {
+      "kind": "external_CLR_actual_pure_UpdateDefinition_allocation_only_not_Unity_Runtime_Stop_or_frame_timing",
+      "warmup_iterations": 1000,
+      "measured_iterations": 10000,
+      "before_proof": "/workspace/.cave-dungeon/copy-flow/allocation-before.json",
+      "after_proof": "/workspace/.cave-dungeon/copy-flow/allocation-after.json",
+      "before": [
+        {
+          "name": "unchanged_empty_arrays",
+          "allocated_bytes": 720000,
+          "allocated_bytes_per_update": 72
+        },
+        {
+          "name": "unchanged_nonempty_arrays",
+          "allocated_bytes": 2560000,
+          "allocated_bytes_per_update": 256
+        },
+        {
+          "name": "changed_scalar_control",
+          "allocated_bytes": 720000,
+          "allocated_bytes_per_update": 72
+        }
+      ],
+      "after": [
+        {
+          "name": "unchanged_empty_arrays",
+          "allocated_bytes": 0,
+          "allocated_bytes_per_update": 0
+        },
+        {
+          "name": "unchanged_nonempty_arrays",
+          "allocated_bytes": 0,
+          "allocated_bytes_per_update": 0
+        },
+        {
+          "name": "changed_scalar_control",
+          "allocated_bytes": 1840000,
+          "allocated_bytes_per_update": 184
+        }
+      ],
+      "limits": [
+        "Only actual production ActionExecutionSystem registration/update is measured; no actor logic or Native API is simulated.",
+        "Initial registration, source-array construction, world/system construction, warmup and JSON serialization are outside the measured interval.",
+        "This does not measure total game allocations, Runtime Stop requests, Mono/IL2CPP GC behavior or frame time.",
+        "The changed-scalar control intentionally requires a fresh immutable payload; unchanged updates should reuse captured data."
+      ]
+    },
+    "native_execution": "not_run",
+    "native_regressions_added_this_task": 0,
+    "unity_api_compile": "not_run",
+    "unity_profiler": "not_run",
+    "call_paths": {
+      "total": 92,
+      "added_this_task": 6,
+      "existing_logic_paths_refreshed": 32
+    },
+    "feature_db": {
+      "feature": "SoA_CopyReduction",
+      "tests_passed_increment": 27,
+      "total_unique_pure_suite": 650,
+      "status": "in_progress"
+    },
+    "verification_summary": "/workspace/.cave-dungeon/copy-flow/verification-summary.json"
+  },
+  "remaining": [
+    "Unity Editor/Mono/IL2CPP上の型/API・ライフサイクル/物理回帰とProfiler計測。",
+    "既存のaction/group生成等の別allocationは今回GCゼロ化の対象/検証には含めていない。",
+    "Native構造変更を禁止する借用期間・Jobs完了/Disposeの契約は別の残件。",
+    "装備UI/初期装備の呼出接続・AI現在戦術publish・未接続設定の意味は前回監査の残件を維持。"
+  ],
+  "owner_reports": [
+    "/workspace/.cave-dungeon/copy-flow/ai-copy-changes.json",
+    "/workspace/.cave-dungeon/copy-flow/core-copy-changes.json",
+    "/workspace/.cave-dungeon/copy-flow/projectile-copy-report.json"
+  ],
+  "changed_source_sha256": {
+    "Assets/MyAsset/Core/AI/Companion/CompanionController.cs": {
+      "before": "3638383e33258ccf06f4d560a879ee484c99978e8e4e1cbc6d14cdd6bc97a53d",
+      "after": "31bfa77286f35ae23537aab747d428db9e49e74a3c0bb74a134def064c5a4c82"
+    },
+    "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": {
+      "before": "859f33bc232fb9f880759ea2d166ce549f2ff541c0f4be9ba252599a01194395",
+      "after": "070c63086f02dc602496ee6ef9d1ec7005ad27709ca8b30b5fb11a8566803fa7"
+    },
+    "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs": {
+      "before": "ee8d60ef903fcf58f9ef90a842ae6f3ee868b4643b40af8b5a62f073c1bfb833",
+      "after": "29ef7299f8c48009979eaae94ef9246c30a9ec532ad1d8383a8bc1b843a9d23c"
+    },
+    "Assets/MyAsset/Core/AI/Core/ConditionEvaluator.cs": {
+      "before": "ad873f620692be152dbb7416d46d40616e5c9ce4fc95b7a56dd11acb66b287e2",
+      "after": "2895582cef39690c519592e12fd8d967e64a5a15339ae61f20c43d8ca1be4960"
+    },
+    "Assets/MyAsset/Core/AI/Core/TargetSelector.cs": {
+      "before": "3f0254fe4e876652218f54e02c8c5875859262f1120c67a65f830ea9fb3c05ee",
+      "after": "4561a7d5574784e5e96c84f9cde43fdfe2e460afee4a44faf5d031485acf2aee"
+    },
+    "Assets/MyAsset/Core/Actions/ActionDefinitionSnapshot.cs": {
+      "before": "5980bfc2424e6c7c97140b359c6b2d7a57b8a0a7e55727eae711e64d9145f154",
+      "after": "803ca5451192ada064bc1244f4810ff8fac2b82d8dd9785f646645aa1f90ffab"
+    },
+    "Assets/MyAsset/Core/Actions/ActionExecutionSystem.Groups.cs": {
+      "before": "4b8fb6a0eae95a439123daae1fe9eab3cc57e139ef4a67bf0ccaaab7ae2d6595",
+      "after": "0ef6d1cd810dde290510bd379001bc4a025bc69864b27270aa8eaebffb4d6167"
+    },
+    "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": {
+      "before": "0b3ae6b2c6c1b43e5e049ae69c44bb3ec2b2d294fd68ee80a7188edf7b8ff391",
+      "after": "883453320d701bf489a06f686c57dbbc54899d4611a2a508f2eb4449d5999992"
+    },
+    "Assets/MyAsset/Core/Combat/Projectile/BulletFeatureProcessor.cs": {
+      "before": "844befd9034c8629a6e85e2634faaf59973e6c358ab35e976928ccb189bdb312",
+      "after": "7549d7ad237990a66cc5ceda8ce1e63fe3bba60d05d98afac9e1c9871bf7d038"
+    },
+    "Assets/MyAsset/Core/Combat/Projectile/BulletProfile.cs": {
+      "before": "85437634319a3738801fd34e51965bb83f780833518b5d16f2e497e255d2870f",
+      "after": "db54e418a3163ee4741302095519044263714862c0f4ed5f643e0dd5815028a2"
+    },
+    "Assets/MyAsset/Core/Combat/Projectile/ChildBulletHelper.cs": {
+      "before": "bfc7d5e94e7430f4baddbf5810d61af72f605dba88330bd604a29c9b56bed6d7",
+      "after": "860adef48d9b32c26babf3665aa610ce5ea12f68a8ebff70e6af59453d6d995a"
+    },
+    "Assets/MyAsset/Core/Combat/Projectile/Projectile.cs": {
+      "before": "6b598edac6d9e63ed805d921490264fc53d86c98d4ec06d124d4944ed9488a7e",
+      "after": "be20d4999760857b313e294e7b387a9f62c1cf9f8270186f855319e367152ad5"
+    },
+    "Assets/MyAsset/Core/Combat/Projectile/ProjectileHitProcessor.cs": {
+      "before": "12ddeed2a027b52dca4294534263ca732ba50d6375336ab4e1078100b9920461",
+      "after": "a0c0a8f9cd26c0ecc20ff3bc2b5634a744933445bf409bd40cd154ce48db109e"
+    },
+    "Assets/MyAsset/Core/Combat/Projectile/ProjectileMovement.cs": {
+      "before": "4d3982a6acc3cfa4839b827cd7c66902327105b6900febe04709258bca1ea65f",
+      "after": "a728b79db0e76c1fee9c22dcfc4d5a3d09bd673f80b268300387bde683fbb0b7"
+    },
+    "Assets/MyAsset/Core/Common/Structs.cs": {
+      "before": "a8f7b08292306d3a795aecca18b78729730a1031f8c4573ff12939a55f871dfe",
+      "after": "8a0b1704b6db5756a77095ab1a1ccee9e3dfd961dbe2c9b81bc4082ce0eb9a47"
+    },
+    "Assets/MyAsset/Core/Damage/AttackTargetPolicy.cs": {
+      "before": "65258d49000c3d277d1786da444542585328d204ddec598f411f32fbcdfbe8e5",
+      "after": "f624220d9eec1c8ce9abf3ee373be75ba538ce36976f55a4478b0bfe9093216b"
+    },
+    "Assets/MyAsset/Core/Damage/DamageCalculator.cs": {
+      "before": "b2c2a2d119da5e19f8011e20876b3e85ebcf46f117b7828a841e3dfb9ebeed29",
+      "after": "00f3f5c759495ffc1b62fa3801245980c217622bf8bc3717ac7ed94e7d4bf415"
+    },
+    "Assets/MyAsset/Core/Damage/StatusEffectDefenseProfile.cs": {
+      "before": "0ba9f8fe6a0f58a129a54c4781619e19f07f340ab2beae80608106b318fd5f15",
+      "after": "173b6b352ea1d4019e0b4215910575aa74cc42e253620131b91249f1389efa8b"
+    },
+    "Assets/MyAsset/Core/Damage/StatusEffectStore.cs": {
+      "before": "1849dd8d7bb9ec5dfb0740a7deaae22b17dc0f63ec5c96ff17cd7dadce147bf1",
+      "after": "37ffaa37cfb1f7ab3e7601309a40df51e7ab5046c0dede4b7ff1d708a0938899"
+    },
+    "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": {
+      "before": "d16549dbc172632b2113347eb6308cc6e6e2604d65d37d44e7842ad5343ba8d4",
+      "after": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da"
+    },
+    "Assets/MyAsset/Core/LevelUp/CharacterStatCalculator.cs": {
+      "before": "4f24747ab6aba630c0611387ee2be2de7b7be9e9f416753474ca6ff0496cd6b4",
+      "after": "0e8280a2a75a99d48ab5f56c92be9afea650be6d9faddacbcab138dbd043631f"
+    },
+    "Assets/MyAsset/Runtime/Animation/CharacterAnimationController.cs": {
+      "before": "e4af896da50ca1197d4ece526c9cd6e0ecc2e7b814065daa305f5b485b430882",
+      "after": "c735c5dabebf834b6ae55cb08d0f54efbe41270d62a5e9735acf1fe005e7621a"
+    },
+    "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": {
+      "before": "5f16ee6819408a7a4683bdd124bec8e9df78d85403cac977421dd82dc8c7c2a6",
+      "after": "2d65d52e8615aa5cea7f31e318265a28521b4976d1f926960f201f2c0aba9ccc"
+    },
+    "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": {
+      "before": "c36c334942d72148b15322f48899674fcda58294500298f0324176538e526e0d",
+      "after": "9ec44a29555568bf8f49509c9776bde0cf0968a49db1b944d6a5553766f86686"
+    },
+    "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": {
+      "before": "1d5a7166ea3ff183ea0f23693f48376ccc6214e6318ad9cbe47e3c46a8008c3e",
+      "after": "872d34a012582b272f5122035f114323383b8e83dfc55a0ea259390c1b5c1e71"
+    },
+    "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileController.cs": {
+      "before": "9781a7bb2f845e9abd529c0ed267c2df95c93c6d4e07395232633e8008e163c7",
+      "after": "a035813669a110c6fc55df9499a667e5627b5bd1c8e511433be36642425414a6"
+    },
+    "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs": {
+      "before": "9df08b133f7258ddc001be45932d9a2fd88e276987345fec603f3a7c8795ab97",
+      "after": "da1833def63b1cf748a93e1a9274292a5ede4d06f8f9751d8252fc74762b1687"
+    },
+    "Assets/MyAsset/Runtime/GameManager.cs": {
+      "before": "ee91dd1a60ee1e1f426df13fc5fd506c07a08b18e3765c6f9d967199fbd3d288",
+      "after": "9fafa4aa18f44fd49315bc922df6b1ef4fb5d8560b6bdff3497f3c60a9ee667d"
+    },
+    "Assets/Tests/EditMode/AIObservationContextTests.cs": {
+      "before": "dc632766b8ddb0c3b298e33ec137eeedb4c9323efdf0d36091bb1801fe20bbf7",
+      "after": "8e1e59a193e0503a67c74832dd631d4c8f7315a596406080262b0d5875e012ad"
+    },
+    "Assets/Tests/EditMode/ActionDefinitionSnapshotTests.cs": {
+      "before": "3434ebf7330cf9cbcf9f6d3f7393333b74869812c186dd4758ca00612664fe07",
+      "after": "921b2a0ce442bad999496f0a8865490164d07ba6162340e2af34b9cc250197bb"
+    },
+    "Assets/Tests/PlayMode/CharacterPhysicsBoundaryTests.cs": {
+      "before": "bd5bc736633a210ba70a1bf54a9c7f06b6ff11269c0882c56dae9e92f1141a6b",
+      "after": "829aecbd2191aa4e4727712a68bba9919d0b1c7ea66258131636d6771042f846"
+    }
+  },
+  "follow_up_readonly_parameters": {
+    "recorded_date": "2026-10-28",
+    "report": "designs/in-parameter-audit.json",
+    "note": "650件とsourceSHAはコピー整理完了時点の履歴。以後のreadonly引数追補・現在の694件検証はfollow-upを参照。"
+  }
+}

@@ -99,14 +99,6 @@ namespace Game.Runtime
             // 名前→ハッシュのマッピングを登録（DialogueSystem等の外部連携用）
             CharacterRegistry.RegisterName(_characterInfo.name, _objectHash);
 
-            if (_damageReceiver != null)
-            {
-                _damageReceiver.SetArmorRecoveryParams(
-                    _characterInfo.maxArmor,
-                    _characterInfo.armorRecoveryRate,
-                    _characterInfo.armorRecoveryDelay);
-            }
-
             if (_animationController != null)
             {
                 _animationController.Initialize(_objectHash);
@@ -168,10 +160,6 @@ namespace Game.Runtime
             {
                 // 前キャラの連続JG窓・ガード経過時間・行動特殊効果が残らないようクリア
                 _damageReceiver.ResetInternalState();
-                _damageReceiver.SetArmorRecoveryParams(
-                    _characterInfo.maxArmor,
-                    _characterInfo.armorRecoveryRate,
-                    _characterInfo.armorRecoveryDelay);
             }
         }
 

@@ -39,7 +39,6 @@ namespace Game.Core
                 _data.GetGrowth(ownerHash) = actor.growth;
                 _data.GetVitals(ownerHash) = actor.vitals;
                 _data.GetCombatStats(ownerHash) = actor.combat;
-                _data.GetDefenseState(ownerHash).maxArmor = actor.vitals.maxArmor;
                 _data.GetFlags(ownerHash).AbilityFlags = actor.publishedFlags;
                 _data.GetEquipmentStatus(ownerHash) = actor.equipment;
             }

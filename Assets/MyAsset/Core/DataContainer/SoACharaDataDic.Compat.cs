@@ -131,7 +131,8 @@ namespace Game.Core
         public bool TryGetManaged(int hash, out ManagedCharacter managed)
         {
             ThrowIfDisposed();
-            return TryGetManagedCharacterByHash(hash, out managed);
+            managed = GetManaged(hash);
+            return managed != null;
         }
 
         public int Add(int hash, CharacterVitals vitals, CombatStats combatStats,

@@ -959,54 +959,26 @@ namespace Game.Runtime
 
         private static AIMode CloneMode(AIMode source)
         {
-            AIMode clone = new AIMode
-            {
-                modeName = source.modeName,
-                modeId = source.modeId,
-                defaultActionIndex = source.defaultActionIndex,
-                judgeInterval = source.judgeInterval,
-            };
-
-            clone.actions = source.actions != null ? (ActionSlot[])source.actions.Clone() : new ActionSlot[0];
-            clone.targetSelects = source.targetSelects != null ? (AITargetSelect[])source.targetSelects.Clone() : new AITargetSelect[0];
-
-            // ルール配列は conditions 配列を含むので深くクローン
-            int targetRuleCount = source.targetRules != null ? source.targetRules.Length : 0;
-            clone.targetRules = new AIRule[targetRuleCount];
-            for (int i = 0; i < targetRuleCount; i++)
-            {
-                clone.targetRules[i] = CloneRule(source.targetRules[i]);
-            }
-
-            int actionRuleCount = source.actionRules != null ? source.actionRules.Length : 0;
-            clone.actionRules = new AIRule[actionRuleCount];
-            for (int i = 0; i < actionRuleCount; i++)
-            {
-                clone.actionRules[i] = CloneRule(source.actionRules[i]);
-            }
+            AIMode clone = AIConfigurationCopy.Clone(source);
+            clone.actions = clone.actions ?? new ActionSlot[0];
+            clone.targetSelects = clone.targetSelects ?? new AITargetSelect[0];
+            clone.targetRules = clone.targetRules ?? new AIRule[0];
+            clone.actionRules = clone.actionRules ?? new AIRule[0];
 
             return clone;
         }
 
         private static AIRule CloneRule(AIRule source)
         {
-            AIRule clone = new AIRule
-            {
-                actionIndex = source.actionIndex,
-                probability = source.probability,
-            };
-            clone.conditions = source.conditions != null ? (AICondition[])source.conditions.Clone() : new AICondition[0];
+            AIRule clone = AIConfigurationCopy.Clone(source);
+            clone.conditions = clone.conditions ?? new AICondition[0];
             return clone;
         }
 
         private static ModeTransitionRule CloneTransitionRule(ModeTransitionRule source)
         {
-            ModeTransitionRule clone = new ModeTransitionRule
-            {
-                sourceModeIndex = source.sourceModeIndex,
-                targetModeIndex = source.targetModeIndex,
-            };
-            clone.conditions = source.conditions != null ? (AICondition[])source.conditions.Clone() : new AICondition[0];
+            ModeTransitionRule clone = AIConfigurationCopy.Clone(source);
+            clone.conditions = clone.conditions ?? new AICondition[0];
             return clone;
         }
     }

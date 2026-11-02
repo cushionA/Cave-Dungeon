@@ -4,46 +4,66 @@ Section: 2 — AI・仲間・連携
 ## 責務
 2つのサブシステムから構成:
 
-1. **ProjectileSystem（飛翔体基盤）**: 全ての飛翔体（魔法弾、スキル衝撃波、チャージ攻撃弾、敵の遠距離攻撃）の共通基盤。発射→飛翔→ヒット判定を統一処理する。弾丸はcasterHashのみ記録し、命中時にコンテナから最新ステータスを取得する。
+1. **ProjectileSystem（飛翔体基盤）**: 全ての飛翔体（魔法弾、スキル衝撃波、チャージ攻撃弾、敵の遠距離攻撃）の共通基盤。発射→飛翔→ヒット判定を統一処理する。発射時の `AttackContext` と世代付き `ActorRef` を保持し、射手の消失・ID再利用後も元の攻撃入力で処理する。
 2. **MagicAction（魔法アクション）**: 詠唱→発動モーション→ProjectileSystemで弾丸生成、という魔法固有のフローを管理する。プレイヤー・NPC共通。
 
 WeaponSystemのスキル・チャージ攻撃もProjectileSystemを使う。魔法以外の飛翔体発射元はProjectileSystemを直接呼ぶ。
 
 ## 依存
-- 入力: DataContainer（CharacterVitals: MP消費、CombatStats: 命中時ステータス取得）、DamageSystem（ダメージ計算）、InputSystem（魔法入力）
+- 入力: DataContainer（CharacterVitals: MP消費、CombatStats: 発射時の攻撃入力捕捉）、DamageSystem（ダメージ計算）、InputSystem（魔法入力）
 - 出力: 弾丸生成・飛翔・ヒット判定、ダメージ/回復/バフの適用
 
 ## アーキテクチャ準拠
 - SoAコンテナ経由でキャラクターデータにアクセス（GetComponent排除）
-- 弾丸の移動計算はJob System対応（複数弾丸の並列計算）
-- 魔法データはScriptableObject（MagicDefinition）で定義
+- 弾丸の移動・寿命計算は Core に集約し、固定tickから一括実行する。現実装はメインスレッドの managed pool。Jobs / Burst / Entities への移行は未実装
+- 作者入力は `AttackInfo` / `ActionDefinition`。登録時に `ActionCatalog` が値を捕捉し、発射用の値型 `MagicDefinition` を作る
 
 ## コンポーネント構成
 
 ### ProjectileSystem（飛翔体基盤 — 全飛翔体共通）
 | コンポーネント | 責務 | MonoBehaviour? |
 |--------------|------|---------------|
-| ProjectileController | 1発射分の複数弾丸を統括管理（Job統括） | Yes |
-| Projectile | 個別弾丸のライフサイクル・衝突検出・casterHash記録 | Yes |
-| ProjectileMoveJob | 弾丸移動のJob System計算 | No (IJobParallelForTransform) |
-| ProjectilePool | 弾丸オブジェクトプール | No |
+| ProjectileManager | 発射、固定tick、Coreと表示の同時回収、Prefab別表示プール | Yes |
+| ProjectileController | 1弾のUnity表示・Physics2D接触と移動区間の判定 | Yes |
+| Projectile | 個別弾の状態・寿命・射手/対象の世代 | No |
+| ProjectileMovement | 移動・遅延・寿命・重力を同じ時間幅で計算 | No |
+| ProjectilePool | 世代付き貸出とCore状態のプール | No |
 | BulletProfile | 弾丸挙動定義（速度・追尾・寿命・特性） | No (Serializable) |
 
 ### MagicAction（魔法固有フロー）
 | コンポーネント | 責務 | MonoBehaviour? |
 |--------------|------|---------------|
-| MagicCaster | 詠唱→発動の統括（キャラクターに付く） | Yes |
-| MagicDefinition | 魔法データ定義（BulletProfile含む） | No (ScriptableObject) |
+| GameActionRuntime / ActionExecutionSystem | 共通アクションの詠唱→Active発射 | Yes / No |
+| ActionCatalog | 作者入力の検証と登録時snapshot | No |
+| MagicDefinition | 発射用の値データ（BulletProfile・AttackContext含む） | No (struct) |
 
 ### 利用関係
 ```
-MagicCaster ────→ ProjectileController（魔法弾）
-WeaponSystem ───→ ProjectileController（スキル衝撃波、チャージ弾）
-EnemySystem ────→ ProjectileController（敵の遠距離攻撃）
-CoopAction ─────→ MagicCaster or ProjectileController（連携スキル）
+AttackInfo / ActionDefinition → ActionCatalog → GameActionRuntime
+                                              ↓ Active時に1回
+                                      ProjectileManager
+                                      ↙               ↘
+                            Core Projectile      Unity Controller
 ```
 
 ---
+
+## 現行の管理契約（2026-10-26）
+
+- `GameManager` の固定tickから更新する。tick開始時点の貸出世代を対象にし、その途中で生まれた子弾は次のtickから更新する。
+- Core状態とControllerの返却はManagerの同じ経路で行う。返却予約とtick作業は貸出世代を照合し、以前の予約が再利用後の弾に作用しない。Core poolも二重返却・別poolへの返却を受け付けない。
+- 遅延を跨ぐtickでは残り時間だけ移動・寿命を進める。RainとGravityの併用で重力を二重適用しない。
+- Physics2Dを引き続き衝突境界に使う。移動区間のshape sweepと接触通知を同じ命中経路へ渡す。弾の表示Prefabは登録時に捕捉し、Prefabごとに再利用する。
+- `pierceCount` は有限の追加ヒット数（総数は `pierceCount + 1`）。旧 `BulletFeature.Pierce` は寿命まで総数を無視する別の指定として維持する。キャラ別ヒット数は世代単位で数える。
+- `aoeRadius > 0` の作者入力は爆発機能へ接続する。範囲対象は被弾通知前に世代付きで捕捉し、通知中の別爆発・全回収から保護する。
+- 発射時の攻撃入力と既に受理したアクションの発射保証を維持する。新規発射は消失した射手から受け付けない。発射済み弾とその子弾は元の捕捉済み入力を使う。
+- 2026-10-27: `AttackTargetPolicy` と共通 `AttackTargetRules` を近接・弾の接触/sweep・爆発・明示/自動追尾へ接続した。発射元から見た敵対・友好・自分・中立を指定し、発射元の陣営と対象条件は発射時に捕捉、相手の陣営は命中時に確認する。対象外は命中数の消費や爆発・子弾発動より前に除く。詳細と旧直接APIの互換境界は `DamageSystem.md` の「対象条件の共通契約」を参照。
+
+ShotAnchor、appearDelay / moveStartDelayの二分化、複数Profile、未実装の特性は `docs/FUTURE_TASKS.md` の継続項目。これらを実装済みとして扱わない。
+
+## 以下は初期設計案
+
+以下の型定義・Job例・魔法専用フローは初期案を残したもの。現行実装の型・状態取得・更新経路は上記とソースを参照する。とくに `MagicDefinition : ScriptableObject`、命中時の射手ステータス読出し、Jobによる移動、再帰子弾は現行の契約ではない。
 
 ## 魔法データ定義（MagicDefinition）
 

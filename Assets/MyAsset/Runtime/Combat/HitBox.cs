@@ -15,6 +15,8 @@ namespace Game.Runtime
         private HitboxLogic _logic;
         private AttackMotionData _currentMotion;
         private int _ownerHash;
+        private AttackContext _attackContext;
+        private uint _activationVersion;
         private bool _isActive;
 
         public bool IsActive => _isActive;
@@ -31,13 +33,9 @@ namespace Game.Runtime
         /// <summary>
         /// ヒットボックスを有効化する。HitboxLogicを初期化してヒット管理開始。
         /// </summary>
-        public void Activate(AttackMotionData motion, int ownerHash)
+        public void Activate(in AttackMotionData motion, int ownerHash)
         {
-            _currentMotion = motion;
-            _ownerHash = ownerHash;
-            _isActive = true;
-            _logic = new HitboxLogic(motion.maxHitCount);
-            _triggerCollider.enabled = true;
+            ResetForNewAttack(motion, ownerHash);
         }
 
         /// <summary>
@@ -46,17 +44,21 @@ namespace Game.Runtime
         public void Deactivate()
         {
             _isActive = false;
+            _activationVersion++;
+            _attackContext = default;
             _triggerCollider.enabled = false;
         }
 
         /// <summary>
         /// HitboxLogicをリセットして新しい攻撃モーション用に再初期化する。
         /// </summary>
-        public void ResetForNewAttack(AttackMotionData motion, int ownerHash)
+        public void ResetForNewAttack(in AttackMotionData motion, int ownerHash)
         {
             _currentMotion = motion;
             _ownerHash = ownerHash;
-            _isActive = true;
+            _activationVersion++;
+            _isActive = CombatDataHelper.TryCaptureAttack(ownerHash, motion,
+                GameManager.Data, GameManager.Actors, out _attackContext);
 
             if (_logic != null)
             {
@@ -67,7 +69,7 @@ namespace Game.Runtime
                 _logic = new HitboxLogic(motion.maxHitCount);
             }
 
-            _triggerCollider.enabled = true;
+            _triggerCollider.enabled = _isActive;
         }
 
         private void OnTriggerEnter2D(Collider2D other)
@@ -79,18 +81,15 @@ namespace Game.Runtime
 
             // アーキテクチャ準拠: 毎衝突でのGetComponentを避け、
             // GameObject.GetHashCode → GameManager.Data.GetManaged で IDamageable 逆引き。
-            int targetHash = other.gameObject.GetHashCode();
-
-            // 自分自身にはダメージを与えない
-            if (targetHash == _ownerHash)
+            if (other == null || GameManager.Actors == null) { return; }
+            bool found = GameManager.Actors.TryGet(other.gameObject.GetHashCode(), out ActorRef target);
+            if (!found && other.attachedRigidbody != null)
             {
-                return;
+                found = GameManager.Actors.TryGet(other.attachedRigidbody.gameObject.GetHashCode(), out target);
             }
-
-            if (GameManager.Data == null)
-            {
-                return;
-            }
+            if (!found || !CombatDataHelper.CanAffectTarget(_attackContext, target,
+                GameManager.Data, GameManager.Actors)) { return; }
+            int targetHash = target.Hash;
 
             IDamageable receiver = GameManager.Data.GetManaged(targetHash)?.Damageable;
             if (receiver == null)
@@ -105,40 +104,30 @@ namespace Game.Runtime
                 return;
             }
 
-            // 味方同士はダメージを与えない（陣営チェック）
-            if (GameManager.IsCharacterValid(_ownerHash) && GameManager.IsCharacterValid(targetHash))
-            {
-                CharacterBelong ownerBelong = GameManager.Data.GetFlags(_ownerHash).Belong;
-                CharacterBelong targetBelong = GameManager.Data.GetFlags(targetHash).Belong;
-                if (ownerBelong == targetBelong)
-                {
-                    return;
-                }
-            }
-
             // HitboxLogicでヒット登録（重複防止+上限管理）
-            if (!_logic.TryRegisterHit(targetHash))
+            if (!_logic.TryRegisterHit(target))
             {
                 return;
             }
 
             // DamageData生成
-            DamageData data = BuildDamageData(targetHash);
-
+            DamageData data = BuildDamageData(target);
+            uint activationVersion = _activationVersion;
             receiver.ReceiveDamage(data);
 
             // 上限到達で自動無効化
-            if (_logic.IsExhausted)
+            if (this != null && _activationVersion == activationVersion && _logic.IsExhausted)
             {
                 Deactivate();
             }
         }
 
-        private DamageData BuildDamageData(int defenderHash)
+        private DamageData BuildDamageData(ActorRef defender)
         {
-            ElementalStatus attackStats = CombatDataHelper.GetAttackStats(GameManager.Data, _ownerHash);
-            return CombatDataHelper.BuildDamageData(
-                _ownerHash, defenderHash, _currentMotion, attackStats);
+            DamageData damage = CombatDataHelper.BuildDamageData(
+                _ownerHash, defender.Hash, _currentMotion, _attackContext.AttackStats);
+            _attackContext.ApplyTo(ref damage, defender);
+            return damage;
         }
     }
 }

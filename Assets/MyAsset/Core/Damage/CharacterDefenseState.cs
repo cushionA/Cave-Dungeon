@@ -13,7 +13,6 @@ namespace Game.Core
         public float armorRecoveryTimer;
         public float armorRecoveryDelay;
         public float armorRecoveryRate;
-        public float maxArmor;
         public ActState previousActState;
     }
 }

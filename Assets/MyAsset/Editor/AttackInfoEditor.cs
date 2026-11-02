@@ -74,7 +74,7 @@ namespace Game.Editor
             {
                 if (info.projectileInfo.projectilePrefab == null)
                 {
-                    EditorGUILayout.HelpBox("飛翔体が有効ですが projectilePrefab が未設定です。", MessageType.Error);
+                    EditorGUILayout.HelpBox("飛翔体は ProjectileManager の既定Prefabを使います。", MessageType.Info);
                 }
                 if (info.projectileInfo.speed <= 0)
                 {

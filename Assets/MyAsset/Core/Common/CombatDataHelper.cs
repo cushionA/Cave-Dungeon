@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Game.Core
@@ -15,11 +16,16 @@ namespace Game.Core
         /// ActionExecutorController等、AttackInfoベースで攻撃を駆動する箇所で使用。
         /// </summary>
         public static AttackMotionData BuildMotionData(AttackInfo info, int maxHitCount = k_DefaultMaxHitCount,
-            StatusEffectApplicationData[] equipmentEffects = null)
+            IReadOnlyList<StatusEffectApplicationData> equipmentEffects = null)
         {
             return new AttackMotionData
             {
                 actionName = info.attackName,
+                targetPolicy = new AttackTargetPolicy
+                {
+                    overrideTargets = true,
+                    targets = info.targetPolicy.Resolve(info.magicType),
+                },
                 motionValue = info.damageMultiplier,
                 attackElement = info.attackElement,
                 feature = info.feature,
@@ -48,12 +54,13 @@ namespace Game.Core
         /// </summary>
         public static DamageData BuildDamageData(
             int attackerHash, int defenderHash,
-            AttackMotionData motion, ElementalStatus attackStats,
+            in AttackMotionData motion, in ElementalStatus attackStats,
             bool isProjectile = false)
         {
             return new DamageData
             {
                 actionInstanceId = motion.actionInstanceId,
+                targetPolicy = motion.targetPolicy,
                 attackerHash = attackerHash,
                 defenderHash = defenderHash,
                 damage = attackStats,

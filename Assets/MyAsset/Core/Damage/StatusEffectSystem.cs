@@ -55,22 +55,47 @@ namespace Game.Core
 
         public bool Apply(int hash, StatusEffectInfo info, int sourceHash = 0)
         {
-            if (_actors != null && _actors.TryGet(hash, out ActorRef target))
+            if (_actors != null)
             {
+                if (!_actors.TryGet(hash, out ActorRef target)) { return false; }
                 _actors.TryGet(sourceHash, out ActorRef source);
-                return CanApply(hash) && Store.Apply(target, info, source);
+                return Apply(target, info, source);
             }
-            return CanApply(hash) && Store.Apply(hash, info, sourceHash);
+            if (!CanApply(hash, info)) { return false; }
+            StatusEffectDefense defense = GetDefense(hash, info.effect);
+            return Store.Apply(hash, info, defense, sourceHash);
         }
 
         public bool Accumulate(int hash, StatusEffectInfo info, float statusCut, int sourceHash = 0)
         {
-            if (_actors != null && _actors.TryGet(hash, out ActorRef target))
+            if (_actors != null)
             {
+                if (!_actors.TryGet(hash, out ActorRef target)) { return false; }
                 _actors.TryGet(sourceHash, out ActorRef source);
-                return CanApply(hash) && Store.Accumulate(target, info, statusCut, source);
+                return Accumulate(target, info, statusCut, source);
             }
-            return CanApply(hash) && Store.Accumulate(hash, info, statusCut, sourceHash);
+            if (!CanApply(hash, info)) { return false; }
+            StatusEffectDefense defense = GetDefense(hash, info.effect, statusCut);
+            return Store.Accumulate(hash, info, defense, sourceHash);
+        }
+
+        private bool Apply(ActorRef target, in StatusEffectInfo info, ActorRef source)
+        {
+            if (!_actors.IsCurrent(target) || !CanApply(target.Hash, info)) { return false; }
+            StatusEffectDefense defense = GetDefense(target.Hash, info.effect);
+            return Store.Apply(target, info, defense, source);
+        }
+
+        private bool Accumulate(ActorRef target, in StatusEffectInfo info, float statusCut, ActorRef source)
+        {
+            if (!_actors.IsCurrent(target) || !CanApply(target.Hash, info)) { return false; }
+            StatusEffectDefense defense = GetDefense(target.Hash, info.effect, statusCut);
+            return Store.Accumulate(target, info, defense, source);
+        }
+
+        private StatusEffectDefense GetDefense(int targetHash, StatusEffectId effect, float statusCut = 0f)
+        {
+            return _data.GetCombatStats(targetHash).statusDefense.Resolve(effect, statusCut);
         }
 
         private readonly struct CapturedSourceWriter : IStatusEffectWriter
@@ -84,20 +109,18 @@ namespace Game.Core
             public bool Apply(int hash, StatusEffectInfo info, int sourceHash = 0)
             {
                 ActorRef target = Resolve(hash);
-                return _system._actors.IsCurrent(target) && _system.CanApply(hash)
-                    && _system.Store.Apply(target, info, _source);
+                return _system.Apply(target, info, _source);
             }
             public bool Accumulate(int hash, StatusEffectInfo info, float cut, int sourceHash = 0)
             {
                 ActorRef target = Resolve(hash);
-                return _system._actors.IsCurrent(target) && _system.CanApply(hash)
-                    && _system.Store.Accumulate(target, info, cut, _source);
+                return _system.Accumulate(target, info, cut, _source);
             }
         }
 
-        public StatusEffectId ApplyApplications(StatusEffectApplicationData[] applications, ActorRef source,
+        public StatusEffectId ApplyApplications(IReadOnlyList<StatusEffectApplicationData> applications, ActorRef source,
             int hitTargetHash, GuardResult guardResult, float statusCut,
-            StatusEffectApplicationData[] equipmentApplications = null)
+            IReadOnlyList<StatusEffectApplicationData> equipmentApplications = null)
         {
             if (_actors == null) { throw new InvalidOperationException("Captured sources require an actor registry."); }
             if (!_actors.TryGet(hitTargetHash, out ActorRef target)) { return StatusEffectId.None; }
@@ -115,10 +138,16 @@ namespace Game.Core
                 guardResult, statusCut, new CapturedSourceWriter(this, context.Owner, target));
         }
 
-        public StatusEffectId ApplyApplications(StatusEffectApplicationData[] applications,
+        public StatusEffectId ApplyApplications(IReadOnlyList<StatusEffectApplicationData> applications,
             int sourceHash, int hitTargetHash, GuardResult guardResult, float statusCut,
-            StatusEffectApplicationData[] equipmentApplications = null)
+            IReadOnlyList<StatusEffectApplicationData> equipmentApplications = null)
         {
+            if (_actors != null)
+            {
+                _actors.TryGet(sourceHash, out ActorRef source);
+                return ApplyApplications(applications, source, hitTargetHash, guardResult, statusCut,
+                    equipmentApplications);
+            }
             return StatusEffectApplicationLogic.Apply(applications, sourceHash, hitTargetHash,
                 guardResult, statusCut, this, equipmentApplications);
         }
@@ -182,19 +211,23 @@ namespace Game.Core
             _ticks.Clear();
         }
 
-        private bool CanApply(int hash)
+        private bool CanApply(int hash, in StatusEffectInfo info)
         {
-            return _data.TryGetValue(hash, out _) && _data.GetVitals(hash).currentHp > 0;
+            return CharacterStatusEffects.IsValidId(info.effect)
+                && _data.TryGetValue(hash, out _) && _data.GetVitals(hash).currentHp > 0;
         }
 
         private void PublishChange(int hash, StatusEffectId id, StatusEffectChangeKind kind)
         {
+            ActorRef observedTarget = default;
+            if (_actors != null) { _actors.TryGet(hash, out observedTarget); }
             if (_data.TryGetValue(hash, out _))
             {
                 _data.GetStatusEffects(hash) = Store.GetSummary(hash);
             }
             _events.FireStatusEffectChanged(hash, id, kind);
-            if (kind == StatusEffectChangeKind.Applied)
+            if (kind == StatusEffectChangeKind.Applied
+                && (_actors == null || _actors.IsCurrent(observedTarget)))
             {
                 _events.FireStatusEffectApplied(hash, id);
             }

@@ -79,6 +79,12 @@ namespace Game.Core
         /// </summary>
         public void SetMode(AIMode mode)
         {
+            SetCapturedMode(AIConfigurationCopy.Clone(mode));
+        }
+
+        /// <summary>ModeControllerが所有するsnapshotだけを渡す。毎tickやモード切替で再コピーしない。</summary>
+        internal void SetCapturedMode(AIMode mode)
+        {
             _currentMode = mode;
             _targetJudgeTimer = mode.judgeInterval.x;
             // アクション評価を即座に実行するためタイマーを0にする

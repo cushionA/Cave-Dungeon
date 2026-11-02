@@ -36,6 +36,8 @@ namespace Game.Runtime
                 this.equipmentSource = equipmentSource;
                 this.contactType = contactType;
                 this.spreadAngle = spreadAngle;
+                attack.equipmentStatusEffects = CaptureEquipmentEffects(attack.equipmentStatusEffects);
+                magic.equipmentStatusEffects = CaptureEquipmentEffects(magic.equipmentStatusEffects);
                 _attack = attack;
                 _magic = magic;
             }
@@ -49,7 +51,6 @@ namespace Game.Runtime
             {
                 AttackMotionData packet = _attack;
                 packet.statusEffects = Copy(_attack.statusEffects);
-                packet.equipmentStatusEffects = Copy(_attack.equipmentStatusEffects);
                 return packet;
             }
 
@@ -57,13 +58,21 @@ namespace Game.Runtime
             {
                 MagicDefinition packet = _magic;
                 packet.statusEffects = Copy(_magic.statusEffects);
-                packet.equipmentStatusEffects = Copy(_magic.equipmentStatusEffects);
                 return packet;
             }
 
             private static StatusEffectApplicationData[] Copy(StatusEffectApplicationData[] values)
                 => values != null && values.Length > 0 ? (StatusEffectApplicationData[])values.Clone()
                     : Array.Empty<StatusEffectApplicationData>();
+
+            private static IReadOnlyList<StatusEffectApplicationData> CaptureEquipmentEffects(
+                IReadOnlyList<StatusEffectApplicationData> values)
+            {
+                if (values == null || values.Count == 0) { return Array.Empty<StatusEffectApplicationData>(); }
+                StatusEffectApplicationData[] copy = new StatusEffectApplicationData[values.Count];
+                for (int i = 0; i < copy.Length; i++) { copy[i] = values[i]; }
+                return Array.AsReadOnly(copy);
+            }
         }
 
         private sealed class Draft
@@ -211,17 +220,20 @@ namespace Game.Runtime
             MagicDefinition magic = new MagicDefinition
             {
                 magicName = attack.attackName, magicType = attack.magicType,
+                targetPolicy = hit.targetPolicy,
                 motionValue = attack.damageMultiplier, attackElement = attack.attackElement,
                 feature = attack.feature, guardDamage = attack.guardDamage,
                 armorBreakValue = attack.armorBreakValue, justGuardResistance = attack.justGuardResistance,
                 knockbackForce = attack.knockbackInfo.hasKnockback ? attack.knockbackInfo.force : default,
                 statusEffects = hit.statusEffects, equipmentSource = attack.equipmentSource,
                 healAmount = attack.healAmount, bulletCount = Math.Max(1, attack.projectileInfo.projectileCount),
+                projectilePrefab = attack.projectileInfo.projectilePrefab,
                 bulletProfile = new BulletProfile
                 {
                     moveType = attack.projectileInfo.trajectory, speed = attack.projectileInfo.speed,
                     lifeTime = attack.projectileInfo.lifetime, hitLimit = Math.Max(1, attack.projectileInfo.pierceCount + 1),
                     explodeRadius = attack.projectileInfo.aoeRadius, homingStrength = attack.projectileInfo.homingStrength,
+                    features = attack.projectileInfo.aoeRadius > 0f ? BulletFeature.Explode : BulletFeature.None,
                 },
             };
             return new Entry(data, presentation, AttackExecutionSettings.Capture(attack), hit, magic,
@@ -302,6 +314,7 @@ namespace Game.Runtime
 
         private static void ValidateAttack(AttackInfo attack)
         {
+            AttackTargetRules.Validate(attack.targetPolicy);
             if (!NonNegative(attack.damageMultiplier) || !NonNegative(attack.guardDamage)
                 || !NonNegative(attack.armorBreakValue) || !NonNegative(attack.justGuardResistance)
                 || attack.justGuardResistance > 100f || attack.healAmount < 0

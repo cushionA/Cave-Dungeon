@@ -157,7 +157,7 @@ namespace Game.Core
 
         public void UpdateDefinition(int id, ActionDefinitionData data)
         {
-            if (!_definitions.ContainsKey(id))
+            if (!_definitions.TryGetValue(id, out ActionDefinitionSnapshot current))
             {
                 throw new KeyNotFoundException($"Action definition {id} is not registered.");
             }
@@ -166,6 +166,8 @@ namespace Game.Core
                 throw new ArgumentException("The action definition ID cannot change.", nameof(data));
             }
             data.id = id;
+            // 停止入力などの同値更新は、捕捉済みの不変定義とその配列viewを再利用する。
+            if (current.Matches(data)) { return; }
             _definitions[id] = SnapshotDefinition(data);
         }
 
@@ -188,6 +190,7 @@ namespace Game.Core
             if (_disposed || (_notificationDepth > 0 && !request.forced) || !PrepareRequestReferences(ref request)
                 || !_actors.ContainsKey(request.ownerHash)
                 || !_definitions.TryGetValue(request.definitionId, out ActionDefinitionSnapshot definition)
+                || !ValidMovementInput(definition, request.direction, request.speedMultiplier == 0f ? 1f : request.speedMultiplier)
                 || !_world.TryGetActor(request.ownerHash, out ActionActorState actor)
                 || !ValidSource(request.ownerHash, request.sourceInstanceId, allowInterruptedSource))
             {
@@ -335,6 +338,8 @@ namespace Game.Core
             if (!_disposed && PrepareRequestReferences(ref request)
                 && _actors.TryGetValue(request.ownerHash, out int version)
                 && _definitionVersions.TryGetValue(request.definitionId, out int definitionVersion)
+                && _definitions.TryGetValue(request.definitionId, out ActionDefinitionSnapshot definition)
+                && ValidMovementInput(definition, request.direction, request.speedMultiplier == 0f ? 1f : request.speedMultiplier)
                 && ValidSource(request.ownerHash, request.sourceInstanceId, allowInterruptedSource)
                 && ResolveRequestGroup(ref request, out ExecutionGroup group))
             {
@@ -384,11 +389,11 @@ namespace Game.Core
 
         public void Tick(float deltaTime)
         {
-            using GroupMutation mutation = new GroupMutation(this);
-            if (_disposed || deltaTime < 0f || _notificationDepth > 0)
+            if (_disposed || !Finite(deltaTime) || deltaTime < 0f || _notificationDepth > 0)
             {
                 return;
             }
+            using GroupMutation mutation = new GroupMutation(this);
             while (_requests.Count > 0)
             {
                 _tickRequests.Add(_requests.Dequeue());
@@ -479,7 +484,8 @@ namespace Game.Core
         public bool UpdateInput(long instanceId, Vector2 direction, float speedMultiplier = 1f)
         {
             if (!_instances.TryGetValue(instanceId, out Instance state)
-                || !state.execution.definition.movementUsesInput)
+                || !state.execution.definition.movementUsesInput
+                || !ValidMovementInput(state.execution.definition, direction, speedMultiplier))
             {
                 return false;
             }
@@ -556,7 +562,7 @@ namespace Game.Core
             Instance selected = null;
             foreach (Instance state in _instances.Values)
             {
-                ActionExecution current = state.execution;
+                ref readonly ActionExecution current = ref state.execution;
                 if (current.ownerHash == ownerHash && !current.definition.motionOnly
                     && (current.definition.resources & resource) != 0
                     && (selected == null || HigherPriority(current, selected.execution)))
@@ -569,8 +575,8 @@ namespace Game.Core
             {
                 return false;
             }
-            ActionExecution active = selected.execution;
-            ActionDefinitionSnapshot definition = active.definition;
+            ref readonly ActionExecution active = ref selected.execution;
+            ref readonly ActionDefinitionSnapshot definition = ref active.definition;
             if ((definition.gameplay & ActionGameplayFlags.Move) != 0 && active.elapsed >= definition.moveStartTime
                 && (definition.moveDuration <= 0f || active.elapsed < definition.moveStartTime + definition.moveDuration))
             {
@@ -915,7 +921,7 @@ namespace Game.Core
                     && (allowInterruptedSource || !_interruptedSources.Contains(source)));
         }
 
-        private static bool CanReplace(ActionRequest request, ActionDefinitionSnapshot definition, ActionExecution existing)
+        private static bool CanReplace(in ActionRequest request, ActionDefinitionSnapshot definition, in ActionExecution existing)
         {
             if (definition.motionOnly && !existing.definition.motionOnly)
             {
@@ -932,7 +938,7 @@ namespace Game.Core
             return !existing.forced && definition.priority >= existing.definition.priority && existing.canCancel;
         }
 
-        private static bool Blocked(ActionDefinitionSnapshot definition, ActionActorState actor)
+        private static bool Blocked(ActionDefinitionSnapshot definition, in ActionActorState actor)
         {
             return actor.statusEffects.BlocksActions
                 || ((definition.gameplay & ActionGameplayFlags.Cast) != 0 && actor.statusEffects.BlocksCasting)
@@ -944,7 +950,7 @@ namespace Game.Core
             return HitReactionLogic.IsArmorResetStun(state) || state == ActState.WakeUp;
         }
 
-        private static bool HigherPriority(ActionExecution candidate, ActionExecution current)
+        private static bool HigherPriority(in ActionExecution candidate, in ActionExecution current)
         {
             if (candidate.forced != current.forced)
             {
@@ -954,7 +960,7 @@ namespace Game.Core
                 ? candidate.definition.priority > current.definition.priority : candidate.instanceId > current.instanceId;
         }
 
-        private static bool HigherPrimary(ActionExecution candidate, ActionExecution current)
+        private static bool HigherPrimary(in ActionExecution candidate, in ActionExecution current)
         {
             if (candidate.definition.motionOnly != current.definition.motionOnly)
             {
@@ -1087,7 +1093,7 @@ namespace Game.Core
             return removed;
         }
 
-        private static ActionDefinitionSnapshot SnapshotDefinition(ActionDefinitionData data)
+        private static ActionDefinitionSnapshot SnapshotDefinition(in ActionDefinitionData data)
         {
             ActionDefinitionValidator.Validate(data);
             return new ActionDefinitionSnapshot(data);

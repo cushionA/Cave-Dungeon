@@ -15,26 +15,28 @@ namespace Game.Runtime
         private AttackMotionData _currentMotion;
         private int _ownerHash;
         private bool _isActive;
-        private HashSet<int> _hitTargets;
+        private HashSet<ActorRef> _hitTargets;
+        private AttackContext _attackContext;
 
         private void Awake()
         {
             _triggerCollider = GetComponent<BoxCollider2D>();
             _triggerCollider.isTrigger = true;
             _triggerCollider.enabled = false;
-            _hitTargets = new HashSet<int>();
+            _hitTargets = new HashSet<ActorRef>();
         }
 
         /// <summary>
         /// ヒットボックスを有効化する。
         /// </summary>
-        public void Activate(AttackMotionData motion, int ownerHash)
+        public void Activate(in AttackMotionData motion, int ownerHash)
         {
             _currentMotion = motion;
             _ownerHash = ownerHash;
-            _isActive = true;
+            _isActive = CombatDataHelper.TryCaptureAttack(ownerHash, motion,
+                GameManager.Data, GameManager.Actors, out _attackContext);
             _hitTargets.Clear();
-            _triggerCollider.enabled = true;
+            _triggerCollider.enabled = _isActive;
         }
 
         /// <summary>
@@ -43,6 +45,7 @@ namespace Game.Runtime
         public void Deactivate()
         {
             _isActive = false;
+            _attackContext = default;
             _triggerCollider.enabled = false;
         }
 
@@ -55,18 +58,15 @@ namespace Game.Runtime
 
             // アーキテクチャ準拠: 毎衝突でのGetComponentを避け、
             // GameObject.GetHashCode → GameManager.Data.GetManaged で IDamageable 逆引き。
-            int targetHash = other.gameObject.GetHashCode();
-
-            // 自分自身にはダメージを与えない
-            if (targetHash == _ownerHash)
+            if (other == null || GameManager.Actors == null) { return; }
+            bool found = GameManager.Actors.TryGet(other.gameObject.GetHashCode(), out ActorRef target);
+            if (!found && other.attachedRigidbody != null)
             {
-                return;
+                found = GameManager.Actors.TryGet(other.attachedRigidbody.gameObject.GetHashCode(), out target);
             }
-
-            if (GameManager.Data == null)
-            {
-                return;
-            }
+            if (!found || !CombatDataHelper.CanAffectTarget(_attackContext, target,
+                GameManager.Data, GameManager.Actors)) { return; }
+            int targetHash = target.Hash;
 
             // 非キャラクター(地形等)との接触は _hitTargets 登録前にスキップして汚染を防ぐ
             IDamageable receiver = GameManager.Data.GetManaged(targetHash)?.Damageable;
@@ -76,15 +76,15 @@ namespace Game.Runtime
             }
 
             // 同一攻撃で同じターゲットに多重ヒットしない (キャラ衝突のみ登録)
-            if (!_hitTargets.Add(targetHash))
+            if (!receiver.IsAlive || !_hitTargets.Add(target))
             {
                 return;
             }
 
             // DamageData生成
-            ElementalStatus attackStats = CombatDataHelper.GetAttackStats(GameManager.Data, _ownerHash);
             DamageData data = CombatDataHelper.BuildDamageData(
-                _ownerHash, targetHash, _currentMotion, attackStats);
+                _ownerHash, targetHash, _currentMotion, _attackContext.AttackStats);
+            _attackContext.ApplyTo(ref data, target);
 
             receiver.ReceiveDamage(data);
         }

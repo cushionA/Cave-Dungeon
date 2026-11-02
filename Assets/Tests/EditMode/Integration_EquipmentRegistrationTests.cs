@@ -47,8 +47,7 @@ namespace Game.Tests.EditMode
                 Assert.AreEqual(AbilityFlag.DoubleJump, core.Data.GetFlags(owner).AbilityFlags);
                 Assert.AreEqual(AbilityFlag.None, core.Data.GetEquipmentStatus(owner).activeFlags);
                 Assert.AreEqual(0f, core.Data.GetEquipmentStatus(owner).totalWeight);
-                Assert.AreEqual(17, core.Data.GetEquipmentStatus(owner).finalAttack.slash);
-                Assert.AreEqual(core.Data.GetCombatStats(owner).attack, core.Data.GetEquipmentStatus(owner).finalAttack);
+                Assert.AreEqual(17, core.Data.GetCombatStats(owner).attack.slash);
                 Assert.AreEqual(100, core.Data.GetVitals(owner).currentHp);
                 Assert.IsFalse(core.Equipment.GetHolder(owner).HasCore);
                 notifications++;
@@ -122,12 +121,11 @@ namespace Game.Tests.EditMode
             using IDisposable subscription = core.Events.OnCharacterStatsChanged.Subscribe(ownerHash =>
             {
                 notifications++;
-                EquipmentStatus equipment = core.Data.GetEquipmentStatus(ownerHash);
                 CombatStats combat = core.Data.GetCombatStats(ownerHash);
-                Assert.AreEqual(combat.attack, equipment.finalAttack);
-                Assert.AreEqual(combat.defense, equipment.finalDefense);
-                Assert.AreEqual(combat.guardStats, equipment.finalGuardStats);
-                Assert.AreEqual(core.Data.GetVitals(ownerHash).maxArmor, core.Data.GetDefenseState(ownerHash).maxArmor);
+                Assert.AreEqual(notifications == 1 ? 47 : 17, combat.attack.slash);
+                Assert.AreEqual(notifications == 1 ? 10 : 7, combat.defense.fire);
+                Assert.AreEqual(notifications == 1 ? 30f : 15f, combat.guardStats.guardStrength);
+                Assert.AreEqual(notifications == 1 ? 24f : 20f, core.Data.GetVitals(ownerHash).maxArmor);
                 Assert.AreEqual(1.5f, core.Data.GetStatusEffects(ownerHash).AttackMultiplier);
                 Assert.AreEqual(ActState.Guarding, core.Data.GetFlags(ownerHash).ActState);
             });
@@ -171,7 +169,7 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(0.2f, core.Data.GetDefenseState(k_Owner).guardElapsedTime);
             Assert.AreEqual(9f, core.Data.GetDefenseState(k_Owner).continuousJustGuardUntil);
             Assert.AreEqual(0.8f, core.Data.GetDefenseState(k_Owner).armorRecoveryTimer);
-            Assert.AreEqual(20f, core.Data.GetDefenseState(k_Owner).maxArmor);
+            Assert.AreEqual(20f, core.Data.GetVitals(k_Owner).maxArmor);
             Assert.AreEqual(17, core.Data.GetBaseStats(k_Owner).combat.attack.slash);
             Assert.AreEqual(100, core.Data.GetBaseStats(k_Owner).maxHp);
         }

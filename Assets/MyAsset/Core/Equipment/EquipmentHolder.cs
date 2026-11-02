@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Game.Core
 {
@@ -28,6 +29,9 @@ namespace Game.Core
         private StatusEffectApplicationData[] _coreEffects = Array.Empty<StatusEffectApplicationData>();
         private StatusEffectApplicationData[] _weaponCombinedEffects = Array.Empty<StatusEffectApplicationData>();
         private StatusEffectApplicationData[] _shieldCombinedEffects = Array.Empty<StatusEffectApplicationData>();
+        private IReadOnlyList<StatusEffectApplicationData> _coreEffectView = Array.Empty<StatusEffectApplicationData>();
+        private IReadOnlyList<StatusEffectApplicationData> _weaponEffectView = Array.Empty<StatusEffectApplicationData>();
+        private IReadOnlyList<StatusEffectApplicationData> _shieldEffectView = Array.Empty<StatusEffectApplicationData>();
 
         public IEquippable Weapon => _weapon;
         public IEquippable Shield => _shield;
@@ -51,6 +55,10 @@ namespace Game.Core
             if (item == null)
             {
                 throw new ArgumentNullException(nameof(item));
+            }
+            if (item is IEquipmentStatsProvider provider)
+            {
+                provider.StatModifiers.statusDefense.Validate();
             }
 
             IEquippable previous = null;
@@ -142,13 +150,13 @@ namespace Game.Core
             return removed;
         }
 
-        public StatusEffectApplicationData[] GetOnHitEffects(AttackEquipmentSource source)
+        public IReadOnlyList<StatusEffectApplicationData> GetOnHitEffects(AttackEquipmentSource source)
         {
             switch (source)
             {
-                case AttackEquipmentSource.None: return _coreEffects;
-                case AttackEquipmentSource.Weapon: return _weaponCombinedEffects;
-                case AttackEquipmentSource.Shield: return _shieldCombinedEffects;
+                case AttackEquipmentSource.None: return _coreEffectView;
+                case AttackEquipmentSource.Weapon: return _weaponEffectView;
+                case AttackEquipmentSource.Shield: return _shieldEffectView;
                 default: throw new ArgumentOutOfRangeException(nameof(source));
             }
         }
@@ -157,6 +165,9 @@ namespace Game.Core
         {
             _weaponCombinedEffects = Combine(_weaponEffects, _coreEffects);
             _shieldCombinedEffects = Combine(_shieldEffects, _coreEffects);
+            _coreEffectView = Array.AsReadOnly(_coreEffects);
+            _weaponEffectView = Array.AsReadOnly(_weaponCombinedEffects);
+            _shieldEffectView = Array.AsReadOnly(_shieldCombinedEffects);
         }
 
         private static StatusEffectApplicationData[] Combine(StatusEffectApplicationData[] first,

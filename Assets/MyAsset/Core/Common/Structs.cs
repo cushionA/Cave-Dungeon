@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -36,15 +37,15 @@ namespace Game.Core
 
         [ShowInInspector, ReadOnly, LabelText("合計")]
         [Tooltip("物理: 斬+打+突 / 魔法: 炎+雷+聖+闇")]
-        public int Total => slash + strike + pierce + fire + thunder + light + dark;
+        public readonly int Total => slash + strike + pierce + fire + thunder + light + dark;
 
         [ShowInInspector, ReadOnly, LabelText("物理計")]
-        public int PhysicalTotal => slash + strike + pierce;
+        public readonly int PhysicalTotal => slash + strike + pierce;
 
         [ShowInInspector, ReadOnly, LabelText("魔法計")]
-        public int MagicalTotal => fire + thunder + light + dark;
+        public readonly int MagicalTotal => fire + thunder + light + dark;
 
-        public int Get(Element element)
+        public readonly int Get(Element element)
         {
             switch (element)
             {
@@ -157,6 +158,7 @@ namespace Game.Core
         public ActorRef attackerRef;
         public ActorRef defenderRef;
         public AttackContext attackContext;
+        public AttackTargetPolicy targetPolicy;
         public long actionInstanceId;
         public int attackerHash;
         public int defenderHash;
@@ -165,7 +167,7 @@ namespace Game.Core
         public Vector2 knockbackForce;
         public Element attackElement;
         public StatusEffectApplicationData[] statusEffects;
-        public StatusEffectApplicationData[] equipmentStatusEffects;
+        public IReadOnlyList<StatusEffectApplicationData> equipmentStatusEffects;
         public AttackFeature feature;
         public float guardDamage;
         public float armorBreakValue;
@@ -202,9 +204,9 @@ namespace Game.Core
         [MinValue(0), LabelText("持続(秒)")] public float duration;
         [LabelText("効果量")] public float value;
 
-        public float EndTime => startTime + duration;
+        public readonly float EndTime => startTime + duration;
 
-        public bool IsActive(float elapsedTime)
+        public readonly bool IsActive(float elapsedTime)
         {
             return elapsedTime >= startTime && elapsedTime < EndTime;
         }
@@ -214,6 +216,8 @@ namespace Game.Core
     public struct AttackMotionData
     {
         public long actionInstanceId;
+        [FoldoutGroup("対象条件")]
+        public AttackTargetPolicy targetPolicy;
         [FoldoutGroup("基本")]
         [LabelText("行動名")] public string actionName;
         [FoldoutGroup("基本")]
@@ -240,7 +244,7 @@ namespace Game.Core
 
         [FoldoutGroup("状態異常")]
         public StatusEffectApplicationData[] statusEffects;
-        public StatusEffectApplicationData[] equipmentStatusEffects;
+        public IReadOnlyList<StatusEffectApplicationData> equipmentStatusEffects;
 
         [FoldoutGroup("移動")]
         [MinValue(0)] public float attackMoveDistance;

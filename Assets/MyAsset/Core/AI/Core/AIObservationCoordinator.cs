@@ -54,15 +54,14 @@ namespace Game.Core
             for (int i = 0; i < _hashes.Count; i++)
             {
                 int hash = _hashes[i];
-                if (!_actors.TryGet(hash, out ActorRef actor) || _data.GetVitals(hash).currentHp <= 0
-                    || _data.GetFlags(hash).ActState == ActState.Dead) { RemoveHash(hash); continue; }
-                if (_data.GetFlags(hash).IsVanished) { Targets.RemoveHash(hash); continue; }
+                if (!_actors.TryGet(hash, out ActorRef actor)) { RemoveHash(hash); continue; }
+                ref readonly CharacterVitals vitals = ref _data.GetVitals(hash);
+                ref readonly CharacterFlags flags = ref _data.GetFlags(hash);
+                if (vitals.currentHp <= 0 || flags.ActState == ActState.Dead) { RemoveHash(hash); continue; }
+                if (flags.IsVanished) { Targets.RemoveHash(hash); continue; }
                 RegisterActor(actor);
-                Observation.AddActor(new AIActorObservation
-                {
-                    actor = actor, vitals = _data.GetVitals(hash),
-                    combat = _data.GetCombatStats(hash), flags = _data.GetFlags(hash),
-                });
+                AIActorObservation snapshot = AIActorObservation.Capture(actor, vitals, _data.GetCombatStats(hash), flags);
+                Observation.AddActor(snapshot);
             }
             Observation.SetDamageScoresAvailable();
             foreach (KeyValuePair<ActorRef, DamageScoreTracker> owner in _scores)

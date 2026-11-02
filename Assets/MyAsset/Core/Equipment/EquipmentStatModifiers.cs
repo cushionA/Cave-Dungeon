@@ -18,6 +18,8 @@ namespace Game.Core
         public float intelligenceScaling;
         public bool overridesGuard;
         public GuardStats guardStats;
+        /// <summary>共通・効果別の蓄積軽減率と閾値への加算補正、免疫の付与。</summary>
+        public StatusEffectDefenseProfile statusDefense;
     }
 
     /// <summary>補正を持たない既存IEquippableも引き続き使用できる任意の入力契約。</summary>

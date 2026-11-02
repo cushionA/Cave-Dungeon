@@ -60,7 +60,7 @@ PRレビューや実装中に発生した「今すぐではないが後で対応
 
 各項目は設定元→共有データ→利用先の呼び出し経路と検証範囲を `designs/call-paths.json`・機能DBへ記録する。純ロジックのテスト成功、Unity連携のコンパイル成功、Unity上の動作確認は区別する。
 
-### 共有実行・観測の構造整理（2026-10-26、未コミット）
+### 共有実行・観測の構造整理（2026-10-26、439e429）
 
 - 行動要求は`ActionCommand`へ明示変換し、技の永続ID・標的・チャージ倍率・実行variantを保持する。旧`ActionSlot`/配列番号はID空の既存保存だけの互換入口。新規作者データ・UI・builderは永続IDを保存する。未知IDで番号へ戻さず、未実装行動はUnsupportedとする。
 - 共通実行は`groupId`で必須activeとqueued後続を管理し、一度だけ全体完了を通知する。Detachedは独立寿命。全group置換は全メンバーの占有/優先度/キャンセル可否を検証してから原子的に受理し、拒否時は旧行動・費用を保持する。自然接地はCompleted＋同group Recoveryへ原子継続し、元Completed後続はRecovery終了まで待機する。Player独自の空中・落下・着地タイマーと状態boolを除去した。
@@ -71,7 +71,7 @@ PRレビューや実装中に発生した「今すぐではないが後で対応
 - **検証**: 純Coreをリンクする外部.NET/C#9回帰197件成功（HitResolver既存全クラスのうち今回追加した消滅拒否1件だけを追加実行）、通知境界の新規2件は修正前失敗→修正後成功。Unityの値型/属性の最小代替とNative classからのvalue宣言抽出は検証用であり、Unityの型/APIコンパイル・物理・ライフサイクルの実行成功には数えない。証拠は`/workspace/.cave-dungeon/action-flow-harness/`、経路と実行済みSHA-256は`designs/call-paths.json`へ記録。
 - **残件**: 個体別知覚・地形/環境物/弾接近・AIイベント履歴の入力、解放キーの旧番号からの保存移行、未使用の作者charge設定と入力側設定元の統合、表示資源の解放/明示的な再読込契約、重量/持ち方性能、HPとMPバリアの仕様確定。これらを実装済み・検証済み扱いにしない。
 
-### キャラクター物理境界と固定更新（2026-10-26、未コミット）
+### キャラクター物理境界と固定更新（2026-10-26、439e429）
 
 - 共通基底`BaseCharacter`へキャラの物理APIを集約し、`ICharacterPhysics2D`と`CreateCharacterPhysics()`を差替え口にする。Rigidbody2D/Collider2D/Physics2Dの操作は既存backend内へ移し、Player/Enemy/Companion・共通行動・ノックバック・運搬・デバッグ位置リセットを接続した。既存ステージ物理は維持する。Projectileとlegacy SimpleEnemyBrainは別経路。
 - 中央`SimulationTickRunner`で、対象世代固定→物理観測→全入力公開→共有処理/資源/AI観測→全キャラ判断→共通移動の最終補正を実行し、その後Unity物理へ渡す。各キャラの独立FixedUpdateを廃止。世代変更・pool返却は後段から除外し、component無効時は観測を維持して入力/制御を止める。
@@ -80,7 +80,83 @@ PRレビューや実装中に発生した「今すぐではないが後で対応
 - **検証**: 外部.NET/C#9の純ロジック・変換279件成功（既存265＋固定tick runner8＋入力時計/チャージ6）、source変更0。runner未実装時の8件失敗と、時計初版の逆行回帰1件失敗を保存。変更C#119ファイル×3構成の構文確認成功。Native回帰23件を追加したが、Unity型/API・物理・InputSystem・ライフサイクルの実行は未確認。証拠は`/workspace/.cave-dungeon/action-flow-harness/physics-final-*`と`syntax/physics-results.json`。
 - **接続の限界**: 運搬`SyncCarriedPosition`の内側は対応したが、元からRuntime呼出元がなく自動更新は未接続。真の3D化/DOTS Physicsでは座標とステージCollider・接地・一方通行床等も併せて移行する。実機入力遅延・衝突挙動の計測、完全な遅延書込みは未実施。
 
-### SOから不変実行定義への変換（2026-10-26、未コミット）
+### 飛翔体の管理・更新境界（2026-10-26、未コミット）
+
+- CoreとUnity表示の別々の回収を廃止し、Managerの同じ手順で両方を返す。返却要求は即座に弾を停止し、貸出世代を照合して固定tickで回収する。Core poolも二重・他pool・旧世代の返却を拒否し、active indexによるO(1)回収へ変更した。
+- 固定tickの対象世代を先に捕捉し、途中生成の子弾は次tickから進める。遅延の残時間・寿命の残時間・移動・重力をCoreの単一入口へ揃え、RainとGravityの二重適用、真後ろへの追尾停止、減速後の逆走を修正した。
+- Unity側は移動区間のsweepと接触通知を同じ命中経路へ接続する。最終寿命区間の接触を解決してから寿命切れを確定する。爆発対象の世代を通知前に捕捉し、被弾通知中の別爆発・全回収・再利用で元の処理対象を取り違えない。
+- 作者の`aoeRadius`を爆発へ、`projectilePrefab`を登録時snapshotとPrefab別表示プールへ接続した。Prefab未指定はManagerの既定を使う。作者の発数0→1と有限`pierceCount + 1`は互換を維持し、Runtime直接発射のcount<=0は0発にする。
+- 発射時`AttackContext`・対象/射手の世代・受理済みアクションの発射保証を維持する。子弾の同方向複数発も全数生成する。アクションの分割機構、DOTS/Jobs/Burst、ステージ物理の方式は変更していない。
+- **純実行の証拠**: 外部.NET/C#9で327件成功（既存279＋既存弾Core/移動/子弾15＋作者変換19＋新規simulation/lease14）、実行中source変更0。旧実Core10ケース中9失敗→修正後14成功、作者変換36ケース中2失敗→36成功の証拠を保存。`/workspace/.cave-dungeon/action-flow-harness/projectile-reviewed-*`と`ProjectileFlow-README.txt`を参照。Unity値/参照の最小adapterと宣言抽出を使い、Native SoA・Physics2D・Manager/Controllerの実行成功には数えない。
+- **Unity向け回帰**: 実Managerを通すEditMode12件と高速弾/寿命末尾/接触重複/callback中の再利用を確認するPlayMode5件を追加したが未実行。変更C#18ファイル×3構成はC#9構文エラー0、検査中source変更0。証拠は`/workspace/.cave-dungeon/action-flow-harness/syntax/projectile-results.json`。新規4ファイルの`.meta`はGUID形式と重複を確認した。
+- **残件**: Unity上の型/APIコンパイル・衝突/表示/ライフサイクル・GC/性能計測、ShotAnchor・遅延二分化・複数Profile、未実装特性。sweepは現行の円形Colliderと相手のtick開始時物理位置を使い、相手自身の高速移動を含む相対移動の連続判定は未実装。子弾timerは従来どおり1tick最大1回で、経過した全周期の追いつき発射は行わない。Recover弾の負値/整数overflow対策は今回変更していない。設計現状は`designs/systems/MagicSystem.md`を参照。
+
+### 陣営と攻撃対象条件の統一（2026-10-27、未コミット）
+
+- 作者入力`AttackInfo.targetPolicy`を登録時に値へ解決し、近接・弾・子弾へ伝播する。`overrideTargets`で既定と明示Noneを区別し、Hostile/Friendly/Self/Neutralの組合せを設定できる。既定はAttack/SupportがHostile、RecoverがFriendly|Self。未定義bitは登録時に拒否する。
+- 純`AttackTargetRules`へ関係判定を集約した。近接開始/弾発射時の`AttackContext`に発生元の陣営・対象条件を捕捉し、対象の現在世代・現在陣営と照合する。近接2経路、弾接触/sweep、爆発、明示/自動追尾、受け側防御を接続。対象外は総/個別ヒット数・重複記録・爆発・子弾より前に除外する。
+- **純検証**: 外部.NET/C#9で383件成功（前回327＋共通ルール29＋作者変換13＋resolver7＋既存Hitbox6/新規世代1）、実行中source変更0。作者未接続13件中12失敗→13成功、保存した旧実resolver7件中4失敗→7成功を確認。新共通APIの未実装skeleton29件失敗も別証拠として保持する。`/workspace/.cave-dungeon/action-flow-harness/target-candidate-*`と`TargetPolicyFlow-README.txt`を参照。Unity値/参照の最小adapterと宣言抽出を使い、Native SoA・Physics2D・MonoBehaviour実行は含めない。
+- **Unity向け回帰**: 新たに近接/受け側6件、弾/爆発/追尾/自己回復8件を追加し、既存4fixtureの陣営・対象条件を明示した。14件は未実行。前回弾管理修正を含む変更C#39ファイル×3構成のC#9構文エラー0、検査中source変更0。累積新規C#10ファイルのmeta/GUID形式と一意性も確認。証拠は`/workspace/.cave-dungeon/action-flow-harness/syntax/target-results.json`。実Unityの型/APIコンパイル・実行・性能計測は未確認。
+- **境界**: 追尾の操舵対象はtick開始観測、命中可否はその場の陣営を再評価。捕捉・明示条件のない旧`ReceiveDamage` packetは発生元なしダメージとの互換として維持し、明示条件には発生元解決と共通判定を必須にする。トラップ発射元・近接の回復効果は今回追加しない。詳細は`designs/systems/DamageSystem.md`。
+
+### 状態異常の防御データ接続（2026-10-27、未コミット）
+
+- `StatusEffectDefenseProfile`をキャラ・武器・盾・コアの共通形式にし、CombatStatsへ値として保持する。共通/個別蓄積軽減、共通閾値倍率、15効果別の閾値・免疫を設定可能。基礎値から毎回合成し、着脱・再計算で補正が累積しない。
+- 未接続だった旧`CharacterInfo.statusResistance`は元の『発症閾値×(1+値)』意図で一度だけ登録へ合成し、名前/型を維持したInspector非表示の互換入力にした。新規入力は`statusDefense`へ統一。旧値を新フィールドへ自動コピーしない。
+- `StatusEffectSystem`の全writerが対象の現在の防御値を読み、Storeのtyped入口へ渡す。蓄積量軽減・閾値・免疫を共通処理し、即時付与は明示免疫だけを適用する。自己付与にも現在の防御値を使用。発生元/対象の世代・guard・死亡・callback中再登録の保証を維持する。
+- **検証**: 外部.NET/C#9で460件成功（前回383＋既存状態異常21＋新Profile33・作者/装備11・Store12）、実行中source変更0。最終作者未接続9件中8失敗→成功、初版typedStore未接続12件中10失敗→成功、不正装備preflight未実装2件失敗→成功を保存。新API未実装skeletonと、設計確定前の初期Redは別証拠として区別する。`/workspace/.cave-dungeon/action-flow-harness/resistance-candidate-*`と`ResistanceFlow-README.txt`参照。実CharacterInfoの登録変換もリンクしているが、Unity値/参照の最小adapterを使いNative実行とは区別する。
+- **Unity向け回帰**: 現在耐性・世代・自己付与を通すEditMode7件と、実被弾/弾の付与pipelineを通すPlayMode2件を追加、9件とも未実行。前回変更を含むC#53ファイル×3構成のC#9構文エラー0、検査中source変更0。累積新規C#16ファイルのmeta/GUID形式・一意性も確認。証拠は`/workspace/.cave-dungeon/action-flow-harness/syntax/resistance-results.json`。
+- **契約と残件**: 免疫取得で過去の異常/蓄積を消さず、閾値変更で即発症させない。現在値は次の有効な付与で評価する。仮の効果別バランス値や耐性による持続時間短縮は導入しない。Unity上の型/APIコンパイル・実SoA・物理・実行/性能計測は未確認。詳細の計算順・旧cut互換は`designs/systems/DamageSystem.md`。
+
+### SoAデータフロー監査（2026-10-27、未コミット）
+
+6担当＋rootで、独自SoAの登録→更新→参照→破棄と、作者設定・装備・行動・AI・戦闘・物理/入力の境界を監査した。Native格納対象の宣言10構造体を入れ子まで検査し、意図しない参照型混入は0。`ManagedCharacter`や作者/表示/攻撃snapshotのmanaged参照は役割を持つ境界として残す。Unity.Entitiesの導入や全面移行は行っていない。
+
+- **修正済み**: 14修正群。最大アーマーと攻防の重複正本を除去し、装備効果・AI設定・弾照会の可変参照漏れ、通知中の再登録/再入、命令や状態異常の非有限値入力を修正した。基礎/成長→導出値、Store→状態要約、tick観測、発射時snapshotは役割が異なるため保持する。
+- **検証**: 外部.NET/C#9の純回帰623件成功（前460＋新規監査77＋今回初実行の既存AI86）、失敗0・実行中source変更0。Native回帰16件を追加したが未実行。Unity型/API・生成SoAのNative ABI・物理/ライフサイクル・Jobs/Burstの成功は未確認。証拠は`/workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*`と`SoAAuditFlow-README.txt`。
+- **統合記録**: `designs/soa-data-flow-audit.json`に担当・正本判断・field別の接続状況・修正/残件・最終source SHAを記録。未接続と未使用、作者/保存用と実行用を区別し、参照件数だけで削除しない。
+
+- [ ] 🟡✓ **監査修正のUnity検証** — 追加Native回帰16件と実生成APIを確認する
+  - **背景**: 純回帰は実Coreを使うが、Unity値/参照の最小adapterを含み、Native実行を代替しない。
+  - **仕様**: Unityで生成物を再ビルドし、登録拒否・破棄済み参照・アーマー・AI snapshot・弾照会・通知世代の回帰を実行する。ABI変更と実ライフサイクルを確認し、純成功とは別に記録する。
+  - **対象ファイル**: `designs/soa-data-flow-audit.json`の`implemented_fix_groups`・`verification`
+
+- [ ] 🟡⚠ **AI設定の適用と評価を接続（AI-04/05/06/09）** — UIの現在戦術が実行AIへ届かず、`probability`・弱点AND等も評価へ未接続
+  - **背景**: UI内の保存と実AIへのpublishが別経路。未対応triggerの変換でも条件の欠落/不成立がある。
+  - **仕様**: 適用先の世代付き個体と適用tickを定義する。確率と優先度weight、弱点入力/AND・OR、未対応条件の扱いを確認して、UI表示・保存・実評価を揃える。
+  - **対象ファイル**: `Assets/MyAsset/Core/UI/CompanionAISettingsLogic.cs:329` / `Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs:111` / `Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs:175`
+
+- [ ] 🟡⚠ **AIの必要MP/SPの単位を統一（AI-08）** — 必要絶対量が0〜100の割合条件へそのまま変換される
+  - **背景**: 必要MP20に対し、MP15/50は30%で成立し、MP30/200は15%で不成立になる。
+  - **仕様**: 絶対量の条件を設けるか、割合入力へ変更して既存データを移行する。MP/SP両方の作者値・変換・観測・UIを同じ単位にする。
+  - **対象ファイル**: `Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs:235` / `Assets/MyAsset/Core/AI/Core/AIObservationContext.cs:136`
+
+- [ ] 🟡🔶 **未接続入力・serialized設定の契約を整理** — 設定可能でも効かない欄を接続または移行廃止する
+  - **背景**: interaction/cooperation/weapon/grip/menu/map入力、重量/持ち方・成長/保存の橋渡し、`CharacterInfo`の一部欄、旧攻撃/弾設定等に実行consumerがない。既存asset値やenum bitは保存互換を持つ。
+  - **仕様**: 統合レポートのfield inventoryに従い、現在使う値・未実装・互換入力を明示する。数式や意味を確認して接続/移行し、一括削除や未確定の性能式追加はしない。
+  - **対象ファイル**: `Assets/MyAsset/Core/ScriptableObjects/CharacterInfo.cs:249` / `Assets/MyAsset/Core/DataContainer/SoAStructs.cs` / `Assets/MyAsset/Core/Combat/Projectile/BulletProfile.cs:13` / `designs/soa-data-flow-audit.json`
+
+- [ ] 🟡⚠ **装備snapshotとcallback再入の契約を確定（STATS-04/05）** — 捕捉時点と着脱transactionを揃える
+  - **背景**: 効果はEquip時snapshotだが、補正/flags/weightはlive定義を再読込する。`OnUnequip`からの再入で途中装備の解除通知も欠落し得る（標準callbackはno-op）。
+  - **仕様**: Equip時の不変定義か明示reloadかを選ぶ。再入は拒否またはslot version付きtransactionとし、通知前後の所有権を定める。
+  - **対象ファイル**: `Assets/MyAsset/Core/Equipment/EquipmentHolder.cs:76` / `Assets/MyAsset/Core/LevelUp/CharacterStatsSystem.cs:103`
+
+- [ ] 🟢⚠ **Jobs導入前にNative借用寿命を定義** — generatedの直接ref/view/ByHashと変更・Disposeの境界を設ける
+  - **背景**: 現RuntimeはCompat入口を使うが、直接APIには変更version/Dispose guardがない。生成物に`stackalloc`はなく、10000件上限はスタック保護ではない。
+  - **仕様**: 借用期間、構造変更禁止区間、Job完了とDisposeの順序を定義して検証する。managed packetは値/ID snapshotへ変換する。容量上限の意味も実装へ合わせ、Jobs/Burst対応済みと扱わない。
+  - **対象ファイル**: `Assets/MyAsset/Core/DataContainer/SoACharaDataDic.cs:21` / `designs/soa-data-flow-audit.json`の`native_value_boundary`
+
+### 構造体のコピー削減（2026-10-28、未コミット）
+
+- **AI観測**: `AIActorObservation`を判定に必要な座標・割合・攻防合計・弱点mask等のreadonly値へ投影し、全`CombatStats`の保持と候補ごとの不要な再取得を除去した。同じtickの判断値は固定し、live SoA参照へ置き換えない。
+- **共通実行**: `ActionDefinitionSnapshot`はprivateな不変payloadを参照共有する。同内容の`UpdateDefinition`は配列要素まで比較して再捕捉を省略し、queued要求・versionの意味は維持する。攻撃開始では近接用か弾用の必要なpacketだけを生成する。
+- **Core・弾**: 純読取りメンバーを`readonly`、数値計算の読取り引数を`in`へ揃え、状態異常要約は必要な列だけを集計する。能力導出用の大きな親構造体コピーと、弾tick/追尾での`MagicDefinition`丸ごとの取得を減らした。着脱transaction・通知/世代境界のsnapshot、公開照会の独立コピーは保持する。
+- **検証**: 外部.NET/C#9の純回帰650件成功（前623＋AI観測20＋定義snapshot7）、失敗0・実行中source変更0。累積変更C#103ファイル×3構成の構文エラー0。Unity型/API・Native SoA・物理/ライフサイクルの実行は未確認、Unity Profilerでの実測も未実施。削減量をフレーム時間や実機性能の改善値として扱わない。
+- **記録**: 詳細は[構造体コピーの整理記録](../designs/struct-copy-flow.json)。実行証拠は`/workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*`と`CopyFlow-README.txt`。前回623件の証拠も保持する。装備UI/AI設定等の未接続機能、Native借用寿命やJobs/Burstの導入は前節の残件を継続する。
+- **readonly引数の追補**: 頻繁な移動設定・命中packet構築・行動判定・状態異常内部転送・Runtimeの保管前中継を再確認し、29メソッドの31構造体引数を`in`化した。ジャンプ設定とスタミナ参照が同じ領域を指す場合も、消費前の跳躍力を返す意味を維持する。
+- **追補検証と判断**: 純回帰694件成功（前650＋今回初実行の既存43＋新alias境界1）、source変更0。累積変更C#107ファイル×3構成の構文エラー0。小型値・編集用コピー・通知/生成/被弾の時点固定・interface/delegate契約は一律変更しない。旧AI互換・登録/UI処理の候補は低優先として記録した。[readonly引数監査](../designs/in-parameter-audit.json)と`in-parameter-reviewed-*` / `InParameterFlow-README.txt`を参照。Unity型/API・Native実行・実機性能は引き続き未確認。
+
+### SOから不変実行定義への変換（2026-10-26、439e429）
 
 - `ActionCatalog` が全到達グラフを先に検証・捕捉し、IDを解決してから公開する。循環を許容し、不正な子定義・遷移・数値で既存の登録を壊さない。variant・着地Recoveryも初回の捕捉値を継承する。
 - `ActionDefinitionSnapshot` の値と効果/遷移の読取専用ビューを共有し、実行照会5経路・通知からの配列書換えを防ぐ。読取りごとの配列コピーは増やさず、派生登録用の編集可能コピーと実行ごとの技packetだけを分離する。

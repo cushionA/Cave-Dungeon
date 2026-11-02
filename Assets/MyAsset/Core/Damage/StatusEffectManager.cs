@@ -32,7 +32,7 @@ namespace Game.Core
 
     public class StatusEffectManager
     {
-        public const float k_DefaultThreshold = 100f;
+        public const float k_DefaultThreshold = StatusEffectDefenseProfile.DefaultThreshold;
 
         private readonly int _targetHash;
 
@@ -58,6 +58,11 @@ namespace Game.Core
             return Store.Accumulate(_targetHash, info, statusCut, sourceHash);
         }
 
+        public bool Accumulate(StatusEffectInfo info, in StatusEffectDefense defense, int sourceHash = 0)
+        {
+            return Store.Accumulate(_targetHash, info, defense, sourceHash);
+        }
+
         public bool Accumulate(StatusEffectId id, float value, float statusCut)
         {
             return Accumulate(new StatusEffectInfo
@@ -73,6 +78,11 @@ namespace Game.Core
         public bool Apply(StatusEffectInfo info, int sourceHash = 0)
         {
             return Store.Apply(_targetHash, info, sourceHash);
+        }
+
+        public bool Apply(StatusEffectInfo info, in StatusEffectDefense defense, int sourceHash = 0)
+        {
+            return Store.Apply(_targetHash, info, defense, sourceHash);
         }
 
         public int Tick(float deltaTime) => Store.Tick(_targetHash, deltaTime);

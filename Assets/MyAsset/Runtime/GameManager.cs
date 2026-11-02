@@ -207,7 +207,7 @@ namespace Game.Runtime
         {
             AIObservationContext observation = Observation;
             return observation != null && observation.TryGetActor(hash, out AIActorObservation actor)
-                ? actor.vitals.position : fallback;
+                ? actor.position : fallback;
         }
 
         private void LateUpdate()

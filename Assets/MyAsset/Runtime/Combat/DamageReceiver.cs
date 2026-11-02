@@ -41,14 +41,13 @@ namespace Game.Runtime
             GameManager.Actions?.SetActionEffects(ObjectHash, null);
         }
 
-        public void SetArmorRecoveryParams(float maxArmor, float recoveryRate, float recoveryDelay)
+        public void SetArmorRecoveryParams(float recoveryRate, float recoveryDelay)
         {
             if (!GameManager.IsCharacterValid(ObjectHash))
             {
                 return;
             }
             ref CharacterDefenseState state = ref GameManager.Data.GetDefenseState(ObjectHash);
-            state.maxArmor = maxArmor;
             state.armorRecoveryRate = recoveryRate;
             state.armorRecoveryDelay = recoveryDelay;
         }
@@ -63,7 +62,6 @@ namespace Game.Runtime
             ref CharacterDefenseState state = ref GameManager.Data.GetDefenseState(ObjectHash);
             state = new CharacterDefenseState
             {
-                maxArmor = state.maxArmor,
                 armorRecoveryRate = state.armorRecoveryRate,
                 armorRecoveryDelay = state.armorRecoveryDelay,
                 continuousJustGuardUntil = -1f,
@@ -101,12 +99,25 @@ namespace Game.Runtime
             if (attack.defenderRef.IsValid && (actors == null || attack.defenderRef != targetRef)) { return default; }
             if (attack.attackerRef.IsValid && !attack.attackContext.IsCaptured
                 && (actors == null || !actors.IsCurrent(attack.attackerRef))) { return default; }
-            if (attack.attackContext.IsCaptured) { attack.attackContext.ApplyTo(ref attack, targetRef); }
+            if (attack.attackContext.IsCaptured)
+            {
+                if (!CombatDataHelper.CanAffectTarget(attack.attackContext, targetRef,
+                    GameManager.Data, actors)) { return default; }
+                attack.attackContext.ApplyTo(ref attack, targetRef);
+            }
+            else if (attack.targetPolicy.overrideTargets)
+            {
+                // Explicit conditions on the legacy direct API must not bypass the shared rule.
+                if (actors == null || !actors.TryGet(attack.attackerHash, out ActorRef source)
+                    || !GameManager.IsCharacterValid(source.Hash)
+                    || !AttackTargetRules.CanAffect(source, GameManager.Data.GetFlags(source.Hash).Belong,
+                        targetRef, GameManager.Data.GetFlags(hash).Belong, attack.targetPolicy.Resolve()))
+                { return default; }
+            }
 
             SoACharaDataDic data = GameManager.Data;
             CharacterDefenseState defense = data.GetDefenseState(hash);
             defense.actionArmorConsumed = 0f;
-            CombatStats combat = data.GetCombatStats(hash);
             ActState previousState = data.GetFlags(hash).ActState;
             HitContext context = new HitContext
             {
@@ -120,9 +131,15 @@ namespace Game.Runtime
                 bonusConfig = _bonusConfig,
             };
 
-            HitResolution resolution = HitResolver.Resolve(attack,
-                ref data.GetVitals(hash), combat, ref data.GetFlags(hash),
-                ref defense, context);
+            float guardStatusCut;
+            HitResolution resolution;
+            {
+                ref readonly CombatStats combat = ref data.GetCombatStats(hash);
+                guardStatusCut = combat.guardStats.statusCut;
+                resolution = HitResolver.Resolve(attack,
+                    ref data.GetVitals(hash), in combat, ref data.GetFlags(hash),
+                    ref defense, context);
+            }
             if (resolution.ignored)
             {
                 return resolution.result;
@@ -143,23 +160,25 @@ namespace Game.Runtime
             if (sameTarget && attack.attackContext.IsCaptured)
             {
                 result.appliedEffect = GameManager.StatusEffects.ApplyApplications(
-                    attack.attackContext, hash, result.guardResult, combat.guardStats.statusCut);
+                    attack.attackContext, hash, result.guardResult, guardStatusCut);
             }
             else if (sameTarget)
             {
                 result.appliedEffect = GameManager.StatusEffects.ApplyApplications(
                     attack.statusEffects, attack.attackerHash, hash, result.guardResult,
-                    combat.guardStats.statusCut, attack.equipmentStatusEffects);
+                    guardStatusCut, attack.equipmentStatusEffects);
             }
 
             GameEvents events = GameManager.Events;
             if (events != null)
             {
                 events.FireDamageDealt(result, attack.attackerHash, hash);
-                if (result.guardResult != GuardResult.NoGuard)
+                if (result.guardResult != GuardResult.NoGuard
+                    && (actors == null || actors.IsCurrent(targetRef)))
                 {
-                    events.FireGuardEvent(hash, attack.attackContext.IsCaptured
-                        ? attack.attackContext.GetLiveSourceHash(actors) : attack.attackerHash, result.guardResult);
+                    int liveAttackerHash = actors == null ? attack.attackerHash
+                        : actors.IsCurrent(result.attackerRef) ? result.attackerRef.Hash : 0;
+                    events.FireGuardEvent(hash, liveAttackerHash, result.guardResult);
                 }
                 if (result.isKill)
                 {
@@ -175,7 +194,7 @@ namespace Game.Runtime
             return result;
         }
 
-        private bool IsAttackFromFront(DamageData attack)
+        private bool IsAttackFromFront(in DamageData attack)
         {
             if (attack.knockbackForce.sqrMagnitude < 0.001f)
             {

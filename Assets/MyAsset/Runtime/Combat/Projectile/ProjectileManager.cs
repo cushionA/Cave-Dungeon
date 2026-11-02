@@ -6,8 +6,8 @@ namespace Game.Runtime
 {
     /// <summary>
     /// 全飛翔体のライフサイクルを管理するマネージャー。
-    /// Core ProjectilePool + Unity GameObjectプールの二重プール同期。
-    /// ProjectileMovement.UpdateAllで一括移動→各ControllerのSyncTransformで表示同期。
+    /// CoreとGameObjectを同じleaseとして確保・返却し、固定tick開始時の集合だけを進める。
+    /// Controllerは表示とUnity接触を担当し、生成・寿命・派生・回収はここを通る。
     /// IGameSubManager を実装し、GameManager から Priority 順に初期化される。
     /// </summary>
     public class ProjectileManager : MonoBehaviour, IGameSubManager
@@ -20,17 +20,61 @@ namespace Game.Runtime
 
         private ProjectilePool _corePool;
         private Queue<ProjectileController> _goPool;
-        private List<ProjectileController> _activeControllers;
+        private List<ProjectileStep> _activeProjectiles;
         private Transform _poolParent;
 
-        // 返却予約集合（OnTriggerEnter2D中のリスト改変を防ぐ）。
-        // HashSet で O(1) の重複チェック+追加 (Issue #75 HIGH-Perf-2)。
-        private HashSet<ProjectileController> _pendingReturns;
-
-        // 爆発処理用の再利用バッファ
+        private Dictionary<GameObject, Queue<ProjectileController>> _prefabPools;
+        private List<ProjectileStep> _tickSnapshot;
         private List<int> _allHashesBuffer;
+        private List<ExplosionQuery> _explosionQueries;
+        private int _explosionDepth;
+        private bool _isTicking;
+        private bool _isClearing;
+        private uint _clearVersion;
 
-        public int ActiveCount => _activeControllers != null ? _activeControllers.Count : 0;
+        private readonly struct ProjectileStep
+        {
+            public readonly ProjectileController controller;
+            public readonly Projectile core;
+            public readonly ulong lease;
+            public ProjectileStep(ProjectileController controller, Projectile core, ulong lease)
+            {
+                this.controller = controller;
+                this.core = core;
+                this.lease = lease;
+            }
+        }
+
+        private sealed class ExplosionQuery
+        {
+            public readonly List<int> hashes = new List<int>(64);
+            public readonly List<ActorRef> targets = new List<ActorRef>(64);
+        }
+
+        private readonly struct ChildSpawn
+        {
+            public readonly MagicDefinition magic;
+            public readonly ActorRef caster;
+            public readonly ActorRef target;
+            public readonly Vector2 position;
+            public readonly Vector2 direction;
+            public readonly int count;
+            public readonly float spread;
+            public ChildSpawn(Projectile parent, in MagicDefinition parentMagic)
+            {
+                ChildBulletConfig config = parentMagic.childBullet;
+                magic = ChildBulletHelper.CreateChildMagic(parentMagic, config);
+                caster = parent.CasterRef;
+                target = parent.TargetRef;
+                position = parent.Position;
+                direction = parent.Velocity.sqrMagnitude > 0.001f ? parent.Velocity.normalized
+                    : (parent.InitialDirection.sqrMagnitude > 0.001f ? parent.InitialDirection : Vector2.right);
+                count = config.count;
+                spread = config.spreadAngle;
+            }
+        }
+
+        public int ActiveCount => _activeProjectiles != null ? _activeProjectiles.Count : 0;
 
         /// <summary>IGameSubManager 初期化順。数値が小さいほど先。</summary>
         public int InitOrder => k_InitOrder;
@@ -45,11 +89,11 @@ namespace Game.Runtime
         }
 
         /// <summary>
-        /// IGameSubManager 実装。MonoBehaviour の OnDestroy との重複解放を避けるため No-op。
+        /// IGameSubManager 実装。ClearAllは繰り返し呼んでも同じleaseを二重返却しない。
         /// </summary>
         void IGameSubManager.Dispose()
         {
-            // OnDestroy 側で ClearAll を呼ぶため、ここでは何もしない
+            ClearAll();
         }
 
         /// <summary>
@@ -57,11 +101,15 @@ namespace Game.Runtime
         /// </summary>
         public void Initialize()
         {
-            _corePool = new ProjectilePool(_preWarmCount);
+            if (_corePool != null) { return; }
+            int preWarm = Mathf.Max(0, _preWarmCount);
+            _corePool = new ProjectilePool(preWarm);
             _goPool = new Queue<ProjectileController>();
-            _activeControllers = new List<ProjectileController>();
-            _pendingReturns = new HashSet<ProjectileController>();
+            _activeProjectiles = new List<ProjectileStep>(preWarm);
+            _prefabPools = new Dictionary<GameObject, Queue<ProjectileController>>();
+            _tickSnapshot = new List<ProjectileStep>(preWarm);
             _allHashesBuffer = new List<int>(64);
+            _explosionQueries = new List<ExplosionQuery> { new ExplosionQuery() };
 
             // プール用の非表示親オブジェクト
             GameObject poolObj = new GameObject("[ProjectilePool]");
@@ -72,10 +120,10 @@ namespace Game.Runtime
             // GameObjectプレウォーム
             if (_defaultProjectilePrefab != null)
             {
-                for (int i = 0; i < _preWarmCount; i++)
+                Queue<ProjectileController> pool = GetControllerPool(_defaultProjectilePrefab);
+                for (int i = 0; i < preWarm; i++)
                 {
-                    ProjectileController controller = CreatePooledController();
-                    _goPool.Enqueue(controller);
+                    pool.Enqueue(CreatePooledController(_defaultProjectilePrefab));
                 }
             }
         }
@@ -104,34 +152,48 @@ namespace Game.Runtime
             return SpawnCapturedProjectile(caster, magic, position, direction, target);
         }
 
-        private ProjectileController SpawnCapturedProjectile(ActorRef caster, MagicDefinition magic,
+        private ProjectileController SpawnCapturedProjectile(ActorRef caster, in MagicDefinition magic,
             Vector2 position, Vector2 direction, ActorRef target)
         {
-            if (!magic.attackContext.IsCaptured || magic.attackContext.Owner != caster) { return null; }
-            // Issue #78 M5 撤回: MagicDefinition / BulletProfile はいずれも struct (値型) のため
-            // null 比較は不可能 (CS0019)。NRE 起因の「弾が出ない」silent bug は元々発生し得ないため
-            // 入口 null チェックは不要 (struct はデフォルト値で初期化される)。
-            // 代替の健全性検証 (bulletCount <= 0 等) は将来必要なら別 issue で対応する。
-
-            // spawnOffset をローカル座標(forward/up)で解釈してワールド座標にオフセット
+            if (_corePool == null || _isClearing || !magic.attackContext.IsCaptured
+                || magic.attackContext.Owner != caster) { return null; }
             Vector2 spawnPosition = ApplyLocalSpawnOffset(position, direction, magic.bulletProfile.spawnOffset);
-
-            Projectile core = _corePool.Get();
-            core.Initialize(caster, magic.bulletProfile, spawnPosition, direction);
-            core.TrySetTarget(target, GameManager.Actors);
-
-            ProjectileController controller = GetOrCreateController();
-            controller.Activate(core, magic, this);
-            _activeControllers.Add(controller);
-
-            // OnActivateトリガー: 生成直後に子弾を生成
-            if (ChildBulletHelper.HasChildBullet(magic)
-                && magic.childBullet.trigger == ChildBulletTrigger.OnActivate)
+            GameObject prefab = magic.projectilePrefab != null ? magic.projectilePrefab : _defaultProjectilePrefab;
+            uint clearVersion = _clearVersion;
+            // Reparenting a designer prefab can invoke OnTransformParentChanged. Do it before leasing Core.
+            ProjectileController controller = GetOrCreateController(prefab);
+            if (controller == null) { return null; }
+            if (_isClearing || clearVersion != _clearVersion)
             {
-                SpawnChildProjectiles(core, magic);
+                controller.transform.SetParent(_poolParent, false);
+                if (controller != null) { GetControllerPool(prefab).Enqueue(controller); }
+                return null;
             }
-
-            return controller;
+            Projectile core = _corePool.Get();
+            ulong lease = core.LeaseId;
+            core.Initialize(caster, magic.bulletProfile, spawnPosition, direction);
+            if (ProjectileHitProcessor.CanAffect(core, magic, GameManager.Data, GameManager.Actors, target))
+            {
+                core.TrySetTarget(target, GameManager.Actors);
+            }
+            controller.ActiveIndex = _activeProjectiles.Count;
+            _activeProjectiles.Add(new ProjectileStep(controller, core, lease));
+            try { controller.Activate(core, magic, this); }
+            catch
+            {
+                ReturnControllerInternal(controller, core, lease, false);
+                throw;
+            }
+            if (!IsCurrent(controller, core, lease))
+            {
+                ReturnControllerInternal(controller, core, lease, false);
+                return null;
+            }
+            if (controller.HasChildTrigger(ChildBulletTrigger.OnActivate))
+            {
+                SpawnChildProjectiles(core, controller.CapturedMagic);
+            }
+            return IsCurrent(controller, core, lease) ? controller : null;
         }
 
         private bool CanBeginPublicShot(ActorRef caster) => GameManager.Actors != null
@@ -152,7 +214,7 @@ namespace Game.Runtime
                 GameManager.Data.GetCombatStats(caster.Hash).attack,
                 GameManager.Data.GetStatusEffects(caster.Hash).AttackMultiplier,
                 GameManager.Data.GetFlags(caster.Hash).Belong,
-                magic.equipmentStatusEffects, magic.statusEffects);
+                magic.equipmentStatusEffects, magic.statusEffects, magic.targetPolicy.Resolve(magic.magicType));
             return true;
         }
 
@@ -213,10 +275,11 @@ namespace Game.Runtime
             SpawnCapturedSpread(current.ownerRef, magic, position, baseDirection, count, spreadAngle, target);
         }
 
-        private void SpawnCapturedSpread(ActorRef caster, MagicDefinition magic,
+        private void SpawnCapturedSpread(ActorRef caster, in MagicDefinition magic,
             Vector2 position, Vector2 baseDirection, int count, float spreadAngle, ActorRef target)
         {
-            if (count <= 1)
+            if (count <= 0) { return; }
+            if (count == 1)
             {
                 SpawnCapturedProjectile(caster, magic, position, baseDirection, target);
                 return;
@@ -226,8 +289,10 @@ namespace Game.Runtime
             float startAngle = -spreadAngle / 2f;
             float angleStep = spreadAngle / (count - 1);
 
+            uint clearVersion = _clearVersion;
             for (int i = 0; i < count; i++)
             {
+                if (_isClearing || clearVersion != _clearVersion) { break; }
                 float angle = baseAngle + startAngle + angleStep * i;
                 float rad = angle * Mathf.Deg2Rad;
                 Vector2 dir = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
@@ -238,88 +303,70 @@ namespace Game.Runtime
 
         public void SimulationTick(float deltaTime)
         {
-            if (_activeControllers == null || _activeControllers.Count == 0)
+            if (_isTicking || _isClearing || _activeProjectiles == null || _activeProjectiles.Count == 0) { return; }
+            _isTicking = true;
+            _tickSnapshot.Clear();
+            for (int i = 0; i < _activeProjectiles.Count; i++)
             {
-                return;
+                _tickSnapshot.Add(_activeProjectiles[i]);
             }
-
-            // ホーミング弾のターゲット位置を更新
-            UpdateHomingTargets();
-
-            // Core一括移動更新
-            ProjectileMovement.UpdateAll(_corePool, deltaTime, Vector2.zero);
-
-            // 特殊効果処理（重力等）+ OnTimerチェック
-            // NOTE: SpawnChildProjectilesで_activeControllers末尾にAddされるが、
-            // 子弾のchildBulletはnull強制のため同一フレーム内で再処理されても無害
-            for (int i = 0; i < _activeControllers.Count; i++)
+            try
             {
-                Projectile core = _activeControllers[i].CoreProjectile;
-                if (core == null || !core.IsAlive)
+                // Queries observe current character bodies. Projectile sweep origins are explicit world positions.
+                Physics2D.SyncTransforms();
+                UpdateHomingTargets();
+                for (int i = 0; i < _tickSnapshot.Count; i++)
                 {
-                    continue;
-                }
-
-                // スポーン遅延中は特殊効果（重力等）や子弾タイマーを進めない
-                if (core.IsSpawnDelayed)
-                {
-                    continue;
-                }
-
-                BulletFeatureProcessor.ProcessFeatures(core, deltaTime);
-
-                // OnTimerトリガー: emitInterval経過で子弾を生成
-                MagicDefinition magic = _activeControllers[i].Magic;
-                if (ChildBulletHelper.HasChildBullet(magic)
-                    && magic.childBullet.trigger == ChildBulletTrigger.OnTimer
-                    && ChildBulletHelper.ShouldEmitOnTimer(
-                        core.ElapsedTime, core.LastEmitTime, core.Profile.emitInterval))
-                {
-                    core.LastEmitTime = core.ElapsedTime;
-                    SpawnChildProjectiles(core, magic);
-                }
-            }
-
-            // Transform同期 + 死亡チェック（逆順でリスト改変安全）
-            // NOTE: OnDestroyで子弾が末尾にAddされるが、iは減少方向のため追加分は走査されない
-            for (int i = _activeControllers.Count - 1; i >= 0; i--)
-            {
-                ProjectileController controller = _activeControllers[i];
-                if (controller.CoreProjectile == null || !controller.CoreProjectile.IsAlive)
-                {
-                    // OnDestroyトリガー: 消滅時に子弾を生成
-                    if (controller.CoreProjectile != null)
+                    ProjectileStep step = _tickSnapshot[i];
+                    if (!IsCurrent(step.controller, step.core, step.lease) || step.controller == null)
                     {
-                        MagicDefinition magic = controller.Magic;
-                        if (ChildBulletHelper.HasChildBullet(magic)
-                            && magic.childBullet.trigger == ChildBulletTrigger.OnDestroy)
+                        ReturnControllerInternal(step.controller, step.core, step.lease, false);
+                        continue;
+                    }
+                    if (step.core.IsAlive)
+                    {
+                        ProjectileMovement.UpdateProjectile(step.core, deltaTime, Vector2.zero, true);
+                        step.controller.SweepToCorePosition(step.core, step.lease);
+                        if (!IsCurrent(step.controller, step.core, step.lease)) { continue; }
+                        step.core.CompleteSimulationStep();
+                        if (step.core.IsAlive && !step.core.IsSpawnDelayed
+                            && step.controller.HasChildTrigger(ChildBulletTrigger.OnTimer)
+                            && ChildBulletHelper.ShouldEmitOnTimer(step.core.ElapsedTime,
+                                step.core.LastEmitTime, step.core.CapturedProfile.emitInterval))
                         {
-                            SpawnChildProjectiles(controller.CoreProjectile, magic);
+                            step.core.LastEmitTime = step.core.ElapsedTime;
+                            SpawnChildProjectiles(step.core, step.controller.CapturedMagic);
                         }
                     }
-
-                    ReturnControllerInternal(controller, i);
-                    continue;
+                    if (IsCurrent(step.controller, step.core, step.lease) && !step.core.IsAlive)
+                    {
+                        ReturnControllerInternal(step.controller, step.core, step.lease, true);
+                    }
                 }
-
-                controller.SyncTransform();
             }
-
-            // OnTriggerEnter2D中の返却予約を処理
-            ProcessPendingReturns();
-
-            // CorePool側の死亡弾丸クリーンアップ
-            _corePool.ReturnAllDead();
+            finally
+            {
+                _tickSnapshot.Clear();
+                _isTicking = false;
+            }
         }
 
-        /// <summary>
-        /// 飛翔体を返却する。OnTriggerEnter2Dから呼ばれる。
-        /// Update中のリスト改変を避けるため予約リストに追加する。
-        /// </summary>
+        /// <summary>接触中は死亡と判定停止だけを確定し、両poolへの返却は固定tickの単一経路で行う。</summary>
         public void ReturnProjectile(ProjectileController controller)
         {
-            // HashSet.Add は重複時 false を返すだけで例外を投げない (Contains 線形探索を排除)
-            _pendingReturns.Add(controller);
+            if (controller == null) { return; }
+            Projectile core = controller.CoreProjectile;
+            if (core == null || !IsCurrent(controller, core, controller.LeaseId)) { return; }
+            core.Kill();
+            controller.StopCollision();
+        }
+
+        internal bool IsCurrent(ProjectileController controller, Projectile core, ulong lease)
+        {
+            if (controller == null || core == null || !controller.Matches(core, lease)
+                || _corePool == null || !_corePool.IsActive(core, lease)) { return false; }
+            int index = controller.ActiveIndex;
+            return MatchesEntry(index, controller, core, lease);
         }
 
         /// <summary>
@@ -327,50 +374,49 @@ namespace Game.Runtime
         /// </summary>
         public void ProcessExplosion(Projectile projectile, MagicDefinition magic)
         {
-            if (GameManager.Data == null)
+            if (projectile == null || GameManager.Data == null || _corePool == null) { return; }
+            ulong lease = projectile.LeaseId;
+            if (!_corePool.IsActive(projectile, lease)) { return; }
+            float radius = projectile.CapturedProfile.explodeRadius;
+            if (radius <= 0f) { return; }
+            Vector2 center = projectile.Position;
+            if (_explosionDepth == _explosionQueries.Count) { _explosionQueries.Add(new ExplosionQuery()); }
+            ExplosionQuery query = _explosionQueries[_explosionDepth++];
+            query.hashes.Clear();
+            query.targets.Clear();
+            try
             {
-                return;
-            }
-
-            float radius = projectile.Profile.explodeRadius;
-            if (radius <= 0f)
-            {
-                return;
-            }
-
-            _allHashesBuffer.Clear();
-            GameManager.Data.GetAllHashes(_allHashesBuffer);
-
-            List<int> targets = BulletFeatureProcessor.GetExplosionTargets(
-                projectile.Position, radius, _allHashesBuffer, GameManager.Data);
-            ActorRef[] observedTargets = new ActorRef[targets.Count];
-            for (int i = 0; i < targets.Count; i++)
-            {
-                if (GameManager.Actors != null) { GameManager.Actors.TryGet(targets[i], out observedTargets[i]); }
-            }
-
-            for (int i = 0; i < targets.Count; i++)
-            {
-                int targetHash = targets[i];
-                ActorRef target = observedTargets[i];
-                if (!projectile.CanHit(target, GameManager.Actors)) { continue; }
-                if (GameManager.Data.GetFlags(targetHash).IsVanished) { continue; }
-                // キャスター自身は爆発ダメージ対象外
-                if (target == projectile.CasterRef)
+                GameManager.Data.GetAllHashes(query.hashes);
+                float radiusSquared = radius * radius;
+                for (int i = 0; i < query.hashes.Count; i++)
                 {
-                    continue;
+                    int hash = query.hashes[i];
+                    if (GameManager.Actors == null || !GameManager.Actors.TryGet(hash, out ActorRef target)
+                        || !ProjectileHitProcessor.CanAffect(projectile, magic, GameManager.Data,
+                            GameManager.Actors, target)) { continue; }
+                    if ((GameManager.Data.GetVitals(hash).position - center).sqrMagnitude <= radiusSquared)
+                    {
+                        query.targets.Add(target);
+                    }
                 }
-
-                // SoAからIDamageable逆引き。未登録のキャラはスキップ
-                IDamageable receiver = GameManager.Data.GetManaged(targetHash)?.Damageable;
-                if (receiver == null)
+                // Each recursion depth owns its buffer; damage callbacks cannot overwrite this observation.
+                for (int i = 0; i < query.targets.Count; i++)
                 {
-                    continue;
+                    if (!_corePool.IsActive(projectile, lease)) { break; }
+                    ActorRef target = query.targets[i];
+                    if (!ProjectileHitProcessor.CanAffect(projectile, magic, GameManager.Data,
+                        GameManager.Actors, target)) { continue; }
+                    IDamageable receiver = GameManager.Data.GetManaged(target.Hash)?.Damageable;
+                    if (receiver == null) { continue; }
+                    ProjectileHitProcessor.ProcessHit(projectile, receiver, GameManager.Data, magic,
+                        GameManager.Events, GameManager.StatusEffects, GameManager.Actors, target);
                 }
-
-                ProjectileHitProcessor.ProcessHit(
-                    projectile, receiver, GameManager.Data, magic, GameManager.Events, GameManager.StatusEffects,
-                    GameManager.Actors, target);
+            }
+            finally
+            {
+                query.hashes.Clear();
+                query.targets.Clear();
+                _explosionDepth--;
             }
         }
 
@@ -379,29 +425,24 @@ namespace Game.Runtime
         /// </summary>
         public void ClearAll()
         {
-            if (_activeControllers == null)
+            if (_activeProjectiles == null || _isClearing) { return; }
+            _isClearing = true;
+            _clearVersion++;
+            try
             {
-                return;
-            }
-
-            for (int i = _activeControllers.Count - 1; i >= 0; i--)
-            {
-                ReturnControllerInternal(_activeControllers[i], i);
-            }
-
-            if (_pendingReturns != null)
-            {
-                _pendingReturns.Clear();
-            }
-            if (_corePool != null)
-            {
+                while (_activeProjectiles.Count > 0)
+                {
+                    ProjectileStep step = _activeProjectiles[_activeProjectiles.Count - 1];
+                    ReturnControllerInternal(step.controller, step.core, step.lease, false);
+                }
                 _corePool.Clear();
             }
+            finally { _isClearing = false; }
         }
 
         /// <summary>
         /// ホーミング弾のターゲット位置を毎フレーム更新する。
-        /// TargetHash指定時はそのキャラのSoA位置を使用、0なら陣営ベースで最寄り敵を検索。
+        /// 明示対象も現在の対象条件を照合し、対象外なら同じ条件で進行方向に近い候補を検索する。
         /// </summary>
         private void UpdateHomingTargets()
         {
@@ -410,22 +451,26 @@ namespace Game.Runtime
                 return;
             }
 
-            for (int i = 0; i < _activeControllers.Count; i++)
+            _allHashesBuffer.Clear();
+            GameManager.Data.GetAllHashes(_allHashesBuffer);
+            for (int i = 0; i < _tickSnapshot.Count; i++)
             {
-                Projectile core = _activeControllers[i].CoreProjectile;
-                if (core == null || !core.IsAlive)
+                ProjectileStep step = _tickSnapshot[i];
+                Projectile core = step.core;
+                if (core == null || !core.IsAlive || !IsCurrent(step.controller, core, step.lease))
                 {
                     continue;
                 }
 
-                if (core.Profile.moveType != BulletMoveType.Homing)
+                if (core.CapturedProfile.moveType != BulletMoveType.Homing)
                 {
                     continue;
                 }
 
                 // TargetHashが指定されている場合はそのキャラの位置を直接参照
                 bool currentTarget = core.RefreshTarget(GameManager.Actors);
-                if (currentTarget && GameManager.Data.GetFlags(core.TargetHash).IsVanished)
+                if (currentTarget && (!step.controller.CanAffectTarget(core, core.TargetRef)
+                    || GameManager.Data.GetVitals(core.TargetHash).currentHp <= 0))
                 {
                     core.TrySetTarget(default, GameManager.Actors);
                     currentTarget = false;
@@ -437,34 +482,23 @@ namespace Game.Runtime
                 }
                 else
                 {
-                    // TargetHash未指定 or ターゲット死亡→陣営ベースで最寄り敵を検索
-                    core.TargetPosition = FindNearestEnemyPosition(core, _activeControllers[i].Magic.attackContext);
+                    core.TargetPosition = FindPreferredTargetPosition(core, step.controller);
                 }
             }
         }
 
         /// <summary>
-        /// 射撃軌道に最も近い敵対陣営キャラクターの位置をSoAコンテナから返す。
+        /// 対象条件に合うキャラクターのうち、射撃軌道に最も近い位置をSoAから返す。
         /// 弾丸の進行方向と敵への方向のドット積（cos角度）で最小角度の敵を選択する。
-        /// 敵が見つからない場合は弾丸の現在位置を返す（直進継続）。
+        /// 候補が見つからない場合は弾丸の現在位置を返す（直進継続）。
         /// </summary>
-        private Vector2 FindNearestEnemyPosition(Projectile projectile, AttackContext attackContext)
+        private Vector2 FindPreferredTargetPosition(Projectile projectile, ProjectileController controller)
         {
             SoACharaDataDic data = GameManager.Data;
-            if (!attackContext.IsCaptured && !data.TryGetValue(projectile.CasterHash, out int _))
-            {
-                return projectile.Position;
-            }
-
-            CharacterBelong casterBelong = attackContext.IsCaptured
-                ? attackContext.Belong : data.GetFlags(projectile.CasterHash).Belong;
             Vector2 flyDir = projectile.Velocity.normalized;
 
             // 速度がほぼゼロの場合は距離ベースにフォールバック
             bool useAngle = flyDir.sqrMagnitude > 0.5f;
-
-            _allHashesBuffer.Clear();
-            data.GetAllHashes(_allHashesBuffer);
 
             float bestScore = -2f; // ドット積の最大値は1.0
             float closestSqrDist = float.MaxValue;
@@ -474,20 +508,9 @@ namespace Game.Runtime
             {
                 int hash = _allHashesBuffer[i];
                 ActorRef target = default;
-                if (GameManager.Actors == null || !GameManager.Actors.TryGet(hash, out target)) { continue; }
-                if (target == projectile.CasterRef)
-                {
-                    continue;
-                }
-
-                CharacterBelong targetBelong = data.GetFlags(hash).Belong;
-                if (data.GetFlags(hash).IsVanished || data.GetVitals(hash).currentHp <= 0) { continue; }
-
-                // 同陣営はスキップ
-                if (targetBelong == casterBelong)
-                {
-                    continue;
-                }
+                if (GameManager.Actors == null || !GameManager.Actors.TryGet(hash, out target)
+                    || !controller.CanAffectTarget(projectile, target)
+                    || data.GetVitals(hash).currentHp <= 0) { continue; }
 
                 ref CharacterVitals vitals = ref data.GetVitals(hash);
                 Vector2 toTarget = vitals.position - projectile.Position;
@@ -523,106 +546,113 @@ namespace Game.Runtime
             return bestPos;
         }
 
-        private void ProcessPendingReturns()
+        private bool MatchesEntry(int index, ProjectileController controller, Projectile core, ulong lease)
         {
-            // HashSet は順序保証なしだが、ReturnControllerInternal は _activeControllers のスワップ削除のみで
-            // _pendingReturns 自体を改変しないため、foreach 中の collection-modified 例外は発生しない。
-            foreach (ProjectileController controller in _pendingReturns)
+            if (index < 0 || index >= _activeProjectiles.Count) { return false; }
+            ProjectileStep entry = _activeProjectiles[index];
+            return ReferenceEquals(entry.controller, controller) && entry.core == core && entry.lease == lease;
+        }
+
+        private void ReturnControllerInternal(ProjectileController controller, Projectile core, ulong lease, bool emitDestroy)
+        {
+            // The manager retains Core independently of the Unity object's lifetime/binding.
+            int index = ReferenceEquals(controller, null) ? -1 : controller.ActiveIndex;
+            if (!MatchesEntry(index, controller, core, lease))
             {
-                int index = _activeControllers.IndexOf(controller);
-                if (index >= 0)
+                index = -1;
+                for (int i = 0; i < _activeProjectiles.Count; i++)
                 {
-                    ReturnControllerInternal(controller, index);
+                    if (!MatchesEntry(i, controller, core, lease)) { continue; }
+                    index = i;
+                    break;
+                }
+                if (index < 0) { return; }
+            }
+            bool emit = emitDestroy && _corePool.IsActive(core, lease) && !ReferenceEquals(controller, null)
+                && controller.HasChildTrigger(ChildBulletTrigger.OnDestroy);
+            // Own the child inputs before pool return/OnDisable can reuse the controller.
+            ChildSpawn children = emit ? new ChildSpawn(core, controller.CapturedMagic) : default;
+            uint clearVersion = _clearVersion;
+            int lastIndex = _activeProjectiles.Count - 1;
+            if (index != lastIndex)
+            {
+                ProjectileStep last = _activeProjectiles[lastIndex];
+                _activeProjectiles[index] = last;
+                if (!ReferenceEquals(last.controller, null)) { last.controller.ActiveIndex = index; }
+            }
+            _activeProjectiles.RemoveAt(lastIndex);
+            if (!ReferenceEquals(controller, null)) { controller.ActiveIndex = -1; }
+            _corePool.TryReturn(core, lease);
+            if (controller != null)
+            {
+                controller.Deactivate();
+                if (controller != null)
+                {
+                    controller.transform.SetParent(_poolParent, false);
+                    if (controller != null) { GetControllerPool(controller.PoolPrefab).Enqueue(controller); }
                 }
             }
-            _pendingReturns.Clear();
+            if (emit && clearVersion == _clearVersion && !_isClearing) { SpawnChildren(children); }
         }
 
-        private void ReturnControllerInternal(ProjectileController controller, int index)
+        private Queue<ProjectileController> GetControllerPool(GameObject prefab)
         {
-            controller.Deactivate();
-            controller.transform.SetParent(_poolParent);
-            _goPool.Enqueue(controller);
-
-            // スワップ除去で高速削除
-            int lastIndex = _activeControllers.Count - 1;
-            if (index < lastIndex)
+            if (ReferenceEquals(prefab, null)) { return _goPool; }
+            if (!_prefabPools.TryGetValue(prefab, out Queue<ProjectileController> pool))
             {
-                _activeControllers[index] = _activeControllers[lastIndex];
+                pool = new Queue<ProjectileController>();
+                _prefabPools.Add(prefab, pool);
             }
-            _activeControllers.RemoveAt(lastIndex);
+            return pool;
         }
 
-        private ProjectileController GetOrCreateController()
+        private ProjectileController GetOrCreateController(GameObject prefab)
         {
-            ProjectileController controller = _goPool.Count > 0 ? _goPool.Dequeue() : CreatePooledController();
-            controller.transform.SetParent(transform);
+            Queue<ProjectileController> pool = GetControllerPool(prefab);
+            ProjectileController controller = null;
+            while (pool.Count > 0 && controller == null) { controller = pool.Dequeue(); }
+            if (controller == null) { controller = CreatePooledController(prefab); }
+            controller.transform.SetParent(transform, false);
             return controller;
         }
 
-        private ProjectileController CreatePooledController()
+        private ProjectileController CreatePooledController(GameObject prefab)
         {
             GameObject go;
-            if (_defaultProjectilePrefab != null)
-            {
-                go = Instantiate(_defaultProjectilePrefab, _poolParent);
-            }
+            if (prefab != null) { go = Instantiate(prefab, _poolParent); }
             else
             {
                 go = new GameObject("[Projectile]");
-                go.transform.SetParent(_poolParent);
+                go.transform.SetParent(_poolParent, false);
                 go.AddComponent<Rigidbody2D>();
                 go.AddComponent<CircleCollider2D>();
-                go.AddComponent<ProjectileController>();
             }
-
             ProjectileController controller = go.GetComponent<ProjectileController>();
-            if (controller == null)
-            {
-                controller = go.AddComponent<ProjectileController>();
-            }
-
+            if (controller == null) { controller = go.AddComponent<ProjectileController>(); }
             go.SetActive(false);
+            controller.PrepareForPool(prefab);
             return controller;
         }
 
-        /// <summary>
-        /// 親弾の位置・方向から子弾を生成する。
-        /// 子弾は親の個体参照と攻撃snapshotを継承し、childBulletはnullで無限再帰を防止する。
-        /// </summary>
+        /// <summary>個体・攻撃snapshotを継承し、子自身のchildBulletを切って再帰生成を防ぐ。</summary>
         internal void SpawnChildProjectiles(Projectile parent, MagicDefinition parentMagic)
         {
-            ChildBulletConfig config = parentMagic.childBullet;
-            if (config == null || config.count <= 0)
+            if (parent == null || !ChildBulletHelper.HasChildBullet(parentMagic)) { return; }
+            SpawnChildren(new ChildSpawn(parent, parentMagic));
+        }
+
+        private void SpawnChildren(in ChildSpawn children)
+        {
+            if (_isClearing || children.count <= 0 || !children.caster.IsValid) { return; }
+            if (children.magic.attackContext.IsCaptured)
             {
-                return;
-            }
-
-            MagicDefinition childMagic = ChildBulletHelper.CreateChildMagic(parentMagic, config);
-            ActorRef caster = parent.CasterRef;
-            if (!caster.IsValid && (GameManager.Actors == null || !GameManager.Actors.TryGet(parent.CasterHash, out caster))) { return; }
-            ActorRef target = parent.TargetRef;
-            if (!target.IsValid && parent.TargetHash != 0 && GameManager.Actors != null)
-            { GameManager.Actors.TryGet(parent.TargetHash, out target); }
-
-            // 現在の速度方向を優先。静止弾(Set等)は初期方向にフォールバック
-            Vector2 direction = parent.Velocity.sqrMagnitude > 0.001f
-                ? parent.Velocity.normalized
-                : (parent.InitialDirection.sqrMagnitude > 0.001f
-                    ? parent.InitialDirection
-                    : Vector2.right);
-
-            if (config.count <= 1 || config.spreadAngle <= 0f)
-            {
-                if (childMagic.attackContext.IsCaptured)
-                { SpawnCapturedProjectile(caster, childMagic, parent.Position, direction, target); }
-                else { SpawnProjectile(caster, childMagic, parent.Position, direction, target); }
+                SpawnCapturedSpread(children.caster, children.magic, children.position,
+                    children.direction, children.count, children.spread, children.target);
             }
             else
             {
-                if (childMagic.attackContext.IsCaptured)
-                { SpawnCapturedSpread(caster, childMagic, parent.Position, direction, config.count, config.spreadAngle, target); }
-                else { SpawnSpread(caster, childMagic, parent.Position, direction, config.count, config.spreadAngle, target); }
+                SpawnSpread(children.caster, children.magic, children.position,
+                    children.direction, children.count, children.spread, children.target);
             }
         }
 

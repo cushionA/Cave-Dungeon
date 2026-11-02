@@ -91,5 +91,23 @@ namespace Game.Tests.EditMode
 
             Assert.AreEqual(3, logic.HitCount);
         }
+
+        [Test]
+        public void HitboxLogic_ReusedTargetHash_CountsEachGenerationOnce()
+        {
+            HitboxLogic logic = new HitboxLogic(3);
+            ActorRef first = new ActorRef(10, 1);
+            ActorRef replacement = new ActorRef(10, 2);
+
+            Assert.IsTrue(logic.TryRegisterHit(first));
+            Assert.IsFalse(logic.TryRegisterHit(first));
+            Assert.IsTrue(logic.TryRegisterHit(replacement));
+            Assert.IsFalse(logic.TryRegisterHit(replacement));
+            Assert.AreEqual(2, logic.HitCount);
+
+            logic.Reset(1);
+            Assert.IsTrue(logic.TryRegisterHit(replacement));
+            Assert.IsTrue(logic.IsExhausted);
+        }
     }
 }

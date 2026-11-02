@@ -28,7 +28,7 @@ Section: 1 — MVP
 2. 最大HP = 基礎最大HP + (配分VIT + 装備VIT) × 既存の10 + 明示HP加算。最大MPも配分MND・装備MNDに既存の5を使用する。基礎VIT/MNDを重ねて加算しない。END等に未定義の倍率は追加しない。
 3. 各装備の攻撃加算へ、既存式を拡張した `bonus × (1 + (STR係数×STR + DEX係数×DEX + INT係数×INT) / 100)` を適用し、素体攻撃へ合算する。単一係数の場合は既存APIの演算・切り捨てを維持する。防御は素体防御と全装備の防御加算を合算する。攻防は合算後の負値を0に制限する。
 4. 現在HP/MP/SP/アーマー・位置を保持し、装備込みの最終上限に対して一度だけ制限する。上限を増やしても現在値は回復させず、死亡済みのHP0も復活させない。HPを持つキャラクターの最大HPは最低1とし、装備変更だけで死亡通知を迂回してHP0へ落とさない。
-5. `CombatStats` と `EquipmentStatus.finalAttack / finalDefense / finalGuardStats` を同じ値へ更新し、装備の6能力加算は `EquipmentStatus.attributeModifiers` へ保持する。`GetAttributes` は同じ加算を参照する。防御状態は最大アーマーだけ同期し、ガード時間や回復待ち時間は維持する。
+5. 攻撃・防御・ガードの利用値は `CombatStats` に一本化し、装備の6能力加算は `EquipmentStatus.attributeModifiers` へ保持する。`GetAttributes` は同じ加算を参照する。最大アーマーは `CharacterVitals.maxArmor` を正本とし、回復処理もそこを参照する。ガード時間や回復待ち時間は維持する。
 6. 書き戻し後に装備・能力フラグ・ステータス変更を通知する。成長変更も同じ再計算経路へ通す。
 
 状態効果の攻防倍率は従来どおり命中時に適用し、装備の導出値へ焼き込まない。重量の合計・能力フラグの反映は既存の共通入口で継続する。重量上限の算出、持ち方の性能差、技ごとの攻撃入力契約（DF-03）、装備選択UI・見た目の切り替えはこの数値反映とは別の接続項目。
@@ -122,10 +122,7 @@ public struct EquipmentStatus
     public int coreId;
     public GripMode gripMode;
 
-    // 計算済みステータス
-    public ElementalStatus finalAttack;    // 武器+スケーリング+コア補正
-    public ElementalStatus finalDefense;   // 基礎防御+コア補正
-    public GuardStats finalGuardStats;     // 盾ガード性能
+    // 攻撃・防御・ガードの導出値はCombatStatsに保持する。
     public AbilityFlag activeFlags;        // 全装備の合算フラグ
     public float weightRatio;              // 重量比率 (0.0~1.0+)
     public int totalWeight;

@@ -5,11 +5,18 @@ namespace Game.Core
 {
     public class Projectile
     {
+        /// <summary>Pool からの取得ごとに変わる識別子。遅延した返却・接触通知の照合に使う。</summary>
+        public ulong LeaseId { get; private set; }
+        internal ProjectilePool PoolOwner { get; private set; }
+        internal int ActiveIndex { get; set; } = -1;
         public int CasterHash { get; private set; }
         public ActorRef CasterRef { get; private set; }
         public ActorRef TargetRef { get; private set; }
         public int RemainingHits { get; private set; }
-        public BulletProfile Profile { get; private set; }
+        private BulletProfile _profile;
+        public BulletProfile Profile => _profile;
+        // Borrow only for immediate calculations. Pool reset/reuse still requires a value snapshot.
+        internal ref readonly BulletProfile CapturedProfile => ref _profile;
         public float ElapsedTime { get; private set; }
         public bool IsAlive { get; private set; }
         private int _targetHash;
@@ -34,11 +41,9 @@ namespace Game.Core
         /// <summary>世代を持たない呼出しの互換入口。RuntimeはActorRef版で初期化する。</summary>
         public void Initialize(int casterHash, BulletProfile profile, Vector2 position, Vector2 direction)
         {
-            CasterRef = default;
-            TargetRef = default;
-            _targetHash = 0;
+            Reset();
             CasterHash = casterHash;
-            Profile = profile;
+            _profile = profile;
             RemainingHits = profile.hitLimit > 0 ? profile.hitLimit : 1;
             ElapsedTime = 0f;
             IsAlive = true;
@@ -75,42 +80,58 @@ namespace Game.Core
 
         public bool CanHit(ActorRef target, ActorRegistry actors)
         {
-            return actors != null && actors.IsCurrent(target) && target != CasterRef
+            // 対象条件（自身を含めるか等）は AttackTargetRules に集約し、ここは世代だけを照合する。
+            return actors != null && actors.IsCurrent(target)
                 && (!TargetRef.IsValid || target.Hash != TargetRef.Hash || target == TargetRef);
         }
 
         public void Tick(float deltaTime)
         {
-            if (!IsAlive)
-            {
-                return;
-            }
+            AdvanceTime(deltaTime);
+            CompleteSimulationStep();
+        }
 
-            // スポーン遅延中は ElapsedTime を進めず寿命を消費しない。
-            if (SpawnDelayRemaining > 0f)
+        /// <summary>
+        /// 遅延と寿命を除いた、このステップ内で実際に移動できる秒数を返す。
+        /// 寿命終了の確定は接触解決後にも実行できるよう分離している。
+        /// </summary>
+        internal float AdvanceTime(float deltaTime)
+        {
+            if (float.IsNaN(deltaTime) || float.IsInfinity(deltaTime) || deltaTime < 0f)
             {
-                SpawnDelayRemaining -= deltaTime;
-                if (SpawnDelayRemaining <= 0f)
-                {
-                    SpawnDelayRemaining = 0f;
-                    // 遅延終了時点でElapsedTime=0から寿命カウント開始
-                    ElapsedTime = 0f;
-                }
-                return;
+                throw new ArgumentOutOfRangeException(nameof(deltaTime), "Simulation time must be finite and non-negative.");
             }
+            if (!IsAlive || deltaTime == 0f) { return 0f; }
 
-            ElapsedTime += deltaTime;
-            if (Profile.lifeTime > 0f && ElapsedTime >= Profile.lifeTime)
+            float delayTime = Mathf.Min(SpawnDelayRemaining, deltaTime);
+            SpawnDelayRemaining -= delayTime;
+            float activeTime = deltaTime - delayTime;
+            if (_profile.lifeTime > 0f)
             {
-                Kill();
-                return;
+                activeTime = Mathf.Min(activeTime, Mathf.Max(0f, _profile.lifeTime - ElapsedTime));
+                ElapsedTime = Mathf.Min(_profile.lifeTime, ElapsedTime + activeTime);
             }
+            else { ElapsedTime += activeTime; }
+            return activeTime;
+        }
+
+        /// <summary>移動した最後の区間への接触解決を終えた後、寿命切れを確定する。</summary>
+        public void CompleteSimulationStep()
+        {
+            if (_profile.lifeTime > 0f && ElapsedTime >= _profile.lifeTime) { Kill(); }
+        }
+
+        internal void Acquire(ProjectilePool owner, int activeIndex, ulong leaseId)
+        {
+            PoolOwner = owner;
+            ActiveIndex = activeIndex;
+            LeaseId = leaseId;
         }
 
         /// <summary>現在のスケールを BulletProfile から算出する。scaleTime<=0 なら 1f。</summary>
         public float GetCurrentScale()
         {
-            BulletProfile p = Profile;
+            ref readonly BulletProfile p = ref _profile;
             if (p.scaleTime <= 0f)
             {
                 return 1f;
@@ -122,7 +143,7 @@ namespace Game.Core
         /// <summary>現在の追尾力を BulletProfile から算出する（homingStrength + homingAcceleration*elapsedTime）。</summary>
         public float GetCurrentHomingStrength()
         {
-            BulletProfile p = Profile;
+            ref readonly BulletProfile p = ref _profile;
             float baseStrength = p.GetEffectiveHomingStrength();
             float strength = baseStrength + p.homingAcceleration * ElapsedTime;
             return strength < 0f ? 0f : strength;
@@ -135,8 +156,10 @@ namespace Game.Core
                 return false;
             }
 
-            RemainingHits--;
-            bool hasPierce = (Profile.features & BulletFeature.Pierce) != 0;
+            // Pierce は旧仕様どおり寿命まで貫通する。hitLimit は非 Pierce の総命中数。
+            // 無制限貫通中もカウンターを負数へ減らし続けない。
+            if (RemainingHits > 0) { RemainingHits--; }
+            bool hasPierce = (_profile.features & BulletFeature.Pierce) != 0;
 
             if (RemainingHits <= 0 && !hasPierce)
             {
@@ -154,6 +177,7 @@ namespace Game.Core
         public void Reset()
         {
             IsAlive = false;
+            _profile = default;
             CasterHash = 0;
             CasterRef = default;
             TargetHash = 0;

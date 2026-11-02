@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Game.Core
 {
@@ -11,6 +12,7 @@ namespace Game.Core
         public ElementalStatus AttackStats { get; }
         public float AttackMultiplier { get; }
         public CharacterBelong Belong { get; }
+        public AttackTargetRelation TargetRelations { get; }
         public bool IsCaptured => Owner.IsValid;
         public bool HasStatusEffects => (_actionEffects != null && _actionEffects.Length > 0)
             || (_equipmentEffects != null && _equipmentEffects.Length > 0);
@@ -21,24 +23,35 @@ namespace Game.Core
                 && !execution.definition.motionOnly && (execution.definition.gameplay & ActionGameplayFlags.Cast) != 0;
 
         private AttackContext(ActorRef owner, in ElementalStatus stats, float multiplier,
-            CharacterBelong belong, StatusEffectApplicationData[] effects, StatusEffectApplicationData[] actionEffects)
+            CharacterBelong belong, IReadOnlyList<StatusEffectApplicationData> effects, StatusEffectApplicationData[] actionEffects,
+            AttackTargetRelation targetRelations)
         {
             Owner = owner;
             AttackStats = stats;
             AttackMultiplier = multiplier;
             Belong = belong;
-            _equipmentEffects = effects == null || effects.Length == 0
-                ? Array.Empty<StatusEffectApplicationData>() : (StatusEffectApplicationData[])effects.Clone();
+            TargetRelations = targetRelations;
+            _equipmentEffects = CopyEquipmentEffects(effects);
             _actionEffects = actionEffects == null || actionEffects.Length == 0
                 ? Array.Empty<StatusEffectApplicationData>() : (StatusEffectApplicationData[])actionEffects.Clone();
         }
 
         public static AttackContext Capture(ActorRef owner, in ElementalStatus stats, float multiplier,
-            CharacterBelong belong, StatusEffectApplicationData[] equipmentEffects,
-            StatusEffectApplicationData[] actionEffects = null)
+            CharacterBelong belong, IReadOnlyList<StatusEffectApplicationData> equipmentEffects,
+            StatusEffectApplicationData[] actionEffects = null,
+            AttackTargetRelation targetRelations = AttackTargetRelation.Hostile)
         {
             if (!owner.IsValid) { throw new ArgumentException("A captured attack requires an actor generation.", nameof(owner)); }
-            return new AttackContext(owner, stats, multiplier, belong, equipmentEffects, actionEffects);
+            AttackTargetRules.Validate(targetRelations);
+            return new AttackContext(owner, stats, multiplier, belong, equipmentEffects, actionEffects, targetRelations);
+        }
+
+        private static StatusEffectApplicationData[] CopyEquipmentEffects(IReadOnlyList<StatusEffectApplicationData> effects)
+        {
+            if (effects == null || effects.Count == 0) { return Array.Empty<StatusEffectApplicationData>(); }
+            StatusEffectApplicationData[] copy = new StatusEffectApplicationData[effects.Count];
+            for (int i = 0; i < copy.Length; i++) { copy[i] = effects[i]; }
+            return copy;
         }
 
         public void ApplyTo(ref DamageData damage, ActorRef defender)
@@ -49,6 +62,7 @@ namespace Game.Core
             damage.attackerHash = Owner.Hash;
             damage.defenderHash = defender.Hash;
             damage.damage = AttackStats;
+            damage.targetPolicy = new AttackTargetPolicy { overrideTargets = true, targets = TargetRelations };
             // 可変配列をパケットへ露出すると、別ヒットや子弾のsnapshotも変更されてしまう。
             damage.statusEffects = null;
             damage.equipmentStatusEffects = null;

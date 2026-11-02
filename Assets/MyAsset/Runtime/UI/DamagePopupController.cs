@@ -76,7 +76,7 @@ namespace Game.Runtime
             CancelAllActive();
         }
 
-        private void OnDamageDealt(DamageResult result, int attackerHash, int defenderHash)
+        private void OnDamageDealt(in DamageResult result, int attackerHash, int defenderHash)
         {
             if (result.totalDamage <= 0)
             {

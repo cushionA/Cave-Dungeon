@@ -27,6 +27,11 @@ namespace Game.Core
             in CombatStats combat, ref CharacterFlags flags, ref CharacterDefenseState defense,
             in HitContext context)
         {
+            if (attack.attackContext.IsCaptured && !AttackTargetRules.CanAffect(
+                attack.attackContext, attack.defenderRef, flags.Belong))
+            {
+                return new HitResolution { ignored = true };
+            }
             ActState currentState = flags.ActState;
             ActionEffectProcessor.EffectState effects = context.actionEffects;
             if (vitals.currentHp <= 0 || currentState == ActState.Dead || flags.IsVanished
@@ -133,7 +138,7 @@ namespace Game.Core
                 }
                 else
                 {
-                    HpArmorLogic.RecoverArmor(ref vitals.currentArmor, defense.maxArmor,
+                    HpArmorLogic.RecoverArmor(ref vitals.currentArmor, vitals.maxArmor,
                         defense.armorRecoveryRate, deltaTime);
                 }
             }

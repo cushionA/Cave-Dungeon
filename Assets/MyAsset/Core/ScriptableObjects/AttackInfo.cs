@@ -46,6 +46,11 @@ namespace Game.Core
         [InlineProperty]
         public AIAttackEvaluation aiEvaluation;
 
+        [TitleGroup("対象条件")]
+        [InlineProperty]
+        [Tooltip("既定は攻撃・支援が敵対、回復が味方と自分。上書き時は発射元から見た対象を指定")]
+        public AttackTargetPolicy targetPolicy;
+
         [TitleGroup("攻撃移動")]
         public AttackContactType contactType;
 
@@ -155,6 +160,7 @@ namespace Game.Core
         public bool hasProjectile;
 
         [ToggleGroup("hasProjectile")]
+        [Tooltip("飛翔体の表示Prefab。未指定の場合はProjectileManagerの既定Prefabを使用")]
         public GameObject projectilePrefab;
         [ToggleGroup("hasProjectile")]
         public BulletMoveType trajectory;

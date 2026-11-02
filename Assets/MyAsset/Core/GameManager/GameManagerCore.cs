@@ -89,12 +89,16 @@ namespace Game.Core
             CharacterVitals vitals, CharacterFlags flags, ManagedCharacter managed, CharacterDefenseState defenseState)
         {
             if (hash == 0) { throw new ArgumentOutOfRangeException(nameof(hash)); }
+            if (_actors.TryGet(hash, out _) || _data.TryGetValue(hash, out _))
+            {
+                throw new ArgumentException("Character is already registered.", nameof(hash));
+            }
+            basis.combat.statusDefense.Validate();
             int index = _data.Add(hash, vitals, basis.combat, flags, basis.movement,
                 default, default, default, managed);
             _actors.Register(hash);
             _data.GetBaseStats(hash) = basis;
             _data.GetGrowth(hash) = growth;
-            defenseState.maxArmor = vitals.maxArmor;
             defenseState.previousActState = flags.ActState;
             defenseState.continuousJustGuardUntil = -1f;
             _data.GetDefenseState(hash) = defenseState;

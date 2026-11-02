@@ -55,7 +55,6 @@ namespace Game.Tests.EditMode
                 equipment = new EquipmentStatus
                 {
                     gripMode = GripMode.TwoHanded,
-                    finalAttack = new ElementalStatus { slash = 999 },
                     maxWeightCapacity = 100f,
                     weightRatio = 0.25f,
                 },
@@ -107,7 +106,7 @@ namespace Game.Tests.EditMode
             }
             EquipmentStatus status = world.Actors[k_Owner].equipment;
             Assert.AreEqual(GripMode.TwoHanded, status.gripMode);
-            Assert.AreEqual(43, status.finalAttack.slash);
+            Assert.AreEqual(43, world.Actors[k_Owner].combat.attack.slash);
             Assert.AreEqual(100f, status.maxWeightCapacity);
             Assert.AreEqual(0.25f, status.weightRatio);
         }
@@ -154,8 +153,6 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(100, actor.basis.maxHp);
             Assert.AreEqual(43, actor.basis.combat.attack.slash);
             Assert.AreEqual(40, actor.equipment.attributeModifiers.str);
-            Assert.AreEqual(actor.combat.attack, actor.equipment.finalAttack);
-            Assert.AreEqual(actor.combat.defense, actor.equipment.finalDefense);
         }
 
         [Test]
@@ -171,7 +168,6 @@ namespace Game.Tests.EditMode
                 notifications++;
                 EquipmentActorState actor = world.Actors[ownerHash];
                 Assert.AreEqual(50, actor.combat.attack.slash);
-                Assert.AreEqual(actor.combat.attack, actor.equipment.finalAttack);
                 Assert.AreEqual(110, actor.vitals.maxHp);
                 Assert.AreEqual(1, actor.equipment.attributeModifiers.vit);
             });

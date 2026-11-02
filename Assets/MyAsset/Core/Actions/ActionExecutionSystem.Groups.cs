@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Game.Core
 {
@@ -103,19 +104,19 @@ namespace Game.Core
         public bool GetGroupPrimary(long groupId, out ActionExecution execution)
         {
             execution = default;
-            bool found = false;
+            Instance selected = null;
             if (!_groups.TryGetValue(groupId, out ExecutionGroup group)) { return false; }
             foreach (long id in group.members)
             {
                 if (!_instances.TryGetValue(id, out Instance state)) { continue; }
-                ActionExecution candidate = CurrentSnapshot(state);
-                if (!found || HigherPrimary(candidate, execution))
+                if (selected == null || HigherPrimary(state.execution, selected.execution))
                 {
-                    execution = candidate;
-                    found = true;
+                    selected = state;
                 }
             }
-            return found;
+            if (selected == null) { return false; }
+            execution = CurrentSnapshot(selected);
+            return true;
         }
 
         /// <summary>同じグループの全実行・待機要求を取り消す。Detachedな別グループは対象外。</summary>
@@ -134,6 +135,8 @@ namespace Game.Core
 
         private bool PrepareRequestReferences(ref ActionRequest request)
         {
+            if (!Finite(request.direction) || !Finite(request.targetPosition)
+                || !Finite(request.speedMultiplier) || request.speedMultiplier < 0f) { return false; }
             if ((request.ownerRef != default && !request.ownerRef.IsValid)
                 || (request.targetRef != default && !request.targetRef.IsValid)) { return false; }
             if (request.chargeMultiplier == 0f) { request.chargeMultiplier = 1f; }
@@ -149,6 +152,17 @@ namespace Game.Core
                 return request.targetRef.Hash == request.targetHash && _actorRegistry.IsCurrent(request.targetRef);
             }
             return request.targetHash == 0 || _actorRegistry.TryGet(request.targetHash, out request.targetRef);
+        }
+
+        private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+        private static bool Finite(Vector2 value) => Finite(value.x) && Finite(value.y);
+
+        private static bool ValidMovementInput(in ActionDefinitionSnapshot definition,
+            Vector2 direction, float speedMultiplier)
+        {
+            if (!Finite(direction) || !Finite(speedMultiplier) || speedMultiplier < 0f) { return false; }
+            return (definition.gameplay & ActionGameplayFlags.Move) == 0
+                || Finite(direction * (definition.moveSpeed * speedMultiplier));
         }
 
         private bool IsCurrentExecutionOwner(in ActionExecution execution) =>

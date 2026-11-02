@@ -22,9 +22,9 @@ namespace Game.Core
         public float staminaRecoveryRate;     // スタミナ回復速度(/秒)
         public float staminaRecoveryDelay;    // 消費後回復開始遅延(秒)
         // 割合の正本は現在値と最大値。独立したキャッシュの書き戻しは持たない。
-        public byte hpRatio => maxHp > 0
+        public readonly byte hpRatio => maxHp > 0
             ? (byte)Math.Min(100L, Math.Max(0L, 100L * currentHp / maxHp)) : (byte)0;
-        public byte mpRatio => maxMp > 0
+        public readonly byte mpRatio => maxMp > 0
             ? (byte)Math.Min(100f, Math.Max(0f, 100f * currentMp / maxMp)) : (byte)0;
     }
 
@@ -86,6 +86,7 @@ namespace Game.Core
         public ElementalStatus attack;    // 7属性別攻撃力
         public ElementalStatus defense;   // 7属性別防御力
         public GuardStats guardStats;
+        public StatusEffectDefenseProfile statusDefense;
 
         /// <summary>
         /// ノックバック耐性（0.0-1.0）。HpArmorLogic.CalculateKnockback で
@@ -113,49 +114,49 @@ namespace Game.Core
 
         public bool IsVanished
         {
-            get => (flags & (1UL << 60)) != 0;
+            readonly get => (flags & (1UL << 60)) != 0;
             set => flags = value ? flags | (1UL << 60) : flags & ~(1UL << 60);
         }
 
         // Belong: bits 0-2 (3 bits)
         public CharacterBelong Belong
         {
-            get => (CharacterBelong)(flags & 0x7UL);
+            readonly get => (CharacterBelong)(flags & 0x7UL);
             set => flags = (flags & ~0x7UL) | ((ulong)value & 0x7UL);
         }
 
         // ActState: bits 3-8 (6 bits)
         public ActState ActState
         {
-            get => (ActState)((flags >> 3) & 0x3FUL);
+            readonly get => (ActState)((flags >> 3) & 0x3FUL);
             set => flags = (flags & ~(0x3FUL << 3)) | (((ulong)value & 0x3FUL) << 3);
         }
 
         // Feature: bits 9-17 (9 bits)
         public CharacterFeature Feature
         {
-            get => (CharacterFeature)((flags >> 9) & 0x1FFUL);
+            readonly get => (CharacterFeature)((flags >> 9) & 0x1FFUL);
             set => flags = (flags & ~(0x1FFUL << 9)) | (((ulong)value & 0x1FFUL) << 9);
         }
 
         // RecognizeObjectType: bits 24-35 (12 bits)
         public ushort RecognizeObjectType
         {
-            get => (ushort)((flags >> 24) & 0xFFFUL);
+            readonly get => (ushort)((flags >> 24) & 0xFFFUL);
             set => flags = (flags & ~(0xFFFUL << 24)) | (((ulong)value & 0xFFFUL) << 24);
         }
 
         // BrainEventFlagType: bits 36-43 (8 bits)
         public byte BrainEventFlags
         {
-            get => (byte)((flags >> 36) & 0xFFUL);
+            readonly get => (byte)((flags >> 36) & 0xFFUL);
             set => flags = (flags & ~(0xFFUL << 36)) | (((ulong)value & 0xFFUL) << 36);
         }
 
         // AbilityFlags: bits 44-59 (16 bits)
         public AbilityFlag AbilityFlags
         {
-            get => (AbilityFlag)((flags >> 44) & 0xFFFFUL);
+            readonly get => (AbilityFlag)((flags >> 44) & 0xFFFFUL);
             set => flags = (flags & ~(0xFFFFUL << 44)) | (((ulong)value & 0xFFFFUL) << 44);
         }
 
@@ -215,9 +216,6 @@ namespace Game.Core
         public int shieldId;
         public int coreId;
         public GripMode gripMode;
-        public ElementalStatus finalAttack;
-        public ElementalStatus finalDefense;
-        public GuardStats finalGuardStats;
         public StatModifier attributeModifiers;
         public AbilityFlag activeFlags;
         public float weightRatio;
@@ -240,26 +238,26 @@ namespace Game.Core
         private float _defenseMultiplier;
         private float _damageTakenMultiplier;
 
-        public int ActiveCount => _activeCount;
-        public float MoveSpeedMultiplier => _activeCount > 0 ? _moveSpeedMultiplier : 1f;
-        public float AttackMultiplier => _activeCount > 0 ? _attackMultiplier : 1f;
-        public float DefenseMultiplier => _activeCount > 0 ? _defenseMultiplier : 1f;
-        public float DamageTakenMultiplier => _activeCount > 0 ? _damageTakenMultiplier : 1f;
-        public bool BlocksMovement => IsActive(StatusEffectId.Stun) || IsActive(StatusEffectId.Freeze);
-        public bool BlocksActions => BlocksMovement;
-        public bool BlocksCasting => BlocksActions || IsActive(StatusEffectId.Silence);
+        public readonly int ActiveCount => _activeCount;
+        public readonly float MoveSpeedMultiplier => _activeCount > 0 ? _moveSpeedMultiplier : 1f;
+        public readonly float AttackMultiplier => _activeCount > 0 ? _attackMultiplier : 1f;
+        public readonly float DefenseMultiplier => _activeCount > 0 ? _defenseMultiplier : 1f;
+        public readonly float DamageTakenMultiplier => _activeCount > 0 ? _damageTakenMultiplier : 1f;
+        public readonly bool BlocksMovement => IsActive(StatusEffectId.Stun) || IsActive(StatusEffectId.Freeze);
+        public readonly bool BlocksActions => BlocksMovement;
+        public readonly bool BlocksCasting => BlocksActions || IsActive(StatusEffectId.Silence);
 
         public static bool IsValidId(StatusEffectId id)
         {
             return id > StatusEffectId.None && id < StatusEffectId.Count;
         }
 
-        public bool IsActive(StatusEffectId id)
+        public readonly bool IsActive(StatusEffectId id)
         {
             return IsValidId(id) && (_activeMask & (1UL << (int)id)) != 0;
         }
 
-        internal void Include(ActiveEffect effect)
+        internal void Include(StatusEffectId id, float modifier, int stackCount)
         {
             if (_activeCount == 0)
             {
@@ -268,13 +266,13 @@ namespace Game.Core
                 _defenseMultiplier = 1f;
                 _damageTakenMultiplier = 1f;
             }
-            _activeMask |= 1UL << (int)effect.id;
+            _activeMask |= 1UL << (int)id;
             _activeCount++;
-            float increase = (float)Math.Pow(1f + effect.modifier, effect.stackCount);
-            switch (effect.id)
+            float increase = (float)Math.Pow(1f + modifier, stackCount);
+            switch (id)
             {
                 case StatusEffectId.Slow:
-                    _moveSpeedMultiplier *= (float)Math.Pow(1f - effect.modifier, effect.stackCount);
+                    _moveSpeedMultiplier *= (float)Math.Pow(1f - modifier, stackCount);
                     break;
                 case StatusEffectId.SpeedUp:
                     _moveSpeedMultiplier *= increase;

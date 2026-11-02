@@ -18,6 +18,25 @@ namespace Game.Core
             public MagicType magicType;
         }
 
+        /// <summary>接触・爆発・追尾で共有する対象ゲート。命中数を消費する前に呼ぶ。</summary>
+        public static bool CanAffect(Projectile projectile, in MagicDefinition magic,
+            SoACharaDataDic data, ActorRegistry actors, ActorRef target)
+        {
+            if (projectile == null || data == null) { return false; }
+            bool captured = magic.attackContext.IsCaptured;
+            if (captured || projectile.CasterRef.IsValid || actors != null)
+            {
+                if (actors == null || !captured || magic.attackContext.Owner != projectile.CasterRef
+                    || !projectile.CanHit(target, actors)) { return false; }
+                return CombatDataHelper.CanAffectTarget(magic.attackContext, target, data, actors);
+            }
+            // Hash-only callers still use the same relation rules, with current source data as their input.
+            if (!data.TryGetValue(projectile.CasterHash, out int _) || !data.TryGetValue(target.Hash, out int _)) { return false; }
+            CharacterFlags targetFlags = data.GetFlags(target.Hash);
+            return !targetFlags.IsVanished && AttackTargetRules.CanAffect(data.GetFlags(projectile.CasterHash).Belong,
+                targetFlags.Belong, projectile.CasterHash == target.Hash, magic.targetPolicy.Resolve(magic.magicType));
+        }
+
         /// <summary>
         /// 飛翔体がターゲットに命中した時の処理。
         /// Attack: receiver.ReceiveDamage経由で共通パイプラインを通す。
@@ -42,29 +61,21 @@ namespace Game.Core
             }
 
             bool captured = magic.attackContext.IsCaptured;
-            if (data == null || (!captured && !data.TryGetValue(projectile.CasterHash, out int _)))
-            {
-                return result;
-            }
-
             int targetHash = receiver.ObjectHash;
-            if (!data.TryGetValue(targetHash, out int _))
-            {
-                return result;
-            }
-            if (data.GetFlags(targetHash).IsVanished) { return result; }
             ActorRef targetRef = observedTarget;
             if (captured || projectile.CasterRef.IsValid || actors != null)
             {
-                if (actors == null || !captured || magic.attackContext.Owner != projectile.CasterRef) { return result; }
+                if (actors == null) { return result; }
                 if (!targetRef.IsValid && !actors.TryGet(targetHash, out targetRef)) { return result; }
-                if (targetRef.Hash != targetHash || !projectile.CanHit(targetRef, actors)) { return result; }
+                if (targetRef.Hash != targetHash) { return result; }
             }
+            else { targetRef = new ActorRef(targetHash, 0); }
+            if (!CanAffect(projectile, magic, data, actors, targetRef)) { return result; }
 
             bool appliesEffects = magic.magicType != MagicType.Attack && (captured
                 ? magic.attackContext.HasStatusEffects
                 : ((magic.statusEffects != null && magic.statusEffects.Length > 0)
-                    || (magic.equipmentStatusEffects != null && magic.equipmentStatusEffects.Length > 0)));
+                    || (magic.equipmentStatusEffects != null && magic.equipmentStatusEffects.Count > 0)));
             if (appliesEffects && statusEffects == null)
             {
                 throw new InvalidOperationException("Configured magic effects require a StatusEffectSystem.");
@@ -132,13 +143,14 @@ namespace Game.Core
         /// JustGuard時のアーマー削り0扱いに分岐する。
         /// </summary>
         private static DamageData BuildProjectileDamageData(
-            int attackerHash, int defenderHash, MagicDefinition magic, SoACharaDataDic data)
+            int attackerHash, int defenderHash, in MagicDefinition magic, SoACharaDataDic data)
         {
             ElementalStatus attackStats = magic.attackContext.IsCaptured
                 ? magic.attackContext.AttackStats : CombatDataHelper.GetAttackStats(data, attackerHash);
             return new DamageData
             {
                 actionInstanceId = magic.actionInstanceId,
+                targetPolicy = magic.targetPolicy,
                 attackerHash = attackerHash,
                 defenderHash = defenderHash,
                 damage = attackStats,

@@ -81,7 +81,7 @@ namespace Game.Tests.EditMode
             {
                 Assert.AreEqual(1, owner);
                 Assert.AreEqual(AbilityFlag.WallKick, world.Actor.publishedFlags);
-                Assert.AreEqual(world.Actor.combat.attack, world.Actor.equipment.finalAttack);
+                Assert.AreEqual(notifications == 0 ? 30 : 20, world.Actor.combat.attack.slash);
                 notifications++;
             });
 

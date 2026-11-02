@@ -62,12 +62,12 @@ namespace Game.Runtime
         public bool HasMotion(long instanceId) => _layers.ContainsKey(instanceId);
 
         /// <summary>旧呼出向けの変換入口。共有実行器は登録済みの表示snapshotを渡す。</summary>
-        public void Present(ActionExecution execution, MotionDefinition asset, MotionInfo snapshot)
+        public void Present(in ActionExecution execution, MotionDefinition asset, in MotionInfo snapshot)
         {
             Present(execution, MotionPresentationData.Capture(asset, snapshot));
         }
 
-        public void Present(ActionExecution execution, MotionPresentationData presentation)
+        public void Present(in ActionExecution execution, in MotionPresentationData presentation)
         {
             if (!isActiveAndEnabled)
             {
@@ -301,7 +301,7 @@ namespace Game.Runtime
             _bridge.ConsumeAllTriggers();
         }
 
-        private static AnimationClip SelectClip(AnimationPhase phase, MotionInfo motion)
+        private static AnimationClip SelectClip(AnimationPhase phase, in MotionInfo motion)
         {
             switch (phase)
             {

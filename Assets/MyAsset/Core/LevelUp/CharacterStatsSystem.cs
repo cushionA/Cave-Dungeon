@@ -94,9 +94,6 @@ namespace Game.Core
             actor.vitals = derived.vitals;
             actor.combat = derived.combat;
             actor.equipment.attributeModifiers = derived.attributeModifiers;
-            actor.equipment.finalAttack = derived.combat.attack;
-            actor.equipment.finalDefense = derived.combat.defense;
-            actor.equipment.finalGuardStats = derived.combat.guardStats;
             actor.equipment.activeFlags = holder != null ? holder.GetCombinedAbilityFlags() : AbilityFlag.None;
             actor.equipment.totalWeight = holder != null ? holder.GetTotalWeight() : 0;
             actor.publishedFlags = actor.intrinsicFlags | actor.equipment.activeFlags;

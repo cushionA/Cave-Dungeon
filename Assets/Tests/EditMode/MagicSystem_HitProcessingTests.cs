@@ -11,9 +11,11 @@ namespace Game.Tests.EditMode
         {
             SoACharaDataDic data = new SoACharaDataDic();
             data.Add(1, new CharacterVitals { currentHp = 100, maxHp = 100 },
-                new CombatStats { attack = new ElementalStatus { fire = 50 } }, default, default);
+                new CombatStats { attack = new ElementalStatus { fire = 50 } },
+                CharacterFlags.Pack(CharacterBelong.Ally, CharacterFeature.Player, AbilityFlag.None), default);
             data.Add(2, new CharacterVitals { currentHp = 100, maxHp = 100 },
-                new CombatStats { defense = new ElementalStatus { fire = 10 } }, default, default);
+                new CombatStats { defense = new ElementalStatus { fire = 10 } },
+                CharacterFlags.Pack(CharacterBelong.Enemy, CharacterFeature.Minion, AbilityFlag.None), default);
 
             Projectile p = new Projectile();
             p.Initialize(1, new BulletProfile { hitLimit = 1, speed = 1f }, default, default);
@@ -38,9 +40,10 @@ namespace Game.Tests.EditMode
         public void HitProcessor_Recover_HealsTarget()
         {
             SoACharaDataDic data = new SoACharaDataDic();
-            data.Add(1, default, default, default, default);
+            data.Add(1, default, default,
+                CharacterFlags.Pack(CharacterBelong.Ally, CharacterFeature.Player, AbilityFlag.None), default);
             data.Add(2, new CharacterVitals { currentHp = 50, maxHp = 100 },
-                default, default, default);
+                default, CharacterFlags.Pack(CharacterBelong.Ally, CharacterFeature.Companion, AbilityFlag.None), default);
 
             Projectile p = new Projectile();
             p.Initialize(1, new BulletProfile { hitLimit = 1, speed = 1f }, default, default);
@@ -64,9 +67,10 @@ namespace Game.Tests.EditMode
         public void HitProcessor_Recover_CapsAtMaxHp()
         {
             SoACharaDataDic data = new SoACharaDataDic();
-            data.Add(1, default, default, default, default);
+            data.Add(1, default, default,
+                CharacterFlags.Pack(CharacterBelong.Ally, CharacterFeature.Player, AbilityFlag.None), default);
             data.Add(2, new CharacterVitals { currentHp = 90, maxHp = 100 },
-                default, default, default);
+                default, CharacterFlags.Pack(CharacterBelong.Ally, CharacterFeature.Companion, AbilityFlag.None), default);
 
             Projectile p = new Projectile();
             p.Initialize(1, new BulletProfile { hitLimit = 1, speed = 1f }, default, default);
@@ -94,9 +98,11 @@ namespace Game.Tests.EditMode
             // RemainingHits は二重消費されない。
             SoACharaDataDic data = new SoACharaDataDic();
             data.Add(1, default,
-                new CombatStats { attack = new ElementalStatus { fire = 20 } }, default, default);
+                new CombatStats { attack = new ElementalStatus { fire = 20 } },
+                CharacterFlags.Pack(CharacterBelong.Ally, CharacterFeature.Player, AbilityFlag.None), default);
             data.Add(2, new CharacterVitals { currentHp = 100, maxHp = 100 },
-                new CombatStats { defense = new ElementalStatus { fire = 5 } }, default, default);
+                new CombatStats { defense = new ElementalStatus { fire = 5 } },
+                CharacterFlags.Pack(CharacterBelong.Enemy, CharacterFeature.Minion, AbilityFlag.None), default);
 
             Projectile p = new Projectile();
             p.Initialize(1, new BulletProfile { hitLimit = 2, speed = 1f }, default, default);
