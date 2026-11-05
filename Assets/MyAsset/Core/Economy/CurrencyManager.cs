@@ -85,6 +85,13 @@ namespace Game.Core
 
         void ISaveable.Deserialize(object data)
         {
+            // Issue #80 L2: data == null はスロットに entry 無し → 初期状態 (残高 0) にリセット。
+            if (data == null)
+            {
+                DeserializeBalance(0);
+                return;
+            }
+
             int balance = Convert.ToInt32(data);
             DeserializeBalance(balance);
         }
