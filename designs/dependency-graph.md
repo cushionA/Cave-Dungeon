@@ -352,5 +352,9 @@ Game.World (既存拡張)
                            BossRushLogic, SurvivalLogic, LeaderboardManager
 
 Game.Core (既存拡張)
-    └── Common/            Section 4共通Enum/Struct（Section4Structs.cs, Enums.cs追記）
+    ├── Common/Enums.cs    Section 4共通Enum追記
+    ├── AI/Templates/     AITemplateData.cs
+    └── World/Challenge/  ChallengeResult.cs, LeaderboardEntry.cs
 ```
+
+共有Structは型別ファイルへ移動した。型名・`Game.Core` namespace・データ定義は維持する。

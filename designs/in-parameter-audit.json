@@ -295,5 +295,9 @@
       "before": "d4de245b87fba173542a519f5fbd0ad9897b5ef664ab0b0cb142d3423959d0c2",
       "after": "27113711384656b4004e6c4e3f764b8980e7f63ac774746ec372a4f6037384ba"
     }
+  },
+  "follow_up_file_organization": {
+    "report": "designs/struct-organization.json",
+    "note": "本文とSHAはin追補完了時点の履歴。型別ファイル分割後の配置・694件の現source検証はfollow-upを参照。"
   }
 }

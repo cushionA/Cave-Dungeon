@@ -99,7 +99,7 @@
           "kind": "call"
         },
         {
-          "file": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
+          "file": "Assets/MyAsset/Core/Damage/CharacterStatusEffects.cs",
           "symbol": "CharacterStatusEffects",
           "kind": "write"
         },
@@ -113,14 +113,13 @@
         "Assets/Tests/PlayMode/GuardParryStatusEffectPlayTests.cs",
         "Assets/Tests/EditMode/Integration_StatusEffectGameFlowTests.cs"
       ],
-      "notes": "再構造化後のUnity実行/型解決は未確認。以下とhashは以前の検証記録。 Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。 DF-01反映後もCore/Runtime/Editor/EditMode/PlayMode全5アセンブリを再コンパイル成功。Unity内実行は引き続き保留。",
+      "notes": "ファイル分割後の宣言同値は確認済み。Native経路の旧検証段階は維持し、移動前のhashはdesigns/struct-organization.jsonの履歴へ記録。 再構造化後のUnity実行/型解決は未確認。以下とhashは以前の検証記録。 Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。 DF-01反映後もCore/Runtime/Editor/EditMode/PlayMode全5アセンブリを再コンパイル成功。Unity内実行は引き続き保留。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Damage/HitResolver.cs": "101d98dccbd9c26c626f8b52d2db24be03e20d2dd1b73e22f15a90a9ed206309",
         "Assets/MyAsset/Core/Damage/HpArmorLogic.cs": "9865167ed94c9b804e8286fbf2d8097895ded989e536f3a474c09d9b02ffea5c",
         "Assets/MyAsset/Core/Damage/StatusEffectApplication.cs": "f6eefe768bab54306da9ef9689fc6dbdbe3c23933f26cde9f7760e1603d04551",
         "Assets/MyAsset/Core/Damage/StatusEffectStore.cs": "5601d9c7e364ac4219705fd2ff0ffe6e6108a32ea4f4d855f791ae08acc653d6",
         "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs": "82fba81fb4d94103e55fedecdf4cbaf3613e9251e907a6d401814de0647d9150",
-        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "15f53473f68d7071c823b0a9d385b0369018554f876fb3f423a1eb95b87f54f8",
         "Assets/MyAsset/Core/GameManager/GameEvents.cs": "53d64261b950cc6a91569bf91671694de032349460646846a1563d40943f9577",
         "Assets/MyAsset/Core/Guard/GuardJudgmentLogic.cs": "883cbe4d303c658f1e051ecc0b5bbf7aa3f33c480b8dd51e43cf2b6f17a0712d",
         "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "774487ac9224e08ec7817ade0c7a71b10b0408bd7ca57e2ed4f37643b2a98148",
@@ -271,7 +270,7 @@
         "Assets/Tests/EditMode/EquipmentEffectTests.cs",
         "Assets/Tests/EditMode/EquipmentSystemTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック/変換460件成功、実行中source変更0。実CharacterInfoを含む実ソースをリンクし、Unity値/参照の最小adapterと宣言抽出を使用。Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/resistance-candidate-*、ResistanceFlow-README.txt。 2026-10-26構造整理後、外部.NET8/C#9・実Core/NUnitLite/R3で197件成功・source変更0。Unity値型/属性の最小境界とMagicDefinition/ModeTransitionRuleの値宣言抽出を使用。Unity型/APIコンパイル・Native/Runtime/物理実行は未確認。HitResolverTestsは追加した消滅拒否1件だけ実行。証拠: /workspace/.cave-dungeon/action-flow-harness/。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック/変換460件成功、実行中source変更0。実CharacterInfoを含む実ソースをリンクし、Unity値/参照の最小adapterと宣言抽出を使用。Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/resistance-candidate-*、ResistanceFlow-README.txt。 2026-10-26構造整理後、外部.NET8/C#9・実Core/NUnitLite/R3で197件成功・source変更0。Unity値型/属性の最小境界とMagicDefinition/ModeTransitionRuleの値宣言抽出を使用。Unity型/APIコンパイル・Native/Runtime/物理実行は未確認。HitResolverTestsは追加した消滅拒否1件だけ実行。証拠: /workspace/.cave-dungeon/action-flow-harness/。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Damage/StatusEffectApplication.cs": "f978aaa1d722d7bbc9f757f0ecd0d00092a6f209d6482e25fba451e6e01ad790",
         "Assets/MyAsset/Core/Equipment/EquipmentHolder.cs": "6645eddec65ac8ed2fa84dcb83be87bec704414eba9f6a8870b30a6b8293483f",
@@ -423,7 +422,8 @@
         "Assets/Tests/EditMode/DamageProjectileHitProcessorTests.cs",
         "Assets/Tests/PlayMode/GuardParryStatusEffectPlayTests.cs"
       ],
-      "notes": "2026-10-26の飛翔体管理修正後、接続をソースで確認。Unity型/APIコンパイル・Native SoA・Physics2D・callback実行は未確認。純pool/移動/作者変換の証拠は新しい専用経路を参照。"
+      "notes": "2026-10-26の飛翔体管理修正後、接続をソースで確認。Unity型/APIコンパイル・Native SoA・Physics2D・callback実行は未確認。純pool/移動/作者変換の証拠は新しい専用経路を参照。",
+      "verification_hashes": {}
     }
   },
   {
@@ -460,7 +460,8 @@
         "Assets/Tests/EditMode/DamageProjectileHitProcessorTests.cs",
         "Assets/Tests/EditMode/StatusEffectApplicationTests.cs"
       ],
-      "notes": "2026-10-26の飛翔体管理修正後、接続をソースで確認。Unity型/APIコンパイル・Native SoA・Physics2D・callback実行は未確認。純pool/移動/作者変換の証拠は新しい専用経路を参照。"
+      "notes": "2026-10-26の飛翔体管理修正後、接続をソースで確認。Unity型/APIコンパイル・Native SoA・Physics2D・callback実行は未確認。純pool/移動/作者変換の証拠は新しい専用経路を参照。",
+      "verification_hashes": {}
     }
   },
   {
@@ -537,7 +538,8 @@
       "tests": [
         "Assets/Tests/EditMode/ProjectileManagerLifecycleTests.cs"
       ],
-      "notes": "2026-10-26の飛翔体管理修正後、接続をソースで確認。Unity型/APIコンパイル・Native SoA・Physics2D・callback実行は未確認。純pool/移動/作者変換の証拠は新しい専用経路を参照。"
+      "notes": "2026-10-26の飛翔体管理修正後、接続をソースで確認。Unity型/APIコンパイル・Native SoA・Physics2D・callback実行は未確認。純pool/移動/作者変換の証拠は新しい専用経路を参照。",
+      "verification_hashes": {}
     }
   },
   {
@@ -579,7 +581,8 @@
         "Assets/Tests/PlayMode/ProjectileSweepPlayTests.cs",
         "Assets/Tests/EditMode/ProjectileManagerLifecycleTests.cs"
       ],
-      "notes": "固定tick開始時のcontroller/core/lease集合を更新し、最終移動区間のsweep後に寿命を確定する。純計算の実行証拠はcore-step経路を参照。このRuntime経路はソース/構文確認のみ、Unity型/API・Native SoA・Physics2D・callbackの実行は未確認。"
+      "notes": "固定tick開始時のcontroller/core/lease集合を更新し、最終移動区間のsweep後に寿命を確定する。純計算の実行証拠はcore-step経路を参照。このRuntime経路はソース/構文確認のみ、Unity型/API・Native SoA・Physics2D・callbackの実行は未確認。",
+      "verification_hashes": {}
     }
   },
   {
@@ -616,7 +619,8 @@
         "Assets/Tests/EditMode/ChildBulletTests.cs",
         "Assets/Tests/EditMode/ProjectileManagerLifecycleTests.cs"
       ],
-      "notes": "2026-10-26の飛翔体管理修正後、接続をソースで確認。Unity型/APIコンパイル・Native SoA・Physics2D・callback実行は未確認。純pool/移動/作者変換の証拠は新しい専用経路を参照。"
+      "notes": "2026-10-26の飛翔体管理修正後、接続をソースで確認。Unity型/APIコンパイル・Native SoA・Physics2D・callback実行は未確認。純pool/移動/作者変換の証拠は新しい専用経路を参照。",
+      "verification_hashes": {}
     }
   },
   {
@@ -893,7 +897,7 @@
           "kind": "call"
         },
         {
-          "file": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
+          "file": "Assets/MyAsset/Core/DataContainer/CharacterVitals.cs",
           "symbol": "CharacterVitals.currentStamina",
           "kind": "write"
         }
@@ -902,10 +906,9 @@
         "Assets/Tests/EditMode/ParryGuardJudgmentTests.cs",
         "Assets/Tests/EditMode/HitResolverTests.cs"
       ],
-      "notes": "SO変換整理後のこの経路全体は未再検証。以下とhashは以前の検証記録。 実Core＋NUnitをEditor外で実行し、既存236件とActionExecution34件・AICore_ActionExecutor9件を含む純ロジック回帰302件が成功。Guard判定26件・HitResolver17件を包含。完全一致SPはGuarded、JGの近接／飛翔体差を確認。 DF-01反映後もCore/Runtime/Editor/EditMode/PlayMode全5アセンブリを再コンパイル成功。当該純ロジックを含む回帰313件成功・失敗0件。",
+      "notes": "ファイル分割後の宣言同値は確認済み。Native経路の旧検証段階は維持し、移動前のhashはdesigns/struct-organization.jsonの履歴へ記録。 SO変換整理後のこの経路全体は未再検証。以下とhashは以前の検証記録。 実Core＋NUnitをEditor外で実行し、既存236件とActionExecution34件・AICore_ActionExecutor9件を含む純ロジック回帰302件が成功。Guard判定26件・HitResolver17件を包含。完全一致SPはGuarded、JGの近接／飛翔体差を確認。 DF-01反映後もCore/Runtime/Editor/EditMode/PlayMode全5アセンブリを再コンパイル成功。当該純ロジックを含む回帰313件成功・失敗0件。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Damage/HitResolver.cs": "101d98dccbd9c26c626f8b52d2db24be03e20d2dd1b73e22f15a90a9ed206309",
-        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "15f53473f68d7071c823b0a9d385b0369018554f876fb3f423a1eb95b87f54f8",
         "Assets/MyAsset/Core/Guard/GuardJudgmentLogic.cs": "883cbe4d303c658f1e051ecc0b5bbf7aa3f33c480b8dd51e43cf2b6f17a0712d",
         "Assets/Tests/EditMode/HitResolverTests.cs": "e646bb47a19088d98f936cc8c51e1f6e2d6e897c038a873147b61ca8bfd18bf9",
         "Assets/Tests/EditMode/ParryGuardJudgmentTests.cs": "85545441d5ac39899233f00f2411aa4617c96c80f79aab8e53ab49ee8a42af26"
@@ -1032,7 +1035,7 @@
       "tests": [
         "Assets/Tests/EditMode/ActionExecutionTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-26 SO変換整理後、外部.NET8/C#9・実Core/実SO宣言/実ActionCatalog/NUnitLite/R3で265件成功、source変更0。UnityObjectは不活性な参照、Destroyはno-op、属性/値型の最小境界とMagicDefinition/ModeTransitionRule値宣言抽出を使用。Unity型/API・シリアライズ・fake-null・Native/Runtime/物理実行は未確認。HitResolverTestsは消滅拒否1件のみ、他linked fixtureは全件実行。証拠: /workspace/.cave-dungeon/action-flow-harness/definitions-final-*。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-26 SO変換整理後、外部.NET8/C#9・実Core/実SO宣言/実ActionCatalog/NUnitLite/R3で265件成功、source変更0。UnityObjectは不活性な参照、Destroyはno-op、属性/値型の最小境界とMagicDefinition/ModeTransitionRule値宣言抽出を使用。Unity型/API・シリアライズ・fake-null・Native/Runtime/物理実行は未確認。HitResolverTestsは消滅拒否1件のみ、他linked fixtureは全件実行。証拠: /workspace/.cave-dungeon/action-flow-harness/definitions-final-*。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "4d4620da3fee0e3f12444905ad8fe9c7e60843881da803c65b4bcd10f7bb0ad3",
         "Assets/MyAsset/Core/Actions/ExecutionTypes.cs": "57263a1efed59fba81c7793983f8aa36371d63736c5090050dfd11ab8f68fed7",
@@ -1635,7 +1638,8 @@
       "tests": [
         "Assets/Tests/PlayMode/ActionRuntimeFlowTests.cs"
       ],
-      "notes": "2026-10-26の飛翔体管理修正後、接続をソースで確認。Unity型/APIコンパイル・Native SoA・Physics2D・callback実行は未確認。純pool/移動/作者変換の証拠は新しい専用経路を参照。"
+      "notes": "2026-10-26の飛翔体管理修正後、接続をソースで確認。Unity型/APIコンパイル・Native SoA・Physics2D・callback実行は未確認。純pool/移動/作者変換の証拠は新しい専用経路を参照。",
+      "verification_hashes": {}
     }
   },
   {
@@ -1663,7 +1667,7 @@
           "kind": "write"
         },
         {
-          "file": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
+          "file": "Assets/MyAsset/Core/DataContainer/CharacterVitals.cs",
           "symbol": "CharacterVitals.currentMp",
           "kind": "write"
         },
@@ -1692,12 +1696,22 @@
         "Assets/Tests/EditMode/CompanionAI_MpManagerTests.cs",
         "Assets/Tests/EditMode/Integration_CompanionSharedMpTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック/変換460件成功、実行中source変更0。実CharacterInfoを含む実ソースをリンクし、Unity値/参照の最小adapterと宣言抽出を使用。Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/resistance-candidate-*、ResistanceFlow-README.txt。 2026-10-26 SO変換整理後、外部.NET8/C#9・実Core/実SO宣言/実ActionCatalog/NUnitLite/R3で265件成功、source変更0。UnityObjectは不活性な参照、Destroyはno-op、属性/値型の最小境界とMagicDefinition/ModeTransitionRule値宣言抽出を使用。Unity型/API・シリアライズ・fake-null・Native/Runtime/物理実行は未確認。HitResolverTestsは消滅拒否1件のみ、他linked fixtureは全件実行。証拠: /workspace/.cave-dungeon/action-flow-harness/definitions-final-*。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック/変換460件成功、実行中source変更0。実CharacterInfoを含む実ソースをリンクし、Unity値/参照の最小adapterと宣言抽出を使用。Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/resistance-candidate-*、ResistanceFlow-README.txt。 2026-10-26 SO変換整理後、外部.NET8/C#9・実Core/実SO宣言/実ActionCatalog/NUnitLite/R3で265件成功、source変更0。UnityObjectは不活性な参照、Destroyはno-op、属性/値型の最小境界とMagicDefinition/ModeTransitionRule値宣言抽出を使用。Unity型/API・シリアライズ・fake-null・Native/Runtime/物理実行は未確認。HitResolverTestsは消滅拒否1件のみ、他linked fixtureは全件実行。証拠: /workspace/.cave-dungeon/action-flow-harness/definitions-final-*。",
       "verification_hashes": {
         "Assets/MyAsset/Core/AI/Companion/CompanionMpManager.cs": "317c034eb6a3b84ca6d5c1e7638942bcf13f7753a70cf20c5b05ceb525bc0155",
         "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "4d4620da3fee0e3f12444905ad8fe9c7e60843881da803c65b4bcd10f7bb0ad3",
         "Assets/MyAsset/Core/Actions/ExecutionTypes.cs": "57263a1efed59fba81c7793983f8aa36371d63736c5090050dfd11ab8f68fed7",
-        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da",
+        "Assets/MyAsset/Core/Animation/AnimationStateData.cs": "89ed45c29bbcbf887b25e2e4ff5ad0de743903b21b91a8e83a463f02e465defb",
+        "Assets/MyAsset/Core/Damage/CharacterStatusEffects.cs": "4685846978f416fc4fec7bfa15a78fa0c81cca7b41863a8f6742d7ffead1421b",
+        "Assets/MyAsset/Core/DataContainer/CharacterBaseStats.cs": "347b784ea57088279cc9d41b0d07a7e5c885c588a9aba29bf53c6664686f2f9d",
+        "Assets/MyAsset/Core/DataContainer/CharacterFlags.cs": "82232a760285fb46942fcfc23d06a125d4dc760c80df0666566b418e30398069",
+        "Assets/MyAsset/Core/DataContainer/CharacterGrowth.cs": "4d5e65bfae8a7ed5177a5adb0ec67f98fe7414cd702258cb8b57a6afa107058b",
+        "Assets/MyAsset/Core/DataContainer/CharacterRegistration.cs": "fb28379f65c347c2c4af05ff8b5cfd2bfce8ec3f0979a322e126e5069d35d12f",
+        "Assets/MyAsset/Core/DataContainer/CharacterVitals.cs": "3b9c28f941fae3feedb99ff1c911524539f91bb25a900ba09f5e372571a8face",
+        "Assets/MyAsset/Core/DataContainer/CombatStats.cs": "a4b34206461990769895c0c7f7aef720ef9276681a714bc12814d18b7bc66e16",
+        "Assets/MyAsset/Core/Equipment/EquipmentStatus.cs": "4b555446656574abb98da3fb1075e7f453e0cdc6c12ca85696c77bdb86236648",
+        "Assets/MyAsset/Core/Movement/GroundInfo.cs": "e8a2e8d99dbf96068d047b2d3c873c1eae87ea4bd38a8bc6021a7d39d377e0ed",
+        "Assets/MyAsset/Core/Movement/MoveParams.cs": "0ad7cc6bc1e941fd8e4b72583451e1aaebdbd34fc25493809ba0243dd7ab9781",
         "Assets/Tests/EditMode/CompanionAI_MpManagerTests.cs": "de8b945de9aef3eeedd2390a715f0a6a8a40f59e140f3056415612feaeb098f9",
         "Assets/Tests/EditMode/Integration_CompanionSharedMpTests.cs": "319f8d9b896936434af75c02a1964fa92a1b4bfe2ececadd023f6aceeed77619"
       }
@@ -1862,7 +1876,7 @@
           "kind": "entry"
         },
         {
-          "file": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
+          "file": "Assets/MyAsset/Core/DataContainer/CharacterBaseStats.cs",
           "symbol": "CharacterBaseStats",
           "kind": "read"
         },
@@ -1891,9 +1905,8 @@
         "Assets/Tests/EditMode/CharacterStatCalculatorTests.cs",
         "Assets/Tests/EditMode/LevelUpSystemCoreTests.cs"
       ],
-      "notes": "SO変換整理後のこの経路全体は未再検証。以下とhashは以前の検証記録。 実Core＋NUnitをEditor外で実行。新規計算5件・既存成長6件を含む回帰313件成功、失敗0件。配分VIT×10/MND×5、基礎属性の二重加算防止、反復計算、現在値維持、上限減少時の制限、HP0と小数MP保持、6能力合計を検証。SO・実SoA・GameManagerのNative実行はこのlogic_testedには含めない。",
+      "notes": "ファイル分割後の宣言同値は確認済み。Native経路の旧検証段階は維持し、移動前のhashはdesigns/struct-organization.jsonの履歴へ記録。 SO変換整理後のこの経路全体は未再検証。以下とhashは以前の検証記録。 実Core＋NUnitをEditor外で実行。新規計算5件・既存成長6件を含む回帰313件成功、失敗0件。配分VIT×10/MND×5、基礎属性の二重加算防止、反復計算、現在値維持、上限減少時の制限、HP0と小数MP保持、6能力合計を検証。SO・実SoA・GameManagerのNative実行はこのlogic_testedには含めない。",
       "verification_hashes": {
-        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "15f53473f68d7071c823b0a9d385b0369018554f876fb3f423a1eb95b87f54f8",
         "Assets/MyAsset/Core/LevelUp/CharacterStatCalculator.cs": "fcad03a3a0b95d7db791713204c5b30fe4d08404042126fc81f4c24fb142beef",
         "Assets/MyAsset/Core/LevelUp/LevelUpLogic.cs": "25edc26538220fe869289e2c6945516329d698e24996c1ab8d6ef7a09d146e89",
         "Assets/Tests/EditMode/CharacterStatCalculatorTests.cs": "6d95cd2cfc7e9f7d481e07ee71cf0d4d94cff19d7d618e69db2a882b1f7e5147",
@@ -2193,7 +2206,7 @@
       "tests": [
         "Assets/Tests/EditMode/EquipmentDataFlowTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック/変換460件成功、実行中source変更0。実CharacterInfoを含む実ソースをリンクし、Unity値/参照の最小adapterと宣言抽出を使用。Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/resistance-candidate-*、ResistanceFlow-README.txt。 2026-10-26構造整理後、外部.NET8/C#9・実Core/NUnitLite/R3で197件成功・source変更0。Unity値型/属性の最小境界とMagicDefinition/ModeTransitionRuleの値宣言抽出を使用。Unity型/APIコンパイル・Native/Runtime/物理実行は未確認。HitResolverTestsは追加した消滅拒否1件だけ実行。証拠: /workspace/.cave-dungeon/action-flow-harness/。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック/変換460件成功、実行中source変更0。実CharacterInfoを含む実ソースをリンクし、Unity値/参照の最小adapterと宣言抽出を使用。Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/resistance-candidate-*、ResistanceFlow-README.txt。 2026-10-26構造整理後、外部.NET8/C#9・実Core/NUnitLite/R3で197件成功・source変更0。Unity値型/属性の最小境界とMagicDefinition/ModeTransitionRuleの値宣言抽出を使用。Unity型/APIコンパイル・Native/Runtime/物理実行は未確認。HitResolverTestsは追加した消滅拒否1件だけ実行。証拠: /workspace/.cave-dungeon/action-flow-harness/。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Equipment/EquipmentHolder.cs": "6645eddec65ac8ed2fa84dcb83be87bec704414eba9f6a8870b30a6b8293483f",
         "Assets/MyAsset/Core/Equipment/EquipmentStatCalculator.cs": "11d71bfc252e04d3926f96d21f1830807c2960084fb6adaebe519caec657ec4a",
@@ -2246,8 +2259,18 @@
           "kind": "write"
         },
         {
-          "file": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
-          "symbol": "CharacterBaseStats.abilityFlags / CharacterFlags.AbilityFlags / EquipmentStatus",
+          "file": "Assets/MyAsset/Core/DataContainer/CharacterBaseStats.cs",
+          "symbol": "CharacterBaseStats.abilityFlags",
+          "kind": "output"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/CharacterFlags.cs",
+          "symbol": "CharacterFlags.AbilityFlags",
+          "kind": "output"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Equipment/EquipmentStatus.cs",
+          "symbol": "EquipmentStatus",
           "kind": "output"
         },
         {
@@ -2264,7 +2287,7 @@
       "tests": [
         "Assets/Tests/EditMode/Integration_EquipmentRegistrationTests.cs"
       ],
-      "notes": "装備攻防・6能力・最大HP/MP/SP/アーマーとfinal*の共通書き戻し、成長時の装備再導出、通知前更新をコード上で接続。実SoAを使う登録結合6件を追加し、素体原本・現在値/小数MP・位置/状態効果/防御タイマー維持、成長時の中間clamp防止、負HP補正での死亡迂回防止を検証する内容。Unity未導入のため実SoA実行/Unityコンパイルは未確認。装備選択UI、重量上限・持ち方の性能、技ごとの攻撃源契約は別の未接続項目。",
+      "notes": "ファイル分割後の宣言同値は確認済み。Native経路の旧検証段階は維持し、移動前のhashはdesigns/struct-organization.jsonの履歴へ記録。 装備攻防・6能力・最大HP/MP/SP/アーマーとfinal*の共通書き戻し、成長時の装備再導出、通知前更新をコード上で接続。実SoAを使う登録結合6件を追加し、素体原本・現在値/小数MP・位置/状態効果/防御タイマー維持、成長時の中間clamp防止、負HP補正での死亡迂回防止を検証する内容。Unity未導入のため実SoA実行/Unityコンパイルは未確認。装備選択UI、重量上限・持ち方の性能、技ごとの攻撃源契約は別の未接続項目。",
       "verification_hashes": {}
     }
   },
@@ -2282,8 +2305,18 @@
           "kind": "entry"
         },
         {
-          "file": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
-          "symbol": "CharacterBaseStats / CharacterGrowth / CharacterVitals",
+          "file": "Assets/MyAsset/Core/DataContainer/CharacterVitals.cs",
+          "symbol": "CharacterVitals",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/CharacterBaseStats.cs",
+          "symbol": "CharacterBaseStats",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/CharacterGrowth.cs",
+          "symbol": "CharacterGrowth",
           "kind": "read"
         },
         {
@@ -2319,15 +2352,25 @@
       ],
       "verification": "logic_tested",
       "verification_hashes": {
-        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da",
+        "Assets/MyAsset/Core/Animation/AnimationStateData.cs": "89ed45c29bbcbf887b25e2e4ff5ad0de743903b21b91a8e83a463f02e465defb",
+        "Assets/MyAsset/Core/Damage/CharacterStatusEffects.cs": "4685846978f416fc4fec7bfa15a78fa0c81cca7b41863a8f6742d7ffead1421b",
+        "Assets/MyAsset/Core/DataContainer/CharacterBaseStats.cs": "347b784ea57088279cc9d41b0d07a7e5c885c588a9aba29bf53c6664686f2f9d",
+        "Assets/MyAsset/Core/DataContainer/CharacterFlags.cs": "82232a760285fb46942fcfc23d06a125d4dc760c80df0666566b418e30398069",
+        "Assets/MyAsset/Core/DataContainer/CharacterGrowth.cs": "4d5e65bfae8a7ed5177a5adb0ec67f98fe7414cd702258cb8b57a6afa107058b",
+        "Assets/MyAsset/Core/DataContainer/CharacterRegistration.cs": "fb28379f65c347c2c4af05ff8b5cfd2bfce8ec3f0979a322e126e5069d35d12f",
+        "Assets/MyAsset/Core/DataContainer/CharacterVitals.cs": "3b9c28f941fae3feedb99ff1c911524539f91bb25a900ba09f5e372571a8face",
+        "Assets/MyAsset/Core/DataContainer/CombatStats.cs": "a4b34206461990769895c0c7f7aef720ef9276681a714bc12814d18b7bc66e16",
         "Assets/MyAsset/Core/Equipment/EquipmentStatModifiers.cs": "6125d2b1351e543d458ba1f837433e64c76570dc13c412f06b67c4d2d01940d4",
+        "Assets/MyAsset/Core/Equipment/EquipmentStatus.cs": "4b555446656574abb98da3fb1075e7f453e0cdc6c12ca85696c77bdb86236648",
         "Assets/MyAsset/Core/LevelUp/CharacterStatCalculator.cs": "0e8280a2a75a99d48ab5f56c92be9afea650be6d9faddacbcab138dbd043631f",
         "Assets/MyAsset/Core/LevelUp/LevelUpLogic.cs": "b224c5f2a0a58807f698430c129741c007b4dac268286bd25944ac1693be84e0",
+        "Assets/MyAsset/Core/Movement/GroundInfo.cs": "e8a2e8d99dbf96068d047b2d3c873c1eae87ea4bd38a8bc6021a7d39d377e0ed",
+        "Assets/MyAsset/Core/Movement/MoveParams.cs": "0ad7cc6bc1e941fd8e4b72583451e1aaebdbd34fc25493809ba0243dd7ab9781",
         "Assets/Tests/EditMode/CharacterStatCalculatorTests.cs": "6d95cd2cfc7e9f7d481e07ee71cf0d4d94cff19d7d618e69db2a882b1f7e5147",
         "Assets/Tests/EditMode/EquipmentDerivedStatsTests.cs": "86936f6f02cea5106cfa2e3596ed535c9a93bb89cadadc2d55e9ad9248c97ad8",
         "Assets/Tests/EditMode/EquipmentStatCalcTests.cs": "06caf051e4ded4f6b40281951a2e02476df715defaabaa2c9704cacbddf7fec2"
       },
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック/変換460件成功、実行中source変更0。実CharacterInfoを含む実ソースをリンクし、Unity値/参照の最小adapterと宣言抽出を使用。Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/resistance-candidate-*、ResistanceFlow-README.txt。 2026-10-26構造整理後、外部.NET8/C#9・実Core/NUnitLite/R3で197件成功・source変更0。Unity値型/属性の最小境界とMagicDefinition/ModeTransitionRuleの値宣言抽出を使用。Unity型/APIコンパイル・Native/Runtime/物理実行は未確認。HitResolverTestsは追加した消滅拒否1件だけ実行。証拠: /workspace/.cave-dungeon/action-flow-harness/。"
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック/変換460件成功、実行中source変更0。実CharacterInfoを含む実ソースをリンクし、Unity値/参照の最小adapterと宣言抽出を使用。Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/resistance-candidate-*、ResistanceFlow-README.txt。 2026-10-26構造整理後、外部.NET8/C#9・実Core/NUnitLite/R3で197件成功・source変更0。Unity値型/属性の最小境界とMagicDefinition/ModeTransitionRuleの値宣言抽出を使用。Unity型/APIコンパイル・Native/Runtime/物理実行は未確認。HitResolverTestsは追加した消滅拒否1件だけ実行。証拠: /workspace/.cave-dungeon/action-flow-harness/。"
     }
   },
   {
@@ -2382,7 +2425,7 @@
         "Assets/MyAsset/Core/Guard/GuardJudgmentLogic.cs": "9ec9104c1888334fda7141e061abd5f6b1e0a621f7c95108083fbe22fd0f4565",
         "Assets/Tests/EditMode/EquipmentCombatFlowTests.cs": "d143091c5f7e1990cbe119323489148cbcca0f5f7e5c581f0f16bfac67dfb4dd"
       },
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック/変換460件成功、実行中source変更0。実CharacterInfoを含む実ソースをリンクし、Unity値/参照の最小adapterと宣言抽出を使用。Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/resistance-candidate-*、ResistanceFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック・変換383件成功、実行中source変更0。Unity値/参照の最小adapterと宣言抽出を使用し、Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/target-candidate-*、TargetPolicyFlow-README.txt。 2026-10-26構造整理後、外部.NET8/C#9・実Core/NUnitLite/R3で197件成功・source変更0。Unity値型/属性の最小境界とMagicDefinition/ModeTransitionRuleの値宣言抽出を使用。Unity型/APIコンパイル・Native/Runtime/物理実行は未確認。HitResolverTestsは追加した消滅拒否1件だけ実行。証拠: /workspace/.cave-dungeon/action-flow-harness/。"
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック/変換460件成功、実行中source変更0。実CharacterInfoを含む実ソースをリンクし、Unity値/参照の最小adapterと宣言抽出を使用。Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/resistance-candidate-*、ResistanceFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック・変換383件成功、実行中source変更0。Unity値/参照の最小adapterと宣言抽出を使用し、Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/target-candidate-*、TargetPolicyFlow-README.txt。 2026-10-26構造整理後、外部.NET8/C#9・実Core/NUnitLite/R3で197件成功・source変更0。Unity値型/属性の最小境界とMagicDefinition/ModeTransitionRuleの値宣言抽出を使用。Unity型/APIコンパイル・Native/Runtime/物理実行は未確認。HitResolverTestsは追加した消滅拒否1件だけ実行。証拠: /workspace/.cave-dungeon/action-flow-harness/。"
     }
   },
   {
@@ -2414,7 +2457,7 @@
         "Assets/Tests/EditMode/ActionExecutionGroupTests.cs",
         "Assets/Tests/EditMode/ActionExecutionContinuationTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-26 SO変換整理後、外部.NET8/C#9・実Core/実SO宣言/実ActionCatalog/NUnitLite/R3で265件成功、source変更0。UnityObjectは不活性な参照、Destroyはno-op、属性/値型の最小境界とMagicDefinition/ModeTransitionRule値宣言抽出を使用。Unity型/API・シリアライズ・fake-null・Native/Runtime/物理実行は未確認。HitResolverTestsは消滅拒否1件のみ、他linked fixtureは全件実行。証拠: /workspace/.cave-dungeon/action-flow-harness/definitions-final-*。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-26 SO変換整理後、外部.NET8/C#9・実Core/実SO宣言/実ActionCatalog/NUnitLite/R3で265件成功、source変更0。UnityObjectは不活性な参照、Destroyはno-op、属性/値型の最小境界とMagicDefinition/ModeTransitionRule値宣言抽出を使用。Unity型/API・シリアライズ・fake-null・Native/Runtime/物理実行は未確認。HitResolverTestsは消滅拒否1件のみ、他linked fixtureは全件実行。証拠: /workspace/.cave-dungeon/action-flow-harness/definitions-final-*。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Actions/ActionExecutionSystem.Groups.cs": "0ef6d1cd810dde290510bd379001bc4a025bc69864b27270aa8eaebffb4d6167",
         "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "4d4620da3fee0e3f12444905ad8fe9c7e60843881da803c65b4bcd10f7bb0ad3",
@@ -2454,7 +2497,7 @@
         "Assets/Tests/EditMode/ActionAuthoringCommandTests.cs",
         "Assets/Tests/EditMode/AICore_ActionExecutorTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-26構造整理後、外部.NET8/C#9・実Core/NUnitLite/R3で197件成功・source変更0。Unity値型/属性の最小境界とMagicDefinition/ModeTransitionRuleの値宣言抽出を使用。Unity型/APIコンパイル・Native/Runtime/物理実行は未確認。HitResolverTestsは追加した消滅拒否1件だけ実行。証拠: /workspace/.cave-dungeon/action-flow-harness/。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-26構造整理後、外部.NET8/C#9・実Core/NUnitLite/R3で197件成功・source変更0。Unity値型/属性の最小境界とMagicDefinition/ModeTransitionRuleの値宣言抽出を使用。Unity型/APIコンパイル・Native/Runtime/物理実行は未確認。HitResolverTestsは追加した消滅拒否1件だけ実行。証拠: /workspace/.cave-dungeon/action-flow-harness/。",
       "verification_hashes": {
         "Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs": "6e1b233c3986e2e14b934f4ce598cb6b4853935b12099e414c81ce9fd1df8ecf",
         "Assets/MyAsset/Core/AI/Core/ActionExecutor.cs": "778415bc50d8508432c3d3d741a3220de04c893dd4f52fc11f9e203c53da91ab",
@@ -2510,7 +2553,7 @@
         "Assets/Tests/EditMode/ActorEventBoundaryTests.cs",
         "Assets/Tests/EditMode/StatusEffectSourceIdentityTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック/変換460件成功、実行中source変更0。実CharacterInfoを含む実ソースをリンクし、Unity値/参照の最小adapterと宣言抽出を使用。Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/resistance-candidate-*、ResistanceFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック・変換383件成功、実行中source変更0。Unity値/参照の最小adapterと宣言抽出を使用し、Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/target-candidate-*、TargetPolicyFlow-README.txt。 2026-10-26 SO変換整理後、外部.NET8/C#9・実Core/実SO宣言/実ActionCatalog/NUnitLite/R3で265件成功、source変更0。UnityObjectは不活性な参照、Destroyはno-op、属性/値型の最小境界とMagicDefinition/ModeTransitionRule値宣言抽出を使用。Unity型/API・シリアライズ・fake-null・Native/Runtime/物理実行は未確認。HitResolverTestsは消滅拒否1件のみ、他linked fixtureは全件実行。証拠: /workspace/.cave-dungeon/action-flow-harness/definitions-final-*。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック/変換460件成功、実行中source変更0。実CharacterInfoを含む実ソースをリンクし、Unity値/参照の最小adapterと宣言抽出を使用。Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/resistance-candidate-*、ResistanceFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック・変換383件成功、実行中source変更0。Unity値/参照の最小adapterと宣言抽出を使用し、Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/target-candidate-*、TargetPolicyFlow-README.txt。 2026-10-26 SO変換整理後、外部.NET8/C#9・実Core/実SO宣言/実ActionCatalog/NUnitLite/R3で265件成功、source変更0。UnityObjectは不活性な参照、Destroyはno-op、属性/値型の最小境界とMagicDefinition/ModeTransitionRule値宣言抽出を使用。Unity型/API・シリアライズ・fake-null・Native/Runtime/物理実行は未確認。HitResolverTestsは消滅拒否1件のみ、他linked fixtureは全件実行。証拠: /workspace/.cave-dungeon/action-flow-harness/definitions-final-*。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Combat/Projectile/Projectile.cs": "be20d4999760857b313e294e7b387a9f62c1cf9f8270186f855319e367152ad5",
         "Assets/MyAsset/Core/Common/ActorRef.cs": "21ba89ce082343f229cb45883cf0e363e9fbf5abe20c392ab523fc09a8c353e5",
@@ -2557,7 +2600,7 @@
       "tests": [
         "Assets/Tests/EditMode/AIObservationContextTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-26構造整理後、外部.NET8/C#9・実Core/NUnitLite/R3で197件成功・source変更0。Unity値型/属性の最小境界とMagicDefinition/ModeTransitionRuleの値宣言抽出を使用。Unity型/APIコンパイル・Native/Runtime/物理実行は未確認。HitResolverTestsは追加した消滅拒否1件だけ実行。証拠: /workspace/.cave-dungeon/action-flow-harness/。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-26構造整理後、外部.NET8/C#9・実Core/NUnitLite/R3で197件成功・source変更0。Unity値型/属性の最小境界とMagicDefinition/ModeTransitionRuleの値宣言抽出を使用。Unity型/APIコンパイル・Native/Runtime/物理実行は未確認。HitResolverTestsは追加した消滅拒否1件だけ実行。証拠: /workspace/.cave-dungeon/action-flow-harness/。",
       "verification_hashes": {
         "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": "070c63086f02dc602496ee6ef9d1ec7005ad27709ca8b30b5fb11a8566803fa7",
         "Assets/MyAsset/Core/AI/Core/AITargetRelations.cs": "71791495df08210e3ef02cceedf90895596e5ecd9fcca29d7442f789548d0456",
@@ -2601,7 +2644,7 @@
         "Assets/Tests/EditMode/CharacterStatsSystemTests.cs",
         "Assets/Tests/EditMode/EquipmentDerivedStatsTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック/変換460件成功、実行中source変更0。実CharacterInfoを含む実ソースをリンクし、Unity値/参照の最小adapterと宣言抽出を使用。Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/resistance-candidate-*、ResistanceFlow-README.txt。 2026-10-26構造整理後、外部.NET8/C#9・実Core/NUnitLite/R3で197件成功・source変更0。Unity値型/属性の最小境界とMagicDefinition/ModeTransitionRuleの値宣言抽出を使用。Unity型/APIコンパイル・Native/Runtime/物理実行は未確認。HitResolverTestsは追加した消滅拒否1件だけ実行。証拠: /workspace/.cave-dungeon/action-flow-harness/。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック/変換460件成功、実行中source変更0。実CharacterInfoを含む実ソースをリンクし、Unity値/参照の最小adapterと宣言抽出を使用。Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/resistance-candidate-*、ResistanceFlow-README.txt。 2026-10-26構造整理後、外部.NET8/C#9・実Core/NUnitLite/R3で197件成功・source変更0。Unity値型/属性の最小境界とMagicDefinition/ModeTransitionRuleの値宣言抽出を使用。Unity型/APIコンパイル・Native/Runtime/物理実行は未確認。HitResolverTestsは追加した消滅拒否1件だけ実行。証拠: /workspace/.cave-dungeon/action-flow-harness/。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Equipment/EquipmentHolder.cs": "6645eddec65ac8ed2fa84dcb83be87bec704414eba9f6a8870b30a6b8293483f",
         "Assets/MyAsset/Core/Equipment/IEquipmentWorld.cs": "ccb8149e7a6cc12f5c97e826b698bf85a606de52d4c61869ca1206d380888a54",
@@ -2627,8 +2670,13 @@
           "kind": "entry"
         },
         {
-          "file": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
-          "symbol": "SoAStructs",
+          "file": "Assets/MyAsset/Core/DataContainer/CharacterVitals.cs",
+          "symbol": "CharacterVitals",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/CharacterFlags.cs",
+          "symbol": "CharacterFlags",
           "kind": "call"
         },
         {
@@ -2641,11 +2689,21 @@
         "Assets/Tests/EditMode/CompanionAI_MpManagerTests.cs",
         "Assets/Tests/EditMode/HitResolverTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック/変換460件成功、実行中source変更0。実CharacterInfoを含む実ソースをリンクし、Unity値/参照の最小adapterと宣言抽出を使用。Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/resistance-candidate-*、ResistanceFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック・変換383件成功、実行中source変更0。Unity値/参照の最小adapterと宣言抽出を使用し、Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/target-candidate-*、TargetPolicyFlow-README.txt。 2026-10-26構造整理後、外部.NET8/C#9・実Core/NUnitLite/R3で197件成功・source変更0。Unity値型/属性の最小境界とMagicDefinition/ModeTransitionRuleの値宣言抽出を使用。Unity型/APIコンパイル・Native/Runtime/物理実行は未確認。HitResolverTestsは追加した消滅拒否1件だけ実行。証拠: /workspace/.cave-dungeon/action-flow-harness/。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック/変換460件成功、実行中source変更0。実CharacterInfoを含む実ソースをリンクし、Unity値/参照の最小adapterと宣言抽出を使用。Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/resistance-candidate-*、ResistanceFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック・変換383件成功、実行中source変更0。Unity値/参照の最小adapterと宣言抽出を使用し、Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/target-candidate-*、TargetPolicyFlow-README.txt。 2026-10-26構造整理後、外部.NET8/C#9・実Core/NUnitLite/R3で197件成功・source変更0。Unity値型/属性の最小境界とMagicDefinition/ModeTransitionRuleの値宣言抽出を使用。Unity型/APIコンパイル・Native/Runtime/物理実行は未確認。HitResolverTestsは追加した消滅拒否1件だけ実行。証拠: /workspace/.cave-dungeon/action-flow-harness/。",
       "verification_hashes": {
         "Assets/MyAsset/Core/AI/Companion/CompanionMpManager.cs": "317c034eb6a3b84ca6d5c1e7638942bcf13f7753a70cf20c5b05ceb525bc0155",
+        "Assets/MyAsset/Core/Animation/AnimationStateData.cs": "89ed45c29bbcbf887b25e2e4ff5ad0de743903b21b91a8e83a463f02e465defb",
+        "Assets/MyAsset/Core/Damage/CharacterStatusEffects.cs": "4685846978f416fc4fec7bfa15a78fa0c81cca7b41863a8f6742d7ffead1421b",
         "Assets/MyAsset/Core/Damage/HitResolver.cs": "21351038fadbb0873c71fc6c4c7e4662742a181c8d5adfa25a18daaf96f26b96",
-        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da",
+        "Assets/MyAsset/Core/DataContainer/CharacterBaseStats.cs": "347b784ea57088279cc9d41b0d07a7e5c885c588a9aba29bf53c6664686f2f9d",
+        "Assets/MyAsset/Core/DataContainer/CharacterFlags.cs": "82232a760285fb46942fcfc23d06a125d4dc760c80df0666566b418e30398069",
+        "Assets/MyAsset/Core/DataContainer/CharacterGrowth.cs": "4d5e65bfae8a7ed5177a5adb0ec67f98fe7414cd702258cb8b57a6afa107058b",
+        "Assets/MyAsset/Core/DataContainer/CharacterRegistration.cs": "fb28379f65c347c2c4af05ff8b5cfd2bfce8ec3f0979a322e126e5069d35d12f",
+        "Assets/MyAsset/Core/DataContainer/CharacterVitals.cs": "3b9c28f941fae3feedb99ff1c911524539f91bb25a900ba09f5e372571a8face",
+        "Assets/MyAsset/Core/DataContainer/CombatStats.cs": "a4b34206461990769895c0c7f7aef720ef9276681a714bc12814d18b7bc66e16",
+        "Assets/MyAsset/Core/Equipment/EquipmentStatus.cs": "4b555446656574abb98da3fb1075e7f453e0cdc6c12ca85696c77bdb86236648",
+        "Assets/MyAsset/Core/Movement/GroundInfo.cs": "e8a2e8d99dbf96068d047b2d3c873c1eae87ea4bd38a8bc6021a7d39d377e0ed",
+        "Assets/MyAsset/Core/Movement/MoveParams.cs": "0ad7cc6bc1e941fd8e4b72583451e1aaebdbd34fc25493809ba0243dd7ab9781",
         "Assets/Tests/EditMode/CompanionAI_MpManagerTests.cs": "de8b945de9aef3eeedd2390a715f0a6a8a40f59e140f3056415612feaeb098f9",
         "Assets/Tests/EditMode/HitResolverTests.cs": "9b2230b733aa61e4eb16e3d2756e7f982ff62a6975bf70993158f1480f10c72c"
       }
@@ -2776,7 +2834,7 @@
         "Assets/Tests/EditMode/ActionDefinitionSnapshotTests.cs",
         "Assets/Tests/EditMode/ActionEffectProcessorTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-26 SO変換整理後、外部.NET8/C#9・実Core/実SO宣言/実ActionCatalog/NUnitLite/R3で265件成功、source変更0。UnityObjectは不活性な参照、Destroyはno-op、属性/値型の最小境界とMagicDefinition/ModeTransitionRule値宣言抽出を使用。Unity型/API・シリアライズ・fake-null・Native/Runtime/物理実行は未確認。HitResolverTestsは消滅拒否1件のみ、他linked fixtureは全件実行。証拠: /workspace/.cave-dungeon/action-flow-harness/definitions-final-*。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-26 SO変換整理後、外部.NET8/C#9・実Core/実SO宣言/実ActionCatalog/NUnitLite/R3で265件成功、source変更0。UnityObjectは不活性な参照、Destroyはno-op、属性/値型の最小境界とMagicDefinition/ModeTransitionRule値宣言抽出を使用。Unity型/API・シリアライズ・fake-null・Native/Runtime/物理実行は未確認。HitResolverTestsは消滅拒否1件のみ、他linked fixtureは全件実行。証拠: /workspace/.cave-dungeon/action-flow-harness/definitions-final-*。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Actions/ActionDefinitionSnapshot.cs": "803ca5451192ada064bc1244f4810ff8fac2b82d8dd9785f646645aa1f90ffab",
         "Assets/MyAsset/Core/Actions/ActionDefinitionValidator.cs": "b89c2bf2bdf60f12f453abaf57bf3411a38686e9deeef3025510225141ae1387",
@@ -2849,7 +2907,7 @@
         "Assets/Tests/EditMode/AttackExecutionSettingsTests.cs",
         "Assets/Tests/EditMode/MotionPresentationDataTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック・変換383件成功、実行中source変更0。Unity値/参照の最小adapterと宣言抽出を使用し、Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/target-candidate-*、TargetPolicyFlow-README.txt。 実SO/ActionCatalogと実Coreを外部.NET/C#9でリンクし、純suite327件（作者snapshot36件を含む）成功、実行中source変更0。Prefab参照とAoE/有限貫通設定を登録時に捕捉する。UnityObjectは不活性参照adapter、Destroyはno-opで、fake-null/Prefab生成/Native表示の証明ではない。証拠: /workspace/.cave-dungeon/action-flow-harness/projectile-reviewed-*。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック・変換383件成功、実行中source変更0。Unity値/参照の最小adapterと宣言抽出を使用し、Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/target-candidate-*、TargetPolicyFlow-README.txt。 実SO/ActionCatalogと実Coreを外部.NET/C#9でリンクし、純suite327件（作者snapshot36件を含む）成功、実行中source変更0。Prefab参照とAoE/有限貫通設定を登録時に捕捉する。UnityObjectは不活性参照adapter、Destroyはno-opで、fake-null/Prefab生成/Native表示の証明ではない。証拠: /workspace/.cave-dungeon/action-flow-harness/projectile-reviewed-*。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Actions/ActionDefinitionValidator.cs": "b89c2bf2bdf60f12f453abaf57bf3411a38686e9deeef3025510225141ae1387",
         "Assets/MyAsset/Core/Actions/AttackExecutionSettings.cs": "991e2ca154716db2cfdc1d2fdd26ab110d0204406e5160f930dc447392898546",
@@ -2907,7 +2965,8 @@
         "Assets/Tests/PlayMode/MotionPresentationTests.cs",
         "Assets/Tests/PlayMode/ActionRuntimeFlowTests.cs"
       ],
-      "notes": "SOから捕捉済み定義・表示・Player設定までソース接続済み。Native回帰7件を追加。外部.NETはCatalogと値変換まで、Player/表示/RuntimeのUnity型/API・物理・ライフサイクル実行は未確認。"
+      "notes": "SOから捕捉済み定義・表示・Player設定までソース接続済み。Native回帰7件を追加。外部.NETはCatalogと値変換まで、Player/表示/RuntimeのUnity型/API・物理・ライフサイクル実行は未確認。",
+      "verification_hashes": {}
     }
   },
   {
@@ -2933,7 +2992,7 @@
       "tests": [
         "Assets/Tests/EditMode/SimulationTickRunnerTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-26 外部.NET8/C#9・実Core/実定義変換で279件成功、source変更0。Unity値/参照/属性は検証用最小境界、Destroyはno-op、Native型の値宣言は抽出。Unity型/API・物理・入力・ライフサイクルの実行は未確認。HitResolverは消滅拒否1件のみ選択。証拠: /workspace/.cave-dungeon/action-flow-harness/physics-final-*。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-26 外部.NET8/C#9・実Core/実定義変換で279件成功、source変更0。Unity値/参照/属性は検証用最小境界、Destroyはno-op、Native型の値宣言は抽出。Unity型/API・物理・入力・ライフサイクルの実行は未確認。HitResolverは消滅拒否1件のみ選択。証拠: /workspace/.cave-dungeon/action-flow-harness/physics-final-*。",
       "verification_hashes": {
         "Assets/MyAsset/Core/GameManager/ISimulationTickWorld.cs": "879679928c3e434e8fd522ef2c6c63470e8e35fa083a65e00d7aa1275b9c3237",
         "Assets/MyAsset/Core/GameManager/SimulationTickRunner.cs": "698c9231ebd51a65264b819d124dae65532a31c27d9531f952abe1459dcc74a4",
@@ -2969,7 +3028,7 @@
       "tests": [
         "Assets/Tests/EditMode/InputSamplingClockTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-26 外部.NET8/C#9・実Core/実定義変換で279件成功、source変更0。Unity値/参照/属性は検証用最小境界、Destroyはno-op、Native型の値宣言は抽出。Unity型/API・物理・入力・ライフサイクルの実行は未確認。HitResolverは消滅拒否1件のみ選択。証拠: /workspace/.cave-dungeon/action-flow-harness/physics-final-*。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-26 外部.NET8/C#9・実Core/実定義変換で279件成功、source変更0。Unity値/参照/属性は検証用最小境界、Destroyはno-op、Native型の値宣言は抽出。Unity型/API・物理・入力・ライフサイクルの実行は未確認。HitResolverは消滅拒否1件のみ選択。証拠: /workspace/.cave-dungeon/action-flow-harness/physics-final-*。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Input/ChargeInputHandler.cs": "64e339f1757782bb6b5266d03e81d0adc290fed44cffd245d5519d1d5229896d",
         "Assets/MyAsset/Core/Input/InputSamplingClock.cs": "7e16ffff52bc7f6b3092e54e20969a2e655afde283b081227f6217282902792f",
@@ -3027,7 +3086,8 @@
         "Assets/Tests/PlayMode/CharacterPhysicsBoundaryTests.cs",
         "Assets/Tests/PlayMode/CharacterPhysicsCombatBridgeTests.cs"
       ],
-      "notes": "キャラ物理APIと中央固定tickへの接続をソース確認。119変更C#×3構成の構文確認のみ。Native回帰は追加したがUnity型/API・入力・物理・ライフサイクルは未実行。setterは即時read-after-writeを維持し、全書込みを最後まで遅延する構成ではない。"
+      "notes": "キャラ物理APIと中央固定tickへの接続をソース確認。119変更C#×3構成の構文確認のみ。Native回帰は追加したがUnity型/API・入力・物理・ライフサイクルは未実行。setterは即時read-after-writeを維持し、全書込みを最後まで遅延する構成ではない。",
+      "verification_hashes": {}
     }
   },
   {
@@ -3081,7 +3141,8 @@
         "Assets/Tests/PlayMode/AIObservationFlowTests.cs",
         "Assets/Tests/PlayMode/CharacterPhysicsBoundaryTests.cs"
       ],
-      "notes": "キャラ物理APIと中央固定tickへの接続をソース確認。119変更C#×3構成の構文確認のみ。Native回帰は追加したがUnity型/API・入力・物理・ライフサイクルは未実行。setterは即時read-after-writeを維持し、全書込みを最後まで遅延する構成ではない。"
+      "notes": "キャラ物理APIと中央固定tickへの接続をソース確認。119変更C#×3構成の構文確認のみ。Native回帰は追加したがUnity型/API・入力・物理・ライフサイクルは未実行。setterは即時read-after-writeを維持し、全書込みを最後まで遅延する構成ではない。",
+      "verification_hashes": {}
     }
   },
   {
@@ -3123,7 +3184,7 @@
         "Assets/Tests/EditMode/ProjectileLeaseTests.cs",
         "Assets/Tests/EditMode/MagicSystem_ProjectileCoreTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック・変換383件成功、実行中source変更0。Unity値/参照の最小adapterと宣言抽出を使用し、Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/target-candidate-*、TargetPolicyFlow-README.txt。 外部.NET/C#9で実Core/実テストをリンクした純suite327件成功、実行中source変更0。Unity Vector2/Mathfの算術adapterを使用。Native SoA・Physics2D・GameObject/Controllerの実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/projectile-reviewed-*、ProjectileFlow-README.txt。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック・変換383件成功、実行中source変更0。Unity値/参照の最小adapterと宣言抽出を使用し、Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/target-candidate-*、TargetPolicyFlow-README.txt。 外部.NET/C#9で実Core/実テストをリンクした純suite327件成功、実行中source変更0。Unity Vector2/Mathfの算術adapterを使用。Native SoA・Physics2D・GameObject/Controllerの実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/projectile-reviewed-*、ProjectileFlow-README.txt。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Combat/Projectile/Projectile.cs": "be20d4999760857b313e294e7b387a9f62c1cf9f8270186f855319e367152ad5",
         "Assets/MyAsset/Core/Combat/Projectile/ProjectilePool.cs": "34e23db7c3182e1b9f9c82bde424c73bf7fd1861300f9db698ec7b0d9bd9cd9a",
@@ -3171,7 +3232,7 @@
         "Assets/Tests/EditMode/ProjectileSimulationTests.cs",
         "Assets/Tests/EditMode/MagicSystem_ProjectileMovementTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック・変換383件成功、実行中source変更0。Unity値/参照の最小adapterと宣言抽出を使用し、Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/target-candidate-*、TargetPolicyFlow-README.txt。 外部.NET/C#9で実Core/実テストをリンクした純suite327件成功、実行中source変更0。Unity Vector2/Mathfの算術adapterを使用。Native SoA・Physics2D・GameObject/Controllerの実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/projectile-reviewed-*、ProjectileFlow-README.txt。旧HEADの同API回帰10件中9件失敗も別証拠に保存。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック・変換383件成功、実行中source変更0。Unity値/参照の最小adapterと宣言抽出を使用し、Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/target-candidate-*、TargetPolicyFlow-README.txt。 外部.NET/C#9で実Core/実テストをリンクした純suite327件成功、実行中source変更0。Unity Vector2/Mathfの算術adapterを使用。Native SoA・Physics2D・GameObject/Controllerの実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/projectile-reviewed-*、ProjectileFlow-README.txt。旧HEADの同API回帰10件中9件失敗も別証拠に保存。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Combat/Projectile/BulletProfile.cs": "db54e418a3163ee4741302095519044263714862c0f4ed5f643e0dd5815028a2",
         "Assets/MyAsset/Core/Combat/Projectile/Projectile.cs": "be20d4999760857b313e294e7b387a9f62c1cf9f8270186f855319e367152ad5",
@@ -3224,7 +3285,8 @@
       "tests": [
         "Assets/Tests/EditMode/ProjectileManagerLifecycleTests.cs"
       ],
-      "notes": "生成と回収、再入callback、外部破棄、Prefab別poolを実Manager直通テストで追加。Unity本体がないため実行・型/APIコンパイル未確認。"
+      "notes": "生成と回収、再入callback、外部破棄、Prefab別poolを実Manager直通テストで追加。Unity本体がないため実行・型/APIコンパイル未確認。",
+      "verification_hashes": {}
     }
   },
   {
@@ -3261,7 +3323,8 @@
         "Assets/Tests/PlayMode/ProjectileSweepPlayTests.cs",
         "Assets/Tests/EditMode/ProjectileManagerLifecycleTests.cs"
       ],
-      "notes": "高速弾・最終寿命区間・接触通知重複・再入爆発/回収を対象としたNativeテストを追加。Unity実行未確認。CircleCast APIはUnity6000.3公式referenceで照合したが、型/APIコンパイルや衝突成功の証拠には数えない。"
+      "notes": "高速弾・最終寿命区間・接触通知重複・再入爆発/回収を対象としたNativeテストを追加。Unity実行未確認。CircleCast APIはUnity6000.3公式referenceで照合したが、型/APIコンパイルや衝突成功の証拠には数えない。",
+      "verification_hashes": {}
     }
   },
   {
@@ -3282,7 +3345,7 @@
       "tests": [
         "Assets/Tests/EditMode/ChildBulletTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック・変換383件成功、実行中source変更0。Unity値/参照の最小adapterと宣言抽出を使用し、Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/target-candidate-*、TargetPolicyFlow-README.txt。 外部.NET/C#9で実Core/実テストをリンクした純suite327件成功、実行中source変更0。Unity Vector2/Mathfの算術adapterを使用。Native SoA・Physics2D・GameObject/Controllerの実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/projectile-reviewed-*、ProjectileFlow-README.txt。この経路はpacket変換だけを検証し、Runtimeの生成数・タイミング・回収はruntime-lease-return経路の未実行Nativeテストに分ける。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック・変換383件成功、実行中source変更0。Unity値/参照の最小adapterと宣言抽出を使用し、Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/target-candidate-*、TargetPolicyFlow-README.txt。 外部.NET/C#9で実Core/実テストをリンクした純suite327件成功、実行中source変更0。Unity Vector2/Mathfの算術adapterを使用。Native SoA・Physics2D・GameObject/Controllerの実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/projectile-reviewed-*、ProjectileFlow-README.txt。この経路はpacket変換だけを検証し、Runtimeの生成数・タイミング・回収はruntime-lease-return経路の未実行Nativeテストに分ける。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Combat/Magic/MagicCaster.cs": "e630c6c97fc27c863c1bca484ed3c9806bbd6742056d244368d152e6024f43eb",
         "Assets/MyAsset/Core/Combat/Projectile/ChildBulletHelper.cs": "860adef48d9b32c26babf3665aa610ce5ea12f68a8ebff70e6af59453d6d995a",
@@ -3318,7 +3381,7 @@
       "tests": [
         "Assets/Tests/EditMode/AttackTargetRulesTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック・変換383件成功、実行中source変更0。Unity値/参照の最小adapterと宣言抽出を使用し、Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/target-candidate-*、TargetPolicyFlow-README.txt。新API未実装の29件失敗→29件成功は別証拠で保持し、旧挙動の失敗証拠とは区別する。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック・変換383件成功、実行中source変更0。Unity値/参照の最小adapterと宣言抽出を使用し、Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/target-candidate-*、TargetPolicyFlow-README.txt。新API未実装の29件失敗→29件成功は別証拠で保持し、旧挙動の失敗証拠とは区別する。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Common/ActorRef.cs": "21ba89ce082343f229cb45883cf0e363e9fbf5abe20c392ab523fc09a8c353e5",
         "Assets/MyAsset/Core/Damage/AttackContext.cs": "d6e3c5293aebe85f2a4dac590a41c27b2b318ad0252a8262a7540443242b1f7f",
@@ -3360,7 +3423,7 @@
       "tests": [
         "Assets/Tests/EditMode/HitResolverTargetPolicyTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック・変換383件成功、実行中source変更0。Unity値/参照の最小adapterと宣言抽出を使用し、Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/target-candidate-*、TargetPolicyFlow-README.txt。保存した旧実HitResolver＋新policyで7件中4失敗→修正後7成功。対象外ではHP/アーマー/SP/防御を変えない。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック・変換383件成功、実行中source変更0。Unity値/参照の最小adapterと宣言抽出を使用し、Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/target-candidate-*、TargetPolicyFlow-README.txt。保存した旧実HitResolver＋新policyで7件中4失敗→修正後7成功。対象外ではHP/アーマー/SP/防御を変えない。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Damage/AttackContext.cs": "d6e3c5293aebe85f2a4dac590a41c27b2b318ad0252a8262a7540443242b1f7f",
         "Assets/MyAsset/Core/Damage/AttackTargetPolicy.cs": "f624220d9eec1c8ce9abf3ee373be75ba538ce36976f55a4478b0bfe9093216b",
@@ -3403,13 +3466,22 @@
       "tests": [
         "Assets/Tests/EditMode/AttackTargetAuthoringTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック・変換383件成功、実行中source変更0。Unity値/参照の最小adapterと宣言抽出を使用し、Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/target-candidate-*、TargetPolicyFlow-README.txt。作者未接続13件中12失敗→13成功。近接packet・弾packet・DamageData・派生・子弾への伝播と明示None/unknownbitsを確認。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック・変換383件成功、実行中source変更0。Unity値/参照の最小adapterと宣言抽出を使用し、Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/target-candidate-*、TargetPolicyFlow-README.txt。作者未接続13件中12失敗→13成功。近接packet・弾packet・DamageData・派生・子弾への伝播と明示None/unknownbitsを確認。",
       "verification_hashes": {
+        "Assets/MyAsset/Core/Actions/ActionEffect.cs": "78ba7142cc23ee440473dd5a1c7f9e7aa3d821f9be98a3459620903bc4f1edf7",
+        "Assets/MyAsset/Core/Combat/AttackMotionData.cs": "5153b203dbfa75fcb8e9d97071323be2322d26160557cf83434462a45835ca0e",
         "Assets/MyAsset/Core/Combat/Magic/MagicCaster.cs": "e630c6c97fc27c863c1bca484ed3c9806bbd6742056d244368d152e6024f43eb",
         "Assets/MyAsset/Core/Combat/Projectile/ChildBulletHelper.cs": "860adef48d9b32c26babf3665aa610ce5ea12f68a8ebff70e6af59453d6d995a",
         "Assets/MyAsset/Core/Common/CombatDataHelper.cs": "161ae9d66b37e61e82f99e488e203ac5a98805e60cd713e9cb14ae011a4cff96",
-        "Assets/MyAsset/Core/Common/Structs.cs": "8a0b1704b6db5756a77095ab1a1ccee9e3dfd961dbe2c9b81bc4082ce0eb9a47",
+        "Assets/MyAsset/Core/Common/ElementalStatus.cs": "c5af30c09c579e1a0ef528c748e9e422948e3f23bce7aa6b46d5e916c38004ca",
         "Assets/MyAsset/Core/Damage/AttackTargetPolicy.cs": "f624220d9eec1c8ce9abf3ee373be75ba538ce36976f55a4478b0bfe9093216b",
+        "Assets/MyAsset/Core/Damage/DamageData.cs": "09cfff16db5ce9e87530090991ccf3d27815f286e2829f7b84a3e417a288e7ed",
+        "Assets/MyAsset/Core/Damage/DamageResult.cs": "a63cc7bae7d59e547b67b732d5a7d8af470d62070ca15a210515b628ed320ddd",
+        "Assets/MyAsset/Core/Damage/PhysicalResistance.cs": "687d99a7f51192325cf73fa510f4d05930a3fab065de856980652d787c1c9374",
+        "Assets/MyAsset/Core/Damage/StatusEffectInfo.cs": "fd04ccf35a945609a2d2a658a491c5054f4e47761fed21c1f3f0af3899267503",
+        "Assets/MyAsset/Core/Guard/GuardStats.cs": "20c9685400ffc42b1b0dad146744834842fe2edde2845b7a325801aef5768bf0",
+        "Assets/MyAsset/Core/LevelUp/StatModifier.cs": "ee746c49cb27ed60d54063d994f55f5003fe0513fe3715dace4c2dd7c0b5029a",
+        "Assets/MyAsset/Core/Movement/MovementInfo.cs": "e9213b28882629afc6f163a9239e106b3fd2d79a444079d0e9e32b696064781c",
         "Assets/MyAsset/Core/ScriptableObjects/AttackInfo.cs": "63ee11189923fb6257cd16a03ebd84acc698dd3b1483d1a1210ee95494baf86b",
         "Assets/MyAsset/Runtime/Combat/ActionCatalog.cs": "9f2d2c4b23aa99b43d50eaf7088af4445ece4761304bafd7ec6558d80d939a7a",
         "Assets/Tests/EditMode/AttackTargetAuthoringTests.cs": "b5c9977da7169df71b9450428f8f3bc1dd30e40141807bf812bbe041fb14bb58"
@@ -3459,7 +3531,8 @@
       "tests": [
         "Assets/Tests/PlayMode/CombatTargetPolicyPlayTests.cs"
       ],
-      "notes": "2026-10-27: ソース接続とC#9構文のみ確認。実Unityの型/APIコンパイル・Native SoA・物理・ライフサイクルは未実行。CombatTargetPolicyPlayTests6件、ProjectileTargetPolicyPlayTests8件を追加したが成功件数に数えない。発生元陣営は判定開始時、相手の陣営は接触時に照合する。"
+      "notes": "2026-10-27: ソース接続とC#9構文のみ確認。実Unityの型/APIコンパイル・Native SoA・物理・ライフサイクルは未実行。CombatTargetPolicyPlayTests6件、ProjectileTargetPolicyPlayTests8件を追加したが成功件数に数えない。発生元陣営は判定開始時、相手の陣営は接触時に照合する。",
+      "verification_hashes": {}
     }
   },
   {
@@ -3505,7 +3578,8 @@
       "tests": [
         "Assets/Tests/PlayMode/CombatTargetPolicyPlayTests.cs"
       ],
-      "notes": "2026-10-27: ソース接続とC#9構文のみ確認。実Unityの型/APIコンパイル・Native SoA・物理・ライフサイクルは未実行。CombatTargetPolicyPlayTests6件、ProjectileTargetPolicyPlayTests8件を追加したが成功件数に数えない。発生元陣営は判定開始時、相手の陣営は接触時に照合する。"
+      "notes": "2026-10-27: ソース接続とC#9構文のみ確認。実Unityの型/APIコンパイル・Native SoA・物理・ライフサイクルは未実行。CombatTargetPolicyPlayTests6件、ProjectileTargetPolicyPlayTests8件を追加したが成功件数に数えない。発生元陣営は判定開始時、相手の陣営は接触時に照合する。",
+      "verification_hashes": {}
     }
   },
   {
@@ -3541,7 +3615,8 @@
       "tests": [
         "Assets/Tests/PlayMode/ProjectileTargetPolicyPlayTests.cs"
       ],
-      "notes": "2026-10-27: ソース接続とC#9構文のみ確認。実Unityの型/APIコンパイル・Native SoA・物理・ライフサイクルは未実行。CombatTargetPolicyPlayTests6件、ProjectileTargetPolicyPlayTests8件を追加したが成功件数に数えない。爆発の候補捕捉/適用直前も同入口を使い、対象外のヒット数・派生を消費しない。"
+      "notes": "2026-10-27: ソース接続とC#9構文のみ確認。実Unityの型/APIコンパイル・Native SoA・物理・ライフサイクルは未実行。CombatTargetPolicyPlayTests6件、ProjectileTargetPolicyPlayTests8件を追加したが成功件数に数えない。爆発の候補捕捉/適用直前も同入口を使い、対象外のヒット数・派生を消費しない。",
+      "verification_hashes": {}
     }
   },
   {
@@ -3577,7 +3652,8 @@
       "tests": [
         "Assets/Tests/PlayMode/ProjectileTargetPolicyPlayTests.cs"
       ],
-      "notes": "2026-10-27: ソース接続とC#9構文のみ確認。実Unityの型/APIコンパイル・Native SoA・物理・ライフサイクルは未実行。CombatTargetPolicyPlayTests6件、ProjectileTargetPolicyPlayTests8件を追加したが成功件数に数えない。操舵対象はtick開始観測、命中可否は対象の現陣営をその場で照合する。"
+      "notes": "2026-10-27: ソース接続とC#9構文のみ確認。実Unityの型/APIコンパイル・Native SoA・物理・ライフサイクルは未実行。CombatTargetPolicyPlayTests6件、ProjectileTargetPolicyPlayTests8件を追加したが成功件数に数えない。操舵対象はtick開始観測、命中可否は対象の現陣営をその場で照合する。",
+      "verification_hashes": {}
     }
   },
   {
@@ -3603,7 +3679,7 @@
       "tests": [
         "Assets/Tests/EditMode/StatusEffectDefenseProfileTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック/変換460件成功、実行中source変更0。実CharacterInfoを含む実ソースをリンクし、Unity値/参照の最小adapterと宣言抽出を使用。Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/resistance-candidate-*、ResistanceFlow-README.txt。全15効果・finite境界・raw0互換・閾値合成順を33件で確認。新API未実装skeletonは旧実装比較とは別証拠。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック/変換460件成功、実行中source変更0。実CharacterInfoを含む実ソースをリンクし、Unity値/参照の最小adapterと宣言抽出を使用。Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/resistance-candidate-*、ResistanceFlow-README.txt。全15効果・finite境界・raw0互換・閾値合成順を33件で確認。新API未実装skeletonは旧実装比較とは別証拠。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Damage/StatusEffectDefenseProfile.cs": "173b6b352ea1d4019e0b4215910575aa74cc42e253620131b91249f1389efa8b",
         "Assets/Tests/EditMode/StatusEffectDefenseProfileTests.cs": "693208e8bbcb597fa66adbc1e1aba2b8b4c4842882c6c0a4dcbdbb85cf8d8b01"
@@ -3643,15 +3719,25 @@
       "tests": [
         "Assets/Tests/EditMode/StatusDefenseAuthoringTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック/変換460件成功、実行中source変更0。実CharacterInfoを含む実ソースをリンクし、Unity値/参照の最小adapterと宣言抽出を使用。Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/resistance-candidate-*、ResistanceFlow-README.txt。登録時legacy閾値倍率の一度合成、全gear再導出、脱着冪等、不正gear事前拒否を11件で確認。作者未接続8失敗・事前拒否未実装2失敗を保存。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック/変換460件成功、実行中source変更0。実CharacterInfoを含む実ソースをリンクし、Unity値/参照の最小adapterと宣言抽出を使用。Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/resistance-candidate-*、ResistanceFlow-README.txt。登録時legacy閾値倍率の一度合成、全gear再導出、脱着冪等、不正gear事前拒否を11件で確認。作者未接続8失敗・事前拒否未実装2失敗を保存。",
       "verification_hashes": {
+        "Assets/MyAsset/Core/Animation/AnimationStateData.cs": "89ed45c29bbcbf887b25e2e4ff5ad0de743903b21b91a8e83a463f02e465defb",
+        "Assets/MyAsset/Core/Damage/CharacterStatusEffects.cs": "4685846978f416fc4fec7bfa15a78fa0c81cca7b41863a8f6742d7ffead1421b",
         "Assets/MyAsset/Core/Damage/StatusEffectDefenseProfile.cs": "173b6b352ea1d4019e0b4215910575aa74cc42e253620131b91249f1389efa8b",
-        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da",
+        "Assets/MyAsset/Core/DataContainer/CharacterBaseStats.cs": "347b784ea57088279cc9d41b0d07a7e5c885c588a9aba29bf53c6664686f2f9d",
+        "Assets/MyAsset/Core/DataContainer/CharacterFlags.cs": "82232a760285fb46942fcfc23d06a125d4dc760c80df0666566b418e30398069",
+        "Assets/MyAsset/Core/DataContainer/CharacterGrowth.cs": "4d5e65bfae8a7ed5177a5adb0ec67f98fe7414cd702258cb8b57a6afa107058b",
+        "Assets/MyAsset/Core/DataContainer/CharacterRegistration.cs": "fb28379f65c347c2c4af05ff8b5cfd2bfce8ec3f0979a322e126e5069d35d12f",
+        "Assets/MyAsset/Core/DataContainer/CharacterVitals.cs": "3b9c28f941fae3feedb99ff1c911524539f91bb25a900ba09f5e372571a8face",
+        "Assets/MyAsset/Core/DataContainer/CombatStats.cs": "a4b34206461990769895c0c7f7aef720ef9276681a714bc12814d18b7bc66e16",
         "Assets/MyAsset/Core/Equipment/EquipmentHolder.cs": "6645eddec65ac8ed2fa84dcb83be87bec704414eba9f6a8870b30a6b8293483f",
         "Assets/MyAsset/Core/Equipment/EquipmentStatModifiers.cs": "6125d2b1351e543d458ba1f837433e64c76570dc13c412f06b67c4d2d01940d4",
+        "Assets/MyAsset/Core/Equipment/EquipmentStatus.cs": "4b555446656574abb98da3fb1075e7f453e0cdc6c12ca85696c77bdb86236648",
         "Assets/MyAsset/Core/Equipment/EquipmentStore.cs": "f452d4a4c89b9befaf0a34fe4790779024415b82de6240d563b9a106dde5a8b2",
         "Assets/MyAsset/Core/LevelUp/CharacterStatCalculator.cs": "0e8280a2a75a99d48ab5f56c92be9afea650be6d9faddacbcab138dbd043631f",
         "Assets/MyAsset/Core/LevelUp/CharacterStatsSystem.cs": "19721f467b7c96680264ba777e65f799ff28b4b62ca0fab52c2bd084a39ce0a3",
+        "Assets/MyAsset/Core/Movement/GroundInfo.cs": "e8a2e8d99dbf96068d047b2d3c873c1eae87ea4bd38a8bc6021a7d39d377e0ed",
+        "Assets/MyAsset/Core/Movement/MoveParams.cs": "0ad7cc6bc1e941fd8e4b72583451e1aaebdbd34fc25493809ba0243dd7ab9781",
         "Assets/MyAsset/Core/ScriptableObjects/CharacterInfo.cs": "5734ae42917396b70f2330bd6a7e6874a3febe50c2d980118a12f29c13fef8d0",
         "Assets/Tests/EditMode/StatusDefenseAuthoringTests.cs": "465ae7709acf5657ecf7163247a0221f8ac4e2fb7b3a2a08453a539ce8610671"
       }
@@ -3687,7 +3773,7 @@
         "Assets/Tests/EditMode/DamageStatusEffectsTests.cs",
         "Assets/Tests/EditMode/StatusEffectApplicationTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック/変換460件成功、実行中source変更0。実CharacterInfoを含む実ソースをリンクし、Unity値/参照の最小adapterと宣言抽出を使用。Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/resistance-candidate-*、ResistanceFlow-README.txt。新typedStore12件と既存状態異常21件成功。初版typedbridgeは免疫/閾値未接続で12件中10失敗し、修正後12成功。既存状態の自動治療/自動発症は追加しない。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。 2026-10-27: 外部.NET/C#9で純ロジック/変換460件成功、実行中source変更0。実CharacterInfoを含む実ソースをリンクし、Unity値/参照の最小adapterと宣言抽出を使用。Unity型/API・Native SoA・Physics2D・MonoBehaviour実行は含めない。証拠: /workspace/.cave-dungeon/action-flow-harness/resistance-candidate-*、ResistanceFlow-README.txt。新typedStore12件と既存状態異常21件成功。初版typedbridgeは免疫/閾値未接続で12件中10失敗し、修正後12成功。既存状態の自動治療/自動発症は追加しない。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Damage/StatusEffectApplication.cs": "f978aaa1d722d7bbc9f757f0ecd0d00092a6f209d6482e25fba451e6e01ad790",
         "Assets/MyAsset/Core/Damage/StatusEffectDefenseProfile.cs": "173b6b352ea1d4019e0b4215910575aa74cc42e253620131b91249f1389efa8b",
@@ -3738,7 +3824,8 @@
         "Assets/Tests/EditMode/StatusDefenseSystemTests.cs",
         "Assets/Tests/PlayMode/StatusDefensePipelinePlayTests.cs"
       ],
-      "notes": "近接/弾/装備/自己付与を現在の防御へ接続し、相手世代を再照合する。Native回帰Edit7/Play2を追加したが未実行。C#9構文確認のみで、Unity型/APIコンパイル・Native SoA・物理・ライフサイクルは未検証。"
+      "notes": "近接/弾/装備/自己付与を現在の防御へ接続し、相手世代を再照合する。Native回帰Edit7/Play2を追加したが未実行。C#9構文確認のみで、Unity型/APIコンパイル・Native SoA・物理・ライフサイクルは未検証。",
+      "verification_hashes": {}
     }
   },
   {
@@ -3751,8 +3838,48 @@
       "verification": "logic_tested",
       "steps": [
         {
-          "file": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
-          "symbol": "CharacterVitals / CombatStats / CharacterFlags / MoveParams / EquipmentStatus / CharacterStatusEffects / AnimationStateData / CharacterBaseStats / CharacterGrowth",
+          "file": "Assets/MyAsset/Core/DataContainer/CharacterVitals.cs",
+          "symbol": "CharacterVitals",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/CharacterBaseStats.cs",
+          "symbol": "CharacterBaseStats",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/CharacterGrowth.cs",
+          "symbol": "CharacterGrowth",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/CombatStats.cs",
+          "symbol": "CombatStats",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/CharacterFlags.cs",
+          "symbol": "CharacterFlags",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Movement/MoveParams.cs",
+          "symbol": "MoveParams",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Equipment/EquipmentStatus.cs",
+          "symbol": "EquipmentStatus",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/CharacterStatusEffects.cs",
+          "symbol": "CharacterStatusEffects",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Animation/AnimationStateData.cs",
+          "symbol": "AnimationStateData",
           "kind": "read"
         },
         {
@@ -3764,10 +3891,20 @@
       "tests": [
         "Assets/Tests/EditMode/SoAValueBoundaryTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。10件。ContainerSetting10型との集合一致は外部schema-value-test-coverage.jsonで照合。Native ABI/blittability・生成container実行の証明ではない。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。10件。ContainerSetting10型との集合一致は外部schema-value-test-coverage.jsonで照合。Native ABI/blittability・生成container実行の証明ではない。",
       "verification_hashes": {
+        "Assets/MyAsset/Core/Animation/AnimationStateData.cs": "89ed45c29bbcbf887b25e2e4ff5ad0de743903b21b91a8e83a463f02e465defb",
         "Assets/MyAsset/Core/Damage/CharacterDefenseState.cs": "c6b3ed4beac2b10fe64887cbedfe150d70b5b8f8ad6e2bd71b3073af764bf16a",
-        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da",
+        "Assets/MyAsset/Core/Damage/CharacterStatusEffects.cs": "4685846978f416fc4fec7bfa15a78fa0c81cca7b41863a8f6742d7ffead1421b",
+        "Assets/MyAsset/Core/DataContainer/CharacterBaseStats.cs": "347b784ea57088279cc9d41b0d07a7e5c885c588a9aba29bf53c6664686f2f9d",
+        "Assets/MyAsset/Core/DataContainer/CharacterFlags.cs": "82232a760285fb46942fcfc23d06a125d4dc760c80df0666566b418e30398069",
+        "Assets/MyAsset/Core/DataContainer/CharacterGrowth.cs": "4d5e65bfae8a7ed5177a5adb0ec67f98fe7414cd702258cb8b57a6afa107058b",
+        "Assets/MyAsset/Core/DataContainer/CharacterRegistration.cs": "fb28379f65c347c2c4af05ff8b5cfd2bfce8ec3f0979a322e126e5069d35d12f",
+        "Assets/MyAsset/Core/DataContainer/CharacterVitals.cs": "3b9c28f941fae3feedb99ff1c911524539f91bb25a900ba09f5e372571a8face",
+        "Assets/MyAsset/Core/DataContainer/CombatStats.cs": "a4b34206461990769895c0c7f7aef720ef9276681a714bc12814d18b7bc66e16",
+        "Assets/MyAsset/Core/Equipment/EquipmentStatus.cs": "4b555446656574abb98da3fb1075e7f453e0cdc6c12ca85696c77bdb86236648",
+        "Assets/MyAsset/Core/Movement/GroundInfo.cs": "e8a2e8d99dbf96068d047b2d3c873c1eae87ea4bd38a8bc6021a7d39d377e0ed",
+        "Assets/MyAsset/Core/Movement/MoveParams.cs": "0ad7cc6bc1e941fd8e4b72583451e1aaebdbd34fc25493809ba0243dd7ab9781",
         "Assets/Tests/EditMode/SoAValueBoundaryTests.cs": "773799ec7e89a2537ccfdbc4d0754f1b6134fc7a1048c5ab781aeaa72ee99586"
       }
     }
@@ -3795,7 +3932,7 @@
       "tests": [
         "Assets/Tests/EditMode/ActionExecutionInputValidationTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。26件。旧実Core26件中24失敗→修正後成功。Runtimeの出力入口は別Native経路。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。26件。旧実Core26件中24失敗→修正後成功。Runtimeの出力入口は別Native経路。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Actions/ActionExecutionSystem.Groups.cs": "0ef6d1cd810dde290510bd379001bc4a025bc69864b27270aa8eaebffb4d6167",
         "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "4d4620da3fee0e3f12444905ad8fe9c7e60843881da803c65b4bcd10f7bb0ad3",
@@ -3813,7 +3950,7 @@
       "verification": "logic_tested",
       "steps": [
         {
-          "file": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
+          "file": "Assets/MyAsset/Core/DataContainer/CharacterVitals.cs",
           "symbol": "CharacterVitals.maxArmor",
           "kind": "read"
         },
@@ -3831,11 +3968,21 @@
       "tests": [
         "Assets/Tests/EditMode/ArmorRecoveryAuthorityTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。3件。旧実Core3件失敗→修正後成功。DefenseState.maxArmorを削除。登録/Start/poolは別Native経路。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。3件。旧実Core3件失敗→修正後成功。DefenseState.maxArmorを削除。登録/Start/poolは別Native経路。",
       "verification_hashes": {
+        "Assets/MyAsset/Core/Animation/AnimationStateData.cs": "89ed45c29bbcbf887b25e2e4ff5ad0de743903b21b91a8e83a463f02e465defb",
         "Assets/MyAsset/Core/Damage/CharacterDefenseState.cs": "c6b3ed4beac2b10fe64887cbedfe150d70b5b8f8ad6e2bd71b3073af764bf16a",
+        "Assets/MyAsset/Core/Damage/CharacterStatusEffects.cs": "4685846978f416fc4fec7bfa15a78fa0c81cca7b41863a8f6742d7ffead1421b",
         "Assets/MyAsset/Core/Damage/HitResolver.cs": "21351038fadbb0873c71fc6c4c7e4662742a181c8d5adfa25a18daaf96f26b96",
-        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da",
+        "Assets/MyAsset/Core/DataContainer/CharacterBaseStats.cs": "347b784ea57088279cc9d41b0d07a7e5c885c588a9aba29bf53c6664686f2f9d",
+        "Assets/MyAsset/Core/DataContainer/CharacterFlags.cs": "82232a760285fb46942fcfc23d06a125d4dc760c80df0666566b418e30398069",
+        "Assets/MyAsset/Core/DataContainer/CharacterGrowth.cs": "4d5e65bfae8a7ed5177a5adb0ec67f98fe7414cd702258cb8b57a6afa107058b",
+        "Assets/MyAsset/Core/DataContainer/CharacterRegistration.cs": "fb28379f65c347c2c4af05ff8b5cfd2bfce8ec3f0979a322e126e5069d35d12f",
+        "Assets/MyAsset/Core/DataContainer/CharacterVitals.cs": "3b9c28f941fae3feedb99ff1c911524539f91bb25a900ba09f5e372571a8face",
+        "Assets/MyAsset/Core/DataContainer/CombatStats.cs": "a4b34206461990769895c0c7f7aef720ef9276681a714bc12814d18b7bc66e16",
+        "Assets/MyAsset/Core/Equipment/EquipmentStatus.cs": "4b555446656574abb98da3fb1075e7f453e0cdc6c12ca85696c77bdb86236648",
+        "Assets/MyAsset/Core/Movement/GroundInfo.cs": "e8a2e8d99dbf96068d047b2d3c873c1eae87ea4bd38a8bc6021a7d39d377e0ed",
+        "Assets/MyAsset/Core/Movement/MoveParams.cs": "0ad7cc6bc1e941fd8e4b72583451e1aaebdbd34fc25493809ba0243dd7ab9781",
         "Assets/Tests/EditMode/ArmorRecoveryAuthorityTests.cs": "d986d8aa3befd3157dbde8edf93d53f1782e8f2d9aae91d3c4f4454e7bf6089f"
       }
     }
@@ -3868,7 +4015,7 @@
       "tests": [
         "Assets/Tests/EditMode/EquipmentReadOnlyEffectTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。4件。旧公開配列3失敗/1成功→全成功。着脱時にviewを作り、hitごとのToArrayは増やさない。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。4件。旧公開配列3失敗/1成功→全成功。着脱時にviewを作り、hitごとのToArrayは増やさない。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Damage/AttackContext.cs": "d6e3c5293aebe85f2a4dac590a41c27b2b318ad0252a8262a7540443242b1f7f",
         "Assets/MyAsset/Core/Equipment/EquipmentHolder.cs": "6645eddec65ac8ed2fa84dcb83be87bec704414eba9f6a8870b30a6b8293483f",
@@ -3913,7 +4060,7 @@
         "Assets/Tests/EditMode/AIRuleBuilder_TacticalPresetRegistryTests.cs",
         "Assets/Tests/EditMode/CompanionAISettings_LogicTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。新11＋既存86件。旧実Registry/UI11件失敗→全成功。実キャラへ現在戦術をpublishする接続は未実装。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。新11＋既存86件。旧実Registry/UI11件失敗→全成功。実キャラへ現在戦術をpublishする接続は未実装。",
       "verification_hashes": {
         "Assets/MyAsset/Core/AI/RuleBuilder/AIConfigurationCopy.cs": "1f2de269b7d0670b61d2789b6af93eb87021d161ed127b06b05acf486ee0523a",
         "Assets/MyAsset/Core/AI/RuleBuilder/ModePresetRegistry.cs": "249ffa6824269763339dadf36157f337571b4d034c22575e20ef530f2917540b",
@@ -3944,7 +4091,7 @@
       "tests": [
         "Assets/Tests/EditMode/ProjectileDefinitionInspectionTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。3件。childConfigと技/装備effectsをコピーし、immutable AttackContextは共有。Controller getterは別Native経路。初版new bridge redは旧API証拠とは区別。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。3件。childConfigと技/装備effectsをコピーし、immutable AttackContextは共有。Controller getterは別Native経路。初版new bridge redは旧API証拠とは区別。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Combat/Projectile/ChildBulletHelper.cs": "860adef48d9b32c26babf3665aa610ce5ea12f68a8ebff70e6af59453d6d995a",
         "Assets/Tests/EditMode/ProjectileDefinitionInspectionTests.cs": "01c47128cde9a255d25566e22653d30c3912f1cc21135941d3eb32a382623150"
@@ -3969,7 +4116,7 @@
       "tests": [
         "Assets/Tests/EditMode/StatusEffectStoreBoundaryTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。20件。直前実Store15失敗/5成功→全成功。再入はresults.Clear前に拒否しfinally解除。負値clamp/interval0互換維持。低位直呼びdeltaTimeのfinite契約は既存runner前提。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。 2026-10-27 SoA監査: 外部.NET8/C#9の実source/実NUnitをリンクした純suite623件成功、source変更0。前460＋新規監査77＋今回初実行の既存AI86。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRuleの宣言抽出を使用。Unity型/API・Native SoA・fake-null・MonoBehaviour・Physics2D実行は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/soa-audit-final-*、SoAAuditFlow-README.txt。20件。直前実Store15失敗/5成功→全成功。再入はresults.Clear前に拒否しfinally解除。負値clamp/interval0互換維持。低位直呼びdeltaTimeのfinite契約は既存runner前提。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Damage/StatusEffectStore.cs": "aee886ffbd568c92f48d92961e91e145a68e81b50950bf0177ca2f46f3a005a9",
         "Assets/Tests/EditMode/StatusEffectStoreBoundaryTests.cs": "7dd3acd853d1e3b9a895334da14efe42f410854570fbb525a4159026e2a5234f"
@@ -4174,7 +4321,7 @@
           "kind": "entry"
         },
         {
-          "file": "Assets/MyAsset/Core/Common/Structs.cs",
+          "file": "Assets/MyAsset/Core/Movement/MovementInfo.cs",
           "symbol": "MovementInfo",
           "kind": "write"
         },
@@ -4185,7 +4332,7 @@
         }
       ],
       "tests": [],
-      "notes": "2026-10-27 SoA監査: ソースの接続確認と回帰テスト追加のみ。Unity型/APIコンパイル・Native/MonoBehaviour実行は未確認。 ROOT-INPUT-UNCONNECTED。入力生成と状態異常での制限writerはあるが、この6項目のgameplay consumerはない。他の直接UI経路の有無とは区別する。",
+      "notes": "ファイル分割後の宣言同値は確認済み。Native経路の旧検証段階は維持し、移動前のhashはdesigns/struct-organization.jsonの履歴へ記録。 2026-10-27 SoA監査: ソースの接続確認と回帰テスト追加のみ。Unity型/APIコンパイル・Native/MonoBehaviour実行は未確認。 ROOT-INPUT-UNCONNECTED。入力生成と状態異常での制限writerはあるが、この6項目のgameplay consumerはない。他の直接UI経路の有無とは区別する。",
       "verification_hashes": {}
     }
   },
@@ -4217,7 +4364,7 @@
       "tests": [
         "Assets/Tests/EditMode/AIObservationContextTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。既存8＋新20件。readonly値snapshotを維持し、資源割合の旧演算順・非正上限・攻防・弱点mask・世代再利用を確認。CLR参考サイズ368→72B。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。既存8＋新20件。readonly値snapshotを維持し、資源割合の旧演算順・非正上限・攻防・弱点mask・世代再利用を確認。CLR参考サイズ368→72B。",
       "verification_hashes": {
         "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": "070c63086f02dc602496ee6ef9d1ec7005ad27709ca8b30b5fb11a8566803fa7",
         "Assets/MyAsset/Core/AI/Core/ConditionEvaluator.cs": "2895582cef39690c519592e12fd8d967e64a5a15339ae61f20c43d8ca1be4960",
@@ -4250,7 +4397,7 @@
         "Assets/Tests/EditMode/ActionDefinitionSnapshotTests.cs",
         "Assets/Tests/EditMode/ActionDefinitionValidationTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。snapshot既存8＋新7件、validation既存15件。公開default/view/編集copy契約維持。入力array同一参照でも内容比較。UpdateDefinitionのversion/queued契約を変更しない。CLR参考サイズ定義96→8B、実行208→120B、通知216→128B。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。snapshot既存8＋新7件、validation既存15件。公開default/view/編集copy契約維持。入力array同一参照でも内容比較。UpdateDefinitionのversion/queued契約を変更しない。CLR参考サイズ定義96→8B、実行208→120B、通知216→128B。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Actions/ActionDefinitionSnapshot.cs": "803ca5451192ada064bc1244f4810ff8fac2b82d8dd9785f646645aa1f90ffab",
         "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "4d4620da3fee0e3f12444905ad8fe9c7e60843881da803c65b4bcd10f7bb0ad3",
@@ -4269,13 +4416,23 @@
       "verification": "logic_tested",
       "steps": [
         {
-          "file": "Assets/MyAsset/Core/Common/Structs.cs",
+          "file": "Assets/MyAsset/Core/Common/ElementalStatus.cs",
           "symbol": "ElementalStatus readonly members",
           "kind": "read"
         },
         {
-          "file": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
-          "symbol": "CharacterVitals / CharacterFlags / CharacterStatusEffects readonly members",
+          "file": "Assets/MyAsset/Core/DataContainer/CharacterVitals.cs",
+          "symbol": "CharacterVitals",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/CharacterFlags.cs",
+          "symbol": "CharacterFlags",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/CharacterStatusEffects.cs",
+          "symbol": "CharacterStatusEffects readonly members",
           "kind": "read"
         },
         {
@@ -4305,14 +4462,33 @@
         "Assets/Tests/EditMode/StatusEffectApplicationTests.cs",
         "Assets/Tests/EditMode/EquipmentCombatFlowTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。既存回帰で計算結果維持。Native行のfield/順序は変更なし。readonly/inと必要列/必要scalarだけで処理し、transactionのowned値snapshotは維持する。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。既存回帰で計算結果維持。Native行のfield/順序は変更なし。readonly/inと必要列/必要scalarだけで処理し、transactionのowned値snapshotは維持する。",
       "verification_hashes": {
-        "Assets/MyAsset/Core/Common/Structs.cs": "8a0b1704b6db5756a77095ab1a1ccee9e3dfd961dbe2c9b81bc4082ce0eb9a47",
+        "Assets/MyAsset/Core/Actions/ActionEffect.cs": "78ba7142cc23ee440473dd5a1c7f9e7aa3d821f9be98a3459620903bc4f1edf7",
+        "Assets/MyAsset/Core/Animation/AnimationStateData.cs": "89ed45c29bbcbf887b25e2e4ff5ad0de743903b21b91a8e83a463f02e465defb",
+        "Assets/MyAsset/Core/Combat/AttackMotionData.cs": "5153b203dbfa75fcb8e9d97071323be2322d26160557cf83434462a45835ca0e",
+        "Assets/MyAsset/Core/Common/ElementalStatus.cs": "c5af30c09c579e1a0ef528c748e9e422948e3f23bce7aa6b46d5e916c38004ca",
+        "Assets/MyAsset/Core/Damage/CharacterStatusEffects.cs": "4685846978f416fc4fec7bfa15a78fa0c81cca7b41863a8f6742d7ffead1421b",
         "Assets/MyAsset/Core/Damage/DamageCalculator.cs": "00f3f5c759495ffc1b62fa3801245980c217622bf8bc3717ac7ed94e7d4bf415",
+        "Assets/MyAsset/Core/Damage/DamageData.cs": "09cfff16db5ce9e87530090991ccf3d27815f286e2829f7b84a3e417a288e7ed",
+        "Assets/MyAsset/Core/Damage/DamageResult.cs": "a63cc7bae7d59e547b67b732d5a7d8af470d62070ca15a210515b628ed320ddd",
+        "Assets/MyAsset/Core/Damage/PhysicalResistance.cs": "687d99a7f51192325cf73fa510f4d05930a3fab065de856980652d787c1c9374",
         "Assets/MyAsset/Core/Damage/StatusEffectDefenseProfile.cs": "173b6b352ea1d4019e0b4215910575aa74cc42e253620131b91249f1389efa8b",
+        "Assets/MyAsset/Core/Damage/StatusEffectInfo.cs": "fd04ccf35a945609a2d2a658a491c5054f4e47761fed21c1f3f0af3899267503",
         "Assets/MyAsset/Core/Damage/StatusEffectStore.cs": "aee886ffbd568c92f48d92961e91e145a68e81b50950bf0177ca2f46f3a005a9",
-        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da",
+        "Assets/MyAsset/Core/DataContainer/CharacterBaseStats.cs": "347b784ea57088279cc9d41b0d07a7e5c885c588a9aba29bf53c6664686f2f9d",
+        "Assets/MyAsset/Core/DataContainer/CharacterFlags.cs": "82232a760285fb46942fcfc23d06a125d4dc760c80df0666566b418e30398069",
+        "Assets/MyAsset/Core/DataContainer/CharacterGrowth.cs": "4d5e65bfae8a7ed5177a5adb0ec67f98fe7414cd702258cb8b57a6afa107058b",
+        "Assets/MyAsset/Core/DataContainer/CharacterRegistration.cs": "fb28379f65c347c2c4af05ff8b5cfd2bfce8ec3f0979a322e126e5069d35d12f",
+        "Assets/MyAsset/Core/DataContainer/CharacterVitals.cs": "3b9c28f941fae3feedb99ff1c911524539f91bb25a900ba09f5e372571a8face",
+        "Assets/MyAsset/Core/DataContainer/CombatStats.cs": "a4b34206461990769895c0c7f7aef720ef9276681a714bc12814d18b7bc66e16",
+        "Assets/MyAsset/Core/Equipment/EquipmentStatus.cs": "4b555446656574abb98da3fb1075e7f453e0cdc6c12ca85696c77bdb86236648",
+        "Assets/MyAsset/Core/Guard/GuardStats.cs": "20c9685400ffc42b1b0dad146744834842fe2edde2845b7a325801aef5768bf0",
         "Assets/MyAsset/Core/LevelUp/CharacterStatCalculator.cs": "0e8280a2a75a99d48ab5f56c92be9afea650be6d9faddacbcab138dbd043631f",
+        "Assets/MyAsset/Core/LevelUp/StatModifier.cs": "ee746c49cb27ed60d54063d994f55f5003fe0513fe3715dace4c2dd7c0b5029a",
+        "Assets/MyAsset/Core/Movement/GroundInfo.cs": "e8a2e8d99dbf96068d047b2d3c873c1eae87ea4bd38a8bc6021a7d39d377e0ed",
+        "Assets/MyAsset/Core/Movement/MoveParams.cs": "0ad7cc6bc1e941fd8e4b72583451e1aaebdbd34fc25493809ba0243dd7ab9781",
+        "Assets/MyAsset/Core/Movement/MovementInfo.cs": "e9213b28882629afc6f163a9239e106b3fd2d79a444079d0e9e32b696064781c",
         "Assets/Tests/EditMode/EquipmentCombatFlowTests.cs": "d143091c5f7e1990cbe119323489148cbcca0f5f7e5c581f0f16bfac67dfb4dd",
         "Assets/Tests/EditMode/EquipmentDerivedStatsTests.cs": "86936f6f02cea5106cfa2e3596ed535c9a93bb89cadadc2d55e9ad9248c97ad8",
         "Assets/Tests/EditMode/StatusEffectApplicationTests.cs": "e485c056dcd37343e9ad8310e19b585455535bf80a26940c836ccf599fabb946",
@@ -4344,7 +4520,7 @@
         "Assets/Tests/EditMode/ActionExecutionGroupTests.cs",
         "Assets/Tests/EditMode/ActionExecutionTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。選択中にcallback/外部通知を行わず内部refは返さない。公開取得・通知の時点固定snapshotは維持。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。選択中にcallback/外部通知を行わず内部refは返さない。公開取得・通知の時点固定snapshotは維持。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Actions/ActionExecutionSystem.Groups.cs": "0ef6d1cd810dde290510bd379001bc4a025bc69864b27270aa8eaebffb4d6167",
         "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "4d4620da3fee0e3f12444905ad8fe9c7e60843881da803c65b4bcd10f7bb0ad3",
@@ -4383,7 +4559,7 @@
         "Assets/Tests/EditMode/MagicSystem_ProjectileMovementTests.cs",
         "Assets/Tests/EditMode/ProjectileLeaseTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。公開Profileは値snapshotを維持。internal readonly refはcallbackなしの計算だけで使用する。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。 2026-10-28 構造体copy整理: 外部.NET8/C#9の実source/実NUnitをリンクした純suite650件成功（前623＋AI20＋定義snapshot7）、source変更0。Unity値/参照の最小adapterとMagicDefinition/ModeTransitionRule宣言抽出を使用。Unity型/API・Native SoA・MonoBehaviour・Physics2D実行、Unity Profiler速度計測は含めない。HitResolverTestsは消滅拒否1件のみ。証拠: /workspace/.cave-dungeon/action-flow-harness/copy-flow-final-*、CopyFlow-README.txt。公開Profileは値snapshotを維持。internal readonly refはcallbackなしの計算だけで使用する。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Combat/Projectile/BulletProfile.cs": "db54e418a3163ee4741302095519044263714862c0f4ed5f643e0dd5815028a2",
         "Assets/MyAsset/Core/Combat/Projectile/Projectile.cs": "be20d4999760857b313e294e7b387a9f62c1cf9f8270186f855319e367152ad5",
@@ -4487,7 +4663,7 @@
         "Assets/Tests/EditMode/StatusEffectDefenseStoreTests.cs",
         "Assets/Tests/EditMode/StatusEffectStoreBoundaryTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。公開受理/通知のowned値snapshotとwriter interfaceを維持。CombatDataHelperTestsはBuildDamageData等の純8件だけ実行、Native GetAttackStats2件は除外。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。公開受理/通知のowned値snapshotとwriter interfaceを維持。CombatDataHelperTestsはBuildDamageData等の純8件だけ実行、Native GetAttackStats2件は除外。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "4d4620da3fee0e3f12444905ad8fe9c7e60843881da803c65b4bcd10f7bb0ad3",
         "Assets/MyAsset/Core/Common/CombatDataHelper.cs": "161ae9d66b37e61e82f99e488e203ac5a98805e60cd713e9cb14ae011a4cff96",
@@ -4520,7 +4696,7 @@
         "Assets/Tests/EditMode/CoyoteTimeTests.cs",
         "Assets/Tests/EditMode/PlayerMovementGroundTests.cs"
       ],
-      "notes": "2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。MoveParams13入口をin化。Jumpはref staminaがparams.jumpForceと同じ領域でも消費前の跳躍力を返す。新alias1＋既存移動35件。",
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。 2026-10-28 readonly引数追補: 外部.NET8/C#9の純suite694件成功（前650＋初実行の既存43＋新alias1）、source変更0。実sourceとUnity値/参照の最小adapterを使用。MagicDefinition/ModeTransitionRuleとCombatDataHelperTests純部は源SHA/抜粋SHA付きで抽出。CombatDataHelperTestsは純8件のみを実行し、Native2件を除外。HitResolverTestsは消滅拒否1件のみ。Unity型/API・Native/MonoBehaviour/物理実行・実機性能は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed-*、InParameterFlow-README.txt。MoveParams13入口をin化。Jumpはref staminaがparams.jumpForceと同じ領域でも消費前の跳躍力を返す。新alias1＋既存移動35件。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Movement/GroundMovementLogic.cs": "75a8ee25b84832aa6c012e3bde714f0f82d59d60912ce184042ed686e1a9dcd4",
         "Assets/Tests/EditMode/CoyoteTimeTests.cs": "07fa45377498ea7a1faf694ac841a0f1c879b3a9dc3f66b8d3123c2634d17dac",
@@ -4576,6 +4752,301 @@
         "Assets/Tests/EditMode/Integration_StatusEffectGameFlowTests.cs"
       ],
       "notes": "2026-10-28: 接続・所有境界の独立source reviewとC#構文確認のみ。Unity型/APIとNative/Runtime実行は未確認。 8Runtime signature＋System private2。_currentMotionの保管copy、発射/被弾/通知/子弾の時点固定copyを維持。callerの独立local値だけを借用しmethod-group/interfaceは変更しない。",
+      "verification_hashes": {}
+    }
+  },
+  {
+    "feature": "Core_StructOrganization",
+    "path": {
+      "key": "type-file-identity",
+      "title": "型別配置後の宣言・参照・値データの契約を維持",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "logic_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Core/AI/Companion/CompanionMpSettings.cs",
+          "symbol": "CompanionMpSettings",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionSlot.cs",
+          "symbol": "ActionSlot",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AICondition.cs",
+          "symbol": "AICondition",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AITargetSelect.cs",
+          "symbol": "AITargetSelect",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/TargetFilter.cs",
+          "symbol": "TargetFilter",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/FilterBitFlag.cs",
+          "symbol": "FilterBitFlag",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIRule.cs",
+          "symbol": "AIRule",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIMode.cs",
+          "symbol": "AIMode",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/ReactionTrigger.cs",
+          "symbol": "ReactionTrigger",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Boss/PhaseCondition.cs",
+          "symbol": "PhaseCondition",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Summon/SummonSlot.cs",
+          "symbol": "SummonSlot",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/World/Backtrack/BacktrackEntry.cs",
+          "symbol": "BacktrackEntry",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/World/Gate/ElementalGateRequirement.cs",
+          "symbol": "ElementalGateRequirement",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Confusion/ConfusionState.cs",
+          "symbol": "ConfusionState",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Boss/BossPhaseData.cs",
+          "symbol": "BossPhaseData",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/World/Challenge/ChallengeResult.cs",
+          "symbol": "ChallengeResult",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/World/Challenge/LeaderboardEntry.cs",
+          "symbol": "LeaderboardEntry",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Templates/AITemplateData.cs",
+          "symbol": "AITemplateData",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Common/ElementalStatus.cs",
+          "symbol": "ElementalStatus",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Guard/GuardStats.cs",
+          "symbol": "GuardStats",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/LevelUp/StatModifier.cs",
+          "symbol": "StatModifier",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/StatusEffectInfo.cs",
+          "symbol": "StatusEffectInfo",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/PhysicalResistance.cs",
+          "symbol": "PhysicalResistance",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Movement/MovementInfo.cs",
+          "symbol": "MovementInfo",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/DamageData.cs",
+          "symbol": "DamageData",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/DamageResult.cs",
+          "symbol": "DamageResult",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionEffect.cs",
+          "symbol": "ActionEffect",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Combat/AttackMotionData.cs",
+          "symbol": "AttackMotionData",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/CharacterVitals.cs",
+          "symbol": "CharacterVitals",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/CharacterBaseStats.cs",
+          "symbol": "CharacterBaseStats",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/CharacterGrowth.cs",
+          "symbol": "CharacterGrowth",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/CharacterRegistration.cs",
+          "symbol": "CharacterRegistration",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/CombatStats.cs",
+          "symbol": "CombatStats",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/CharacterFlags.cs",
+          "symbol": "CharacterFlags",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Movement/MoveParams.cs",
+          "symbol": "MoveParams",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Equipment/EquipmentStatus.cs",
+          "symbol": "EquipmentStatus",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/CharacterStatusEffects.cs",
+          "symbol": "CharacterStatusEffects",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Movement/GroundInfo.cs",
+          "symbol": "GroundInfo",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Animation/AnimationStateData.cs",
+          "symbol": "AnimationStateData",
+          "kind": "read"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/SoAValueBoundaryTests.cs",
+        "Assets/Tests/EditMode/AIObservationContextTests.cs",
+        "Assets/Tests/EditMode/EquipmentDataFlowTests.cs"
+      ],
+      "notes": "構造体ファイル整理: 5bundle→39型別file（38struct＋関連enum1）。型名/namespace/所属assembly/属性/field順序/宣言原文を維持。外部.NET/C#9の既存694件成功、source変更0。Unity値/参照adapterと宣言/純fixture抜粋を使用し、HitResolverTestsは消滅拒否1件、CombatDataHelperTestsは純8件のみ。Unity型/API・Native/物理実行は未確認。証拠: /workspace/.cave-dungeon/action-flow-harness/struct-organization-final-*、StructOrganizationFlow-README.txt。Roslynで39宣言/using/namespaceが同一、field/属性/CLR参考layoutも39型一致。既存694を再実行し追加テストは作らない。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/AI/Boss/BossPhaseData.cs": "45db2b526a4592775e16f1834e2c1be4370d0adec413748ff6e9f178bf61a7bf",
+        "Assets/MyAsset/Core/AI/Boss/PhaseCondition.cs": "f06fea5512140c41c0bc8b658ee0331a4481eb28e225dd6285ba94a695bb0611",
+        "Assets/MyAsset/Core/AI/Companion/CompanionMpSettings.cs": "a18912227703a7d6a0bfb6ca0ec2b8e00572b4ff476eef9dc3681f9d8a471067",
+        "Assets/MyAsset/Core/AI/Confusion/ConfusionState.cs": "8554505dc5723b3fb31dd32f263c0e5f9334672ab8263630820ec209c8727942",
+        "Assets/MyAsset/Core/AI/Core/AICondition.cs": "0312c083f47e5412d5456c90d91dcbac408badc60b7781f37d20dec59af27863",
+        "Assets/MyAsset/Core/AI/Core/AIMode.cs": "f1d306f3fd6350052f94a40b47a4ecc5af2e2066aa4c2b962b938786a4df4197",
+        "Assets/MyAsset/Core/AI/Core/AIRule.cs": "df2f67f3ca5502ac97349fbdbd63c80b3e6d7865b6294527858fcba0b91a24d9",
+        "Assets/MyAsset/Core/AI/Core/AITargetSelect.cs": "2f4bb66a549d8df9ffe73b845e6e512e3aee5c995b31dc399205d90fe5c57db4",
+        "Assets/MyAsset/Core/AI/Core/FilterBitFlag.cs": "5f1cc053abd230a720e9ddbc608e5517efd105fe92d23bb1b7d41899a8edca45",
+        "Assets/MyAsset/Core/AI/Core/ReactionTrigger.cs": "8187fd66c9e36206545f08f64748099e98bccd0acd590451e598f6ecdb4f9222",
+        "Assets/MyAsset/Core/AI/Core/TargetFilter.cs": "ef97e74155dd227e016a432baca18284a55d67f7a50917e61550b49600a9d142",
+        "Assets/MyAsset/Core/AI/Summon/SummonSlot.cs": "ea908088ee8cef8d853859245abed039889472abdc9f55fd6586b01d9bcc125c",
+        "Assets/MyAsset/Core/AI/Templates/AITemplateData.cs": "dbc2dc903c1e8eb558e32907c9ebd386bed01099db257db2ba7a875115d6bcad",
+        "Assets/MyAsset/Core/Actions/ActionEffect.cs": "78ba7142cc23ee440473dd5a1c7f9e7aa3d821f9be98a3459620903bc4f1edf7",
+        "Assets/MyAsset/Core/Actions/ActionSlot.cs": "a6813b28a8d19376004c43f2374b0a39078a8ef1aa5396bd3680781b949b3569",
+        "Assets/MyAsset/Core/Animation/AnimationStateData.cs": "89ed45c29bbcbf887b25e2e4ff5ad0de743903b21b91a8e83a463f02e465defb",
+        "Assets/MyAsset/Core/Combat/AttackMotionData.cs": "5153b203dbfa75fcb8e9d97071323be2322d26160557cf83434462a45835ca0e",
+        "Assets/MyAsset/Core/Common/ElementalStatus.cs": "c5af30c09c579e1a0ef528c748e9e422948e3f23bce7aa6b46d5e916c38004ca",
+        "Assets/MyAsset/Core/Damage/CharacterStatusEffects.cs": "4685846978f416fc4fec7bfa15a78fa0c81cca7b41863a8f6742d7ffead1421b",
+        "Assets/MyAsset/Core/Damage/DamageData.cs": "09cfff16db5ce9e87530090991ccf3d27815f286e2829f7b84a3e417a288e7ed",
+        "Assets/MyAsset/Core/Damage/DamageResult.cs": "a63cc7bae7d59e547b67b732d5a7d8af470d62070ca15a210515b628ed320ddd",
+        "Assets/MyAsset/Core/Damage/PhysicalResistance.cs": "687d99a7f51192325cf73fa510f4d05930a3fab065de856980652d787c1c9374",
+        "Assets/MyAsset/Core/Damage/StatusEffectInfo.cs": "fd04ccf35a945609a2d2a658a491c5054f4e47761fed21c1f3f0af3899267503",
+        "Assets/MyAsset/Core/DataContainer/CharacterBaseStats.cs": "347b784ea57088279cc9d41b0d07a7e5c885c588a9aba29bf53c6664686f2f9d",
+        "Assets/MyAsset/Core/DataContainer/CharacterFlags.cs": "82232a760285fb46942fcfc23d06a125d4dc760c80df0666566b418e30398069",
+        "Assets/MyAsset/Core/DataContainer/CharacterGrowth.cs": "4d5e65bfae8a7ed5177a5adb0ec67f98fe7414cd702258cb8b57a6afa107058b",
+        "Assets/MyAsset/Core/DataContainer/CharacterRegistration.cs": "fb28379f65c347c2c4af05ff8b5cfd2bfce8ec3f0979a322e126e5069d35d12f",
+        "Assets/MyAsset/Core/DataContainer/CharacterVitals.cs": "3b9c28f941fae3feedb99ff1c911524539f91bb25a900ba09f5e372571a8face",
+        "Assets/MyAsset/Core/DataContainer/CombatStats.cs": "a4b34206461990769895c0c7f7aef720ef9276681a714bc12814d18b7bc66e16",
+        "Assets/MyAsset/Core/Equipment/EquipmentStatus.cs": "4b555446656574abb98da3fb1075e7f453e0cdc6c12ca85696c77bdb86236648",
+        "Assets/MyAsset/Core/Guard/GuardStats.cs": "20c9685400ffc42b1b0dad146744834842fe2edde2845b7a325801aef5768bf0",
+        "Assets/MyAsset/Core/LevelUp/StatModifier.cs": "ee746c49cb27ed60d54063d994f55f5003fe0513fe3715dace4c2dd7c0b5029a",
+        "Assets/MyAsset/Core/Movement/GroundInfo.cs": "e8a2e8d99dbf96068d047b2d3c873c1eae87ea4bd38a8bc6021a7d39d377e0ed",
+        "Assets/MyAsset/Core/Movement/MoveParams.cs": "0ad7cc6bc1e941fd8e4b72583451e1aaebdbd34fc25493809ba0243dd7ab9781",
+        "Assets/MyAsset/Core/Movement/MovementInfo.cs": "e9213b28882629afc6f163a9239e106b3fd2d79a444079d0e9e32b696064781c",
+        "Assets/MyAsset/Core/World/Backtrack/BacktrackEntry.cs": "ba4ff4444272702d1802517c0af0205c61c77ae6414906725c86900cca6cee6d",
+        "Assets/MyAsset/Core/World/Challenge/ChallengeResult.cs": "453b455842a47e6f80fe3229f84d7095a8192b8b2c670f00ba511c697cf3a554",
+        "Assets/MyAsset/Core/World/Challenge/LeaderboardEntry.cs": "2c8618c153bf3be5565b4498614aeaca75eb9e51930c4e5a3c884ad52b3224ce",
+        "Assets/MyAsset/Core/World/Gate/ElementalGateRequirement.cs": "3257e8c83231f85e3bb73a85a0564e4127120d74c76cc48da80a64c2862bcdb0",
+        "Assets/Tests/EditMode/AIObservationContextTests.cs": "8e1e59a193e0503a67c74832dd631d4c8f7315a596406080262b0d5875e012ad",
+        "Assets/Tests/EditMode/EquipmentDataFlowTests.cs": "860d4bfd69b5895ca54d14a1a1237e9a9060b554ed33177d87763b1d7df817b0",
+        "Assets/Tests/EditMode/SoAValueBoundaryTests.cs": "773799ec7e89a2537ccfdbc4d0754f1b6134fc7a1048c5ab781aeaa72ee99586"
+      }
+    }
+  },
+  {
+    "feature": "Core_StructOrganization",
+    "path": {
+      "key": "native-generator-after-relocation",
+      "title": "新配置の型を既存ContainerSettingと登録入口から利用",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "unverified",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/SoACharaDataDic.cs",
+          "symbol": "ContainerSetting.structType",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/CharacterVitals.cs",
+          "symbol": "CharacterVitals",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/DataContainer/CombatStats.cs",
+          "symbol": "CombatStats",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/GameManager/GameManagerCore.cs",
+          "symbol": "GameManagerCore.RegisterCharacterData",
+          "kind": "write"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/CharacterRegistrationValidationTests.cs",
+        "Assets/Tests/EditMode/Integration_CharacterRefsTests.cs"
+      ],
+      "notes": "pinned generator 2991db197cfdfbbe8eb2d4f20ee55a30cc18c7fdのbefore/after生成物80456字/SHA一致、診断/例外0。入力のMonoBehaviour未解決/partial Dispose診断は従来どおり残し、Unity API型解決・Native登録実行・Unityインポート成功とは数えない。",
       "verification_hashes": {}
     }
   }

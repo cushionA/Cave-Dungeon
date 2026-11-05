@@ -134,7 +134,7 @@ PRレビューや実装中に発生した「今すぐではないが後で対応
 - [ ] 🟡🔶 **未接続入力・serialized設定の契約を整理** — 設定可能でも効かない欄を接続または移行廃止する
   - **背景**: interaction/cooperation/weapon/grip/menu/map入力、重量/持ち方・成長/保存の橋渡し、`CharacterInfo`の一部欄、旧攻撃/弾設定等に実行consumerがない。既存asset値やenum bitは保存互換を持つ。
   - **仕様**: 統合レポートのfield inventoryに従い、現在使う値・未実装・互換入力を明示する。数式や意味を確認して接続/移行し、一括削除や未確定の性能式追加はしない。
-  - **対象ファイル**: `Assets/MyAsset/Core/ScriptableObjects/CharacterInfo.cs:249` / `Assets/MyAsset/Core/DataContainer/SoAStructs.cs` / `Assets/MyAsset/Core/Combat/Projectile/BulletProfile.cs:13` / `designs/soa-data-flow-audit.json`
+  - **対象ファイル**: `Assets/MyAsset/Core/ScriptableObjects/CharacterInfo.cs:249` / `Assets/MyAsset/Core/Movement/MoveParams.cs` / `Assets/MyAsset/Core/Equipment/EquipmentStatus.cs` / `Assets/MyAsset/Core/Combat/Projectile/BulletProfile.cs:13` / `designs/soa-data-flow-audit.json`
 
 - [ ] 🟡⚠ **装備snapshotとcallback再入の契約を確定（STATS-04/05）** — 捕捉時点と着脱transactionを揃える
   - **背景**: 効果はEquip時snapshotだが、補正/flags/weightはlive定義を再読込する。`OnUnequip`からの再入で途中装備の解除通知も欠落し得る（標準callbackはno-op）。
@@ -156,6 +156,13 @@ PRレビューや実装中に発生した「今すぐではないが後で対応
 - **readonly引数の追補**: 頻繁な移動設定・命中packet構築・行動判定・状態異常内部転送・Runtimeの保管前中継を再確認し、29メソッドの31構造体引数を`in`化した。ジャンプ設定とスタミナ参照が同じ領域を指す場合も、消費前の跳躍力を返す意味を維持する。
 - **追補検証と判断**: 純回帰694件成功（前650＋今回初実行の既存43＋新alias境界1）、source変更0。累積変更C#107ファイル×3構成の構文エラー0。小型値・編集用コピー・通知/生成/被弾の時点固定・interface/delegate契約は一律変更しない。旧AI互換・登録/UI処理の候補は低優先として記録した。[readonly引数監査](../designs/in-parameter-audit.json)と`in-parameter-reviewed-*` / `InParameterFlow-README.txt`を参照。Unity型/API・Native実行・実機性能は引き続き未確認。
 
+### 構造体のファイル整理
+
+- `Structs.cs`・`Section2/3/4Structs.cs`・`SoAStructs.cs`のまとめを解消し、38構造体と関連enum1個を型名の39ファイルへ分割した。AI・行動・ダメージ・移動・装備・ボス・召喚・ゲート・チャレンジ等の既存フォルダへ配置する。
+- 型名、`Game.Core`名前空間、所属アセンブリ、属性、フィールド順、コメントと実装を維持した。ファイル分割のための`partial`やメモリレイアウト変更は追加しない。元5GUIDは代表型へ移し、他34GUIDを新規発行する。
+- **検証**: 既存純回帰694件成功、source変更0。39宣言・属性・field/CLR参考layoutが同値、Native登録10型とpinned generator生成物も前後一致。39ファイル×3構成の構文エラー0。Unity API/Native/インポート実行は未確認。
+- 型と旧新ファイルの対応、検証範囲は`designs/struct-organization.json`に記録する。過去の監査レポートにある旧パス/SHAは当時の履歴として維持し、現在の呼出経路と参照文書は新パスへ更新する。
+
 ### SOから不変実行定義への変換（2026-10-26、439e429）
 
 - `ActionCatalog` が全到達グラフを先に検証・捕捉し、IDを解決してから公開する。循環を許容し、不正な子定義・遷移・数値で既存の登録を壊さない。variant・着地Recoveryも初回の捕捉値を継承する。
@@ -171,7 +178,7 @@ PRレビューや実装中に発生した「今すぐではないが後で対応
 - [x] 🟡✓ **DF-00 シスターのMP正本を統一（予備MPは独立）** — 魔法消費・回復・バリアAPI・消滅が同じ現在MPを使う
   - **背景**: 共通行動はSoAの `CharacterVitals.currentMp` を消費する一方、`CompanionMpManager._currentMp` が別に回復・バリア・消滅を管理し、同じシスターに二つの現在MPがある。
   - **仕様**: 現在MP・最大MPは既存の共有データを正本とし、行動の消費とシスターの消費・回復・バリアAPI・消滅/復帰判定を同じ値へ接続する。現在MPと独立した予備MPの残量はfloatで扱い、小数コストと回復上限を保ったまま転送の加減を同量にする。回復速度・上限設定・アイテム補充単位は維持し、MPを二重消費・複製しない。通常被弾からバリアへの接続はDF-13で扱う。
-  - **対象ファイル**: `Assets/MyAsset/Core/AI/Companion/CompanionMpManager.cs:12` / `Assets/MyAsset/Core/AI/Companion/CompanionController.cs:85` / `Assets/MyAsset/Runtime/Character/CompanionCharacter.cs:102` / `Assets/MyAsset/Core/DataContainer/SoAStructs.cs:14` / `Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs`
+  - **対象ファイル**: `Assets/MyAsset/Core/AI/Companion/CompanionMpManager.cs:12` / `Assets/MyAsset/Core/AI/Companion/CompanionController.cs:85` / `Assets/MyAsset/Runtime/Character/CompanionCharacter.cs:102` / `Assets/MyAsset/Core/DataContainer/CharacterVitals.cs` / `Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs`
   - **関連PR**: -
   - **実施結果（2026-10-26）**: 現在MPを共有する行動・仲間MPロジック23件を含む純ロジック回帰302件成功、5アセンブリのコンパイル成功。実SoA・AI比率・プール再取得のNativeテストは追加・コンパイルのみ。Unity上の実行は保留。
 
@@ -186,7 +193,7 @@ PRレビューや実装中に発生した「今すぐではないが後で対応
 - [ ] 🟡🔶 **DF-02 装備変更→SoA書き戻しパイプラインを接続** — 基礎値と全装備から最終能力値を一箇所で再導出する
   - **背景**: 旧「装備変更→SoA書き戻しパイプライン未実装」項目を本項へ統合。`EquipmentDefinition : IEquippable` と命中時追加効果に対し、装備変更から攻防・重量・能力を再計算する経路が不足していた。`EquipmentStatus.finalAttack` と `CombatStats.attack` などの利用値も揃える必要があった。
   - **仕様**: DF-01を前提に、差分ロールバックではなく基礎値＋全装備から再計算し、戦闘・移動・UI・AIが同じ導出結果を読む。装備なしの敵も同じ契約で扱う。装備能力、重量、持ち方、攻防、状態効果との合成順と更新責任を確定し、着脱を繰り返しても値が累積しないことを検証する。既存方針のアイテム定義を原本とする方式・セット用差替えデータ参照を維持し、未確定の補正式は勝手に新設しない。
-  - **対象ファイル**: `Assets/MyAsset/Core/Equipment/EquipmentStore.cs:44` / `Assets/MyAsset/Core/Equipment/EquipmentHolder.cs:9` / `Assets/MyAsset/Core/Equipment/EquipmentStatCalculator.cs:7` / `Assets/MyAsset/Core/ScriptableObjects/EquipmentDefinition.cs:7` / `Assets/MyAsset/Core/DataContainer/SoAStructs.cs:154`
+  - **対象ファイル**: `Assets/MyAsset/Core/Equipment/EquipmentStore.cs:44` / `Assets/MyAsset/Core/Equipment/EquipmentHolder.cs:9` / `Assets/MyAsset/Core/Equipment/EquipmentStatCalculator.cs:7` / `Assets/MyAsset/Core/ScriptableObjects/EquipmentDefinition.cs:7` / `Assets/MyAsset/Core/Equipment/EquipmentStatus.cs` / `Assets/MyAsset/Core/DataContainer/CharacterFlags.cs`
   - **関連PR**: -
   - **第一段階実装（2026-10-26、未コミット）**: 着脱のたびに全スロットから装備付与フラグと総重量を再集計し、素体の能力フラグとORした結果をSoAへ反映してから変更通知する。恒久獲得は `EquipmentStore.GrantAbilityFlags` で素体側の原本へ追加し、同じ能力を装備中に獲得しても解除時に失わない。着脱はStore経由とし、`GetHolder` は参照用とする。再登録・プール返却で前の装備を残さない。
   - **第一段階の検証**: FakeWorldで反復着脱・重複フラグ・恒久獲得・通知順・再入・再登録を検証する新規9件と、既存装備12件が成功（上記86件に含む）。装備選択UIからStore入口への接続は従来どおり未完。
@@ -242,7 +249,7 @@ PRレビューや実装中に発生した「今すぐではないが後で対応
 - [ ] 🟡🔶 **DF-09 ゲーム通知からAI用イベントを生成** — 粒度を変えて購読できる階層分類・複数ラベルと履歴を持たせる
   - **背景**: GameEventsの型別即時通知と、判断器が読む8bit `BrainEventFlags` の間に書き込み経路がない。低頻度判断・外部AI・AIカスタムへイベントの意味を渡せない。
   - **仕様**: DF-04/07を前提に、外側の情報処理が必要な通知を発生時刻・発生源・対象・分類/ラベル・有効期限付きのAI用イベントへ投影する。カテゴリ階層と複数ラベルを組み合わせる表現、履歴と集約値の保持方針を確定する。各キャラは独自の判断基準で利用し、復旧や集団調整などの共通処理は外側で行う。不要情報は保持対象に加えない。
-  - **対象ファイル**: `Assets/MyAsset/Core/GameManager/GameEvents.cs:38` / `Assets/MyAsset/Core/AI/Core/ConditionEvaluator.cs:205` / `Assets/MyAsset/Core/DataContainer/SoAStructs.cs:49` / `Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs`
+  - **対象ファイル**: `Assets/MyAsset/Core/GameManager/GameEvents.cs:38` / `Assets/MyAsset/Core/AI/Core/ConditionEvaluator.cs:205` / `Assets/MyAsset/Core/DataContainer/CharacterFlags.cs` / `Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs`
   - **関連PR**: -
 
 - [ ] 🟡✓ **DF-10 判断器へ渡す共通観測Contextを接続** — 人数・DamageScore・地形・戦況を同じ入力契約から照会する
@@ -256,7 +263,7 @@ PRレビューや実装中に発生した「今すぐではないが後で対応
 - [x] 🟡✓ **DF-11 AIカスタムの行動参照を永続ID化** — UIと実行側の配列並びで別の技を選ばない
   - **背景**: AI設定UIはカタログの配列位置をparamIdにし、実行側は別配列の同じ位置を解決する。カタログの並び替えや将来の設定保存で意味が変わる。
   - **仕様**: 共通行動定義に対応する永続IDをUI・AI設定・保存データの参照に使い、実行時登録IDとは区別する。並び替え・未解決参照・定義削除を境界で扱い、同じ設定が同じ行動へ解決されることを検証する。
-  - **対象ファイル**: `Assets/MyAsset/Runtime/UI/CompanionAISettingsController.Dialogs.ActionPicker.cs:312` / `Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs:88` / `Assets/MyAsset/Core/ScriptableObjects/ActionDefinition.cs` / `Assets/MyAsset/Runtime/Combat/ActionCatalog.cs` / `Assets/MyAsset/Core/Common/Structs.cs`
+  - **対象ファイル**: `Assets/MyAsset/Runtime/UI/CompanionAISettingsController.Dialogs.ActionPicker.cs:312` / `Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs:88` / `Assets/MyAsset/Core/ScriptableObjects/ActionDefinition.cs` / `Assets/MyAsset/Runtime/Combat/ActionCatalog.cs` / `Assets/MyAsset/Core/Actions/ActionSlot.cs`
   - **関連PR**: -
 
   - **実装結果**: 新UI/AIInfo/作者変換/builderの技参照をPersistentIdへ統一。未知IDは拒否し、旧indexはID空の互換入口だけ。旧unlockキーの番号ルールは別の移行残件として保持。

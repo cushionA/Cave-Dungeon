@@ -37,8 +37,11 @@ AIルールのテンプレート管理。既存 PresetManager / CompanionAIConfi
 ## データ構造
 
 ### AITemplateData (Common_Section4 で定義)
+
+実装は`Assets/MyAsset/Core/AI/Templates/AITemplateData.cs`。型別ファイルへの移動後も、型名・`Game.Core` namespace・データ定義は維持する。
+
 ```csharp
-// Section4Structs.cs に定義済み
+// Core/AI/Templates/AITemplateData.cs に定義済み
 [Serializable]
 public struct AITemplateData
 {
