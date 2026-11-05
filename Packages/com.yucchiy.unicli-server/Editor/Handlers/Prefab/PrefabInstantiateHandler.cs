@@ -1,4 +1,3 @@
-using UniCli.Server.Editor;
 using System.Threading;
 using System;
 using System.Threading.Tasks;
@@ -36,7 +35,21 @@ namespace UniCli.Server.Editor.Handlers
                     new PrefabInstantiateResponse());
             }
 
-            var instance = PrefabUtility.InstantiatePrefab(prefab) as GameObject;
+            GameObject instance;
+            if (request.parentInstanceId == 0 && string.IsNullOrEmpty(request.parentPath))
+            {
+                instance = PrefabUtility.InstantiatePrefab(prefab) as GameObject;
+            }
+            else
+            {
+                var parent = GameObjectResolver.ResolveByIdOrPath(request.parentInstanceId, request.parentPath);
+                if (parent == null)
+                    throw new CommandFailedException(
+                        $"Parent GameObject not found (instanceId={request.parentInstanceId}, path=\"{request.parentPath}\")",
+                        new PrefabInstantiateResponse());
+                instance = PrefabUtility.InstantiatePrefab(prefab, parent.transform) as GameObject;
+            }
+
             if (instance == null)
             {
                 throw new CommandFailedException(
@@ -46,13 +59,9 @@ namespace UniCli.Server.Editor.Handlers
 
             Undo.RegisterCreatedObjectUndo(instance, "Instantiate Prefab");
 
-            var parent = GameObjectResolver.ResolveByIdOrPath(request.parentInstanceId, request.parentPath);
-            if (parent != null)
-                instance.transform.SetParent(parent.transform, true);
-
             return new ValueTask<PrefabInstantiateResponse>(new PrefabInstantiateResponse
             {
-                instanceId = instance.GetInstanceID(),
+                instanceId = UnityObjectIdentity.GetId(instance),
                 name = instance.name,
                 assetPath = request.assetPath
             });
@@ -70,7 +79,7 @@ namespace UniCli.Server.Editor.Handlers
     [Serializable]
     public class PrefabInstantiateResponse
     {
-        public int instanceId;
+        public long instanceId;
         public string name;
         public string assetPath;
     }

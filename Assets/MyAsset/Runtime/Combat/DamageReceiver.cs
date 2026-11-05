@@ -24,6 +24,7 @@ namespace Game.Runtime
             {
                 _character = GetComponent<BaseCharacter>();
             }
+            if (_character != null) { _character.BindDamageReceiver(this); }
         }
 
         public void SetGuarding(bool isGuarding)

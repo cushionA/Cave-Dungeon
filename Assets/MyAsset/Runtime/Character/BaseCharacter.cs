@@ -29,6 +29,9 @@ namespace Game.Runtime
         private bool _isRegistered;
 
         public override int ObjectHash => _objectHash;
+        public bool IsRegistered => _isRegistered;
+        public virtual bool CanApplyAIDecision => IsAlive && !PhysicsBodySuspended
+            && !(GameManager.Actions != null && GameManager.Actions.IsPhysicsControlled(_objectHash));
         public bool IsGrounded => _isGrounded;
         public GroundInfo GroundInfo => _groundInfo;
         // Unity bool 変換で破棄済み DamageReceiver (fake null) を C# native null に変換してから IDamageable に格納する。
@@ -113,6 +116,17 @@ namespace Game.Runtime
                 GameManager.Instance.UnregisterCharacter(_objectHash);
             }
             _physicsBackend?.Dispose();
+        }
+
+        internal void BindDamageReceiver(DamageReceiver receiver)
+        {
+            _damageReceiver = receiver;
+        }
+
+        internal void BindAnimationController(CharacterAnimationController controller)
+        {
+            _animationController = controller;
+            if (_isRegistered) { controller.Initialize(_objectHash); }
         }
 
         protected MoveParams GetEffectiveMoveParams(float fallbackSpeed = 0f)
@@ -280,6 +294,8 @@ namespace Game.Runtime
 
         /// <summary>共有固定更新が、全キャラクターの判断より前に入力を確定する。</summary>
         public virtual void PrepareSimulationInput(float currentTime) { }
+
+        public virtual void PrepareAIDecisionTick(float deltaTime, float currentTime, AIDecisionSystem decisions) { }
 
         /// <summary>共有固定更新が一度だけ呼ぶキャラクター制御。</summary>
         public virtual void SimulateCharacterTick(float deltaTime, float currentTime) { }

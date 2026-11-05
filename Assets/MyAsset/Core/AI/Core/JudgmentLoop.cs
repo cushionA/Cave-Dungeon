@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -10,7 +11,7 @@ namespace Game.Core
     /// 第2層: actionRulesでアクション選択（ターゲットは第1層で確定済み）
     /// 第3層: 行動実行（常に何かする = 棒立ち防止）
     /// </summary>
-    public class JudgmentLoop
+    public class JudgmentLoop : IDisposable
     {
         private ActionExecutor _executor;
         private SoACharaDataDic _data;
@@ -25,6 +26,19 @@ namespace Game.Core
         private ActorRef _owner;
 
 
+        private AICompiledMode _compiledMode;
+        private AICompiledMode[] _compiledModes;
+        private int _compiledModeIndex;
+        private int _revision;
+        private bool _disposed;
+        private AIDecisionSystem _decisions;
+
+        internal int OwnerHash => _ownerHash;
+        internal int Revision => _revision;
+        internal AICompiledMode[] CompiledModes => _compiledModes;
+        internal int CompiledModeIndex => _compiledModeIndex;
+        internal AIObservationContext Observation => _observation;
+
         public int CurrentTargetHash => _targets != null
             ? (_targets.TryGetTarget(_owner, out ActorRef target) ? target.Hash : 0)
             : _currentTargetHash;
@@ -32,6 +46,8 @@ namespace Game.Core
 
         public void ResetActorLifetime()
         {
+            InvalidateDecision();
+            _decisions?.Unregister(this);
             SetTarget(0);
             _executor.CancelCurrent();
             _owner = default;
@@ -43,7 +59,7 @@ namespace Game.Core
 
         public bool UseObservation(AIObservationContext observation, AITargetRelations targets)
         {
-            if (observation == null || targets == null || !observation.TryGetActor(_ownerHash, out AIActorObservation owner)
+            if (_disposed || observation == null || targets == null || !observation.TryGetActor(_ownerHash, out AIActorObservation owner)
                 || (_owner.IsValid && !_owner.Equals(owner.actor))) { return false; }
             _owner = owner.actor;
             _observation = observation;
@@ -71,6 +87,8 @@ namespace Game.Core
             _executor = executor;
             _data = data;
             _ownerHash = ownerHash;
+            _compiledMode = new AICompiledMode(default);
+            _compiledModes = new[] { _compiledMode };
         }
 
         /// <summary>
@@ -85,6 +103,15 @@ namespace Game.Core
         /// <summary>ModeControllerが所有するsnapshotだけを渡す。毎tickやモード切替で再コピーしない。</summary>
         internal void SetCapturedMode(AIMode mode)
         {
+            SetCapturedMode(mode, new[] { new AICompiledMode(mode) }, 0);
+        }
+
+        internal void SetCapturedMode(AIMode mode, AICompiledMode[] compiledModes, int modeIndex)
+        {
+            _compiledModes = compiledModes;
+            _compiledModeIndex = modeIndex;
+            _compiledMode = compiledModes[modeIndex];
+            InvalidateDecision();
             _currentMode = mode;
             _targetJudgeTimer = mode.judgeInterval.x;
             // アクション評価を即座に実行するためタイマーを0にする
@@ -102,6 +129,7 @@ namespace Game.Core
         /// </summary>
         public void ForceEvaluate()
         {
+            InvalidateDecision();
             _targetJudgeTimer = 0f;
             _actionJudgeTimer = 0f;
             SetTarget(0);
@@ -113,24 +141,10 @@ namespace Game.Core
         /// </summary>
         public void Tick(float deltaTime, List<int> candidates, float currentTime)
         {
-            if (_targets != null && !_targets.IsCurrent(_owner)) { _executor.CancelCurrent(); return; }
-            if (_targets == null && _currentTargetHash != 0 && (!_data.TryGetValue(_currentTargetHash, out _)
-                || _data.GetVitals(_currentTargetHash).currentHp <= 0)) { _currentTargetHash = 0; }
-            _targetJudgeTimer -= deltaTime;
-            _actionJudgeTimer -= deltaTime;
-            _executor.Tick(deltaTime);
-
-            if (_targetJudgeTimer <= 0f)
-            {
-                _targetJudgeTimer = _currentMode.judgeInterval.x;
-                EvaluateTarget(candidates, currentTime);
-            }
-
-            if (_actionJudgeTimer <= 0f)
-            {
-                _actionJudgeTimer = _currentMode.judgeInterval.y;
-                EvaluateAction(currentTime);
-            }
+            if (!AdvanceTimers(deltaTime, out bool targetDue, out bool actionDue)) { return; }
+            if (_observation != null) { EvaluateObserved(candidates, targetDue, actionDue); return; }
+            if (targetDue) { EvaluateTarget(candidates, currentTime); }
+            if (actionDue) { EvaluateAction(currentTime); }
         }
 
         /// <summary>
@@ -138,6 +152,7 @@ namespace Game.Core
         /// </summary>
         public void EvaluateTarget(List<int> candidates, float currentTime)
         {
+            if (_observation != null) { EvaluateObserved(candidates, true, false); return; }
             if (_currentMode.targetRules == null || _currentMode.targetSelects == null)
             {
                 return;
@@ -167,6 +182,7 @@ namespace Game.Core
         /// </summary>
         public void EvaluateAction(float currentTime)
         {
+            if (_observation != null) { EvaluateObserved(null, false, true); return; }
             if (_currentMode.actionRules == null || _currentMode.actions == null)
             {
                 return;
@@ -190,6 +206,89 @@ namespace Game.Core
             {
                 _executor.Execute(_ownerHash, CurrentTargetHash, _currentMode.actions[_currentMode.defaultActionIndex]);
             }
+        }
+        public void PrepareTick(float deltaTime, List<int> candidates, float currentTime, AIDecisionSystem decisions)
+        {
+            if (_disposed || _observation == null || !ReferenceEquals(_observation, decisions.Observation)) { return; }
+            if (!ReferenceEquals(_decisions, decisions))
+            {
+                _decisions?.Unregister(this);
+                _decisions = decisions;
+            }
+            if (AdvanceTimers(deltaTime, out bool targetDue, out bool actionDue) && (targetDue || actionDue))
+            {
+                decisions.Queue(this, candidates, currentTime, targetDue, actionDue);
+            }
+        }
+
+        private bool AdvanceTimers(float deltaTime, out bool targetDue, out bool actionDue)
+        {
+            targetDue = actionDue = false;
+            if (_disposed || _targets != null && !_targets.IsCurrent(_owner)) { _executor.CancelCurrent(); return false; }
+            if (_targets == null && _currentTargetHash != 0 && (!_data.TryGetValue(_currentTargetHash, out _)
+                || _data.GetVitals(_currentTargetHash).currentHp <= 0)) { _currentTargetHash = 0; }
+            _targetJudgeTimer -= deltaTime;
+            _actionJudgeTimer -= deltaTime;
+            _executor.Tick(deltaTime);
+            if (_disposed || _targets != null && !_targets.IsCurrent(_owner)) { return false; }
+            targetDue = _targetJudgeTimer <= 0f;
+            actionDue = _actionJudgeTimer <= 0f;
+            if (targetDue) { _targetJudgeTimer = _currentMode.judgeInterval.x; }
+            if (actionDue) { _actionJudgeTimer = _currentMode.judgeInterval.y; }
+            return true;
+        }
+
+        private void EvaluateObserved(List<int> candidates, bool selectTarget, bool selectAction)
+        {
+            AIManagedWorld world = new AIManagedWorld { observation = _observation };
+            AIManagedProgram program = new AIManagedProgram { mode = _compiledMode };
+            AIManagedCandidates input = new AIManagedCandidates { hashes = candidates ?? _observation.ActorHashes };
+            AIDecisionResult result = AIQueryKernel.Decide(_ownerHash, CurrentTargetHash,
+                selectTarget, selectAction, ref world, ref program, ref input);
+            result.owner = _owner;
+            result.target = _observation.TryGetActor(result.targetHash, out AIActorObservation target) ? target.actor : default;
+            result.observationTick = _observation.Tick;
+            result.revision = _revision;
+            ApplyDecision(result, _revision);
+        }
+
+        internal void ApplyDecision(AIDecisionResult result, int revision)
+        {
+            if (_disposed || revision != _revision || result.revision != _revision || _observation == null
+                || result.observationTick != _observation.Tick || result.owner != _owner
+                || _targets == null || !_targets.IsCurrent(_owner)) { return; }
+            if (result.target.IsValid && (!_targets.IsCurrent(result.target) || !_observation.Contains(result.target)))
+            {
+                InvalidateTarget();
+                return;
+            }
+            SetTarget(result.targetHash);
+            if (result.actionIndex >= 0)
+            {
+                _executor.Execute(_ownerHash, CurrentTargetHash, _compiledMode.actions[result.actionIndex]);
+            }
+        }
+
+        internal void InvalidateDecision() => _revision++;
+
+        internal void InvalidateTarget()
+        {
+            ForceEvaluate();
+        }
+
+        internal void Detach(AIDecisionSystem decisions)
+        {
+            if (ReferenceEquals(_decisions, decisions)) { _decisions = null; }
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) { return; }
+            _disposed = true;
+            InvalidateDecision();
+            _decisions?.Unregister(this);
+            _decisions = null;
+            SetTarget(0);
         }
     }
 }

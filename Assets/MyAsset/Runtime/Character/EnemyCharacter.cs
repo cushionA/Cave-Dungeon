@@ -28,6 +28,8 @@ namespace Game.Runtime
         private readonly List<int> _candidates = new List<int>(8);
 
         public DamageDealer DamageDealer => _damageDealer;
+        public override bool CanApplyAIDecision => base.CanApplyAIDecision
+            && _enemyController != null && _enemyController.IsActive;
 
         /// <summary>テスト/エディタ用: AIInfoを設定する。</summary>
         public void SetAIInfo(AIInfo aiInfo) { _aiInfo = aiInfo; }
@@ -63,7 +65,7 @@ namespace Game.Runtime
             // AttackActionHandlerを監視する
         }
 
-        public override void SimulateCharacterTick(float deltaTime, float currentTime)
+        public override void PrepareAIDecisionTick(float deltaTime, float currentTime, AIDecisionSystem decisions)
         {
             if (!IsAlive)
             {
@@ -84,15 +86,16 @@ namespace Game.Runtime
 
                 BridgeAIActionForJudgmentLoop(_enemyController.JudgmentLoop, _actionExecutorController);
                 if (!GameManager.TryGetObservation(ObjectHash, out AIObservationContext observation)) { return; }
-                _enemyController.Tick(deltaTime, _candidates, observation.Time, observation, GameManager.TargetRelations);
-
-                // 簡易移動: ターゲットへ追尾（Sustained/MoveアクションはAI側で別途処理）
-                UpdateMovement();
+                _enemyController.PrepareTick(deltaTime, _candidates, observation.Time, decisions,
+                    observation, GameManager.TargetRelations);
             }
+        }
 
-            // 向き更新（ターゲット方向を向く）
+        public override void SimulateCharacterTick(float deltaTime, float currentTime)
+        {
+            if (!IsAlive || (GameManager.Actions != null && GameManager.Actions.IsPhysicsControlled(ObjectHash))) { return; }
+            if (_enemyController != null) { UpdateMovement(); }
             UpdateFacingToTarget();
-
         }
 
         /// <summary>

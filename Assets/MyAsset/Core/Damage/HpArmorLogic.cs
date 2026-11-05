@@ -65,7 +65,7 @@ namespace Game.Core
                 if (nowZero && !wasBrokenBefore)
                 {
                     armorBroken = true;
-                    actualDamage = (int)Math.Min(int.MaxValue, Math.Floor(rawDamage * k_ArmorBreakBonusMult));
+                    actualDamage = (int)Math.Min(int.MaxValue, (double)MathF.Floor(rawDamage * k_ArmorBreakBonusMult));
                 }
             }
 

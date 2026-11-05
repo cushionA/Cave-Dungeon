@@ -146,6 +146,26 @@ PRレビューや実装中に発生した「今すぐではないが後で対応
   - **仕様**: 借用期間、構造変更禁止区間、Job完了とDisposeの順序を定義して検証する。managed packetは値/ID snapshotへ変換する。容量上限の意味も実装へ合わせ、Jobs/Burst対応済みと扱わない。
   - **対象ファイル**: `Assets/MyAsset/Core/DataContainer/SoACharaDataDic.cs:21` / `designs/soa-data-flow-audit.json`の`native_value_boundary`
 
+### 中央ループとAI Jobs/Burst（2026-11-05）
+
+`SimulationTickRunner`の更新順序を保ち、確定済み`AIObservationContext`から全AIの判定要求を集める。数値判定を一括Jobへ渡し、完了後にtick・設定revision・ActorRef世代を検証してメインスレッドで行動へ反映する。構造体の64バイト固定化や生成SoAの直接Native借用は行わない。
+
+**2026-11-06の最終検証実績**: Unity 6000.6.8f1・正式UPM依存・Odin Inspector/Validator 4.1.0.0・AnyPortrait 1.7.0の本プロジェクトで、全ScriptAssembliesのNativeコンパイルとEditMode 2097/2097件・PlayMode 223/223件、合計2320件が成功した。失敗・skip・inconclusiveは0。各run前後のソース・依存3791件のSHA-256は不変。Edit→最終Playの差分はPlayModeテストドライバ3本のみで、Core・Runtime・EditModeテスト・依存は同一。過去のCore-only検証・性能測定は別条件の履歴として扱う。
+
+- [x] 🟡✓ **中央ループとBurst判定のUnity回帰を実行** — 実Editorの型/API・Job安全性・ライフサイクルを確認する
+  - **背景**: 依存更新と6.6互換対応後、本プロジェクトのNative全回帰を完了した（2026-11-06、上記2320件）。
+  - **仕様**: AI判定21件・観測28件・固定tick runner 8件、中央ループ7件・物理境界9件・入力サンプリング9件を含む全対象アセンブリで成功した。Unknown/観測済み0、DamageScore/標的数、世代変更/死亡/消滅、設定変更、PlayerLoop・Physics2D・InputSystem・プール・無効化/破棄・独立アニメーションを検証済み。生成SoAの直接Native借用は別の未完了事項として維持する。
+  - **対象ファイル**: `Assets/Tests/EditMode/AIDecisionSystemTests.cs` / `Assets/Tests/PlayMode/CharacterGameLoopTests.cs`
+
+- [ ] 🟢✓ **AI一括判定の規模別性能を計測** — コピーとSchedule/Completeを含む総コストで判断する
+  - **背景**: 最終FullEditの100AI・各100候補・距離順の標的選択では、同期版2.4934275ms/tick、Burst一括版2.597428ms/tickで約4.17%遅かった。Burst有効・実JIT、20 samples・10 iterations/sampleの平均合計時間を10で割った値で、両方式のGC.Alloc回数は0/iteration。観測生成から反映までを含む一条件の測定であり、実運用規模での高速化は確認できていない。
+  - **仕様**: キャラ数・候補数・ルール数を変え、同じ観測と候補での結果一致と、観測生成、Nativeコピー、Job実行、待機、結果反映、GCを計測する。実測に応じて候補共有や近傍検索、同期実行との使い分けを検討する。64バイト固定paddingは追加しない。
+  - **対象ファイル**: `Assets/Tests/EditMode/Performance_BaselineBenchmarks.cs` / `Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs`
+
+実行証拠は`%TEMP%/sistergame-job-validation/regression-prep-20261106/`配下の`20261105-173922Z-FullEdit/`・`20261105-174840Z-FullPlay/`の`TestResults.xml`と`baseline-*.json`、FullEdit側の`native-ai-benchmark-summary.json`・`PerformanceTestResults.json`、run間の`edit-to-final-play-provenance.json`。
+
+個体別知覚・地形/環境物/弾接近・AIイベント履歴、解放キー移行、charge設定、表示資源解放/再読込、重量/持ち方、HP/MPバリアは既存のDFタスクと監査残件を継続し、重複登録しない。
+
 ### 構造体のコピー削減（2026-10-28、未コミット）
 
 - **AI観測**: `AIActorObservation`を判定に必要な座標・割合・攻防合計・弱点mask等のreadonly値へ投影し、全`CombatStats`の保持と候補ごとの不要な再取得を除去した。同じtickの判断値は固定し、live SoA参照へ置き換えない。
@@ -382,7 +402,7 @@ main に取り込まれた「仕様確定版」は新仕様 (perTargetHitLimit �
   - 対象: `BulletProfile.cs` / `Projectile.cs` / `ProjectileManager.Update`
   - **PR #35 第一段階**: 単一の `BulletProfile.spawnDelay` を実装済み (非表示・判定無し・寿命消費なし)。`appearDelay` / `moveStartDelay` への二分化と ShotAnchor 追従は本仕様で継続対応
 
-- [ ] **弾丸スポーン位置（アンカー統合）** — 仕様確定 (2026-04-23 レビュー、項目5/6/8統合)
+- [ ] 🟡⚠ **弾丸スポーン位置（アンカー統合）** — 仕様確定 (2026-04-23 レビュー、項目5/6/8統合)
   - 旧「弾丸スポーン位置オフセット」「ターゲット位置スポーン」「複数発発射対応」を**統合**
   - **発射位置アンカー方式**: キャラPrefab に `ShotAnchor` 子 GameObject を配置、Animator で Transform を動かしてモーションに合わせる
     - `BulletProfile.spawnOffset` (Vector2) は**廃止方向**、アンカーの Transform.position を使用
@@ -398,6 +418,15 @@ main に取り込まれた「仕様確定版」は新仕様 (perTargetHitLimit �
     - **発生した弾丸はキャンセル不能** (アクションキャンセルされても発生保証)
   - 対象: `MagicCaster` / `ProjectileController` スポーン経路 / `ActionPhaseCoordinator` / `MagicDefinition` / `BulletProfile`
   - **PR #35 第一段階**: `BulletProfile.spawnOffset` (Vector2, ローカル座標) を実装済みだが、新仕様では `ShotAnchor` Transform 方式への移行が予定されているため**廃止方向**
+  - **🚧 ブロッカー (2026-04-26 調査)**: ShotAnchor / spawnAtTarget を実装しても**呼ぶ経路が無い**ため YAGNI 状態で着手不可
+    - `MagicCaster.OnFired` を購読する Runtime ハンドラ (例: `MagicCasterController` / `RuntimeCastHandler`) が**未実装** (購読者 0 件)
+    - `ProjectileManager.SpawnProjectile` の外部呼び出しは **0 件** (内部 ChildBullet と Test のみが利用、PR #35 で追加された `_hitCounts` 等の管理機構もテスト経由でしか動かない状態)
+    - 従って Caster (魔法詠唱) → Manager (弾発射) の接続自体が先行タスク
+  - **着手の前提となる先行タスク**: Cast 行動の Runtime ハンドラ実装 (`MagicCaster.OnFired` 購読 → `GameManager.Projectiles.SpawnProjectile(casterHash, magic, position, direction, ...)` を呼ぶ MonoBehaviour、 position は ShotAnchor offset 込み)
+  - **判断ポイント (要相談)**:
+    - ShotAnchor を `[SerializeField] private Transform _shotAnchor;` 単純方式にするか、`Dictionary<string, Transform> + anchorKey` まで先行するか
+    - Caster Runtime ハンドラを Player 専用にするか、 全キャラ共通基盤 (BaseCharacter or 別 Component) にするか
+    - 既存 `BulletProfile.spawnOffset` を一気に廃止するか、 段階的 deprecate にするか
 
 - [x] **追尾力の時間経過変動** — 実装完了 (PR #35)
   - 現状: `ProjectileMovement.cs:21` の `homingStrength=5f` ハードコードを置換
@@ -463,18 +492,20 @@ main に取り込まれた「仕様確定版」は新仕様 (perTargetHitLimit �
   - 影響: パフォーマンス上無害 (Animator への送信は O(1))、ただし最適化効果は限定的
   - 優先度: 🟢 Minor (計測してから判断)
 
-- [ ] 🟡✓ **Integration_WallKickTests の壁蹴り回帰失敗** (2026-04-26 検出)
-  - **背景**: main 上の PlayMode テスト 3 本 (`PlayerCharacter_TouchingRightWallWithWallKickFlag_JumpKicksInFacingDirection` / `PlayerCharacter_TouchingLeftWallWithWallKickFlag_JumpKicksInFacingDirection` / `PlayerCharacter_TouchingWallWithoutWallKickFlag_JumpDoesNotKick`) が失敗中
+- [x] 🟡✓ **Integration_WallKickTests の壁蹴り回帰失敗** (2026-04-26 検出)
+  - **背景**: main 上の PlayMode テスト 3 本が失敗。PR #69 の `TryWallKickWithAlternation` 導入で TryStartJump を先に呼ぶ経路に変わり、テスト fixture の壁配置がもたらす副作用が顕在化
   - **症状**:
-    - facingRight=true 壁蹴り X 速度: Expected `+8.0` (k_WallKickForceX) → Actual `0.0` (壁蹴り不成立)
-    - WallKick 非所持時: Expected `Y速度 <= 0` → Actual `+14.35` (通常ジャンプが成立してしまっている)
-  - **原因仮説**: PR #69 (`feature/wall-kick-common-module`) の `TryWallKickWithAlternation` 導入で、Integration テスト側の前提 (jumpBuffer リフレクション + `_lastKickedWallId` 初期状態) と新ロジックの呼び出し条件にズレがある可能性
-  - **対象ファイル**:
-    - `Assets/Tests/PlayMode/Integration_WallKickTests.cs:124,194`
-    - `Assets/MyAsset/Core/Movement/AdvancedMovementLogic.cs` (`TryWallKickWithAlternation`)
-    - `Assets/MyAsset/Runtime/Character/PlayerCharacter.cs` (`_lastKickedWallId` 管理 + 着地リセット)
-  - **関連PR**: PR #69 (壁蹴り共通モジュール化 + 左右交互制約)
-  - **優先度**: 🟡 Medium (PlayMode CI で常時赤、本来動くはずの基本機能の結合検証が止まっている)
+    - facingRight=true 壁蹴り X 速度: Expected `+8.0` → Actual `0.0`
+    - WallKick 非所持時: Expected `Y速度 <= 0` → Actual `+14.35` (通常ジャンプが成立)
+  - **真因 (Unity の物理エンジン挙動)**:
+    1. テスト fixture の壁を `transform.position` を `AddComponent<BoxCollider2D>` 後に変更していたため、`Physics2D.autoSyncTransforms = false` (Unity デフォルト) と相まって物理エンジンの bounds キャッシュが原点 (0, 0, 0) のまま残り、Player の足元 BoxCast (Y range [1.425, 1.575]) が壁を地面と誤検出 → 通常ジャンプが成立 (Y=14.35)
+    2. 壁を Player の足元 Y 範囲外に持ち上げて bounds キャッシュも修正した後も、壁蹴り仕様 (「壁に向かって蹴り進む」 = facingDir と同符号) で Player が壁と物理衝突して velocity.x が 0 にリセットされる
+  - **修正内容**: PR TBD (feature/wallkick-integration-fix) で対応
+    - `CreateWallRight` / `CreateWallLeft`: 壁の下端を Player スポーン Y (= 2) と揃え、`transform.position` を `AddComponent` より先に設定、`Physics2D.SyncTransforms()` を明示呼び出し
+    - `SpawnPlayer`: 同じく `Physics2D.SyncTransforms()` を呼んで Player collider の bounds 同期
+    - 各テストで `Physics2D.IgnoreCollision(playerCol, wallCol, true)` を呼んで、壁蹴り後の物理衝突 (壁にめり込んで velocity.x が 0 にリセット) を回避。OverlapBox / BoxCast は layer mask 経由なので壁検出には影響しない
+  - **検証**: 4/4 PlayMode Pass、全 PlayMode 106/106 Pass、全 EditMode 1537/1537 Pass
+  - **関連PR**: PR #69 (壁蹴り共通モジュール化 + 左右交互制約) で発生、修正は TBD
 
 - [x] **壁蹴り経路の PlayMode 結合テスト欠落** — `AdvancedMovementLogic.TryWallKick` の純ロジック単体テストは 5 本あるが (PR #35)、PlayerCharacter の `IsTouchingWall` + `TryWallKick` 呼び出し経路を GameObject 配置で再現する結合テストがない
   - 修正案: 壁 GameObject + Player + AbilityFlag.WallKick 付与 → 空中ジャンプ入力で Rigidbody2D.linearVelocity が壁から離れる方向にキックされることを検証

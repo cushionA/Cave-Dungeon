@@ -47,6 +47,16 @@ namespace Game.Core
             weakPoints = weak;
         }
 
+        internal AIActorObservation(ActorRef actor, Vector2 position, CharacterFlags flags, int currentHp,
+            float hpPercent, float hpFraction, float mpPercent, float staminaPercent, float armorPercent,
+            int attackPower, int defensePower, Element weakPoints)
+        {
+            this.actor = actor; this.position = position; this.flags = flags; this.currentHp = currentHp;
+            this.hpPercent = hpPercent; this.hpFraction = hpFraction; this.mpPercent = mpPercent;
+            this.staminaPercent = staminaPercent; this.armorPercent = armorPercent;
+            this.attackPower = attackPower; this.defensePower = defensePower; this.weakPoints = weakPoints;
+        }
+
         /// <summary>現在値をAIの判定に必要な値だけへ投影し、次のsnapshotまで固定する。</summary>
         public static AIActorObservation Capture(ActorRef actor, in CharacterVitals vitals,
             in CombatStats combat, in CharacterFlags flags) => new AIActorObservation(actor, vitals, combat, flags);
@@ -55,7 +65,6 @@ namespace Game.Core
     /// <summary>同じ固定tickの判断器が共有する値snapshot。取得していない情報はfalseで返す。</summary>
     public sealed class AIObservationContext
     {
-        private const float k_DefaultNearbyRadius = 10f;
         private readonly Dictionary<int, AIActorObservation> _actors = new Dictionary<int, AIActorObservation>();
         private readonly List<int> _hashes = new List<int>();
         private readonly Dictionary<(ActorRef owner, ActorRef source), float> _scores = new Dictionary<(ActorRef, ActorRef), float>();
@@ -67,6 +76,25 @@ namespace Game.Core
         public long Tick { get; private set; }
         public float Time { get; private set; }
         public IReadOnlyList<int> ActorHashes => _hashes;
+
+        internal bool DamageScoresAvailable => _damageScoresAvailable;
+        internal bool TargetRelationsAvailable => _targetsAvailable;
+
+        internal bool TryGetLastAttacker(int ownerHash, out ActorRef attacker)
+        {
+            attacker = default;
+            return _damageScoresAvailable && TryGetActor(ownerHash, out AIActorObservation owner)
+                && _lastAttackers.TryGetValue(owner.actor, out attacker);
+        }
+
+        internal void CopyDamageScores(List<KeyValuePair<(ActorRef owner, ActorRef source), float>> output)
+        {
+            output.Clear();
+            foreach (KeyValuePair<(ActorRef owner, ActorRef source), float> score in _scores)
+            {
+                output.Add(score);
+            }
+        }
 
         public void BeginSnapshot(long tick, float time)
         {
@@ -125,142 +153,29 @@ namespace Game.Core
 
         public bool Matches(in TargetFilter filter, int ownerHash, in AIActorObservation candidate)
         {
-            Vector2 ownerPosition = default;
-            if (filter.distanceRange.x > 0f || filter.distanceRange.y > 0f)
-            {
-                if (!TryGetActor(ownerHash, out AIActorObservation owner)) { return false; }
-                ownerPosition = owner.position;
-            }
-            return Matches(filter, ownerHash, ownerPosition, candidate);
+            AIManagedWorld world = new AIManagedWorld { observation = this };
+            return AIQueryKernel.MatchesFilter(filter, ownerHash, candidate.actor.Hash, ref world);
         }
 
         internal bool Matches(in TargetFilter filter, in AIActorObservation owner, in AIActorObservation candidate)
-            => Matches(filter, owner.actor.Hash, owner.position, candidate);
-
-        private static bool Matches(in TargetFilter filter, int ownerHash, Vector2 ownerPosition,
-            in AIActorObservation candidate)
-        {
-            if (candidate.currentHp <= 0 || candidate.flags.ActState == ActState.Dead || candidate.flags.IsVanished) { return false; }
-            if (candidate.actor.Hash == ownerHash && !filter.includeSelf) { return false; }
-            if (filter.belong != 0)
-            {
-                bool match = (filter.filterFlags & FilterBitFlag.BelongAnd) != 0
-                    ? (candidate.flags.Belong & filter.belong) == filter.belong
-                    : (candidate.flags.Belong & filter.belong) != 0;
-                if (!match) { return false; }
-            }
-            if (filter.feature != 0)
-            {
-                bool match = (filter.filterFlags & FilterBitFlag.FeatureAnd) != 0
-                    ? (candidate.flags.Feature & filter.feature) == filter.feature
-                    : (candidate.flags.Feature & filter.feature) != 0;
-                if (!match) { return false; }
-            }
-            if (filter.weakPoint != 0)
-            {
-                if ((filter.weakPoint & candidate.weakPoints) == 0) { return false; }
-            }
-            if (filter.distanceRange.x > 0f || filter.distanceRange.y > 0f)
-            {
-                float distance = Vector2.Distance(ownerPosition, candidate.position);
-                if (filter.distanceRange.x > 0f && distance < filter.distanceRange.x) { return false; }
-                if (filter.distanceRange.y > 0f && distance > filter.distanceRange.y) { return false; }
-            }
-            return true;
-        }
+            => Matches(filter, owner.actor.Hash, candidate);
 
         public bool TryGetConditionValue(in AICondition condition, int ownerHash, int targetHash, out float value)
         {
-            value = 0f;
-            int hash = condition.filter.includeSelf ? ownerHash : targetHash;
-            switch (condition.conditionType)
-            {
-                case AIConditionType.HpRatio:
-                case AIConditionType.MpRatio:
-                case AIConditionType.StaminaRatio:
-                case AIConditionType.ArmorRatio:
-                    if (!TryGetActor(hash, out AIActorObservation actor)) { return false; }
-                    if (condition.conditionType == AIConditionType.HpRatio) { value = actor.hpPercent; }
-                    if (condition.conditionType == AIConditionType.MpRatio) { value = actor.mpPercent; }
-                    if (condition.conditionType == AIConditionType.StaminaRatio) { value = actor.staminaPercent; }
-                    if (condition.conditionType == AIConditionType.ArmorRatio) { value = actor.armorPercent; }
-                    return true;
-                case AIConditionType.Distance:
-                    if (!TryGetActor(ownerHash, out AIActorObservation owner) || !TryGetActor(targetHash, out AIActorObservation target)) { return false; }
-                    value = Vector2.Distance(owner.position, target.position);
-                    return true;
-                case AIConditionType.DamageScore:
-                    return TryGetDamageScore(ownerHash, hash, out value);
-                case AIConditionType.Count:
-                    if (!TryGetActor(ownerHash, out AIActorObservation countOwner)) { return false; }
-                    for (int i = 0; i < _hashes.Count; i++)
-                    {
-                        AIActorObservation candidate = _actors[_hashes[i]];
-                        if (Matches(condition.filter, countOwner, candidate)) { value++; }
-                    }
-                    return true;
-                case AIConditionType.NearbyFaction:
-                    if (!TryGetActor(ownerHash, out AIActorObservation nearbyOwner)) { return false; }
-                    TargetFilter nearbyFilter = condition.filter;
-                    if (nearbyFilter.belong == 0) { nearbyFilter.belong = nearbyOwner.flags.Belong; }
-                    if (nearbyFilter.distanceRange.y <= 0f) { nearbyFilter.distanceRange.y = k_DefaultNearbyRadius; }
-                    for (int i = 0; i < _hashes.Count; i++)
-                    {
-                        AIActorObservation neighbor = _actors[_hashes[i]];
-                        if (neighbor.actor.Hash != ownerHash && Matches(nearbyFilter, nearbyOwner, neighbor)) { value++; }
-                    }
-                    return true;
-                case AIConditionType.SelfActState:
-                    if (!TryGetActor(ownerHash, out AIActorObservation self)) { return false; }
-                    value = (int)self.flags.ActState;
-                    return true;
-                // 知覚・地形・イベント履歴の情報源が接続されるまではunknown。
-                case AIConditionType.ProjectileNear:
-                case AIConditionType.ObjectNearby:
-                case AIConditionType.EventFired:
-                default:
-                    return false;
-            }
+            AIManagedWorld world = new AIManagedWorld { observation = this };
+            return AIQueryKernel.TryConditionValue(condition, ownerHash, targetHash, ref world, out value);
         }
 
         public bool TryGetSortValue(TargetSortKey key, int ownerHash, int targetHash, out float value)
         {
-            value = 0f;
-            if (!TryGetActor(targetHash, out AIActorObservation target)) { return false; }
-            TryGetActor(ownerHash, out AIActorObservation owner);
-            return TryGetSortValue(key, owner, target, out value);
+            AIManagedWorld world = new AIManagedWorld { observation = this };
+            return AIQueryKernel.TrySortValue(key, ownerHash, targetHash, ref world, out value);
         }
 
         internal bool TryGetSortValue(TargetSortKey key, in AIActorObservation owner,
             in AIActorObservation target, out float value)
         {
-            value = 0f;
-            switch (key)
-            {
-                case TargetSortKey.Distance:
-                    if (!owner.actor.IsValid) { return false; }
-                    value = Vector2.Distance(owner.position, target.position); return true;
-                case TargetSortKey.HpRatio: value = target.hpFraction; return true;
-                case TargetSortKey.HpValue: value = target.currentHp; return true;
-                case TargetSortKey.AttackPower: value = target.attackPower; return true;
-                case TargetSortKey.DefensePower: value = target.defensePower; return true;
-                case TargetSortKey.TargetingCount:
-                    if (!_targetsAvailable) { return false; }
-                    _targetCounts.TryGetValue(target.actor, out int count);
-                    value = count; return true;
-                case TargetSortKey.DamageScore:
-                    if (!_damageScoresAvailable || !owner.actor.IsValid) { return false; }
-                    _scores.TryGetValue((owner.actor, target.actor), out value);
-                    return true;
-                case TargetSortKey.LastAttacker:
-                    if (!_damageScoresAvailable || !owner.actor.IsValid) { return false; }
-                    if (!_lastAttackers.TryGetValue(owner.actor, out ActorRef lastAttacker)) { return false; }
-                    value = lastAttacker.Equals(target.actor) ? 1f : 0f; return true;
-                case TargetSortKey.Self: value = target.actor.Equals(owner.actor) ? 1f : 0f; return true;
-                case TargetSortKey.Player: value = (target.flags.Feature & CharacterFeature.Player) != 0 ? 1f : 0f; return true;
-                case TargetSortKey.Sister: value = (target.flags.Feature & CharacterFeature.Companion) != 0 ? 1f : 0f; return true;
-                default: return false;
-            }
+            return TryGetSortValue(key, owner.actor.Hash, target.actor.Hash, out value);
         }
     }
 }

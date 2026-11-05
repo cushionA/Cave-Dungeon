@@ -72,6 +72,21 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
+        public void HpArmorLogic_ApplyDamage_ArmorBreakAtIntMax_ClampsWithoutOverflow()
+        {
+            int currentHp = int.MaxValue;
+            float currentArmor = 1f;
+            float actionArmor = 0f;
+
+            var result = HpArmorLogic.ApplyDamage(ref currentHp, ref currentArmor,
+                int.MaxValue, 2f, ref actionArmor);
+
+            Assert.AreEqual(int.MaxValue, result.actualDamage);
+            Assert.AreEqual(0, currentHp);
+            Assert.IsTrue(result.armorBroken);
+        }
+
+        [Test]
         public void HpArmorLogic_CalculateKnockback_AppliesResistance()
         {
             // Arrange

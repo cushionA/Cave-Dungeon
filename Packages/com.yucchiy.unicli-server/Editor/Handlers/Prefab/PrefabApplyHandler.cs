@@ -1,4 +1,3 @@
-using UniCli.Server.Editor;
 using System.Threading;
 using System;
 using System.Threading.Tasks;
@@ -55,7 +54,7 @@ namespace UniCli.Server.Editor.Handlers
     [Serializable]
     public class PrefabApplyRequest
     {
-        public int instanceId;
+        public long instanceId;
         public string path = "";
     }
 

@@ -1,4 +1,3 @@
-using UniCli.Server.Editor;
 using System.Threading;
 using System;
 using System.Threading.Tasks;
@@ -43,7 +42,7 @@ namespace UniCli.Server.Editor.Handlers
             {
                 previousName = previousName,
                 name = go.name,
-                instanceId = go.GetInstanceID()
+                instanceId = UnityObjectIdentity.GetId(go)
             });
         }
     }
@@ -51,7 +50,7 @@ namespace UniCli.Server.Editor.Handlers
     [Serializable]
     public class RenameGameObjectRequest
     {
-        public int instanceId;
+        public long instanceId;
         public string path = "";
         public string name = "";
     }
@@ -61,6 +60,6 @@ namespace UniCli.Server.Editor.Handlers
     {
         public string previousName;
         public string name;
-        public int instanceId;
+        public long instanceId;
     }
 }

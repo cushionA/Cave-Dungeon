@@ -20,6 +20,8 @@ namespace UniCli.Server.Editor.Handlers
         protected override ValueTask<Unit> ExecuteAsync(Unit request, CancellationToken cancellationToken)
         {
             using var scope = _guard.BeginScope(CommandName, GuardCondition.NotCompiling);
+            if (EditorUtility.scriptCompilationFailed)
+                throw new CommandFailedException("Script compilation errors detected - fix them before entering play mode", Unit.Value);
             EditorApplication.EnterPlaymode();
             return new ValueTask<Unit>(Unit.Value);
         }
@@ -45,6 +47,18 @@ namespace UniCli.Server.Editor.Handlers
         protected override ValueTask<Unit> ExecuteAsync(Unit request, CancellationToken cancellationToken)
         {
             EditorApplication.isPaused = !EditorApplication.isPaused;
+            return new ValueTask<Unit>(Unit.Value);
+        }
+    }
+
+    public sealed class PlayModeStepHandler : CommandHandler<Unit, Unit>
+    {
+        public override string CommandName => "PlayMode.Step";
+        public override string Description => "Advance one frame in play mode";
+
+        protected override ValueTask<Unit> ExecuteAsync(Unit request, CancellationToken cancellationToken)
+        {
+            EditorApplication.Step();
             return new ValueTask<Unit>(Unit.Value);
         }
     }

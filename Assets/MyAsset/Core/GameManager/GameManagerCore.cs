@@ -15,6 +15,7 @@ namespace Game.Core
         private StatusEffectSystem _statusEffects;
         private EquipmentStore _equipment;
         private ActionExecutionSystem _actions;
+        private AIDecisionSystem _aiDecisions;
         private List<IGameSubManager> _subManagers;
         private bool _initialized;
         private bool _disposed;
@@ -26,6 +27,7 @@ namespace Game.Core
         public EquipmentStore Equipment => _equipment;
         public CharacterStatsSystem Stats => _equipment?.Stats;
         public ActionExecutionSystem Actions => _actions;
+        public AIDecisionSystem AIDecisions => _aiDecisions;
         public bool IsInitialized => _initialized;
 
         public GameManagerCore()
@@ -48,6 +50,7 @@ namespace Game.Core
             _statusEffects = new StatusEffectSystem(_data, _events, _actors);
             _equipment = new EquipmentStore(_events, new SoAEquipmentWorld(_data));
             _actions = new ActionExecutionSystem(new SoAExecutionWorld(_data), _actors);
+            _aiDecisions = new AIDecisionSystem(_actors);
 
             // InitOrder昇順でソートして初期化
             _subManagers.Sort((a, b) => a.InitOrder.CompareTo(b.InitOrder));
@@ -120,6 +123,7 @@ namespace Game.Core
         /// <summary>キャラクター削除</summary>
         public void UnregisterCharacter(int hash)
         {
+            _aiDecisions.RemoveActor(hash);
             _actors.Unregister(hash);
             _actions.RemoveActor(hash);
             _statusEffects.Unregister(hash);
@@ -140,6 +144,7 @@ namespace Game.Core
                 mgr.Dispose();
             }
 
+            _aiDecisions?.Dispose();
             _actions?.Dispose();
             _equipment?.Dispose();
             _statusEffects?.Dispose();

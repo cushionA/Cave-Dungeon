@@ -140,6 +140,9 @@ public static class {className}
 }}";
         }
 
+        /// <summary>
+        /// Collects additional references that should be passed explicitly to eval compilation.
+        /// </summary>
         private static string[] GetAdditionalReferences()
         {
             var seen = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -152,7 +155,8 @@ public static class {className}
                     var loc = asm.Location;
                     if (string.IsNullOrEmpty(loc)) continue;
                     if (!File.Exists(loc)) continue;
-                    if (!seen.Add(asm.GetName().Name)) continue;
+                    if (IsImplicitUnityReference(loc)) continue;
+                    if (!seen.Add(Path.GetFullPath(loc))) continue;
                     refs.Add(loc);
                 }
                 catch
@@ -161,6 +165,46 @@ public static class {className}
                 }
             }
             return refs.ToArray();
+        }
+
+        /// <summary>
+        /// Returns whether the assembly is already provided implicitly by Unity's standard references.
+        /// </summary>
+        /// <remarks>
+        /// Passing Facade/BCL assemblies discovered from the current AppDomain into additionalReferences
+        /// can collide with the references added by UseEngineModules and trigger CS1703.
+        /// </remarks>
+        private static bool IsImplicitUnityReference(string assemblyPath)
+        {
+            return IsImplicitUnityReference(assemblyPath, EditorApplication.applicationContentsPath);
+        }
+
+        internal static bool IsImplicitUnityReference(string assemblyPath, string unityContentsPath)
+        {
+            var normalizedAssemblyPath = NormalizePath(Path.GetFullPath(assemblyPath));
+            var normalizedUnityContentsPath = NormalizePath(Path.GetFullPath(unityContentsPath)).TrimEnd('/');
+            var unityPathPrefix = normalizedUnityContentsPath + "/";
+
+            if (!normalizedAssemblyPath.StartsWith(unityPathPrefix, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            var relativePath = normalizedAssemblyPath.Substring(unityPathPrefix.Length);
+            return IsImplicitUnityReferenceRelativePath(relativePath);
+        }
+
+        internal static bool IsImplicitUnityReferenceRelativePath(string relativePath)
+        {
+            var normalizedRelativePath = NormalizePath(relativePath).TrimStart('/');
+
+            return normalizedRelativePath.StartsWith("MonoBleedingEdge/lib/mono/", StringComparison.OrdinalIgnoreCase)
+                || normalizedRelativePath.StartsWith("NetStandard/ref/", StringComparison.OrdinalIgnoreCase)
+                || normalizedRelativePath.StartsWith("NetStandard/compat/", StringComparison.OrdinalIgnoreCase)
+                || normalizedRelativePath.StartsWith("UnityReferenceAssemblies/", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string NormalizePath(string path)
+        {
+            return path.Replace('\\', '/');
         }
 
         private static async Task CompileAsync(string sourcePath, string dllPath, CancellationToken cancellationToken)

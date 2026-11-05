@@ -184,6 +184,29 @@ namespace Game.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator CharacterPhysics_TeleportBeforeSimulation_QueriesGroundAtTheNewBodyPosition()
+        {
+            _created.Add(TestSceneHelper.CreateGround());
+            CharacterPhysicsTickProbe character = CreateActor("Teleport", new Vector2(0f, 0.5f));
+            character.Rigidbody.constraints = RigidbodyConstraints2D.FreezeRotation | RigidbodyConstraints2D.FreezePositionY;
+            yield return null;
+            Physics2D.SyncTransforms();
+            character.UpdateGroundCheck();
+            Assert.IsTrue(character.IsGrounded);
+
+            character.SetPhysicsPosition(new Vector2(0f, 5f));
+            Physics2D.SyncTransforms();
+            Assert.AreEqual(5f, character.PhysicsPosition.y);
+            character.UpdateGroundCheck();
+            Assert.IsFalse(character.IsGrounded);
+
+            character.SetPhysicsPosition(new Vector2(0f, 0.5f));
+            Physics2D.SyncTransforms();
+            character.UpdateGroundCheck();
+            Assert.IsTrue(character.IsGrounded);
+        }
+
+        [UnityTest]
         public IEnumerator CharacterPhysics_InjectedBackend_DrivesObservationAndMovementWithoutWritingOriginalBody()
         {
             CharacterPhysicsTickProbe character = CreateActor("Injected", new Vector2(0f, 5f));

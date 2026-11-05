@@ -37,6 +37,8 @@ namespace Game.Runtime
         private readonly List<int> _candidates = new List<int>(8);
 
         public CompanionController AIController => _aiController;
+        public override bool CanApplyAIDecision => base.CanApplyAIDecision && !_vanishApplied
+            && _playerTransform != null && _aiController != null && !_aiController.MpManager.IsVanished;
 
         /// <summary>テスト/エディタ用: AIInfoを設定する。</summary>
         public void SetAIInfo(AIInfo aiInfo) { _aiInfo = aiInfo; }
@@ -133,7 +135,7 @@ namespace Game.Runtime
             if (isActiveAndEnabled) { SyncAvailability(); }
         }
 
-        public override void SimulateCharacterTick(float deltaTime, float currentTime)
+        public override void PrepareAIDecisionTick(float deltaTime, float currentTime, AIDecisionSystem decisions)
         {
             if (!IsAlive || _playerTransform == null)
             {
@@ -155,9 +157,18 @@ namespace Game.Runtime
 
                 BridgeAIActionForJudgmentLoop(_aiController.JudgmentLoop, _actionExecutorController);
                 if (!GameManager.TryGetObservation(ObjectHash, out AIObservationContext observation)) { return; }
-                _aiController.Tick(deltaTime, _candidates, observation.Time, observation, GameManager.TargetRelations);
+                _aiController.PrepareTick(deltaTime, _candidates, observation.Time, decisions,
+                    observation, GameManager.TargetRelations);
+            }
+        }
 
-                // 追従移動
+        public override void SimulateCharacterTick(float deltaTime, float currentTime)
+        {
+            if (!IsAlive || _playerTransform == null) { return; }
+            SyncAvailability();
+            if (_vanishApplied || (GameManager.Actions != null && GameManager.Actions.IsPhysicsControlled(ObjectHash))) { return; }
+            if (_aiController != null)
+            {
                 ApplyFollowMovement();
             }
             else

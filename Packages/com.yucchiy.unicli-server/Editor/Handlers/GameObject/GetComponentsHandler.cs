@@ -1,4 +1,3 @@
-using UniCli.Server.Editor;
 using System.Threading;
 using System;
 using System.Collections.Generic;
@@ -33,7 +32,7 @@ namespace UniCli.Server.Editor.Handlers
 
                 var detail = new ComponentDetail
                 {
-                    instanceId = component.GetInstanceID(),
+                    instanceId = UnityObjectIdentity.GetId(component),
                     typeName = component.GetType().FullName,
                     enabled = component is not Behaviour behaviour || behaviour.enabled,
                     properties = ExtractProperties(component)
@@ -115,7 +114,7 @@ namespace UniCli.Server.Editor.Handlers
     [Serializable]
     public class GetComponentsRequest
     {
-        public int instanceId;
+        public long instanceId;
         public string path = "";
     }
 
@@ -128,7 +127,7 @@ namespace UniCli.Server.Editor.Handlers
     [Serializable]
     public class ComponentDetail
     {
-        public int instanceId;
+        public long instanceId;
         public string typeName;
         public bool enabled;
         public SerializedPropertyInfo[] properties;

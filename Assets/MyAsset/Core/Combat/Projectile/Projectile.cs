@@ -16,7 +16,7 @@ namespace Game.Core
         private BulletProfile _profile;
         public BulletProfile Profile => _profile;
         // Borrow only for immediate calculations. Pool reset/reuse still requires a value snapshot.
-        internal ref readonly BulletProfile CapturedProfile => ref _profile;
+        public ref readonly BulletProfile CapturedProfile => ref _profile;
         public float ElapsedTime { get; private set; }
         public bool IsAlive { get; private set; }
         private int _targetHash;

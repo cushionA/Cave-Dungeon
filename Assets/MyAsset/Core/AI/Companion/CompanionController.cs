@@ -83,6 +83,7 @@ namespace Game.Core
             _followBehavior = new FollowBehavior();
             _stanceManager = new StanceManager();
             _mpManager = new CompanionMpManager(new SoAExecutionWorld(data), companionHash, initialReserveMp, mpSettings);
+            _mpManager.OnVanish += _judgmentLoop.InvalidateDecision;
 
             if (events != null)
             {
@@ -106,6 +107,8 @@ namespace Game.Core
         {
             if (_disposed) { return; }
             _disposed = true;
+            _judgmentLoop.Dispose();
+            _mpManager.OnVanish -= _judgmentLoop.InvalidateDecision;
             _confusionClearedSubscription?.Dispose();
             _confusionClearedSubscription = null;
             _executor?.CancelCurrent();
@@ -198,6 +201,25 @@ namespace Game.Core
             }
 
             _judgmentLoop.Tick(deltaTime, candidates, currentTime);
+        }
+
+        public void PrepareTick(float deltaTime, List<int> candidates, float currentTime,
+            AIDecisionSystem decisions, AIObservationContext observation, AITargetRelations targets)
+        {
+            if (_disposed || _mpManager.IsVanished || observation == null
+                || !observation.TryGetActor(_companionHash, out AIActorObservation companion)
+                || !observation.TryGetActor(_playerHash, out AIActorObservation player)
+                || !_judgmentLoop.UseObservation(observation, targets)) { return; }
+            _followBehavior.Evaluate(companion.position, player.position);
+            if (_manualOverrideTimer > 0f)
+            {
+                _manualOverrideTimer = Mathf.Max(0f, _manualOverrideTimer - deltaTime);
+            }
+            else
+            {
+                _modeController.EvaluateTransitions(_companionHash, _judgmentLoop.CurrentTargetHash, observation);
+            }
+            _judgmentLoop.PrepareTick(deltaTime, candidates, currentTime, decisions);
         }
 
         /// <summary>

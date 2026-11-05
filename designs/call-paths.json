@@ -3044,7 +3044,7 @@
       "title": "共通基底からPhysics2D backendへ物理操作を集約",
       "implementation_status": "implemented",
       "connection_status": "connected",
-      "verification": "unverified",
+      "verification": "runtime_tested",
       "steps": [
         {
           "file": "Assets/MyAsset/Runtime/Character/BaseCharacter.Physics.cs",
@@ -3086,8 +3086,18 @@
         "Assets/Tests/PlayMode/CharacterPhysicsBoundaryTests.cs",
         "Assets/Tests/PlayMode/CharacterPhysicsCombatBridgeTests.cs"
       ],
-      "notes": "キャラ物理APIと中央固定tickへの接続をソース確認。119変更C#×3構成の構文確認のみ。Native回帰は追加したがUnity型/API・入力・物理・ライフサイクルは未実行。setterは即時read-after-writeを維持し、全書込みを最後まで遅延する構成ではない。",
-      "verification_hashes": {}
+      "notes": "2026-11-06 Unity 6000.6.8f1の本プロジェクトでGame.Tests.EditMode 2097/2097、Game.Tests.PlayMode 223/223成功。失敗・skip・inconclusive 0。正式UPMとOdin Inspector/Validator 4.1.0.0・AnyPortrait 1.7.0を使用。実行ごとのsource/依存3791件のSHAは前後一致。実Burst有効。検証記録: %TEMP%/sistergame-job-validation/regression-prep-20261106/final-native-regression-summary.json。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Physics/ICharacterPhysics2D.cs": "3cf2d9400209ea86b86da3cab758a2de9598ad0a7c9475b3c89fff12e05de1a8",
+        "Assets/MyAsset/Runtime/Character/BaseCharacter.Physics.cs": "c532b497cb3b77e872e883cfb1df1ac134becb46497b14b1728243aa90540401",
+        "Assets/MyAsset/Runtime/Collision/CharacterCollisionController.cs": "d613e4a1d64d0f72124721b9e8f921f5daf2c1e8eda4d2731d81b7cfda281d03",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "4ea6b4ad856310a0cacccd7a9c2869acd04224eba737370335a09c413a78d453",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "a59aa3167c56e749715e7918be3e93e281bf26d5cced4bf5fa929aa37fff55da",
+        "Assets/MyAsset/Runtime/Debug/AutoInputTester.cs": "c0139e996c73437317388f29648839116dd3168dbf72b986aa19dce5cb18ebc8",
+        "Assets/MyAsset/Runtime/Physics/RigidbodyCharacterPhysics2D.cs": "94ca4a3aaa040ea7ce71cbbe319aafb009fc4bebccdcfc210a8be209e7251b63",
+        "Assets/Tests/PlayMode/CharacterPhysicsBoundaryTests.cs": "38985a6efe0e6d67b4c25934c544dc5c70609f5d6f513e3763144b1fe1da0970",
+        "Assets/Tests/PlayMode/CharacterPhysicsCombatBridgeTests.cs": "f7fa985a4fe42bfaea4570bf5787f6a1fc6758fe8be9faf484efb7c50eda47f5"
+      }
     }
   },
   {
@@ -3097,7 +3107,7 @@
       "title": "世代固定・同tick入力・全キャラ判断と物理補正",
       "implementation_status": "implemented",
       "connection_status": "connected",
-      "verification": "unverified",
+      "verification": "runtime_tested",
       "steps": [
         {
           "file": "Assets/MyAsset/Runtime/GameManager.cs",
@@ -3141,8 +3151,19 @@
         "Assets/Tests/PlayMode/AIObservationFlowTests.cs",
         "Assets/Tests/PlayMode/CharacterPhysicsBoundaryTests.cs"
       ],
-      "notes": "キャラ物理APIと中央固定tickへの接続をソース確認。119変更C#×3構成の構文確認のみ。Native回帰は追加したがUnity型/API・入力・物理・ライフサイクルは未実行。setterは即時read-after-writeを維持し、全書込みを最後まで遅延する構成ではない。",
-      "verification_hashes": {}
+      "notes": "2026-11-06 Unity 6000.6.8f1の本プロジェクトでGame.Tests.EditMode 2097/2097、Game.Tests.PlayMode 223/223成功。失敗・skip・inconclusive 0。正式UPMとOdin Inspector/Validator 4.1.0.0・AnyPortrait 1.7.0を使用。実行ごとのsource/依存3791件のSHAは前後一致。実Burst有効。検証記録: %TEMP%/sistergame-job-validation/regression-prep-20261106/final-native-regression-summary.json。",
+      "verification_hashes": {
+        "Assets/MyAsset/Runtime/Character/BaseCharacter.cs": "3c54c9a5f947a83106a23aec9298ed2b405c3eafe826c1a71bf47c118597e822",
+        "Assets/MyAsset/Runtime/Character/CompanionCharacter.cs": "c420a4c4e6b2e5ca41549be1324d789a2173a196f75802baceee8c2443a54400",
+        "Assets/MyAsset/Runtime/Character/EnemyCharacter.cs": "66a3c3f1d534989b14791f7a3eed4a977cffae75c3c5820d2e3c93490ab2e44c",
+        "Assets/MyAsset/Runtime/Character/PlayerCharacter.cs": "957552ff3538a111f3d820b4195a00c0564523a88ab71e9982f6e58c81294422",
+        "Assets/MyAsset/Runtime/GameManager.cs": "f9d3ed946505fe722df9f40da51881b61e057b0bb3720402b3e53deeeb5e7110",
+        "Assets/MyAsset/Runtime/Input/PlayerInputHandler.cs": "8424e2f84cfb04104de6f49280ffed13eb5bdaa41331250c26c0d2eaac13cf57",
+        "Assets/Tests/PlayMode/AIObservationFlowTests.cs": "46947d2a31722a9712fc140d5daef4a997da0229e3a65e42515dc7e91de449d6",
+        "Assets/Tests/PlayMode/CharacterPhysicsBoundaryTests.cs": "38985a6efe0e6d67b4c25934c544dc5c70609f5d6f513e3763144b1fe1da0970",
+        "Assets/Tests/PlayMode/PlayerActionCancellationTests.cs": "6dec830ecdec98b358836ea86de7fdc717afa0c59076ce14d8632aa1702b2763",
+        "Assets/Tests/PlayMode/PlayerInputSamplingTests.cs": "a87a20c1d55f2235bfdfa49102770c21645d0275bb6e51afc8e3525a187b20a2"
+      }
     }
   },
   {
@@ -4577,7 +4598,7 @@
       "title": "RuntimeのAI投影・弾照会・必要packet・表示/被弾引数を統合",
       "implementation_status": "implemented",
       "connection_status": "connected",
-      "verification": "unverified",
+      "verification": "runtime_tested",
       "steps": [
         {
           "file": "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs",
@@ -4627,8 +4648,22 @@
         "Assets/Tests/EditMode/ProjectileManagerLifecycleTests.cs",
         "Assets/Tests/PlayMode/CombatTargetPolicyPlayTests.cs"
       ],
-      "notes": "2026-10-28: ソース接続/構文確認のみ。Unity型/APIコンパイル・Native/MonoBehaviour/物理実行・実機性能は未確認。 既存Native回帰を確認対象として登録するが未実行。Live refをcallbackへ渡さず、被弾guard cut/子弾/pool return/公開inspectionのowned captureを維持。近接か弾の必要packetだけ生成。",
-      "verification_hashes": {}
+      "notes": "2026-11-06 Unity 6000.6.8f1の本プロジェクトでGame.Tests.EditMode 2097/2097、Game.Tests.PlayMode 223/223成功。失敗・skip・inconclusive 0。正式UPMとOdin Inspector/Validator 4.1.0.0・AnyPortrait 1.7.0を使用。実行ごとのsource/依存3791件のSHAは前後一致。実Burst有効。検証記録: %TEMP%/sistergame-job-validation/regression-prep-20261106/final-native-regression-summary.json。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs": "74dca1f8766c30731fcee7837ab7e7b0be4bee540ba8537f904db2d3f3e6c3b6",
+        "Assets/MyAsset/Runtime/Animation/CharacterAnimationController.cs": "04324e7b4f86794cb60224cb527864138a1876439eef1a43c40a2711dd0919d7",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "ba3f7a7ba776889748850c199599e3ef0a908cf47213e27f56046f686322e893",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "4ea6b4ad856310a0cacccd7a9c2869acd04224eba737370335a09c413a78d453",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "a59aa3167c56e749715e7918be3e93e281bf26d5cced4bf5fa929aa37fff55da",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileController.cs": "81a2e5e37b2a5a0dc89f08bc42dc2468ddc5d1d057182c8a38735b6289081860",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs": "983e1027a6fd65e6eb816fd44ccfba9b77e1ea2af33c4777fb8beaf999e76f9d",
+        "Assets/MyAsset/Runtime/GameManager.cs": "f9d3ed946505fe722df9f40da51881b61e057b0bb3720402b3e53deeeb5e7110",
+        "Assets/Tests/EditMode/ProjectileManagerLifecycleTests.cs": "1cf4fbc87d1558f099f909ebefbfdf9988bb9adebf0f885e5ba3762d88d46491",
+        "Assets/Tests/PlayMode/ActionRuntimeFlowTests.cs": "59c43c1610efa0323799c919640495c5f83aaef5198fd310b3867378398daa32",
+        "Assets/Tests/PlayMode/CharacterPhysicsBoundaryTests.cs": "38985a6efe0e6d67b4c25934c544dc5c70609f5d6f513e3763144b1fe1da0970",
+        "Assets/Tests/PlayMode/CombatTargetPolicyPlayTests.cs": "8cd830f6f75baa1a50beac7f0600e60559423e11e76546dd19f2f890f09af4cc",
+        "Assets/Tests/PlayMode/MotionPresentationTests.cs": "c1128bae350bc109968f49caecdada48125107638380d273574639bc68d15449"
+      }
     }
   },
   {
@@ -5048,6 +5083,218 @@
       ],
       "notes": "pinned generator 2991db197cfdfbbe8eb2d4f20ee55a30cc18c7fdのbefore/after生成物80456字/SHA一致、診断/例外0。入力のMonoBehaviour未解決/partial Dispose診断は従来どおり残し、Unity API型解決・Native登録実行・Unityインポート成功とは数えない。",
       "verification_hashes": {}
+    }
+  },
+  {
+    "feature": "AICore_BurstDecisionPipeline",
+    "path": {
+      "key": "baked-mode-rules",
+      "title": "AI設定変更時の全モード平坦化と判定用配列構築",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "runtime_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/ModeController.cs",
+          "symbol": "ModeController.SetModes",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AICompiledMode.cs",
+          "symbol": "AICompiledMode.AICompiledMode",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs",
+          "symbol": "JudgmentLoop.SetMode",
+          "kind": "update"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs",
+          "symbol": "AIDecisionSystem.RebuildPrograms",
+          "kind": "write"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/AIDecisionSystemTests.cs"
+      ],
+      "notes": "2026-11-06 Unity 6000.6.8f1の本プロジェクトでGame.Tests.EditMode 2097/2097、Game.Tests.PlayMode 223/223成功。失敗・skip・inconclusive 0。正式UPMとOdin Inspector/Validator 4.1.0.0・AnyPortrait 1.7.0を使用。実行ごとのsource/依存3791件のSHAは前後一致。実Burst有効。検証記録: %TEMP%/sistergame-job-validation/regression-prep-20261106/final-native-regression-summary.json。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/AI/Core/AICompiledMode.cs": "a46f03a54a85c3dd07fbf542f771e78d5a7d0cb5caccc15b000811ef4f0bd056",
+        "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "8bfe26ba00cbb9ae417f2c053ec0ac5547951b762054ec2564f405f89f95a96c",
+        "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "7bed36a897c8421f05355614f477aa00d3f71ab1f5207e037db1f22c7c063614",
+        "Assets/MyAsset/Core/AI/Core/ModeController.cs": "80da51a328f0e3de9f4444eb11a38600d2a0b8e3da1479c1c706a0b8c793d8cd",
+        "Assets/Tests/EditMode/AIDecisionSystemTests.cs": "4a89924b556ec845b843b7d123735519083711662ba23f88ce6f02e3bce0d216"
+      }
+    }
+  },
+  {
+    "feature": "AICore_BurstDecisionPipeline",
+    "path": {
+      "key": "snapshot-job-apply",
+      "title": "共通数値スナップショットから並列AI判定しメインで行動適用",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "runtime_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/GameManager.cs",
+          "symbol": "GameManager.SimulationTick",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/GameManager/SimulationTickRunner.cs",
+          "symbol": "SimulationTickRunner.Run",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs",
+          "symbol": "AIObservationCoordinator.Capture",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Character/EnemyCharacter.cs",
+          "symbol": "EnemyCharacter.PrepareAIDecisionTick",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs",
+          "symbol": "JudgmentLoop.PrepareTick",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs",
+          "symbol": "AIDecisionSystem.CaptureWorld",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs",
+          "symbol": "AIDecisionSystem.Schedule",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs",
+          "symbol": "AIQueryKernel.Decide",
+          "kind": "output"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs",
+          "symbol": "AIDecisionSystem.CompleteAndApply",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/GameManager.cs",
+          "symbol": "GameManager.CanApplyAIDecision",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs",
+          "symbol": "JudgmentLoop.ApplyDecision",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/ActionExecutor.cs",
+          "symbol": "ActionExecutor.Execute",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/AIDecisionSystemTests.cs",
+        "Assets/Tests/EditMode/Performance_BaselineBenchmarks.cs"
+      ],
+      "notes": "2026-11-06 Unity 6000.6.8f1の本プロジェクトでGame.Tests.EditMode 2097/2097、Game.Tests.PlayMode 223/223成功。失敗・skip・inconclusive 0。正式UPMとOdin Inspector/Validator 4.1.0.0・AnyPortrait 1.7.0を使用。実行ごとのsource/依存3791件のSHAは前後一致。実Burst有効。検証記録: %TEMP%/sistergame-job-validation/regression-prep-20261106/final-native-regression-summary.json。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "8bfe26ba00cbb9ae417f2c053ec0ac5547951b762054ec2564f405f89f95a96c",
+        "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs": "74dca1f8766c30731fcee7837ab7e7b0be4bee540ba8537f904db2d3f3e6c3b6",
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "7a84b64f2f8c6ac092992fdcb3cb280108ee09c9d08fb43780ce31d01132b42d",
+        "Assets/MyAsset/Core/AI/Core/ActionExecutor.cs": "34e14eb01d059accb9476afc0c02601725ba6e67293f72ab75f33f5e3ccabc96",
+        "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "7bed36a897c8421f05355614f477aa00d3f71ab1f5207e037db1f22c7c063614",
+        "Assets/MyAsset/Core/GameManager/SimulationTickRunner.cs": "6d502978045eeb1339e60b35f0b2e56e59732c6927283d6611480784b088a857",
+        "Assets/MyAsset/Runtime/Character/EnemyCharacter.cs": "66a3c3f1d534989b14791f7a3eed4a977cffae75c3c5820d2e3c93490ab2e44c",
+        "Assets/MyAsset/Runtime/GameManager.cs": "f9d3ed946505fe722df9f40da51881b61e057b0bb3720402b3e53deeeb5e7110",
+        "Assets/Tests/EditMode/AIDecisionSystemTests.cs": "4a89924b556ec845b843b7d123735519083711662ba23f88ce6f02e3bce0d216",
+        "Assets/Tests/EditMode/Performance_BaselineBenchmarks.cs": "c962db4c5067a25815132aa52539e78b3366b85eee2ff476a38bcb1d9527d628"
+      }
+    }
+  },
+  {
+    "feature": "GameLoop_CentralUpdate",
+    "path": {
+      "key": "playerloop-character-phases",
+      "title": "PlayerLoopからキャラ準備・AI判断・移動・回復・表示を中央更新",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "runtime_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/GameManager.cs",
+          "symbol": "GameManager.Awake",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/GameLoop.cs",
+          "symbol": "GameLoop.Install",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/GameLoop.cs",
+          "symbol": "GameLoop.TickFixed",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/GameManager/SimulationTickRunner.cs",
+          "symbol": "SimulationTickRunner.Run",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/GameManager.cs",
+          "symbol": "ISimulationTickWorld.SimulateCharacters",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Character/BaseCharacter.cs",
+          "symbol": "BaseCharacter.PrepareObservationTick",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Character/CompanionCharacter.cs",
+          "symbol": "CompanionCharacter.PrepareAIDecisionTick",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Character/EnemyCharacter.cs",
+          "symbol": "EnemyCharacter.SimulateCharacterTick",
+          "kind": "output"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/GameLoop.cs",
+          "symbol": "GameLoop.RegisterFrame",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/GameLoop.cs",
+          "symbol": "GameLoop.TickFrameComponents",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/GameLoop.cs",
+          "symbol": "GameLoop.TickLate",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/PlayMode/CharacterGameLoopTests.cs"
+      ],
+      "notes": "2026-11-06 Unity 6000.6.8f1の本プロジェクトでGame.Tests.EditMode 2097/2097、Game.Tests.PlayMode 223/223成功。失敗・skip・inconclusive 0。正式UPMとOdin Inspector/Validator 4.1.0.0・AnyPortrait 1.7.0を使用。実行ごとのsource/依存3791件のSHAは前後一致。実Burst有効。検証記録: %TEMP%/sistergame-job-validation/regression-prep-20261106/final-native-regression-summary.json。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/GameManager/SimulationTickRunner.cs": "6d502978045eeb1339e60b35f0b2e56e59732c6927283d6611480784b088a857",
+        "Assets/MyAsset/Runtime/Character/BaseCharacter.cs": "3c54c9a5f947a83106a23aec9298ed2b405c3eafe826c1a71bf47c118597e822",
+        "Assets/MyAsset/Runtime/Character/CompanionCharacter.cs": "c420a4c4e6b2e5ca41549be1324d789a2173a196f75802baceee8c2443a54400",
+        "Assets/MyAsset/Runtime/Character/EnemyCharacter.cs": "66a3c3f1d534989b14791f7a3eed4a977cffae75c3c5820d2e3c93490ab2e44c",
+        "Assets/MyAsset/Runtime/GameLoop.cs": "0cf0275bf5402f312784d8355f707502ed1dc50b87a810550c43216cdbce6628",
+        "Assets/MyAsset/Runtime/GameManager.cs": "f9d3ed946505fe722df9f40da51881b61e057b0bb3720402b3e53deeeb5e7110",
+        "Assets/Tests/PlayMode/CharacterGameLoopTests.cs": "6ac4549d61b5c414271f4fa58390f5e6789d47065511044d91979a0ff25f46f2"
+      }
     }
   }
 ]

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Game.Core;
+using Unity.Profiling;
 using CharacterInfo = Game.Core.CharacterInfo;
 
 namespace Game.Runtime
@@ -27,11 +28,17 @@ namespace Game.Runtime
         private bool _capacityWarningFired;
 
         private GameManagerCore _core;
+        private GameLoop _loop;
         private GameActionRuntime _actions;
         private AIObservationCoordinator _observations;
         private readonly List<int> _simulationHashes = new List<int>();
         private readonly List<ActorRef> _simulationActors = new List<ActorRef>();
+        private readonly Dictionary<int, ActorRef> _decisionActors = new Dictionary<int, ActorRef>();
+        private Func<int, bool> _canApplyAIDecision;
         private readonly SimulationTickRunner _simulation = new SimulationTickRunner();
+        private static readonly ProfilerMarker s_PrepareMarker = new ProfilerMarker("GameLoop.PrepareAI");
+        private static readonly ProfilerMarker s_DecisionMarker = new ProfilerMarker("GameLoop.AI.ScheduleAndComplete");
+        private static readonly ProfilerMarker s_ControlMarker = new ProfilerMarker("GameLoop.ApplyCharacterControl");
         [SerializeField] private StatusEffectCatalog _statusEffectCatalog;
         private StatusEffectPresentationController _statusEffectPresentation;
 
@@ -43,10 +50,12 @@ namespace Game.Runtime
         private readonly Dictionary<Type, IGameSubManager> _subManagers = new Dictionary<Type, IGameSubManager>();
 
         public static GameManager Instance { get; private set; }
+        public GameLoop Loop => _loop;
         public static SoACharaDataDic Data => Instance != null ? Instance._core.Data : null;
         public static GameEvents Events => Instance != null ? Instance._core.Events : null;
         public static StatusEffectSystem StatusEffects => Instance != null ? Instance._core.StatusEffects : null;
         public static EquipmentStore Equipment => Instance != null ? Instance._core.Equipment : null;
+        public static AIDecisionSystem AIDecisions => Instance != null ? Instance._core.AIDecisions : null;
         public static ActorRegistry Actors => Instance != null ? Instance._core.Actors : null;
         public static CharacterStatsSystem Stats => Instance != null ? Instance._core.Stats : null;
         public static AIObservationContext Observation => Instance != null ? Instance._observations?.Observation : null;
@@ -115,11 +124,12 @@ namespace Game.Runtime
             _actions = new GameActionRuntime(_core.Data, _core.Events, _core.Actions);
             _observations = new AIObservationCoordinator(_core.Data, _core.Actors, _core.Events);
             _statusEffectPresentation = new StatusEffectPresentationController(_core.Data, _core.StatusEffects.Store, _statusEffectCatalog);
+            _canApplyAIDecision = CanApplyAIDecision;
+            _loop = new GameLoop(this, _actions, _statusEffectPresentation);
+            _loop.Install();
 
             InitializeSubManagers();
         }
-
-        private void FixedUpdate() => SimulationTick(Time.fixedDeltaTime, Time.fixedTime);
 
         /// <summary>物理観測→入力公開→共有実行/観測→全キャラ制御→物理適用を同じ固定tickで実行する。</summary>
         public void SimulationTick(float deltaTime, float currentTime)
@@ -133,9 +143,14 @@ namespace Game.Runtime
             _simulationHashes.Clear();
             _core.Data.GetAllHashes(_simulationHashes);
             _simulationActors.Clear();
+            _decisionActors.Clear();
             for (int i = 0; i < _simulationHashes.Count; i++)
             {
-                if (_core.Actors.TryGet(_simulationHashes[i], out ActorRef actor)) { _simulationActors.Add(actor); }
+                if (_core.Actors.TryGet(_simulationHashes[i], out ActorRef actor))
+                {
+                    _simulationActors.Add(actor);
+                    _decisionActors.Add(actor.Hash, actor);
+                }
             }
         }
 
@@ -173,10 +188,40 @@ namespace Game.Runtime
 
         void ISimulationTickWorld.SimulateCharacters(float deltaTime, float currentTime)
         {
-            for (int i = 0; i < _simulationActors.Count; i++)
+            using (s_PrepareMarker.Auto())
             {
-                if (TryGetSimulationCharacter(i, true, out BaseCharacter character)) { character.SimulateCharacterTick(deltaTime, currentTime); }
+                _core.AIDecisions.BeginTick(_observations.Observation);
+                for (int i = 0; i < _simulationActors.Count; i++)
+                {
+                    if (TryGetSimulationCharacter(i, true, out BaseCharacter character))
+                    {
+                        character.PrepareAIDecisionTick(deltaTime, currentTime, _core.AIDecisions);
+                    }
+                }
             }
+            using (s_DecisionMarker.Auto())
+            {
+                _core.AIDecisions.Schedule();
+                _core.AIDecisions.CompleteAndApply(_canApplyAIDecision);
+            }
+            using (s_ControlMarker.Auto())
+            {
+                for (int i = 0; i < _simulationActors.Count; i++)
+                {
+                    if (TryGetSimulationCharacter(i, true, out BaseCharacter character))
+                    {
+                        character.SimulateCharacterTick(deltaTime, currentTime);
+                    }
+                }
+            }
+        }
+
+        private bool CanApplyAIDecision(int ownerHash)
+        {
+            if (!_decisionActors.TryGetValue(ownerHash, out ActorRef actor)
+                || !_core.Actors.IsCurrent(actor) || !_core.Data.TryGetValue(ownerHash, out _)) { return false; }
+            BaseCharacter character = _core.Data.GetManaged(ownerHash) as BaseCharacter;
+            return character != null && character.isActiveAndEnabled && character.CanApplyAIDecision;
         }
 
         void ISimulationTickWorld.ApplySimulationPhysics()
@@ -208,12 +253,6 @@ namespace Game.Runtime
             AIObservationContext observation = Observation;
             return observation != null && observation.TryGetActor(hash, out AIActorObservation actor)
                 ? actor.position : fallback;
-        }
-
-        private void LateUpdate()
-        {
-            _statusEffectPresentation.Sync();
-            _actions.Present();
         }
 
         /// <summary>
@@ -280,6 +319,7 @@ namespace Game.Runtime
         {
             CharacterRegistration registration = info.CreateRegistration(Physics2D.gravity.magnitude);
             int result = _core.RegisterCharacter(hash, registration, chara);
+            if (chara != null) { GameLoop.BindFrameOwner(chara); }
             WarnIfCapacityUsageHigh();
             return result;
         }
@@ -331,6 +371,7 @@ namespace Game.Runtime
         {
             if (Instance == this)
             {
+                _loop?.Dispose();
                 _observations?.Dispose();
                 _statusEffectPresentation?.Dispose();
                 _actions?.Dispose();

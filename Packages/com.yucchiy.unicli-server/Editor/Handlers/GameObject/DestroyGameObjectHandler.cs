@@ -1,4 +1,3 @@
-using UniCli.Server.Editor;
 using System.Threading;
 using System;
 using System.Threading.Tasks;
@@ -33,7 +32,7 @@ namespace UniCli.Server.Editor.Handlers
             }
 
             var name = go.name;
-            var instanceId = go.GetInstanceID();
+            var instanceId = UnityObjectIdentity.GetId(go);
 
             Undo.DestroyObjectImmediate(go);
 
@@ -48,7 +47,7 @@ namespace UniCli.Server.Editor.Handlers
     [Serializable]
     public class DestroyGameObjectRequest
     {
-        public int instanceId;
+        public long instanceId;
         public string path = "";
     }
 
@@ -56,6 +55,6 @@ namespace UniCli.Server.Editor.Handlers
     public class DestroyGameObjectResponse
     {
         public string name;
-        public int instanceId;
+        public long instanceId;
     }
 }
