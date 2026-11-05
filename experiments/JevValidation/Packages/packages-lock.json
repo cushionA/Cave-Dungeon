@@ -1,5 +1,14 @@
 {
   "dependencies": {
+    "ai.undream.llm": {
+      "version": "https://github.com/undreamai/LLMUnity.git#9931a9ea46906b1f43adaf9498c05ccf227b5d0b",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "com.unity.nuget.newtonsoft-json": "3.0.2"
+      },
+      "hash": "9931a9ea46906b1f43adaf9498c05ccf227b5d0b"
+    },
     "com.unity.ai.inference": {
       "version": "2.6.1",
       "depth": 0,

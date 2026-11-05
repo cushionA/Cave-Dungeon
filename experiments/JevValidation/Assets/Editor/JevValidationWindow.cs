@@ -8,11 +8,14 @@ namespace JevValidation
 {
     public sealed class JevValidationWindow : EditorWindow
     {
-        private enum InferenceBackend { CPU, GPUCompute }
+        private enum InferenceBackend { LLMUnityCPU, SentisCPU, SentisGPUCompute, LLMUnityGPU }
 
         [SerializeField] private ModelAsset _model;
         [SerializeField] private string _casePath = "Assets/PreparedCases/smoke.json";
-        [SerializeField] private InferenceBackend _backend;
+        [SerializeField] private string _ggufPath = "";
+        [SerializeField] private string _ggufCasePath = "";
+        [SerializeField] private InferenceBackend _backend = InferenceBackend.LLMUnityGPU;
+        [SerializeField] private int _gpuLayers = 99;
         private CancellationTokenSource _cancellation;
         private ValidationReport _report;
         private Vector2 _scroll;
@@ -39,25 +42,31 @@ namespace JevValidation
             using (new EditorGUI.DisabledScope(_running))
             {
                 EditorGUI.BeginChangeCheck();
-                _model = (ModelAsset)EditorGUILayout.ObjectField("ONNXモデル", _model, typeof(ModelAsset), false);
-                using (new EditorGUILayout.HorizontalScope())
+                _backend = (InferenceBackend)EditorGUILayout.EnumPopup("推論バックエンド", _backend);
+                if (_backend == InferenceBackend.LLMUnityCPU || _backend == InferenceBackend.LLMUnityGPU)
                 {
-                    _casePath = EditorGUILayout.TextField("準備済みケースJSON", _casePath);
-                    if (GUILayout.Button("選択", GUILayout.Width(60)))
+                    _ggufPath = SelectPath("TinyJev GGUF", _ggufPath, "gguf");
+                    _ggufCasePath = SelectPath("準備済みケースJSON", _ggufCasePath, "json");
+                    if (_backend == InferenceBackend.LLMUnityGPU)
                     {
-                        var selected = EditorUtility.OpenFilePanel("準備済みケースJSON", "", "json");
-                        if (!string.IsNullOrEmpty(selected))
-                            _casePath = selected;
+                        _gpuLayers = EditorGUILayout.IntField("GPU offload層数", _gpuLayers);
+                        EditorGUILayout.HelpBox("GPUへ移す層数を指定します。99は全層を要求します。使用率の%指定はありません。", MessageType.Info);
                     }
                 }
-                _backend = (InferenceBackend)EditorGUILayout.EnumPopup("推論バックエンド", _backend);
+                else
+                {
+                    _model = (ModelAsset)EditorGUILayout.ObjectField("ONNXモデル", _model, typeof(ModelAsset), false);
+                    _casePath = SelectPath("準備済みケースJSON", _casePath, "json");
+                }
                 if (EditorGUI.EndChangeCheck())
                     _report = null;
             }
 
             using (new EditorGUILayout.HorizontalScope())
             {
-                using (new EditorGUI.DisabledScope(_running || _model == null || string.IsNullOrWhiteSpace(_casePath)))
+                using (new EditorGUI.DisabledScope(_running || ((_backend == InferenceBackend.LLMUnityCPU || _backend == InferenceBackend.LLMUnityGPU)
+                           ? string.IsNullOrWhiteSpace(_ggufPath) || string.IsNullOrWhiteSpace(_ggufCasePath)
+                           : _model == null || string.IsNullOrWhiteSpace(_casePath))))
                     if (GUILayout.Button("実行"))
                         Run();
                 using (new EditorGUI.DisabledScope(!_running))
@@ -79,13 +88,22 @@ namespace JevValidation
             EditorGUILayout.LabelField(_report.model_id, EditorStyles.boldLabel);
             EditorGUILayout.LabelField("モデル種別 / backend", _report.model_kind + " / " + _report.backend);
             EditorGUILayout.LabelField("revision", _report.model_revision);
-            EditorGUILayout.LabelField("ONNX SHA256", _report.model_sha256);
+            EditorGUILayout.LabelField("モデル SHA256", _report.model_sha256);
+            if (_report.model_format == "gguf")
+            {
+                EditorGUILayout.LabelField("量子化 / head SHA256", _report.backbone_quantization + " / " + _report.head_sha256);
+                EditorGUILayout.LabelField("モデル起動", _report.model_load_ms.ToString("F3") + " ms");
+                EditorGUILayout.LabelField("GPU要求層数 / 実offload", _report.requested_gpu_layers + " / " + _report.offloaded_gpu_layers + "/" + _report.offloadable_gpu_layers);
+                EditorGUILayout.LabelField("native backend", _report.native_architecture);
+            }
             foreach (var result in _report.cases)
             {
                 using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
                     EditorGUILayout.LabelField(result.case_id + " / " + result.state_id, EditorStyles.boldLabel);
-                    EditorGUILayout.LabelField("選択 / 推論＋readback", result.chosen_id + " / " + result.inference_ms.ToString("F3") + " ms");
+                    EditorGUILayout.LabelField("選択 / 計測時間", result.chosen_id + " / " + result.inference_ms.ToString("F3") + " ms");
+                    if (_report.model_format == "gguf")
+                        EditorGUILayout.LabelField("backbone＋readback / head", result.backbone_ms.ToString("F3") + " / " + result.head_ms.ToString("F3") + " ms");
                     for (var index = 0; index < result.choice_ids.Length; index++)
                         EditorGUILayout.LabelField(result.choice_ids[index], result.probabilities[index].ToString("F6"));
                     EditorGUILayout.LabelField("参照確率との差", result.has_reference
@@ -109,9 +127,12 @@ namespace JevValidation
             _cancellation = new CancellationTokenSource();
             try
             {
-                var suite = PreparedCaseFile.Read(_casePath);
-                _report = await SentisCaseRunner.RunAsync(_model, suite,
-                    _backend == InferenceBackend.CPU ? BackendType.CPU : BackendType.GPUCompute, _cancellation.Token);
+                if (_backend == InferenceBackend.LLMUnityCPU || _backend == InferenceBackend.LLMUnityGPU)
+                    _report = await LlmUnityCaseRunner.RunAsync(_ggufPath, _ggufCasePath, _cancellation.Token,
+                        _backend == InferenceBackend.LLMUnityGPU ? LlmUnityBackend.GPU : LlmUnityBackend.CPU, _gpuLayers);
+                else
+                    _report = await SentisCaseRunner.RunAsync(_model, PreparedCaseFile.Read(_casePath),
+                        _backend == InferenceBackend.SentisCPU ? BackendType.CPU : BackendType.GPUCompute, _cancellation.Token);
             }
             catch (OperationCanceledException)
             {
@@ -136,6 +157,20 @@ namespace JevValidation
             var path = EditorUtility.SaveFilePanel("検証レポート保存", "", "jev-validation.json", "json");
             if (!string.IsNullOrEmpty(path))
                 _report.Save(path);
+        }
+
+        private static string SelectPath(string label, string path, string extension)
+        {
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                path = EditorGUILayout.TextField(label, path);
+                if (GUILayout.Button("選択", GUILayout.Width(60)))
+                {
+                    var selected = EditorUtility.OpenFilePanel(label, "", extension);
+                    if (!string.IsNullOrEmpty(selected)) path = selected;
+                }
+                return path;
+            }
         }
     }
 }

@@ -15,6 +15,9 @@ namespace JevValidation
     {
         public static void ValidateModelHash(ModelAsset asset, PreparedSuite suite)
         {
+            if (suite.model_format == "gguf" || suite.token_count != PreparedCaseFile.TokenCount ||
+                Array.Exists(suite.cases, item => item.choice_ids.Length != PreparedCaseFile.ChoiceCount))
+                throw new InvalidDataException("SentisはONNXの4候補/256token固定です。");
             var path = AssetDatabase.GetAssetPath(asset);
             if (asset == null || !string.Equals(Path.GetExtension(path), ".onnx", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("AssetsにimportしたONNXモデルを選択してください。");

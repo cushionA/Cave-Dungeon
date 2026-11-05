@@ -18,6 +18,10 @@ NUMERIC_STATE = ("Player health: {health}/100. Player stamina: 50/100. Player am
 REAL_STATES = [("verbal_" + state_id, state) for state_id, state in STATES] + [
     ("numeric_hp90", NUMERIC_STATE.format(health=90)),
     ("numeric_hp5", NUMERIC_STATE.format(health=5)),
+    ("personality_aggressive", NUMERIC_STATE.format(health=35) +
+     " Personality: Aggressive, risk-tolerant, drawn to confrontation."),
+    ("personality_cautious", NUMERIC_STATE.format(health=35) +
+     " Personality: Cautious, risk-averse, values safety."),
 ]
 
 
@@ -41,7 +45,7 @@ def load_states(path=None):
     return result
 
 
-def validate_case(case, vocab_size=None):
+def validate_case(case, vocab_size=None, *, token_count=TOKEN_COUNT, choice_count=4):
     if not isinstance(case, dict):
         raise ValueError("A prepared case must be an object")
     for name in ("case_id", "state_id"):
@@ -50,26 +54,26 @@ def validate_case(case, vocab_size=None):
     if "state" in case and (not isinstance(case["state"], str) or not case["state"].strip()):
         raise ValueError("state must be a nonempty string when supplied")
     choices = case.get("choice_ids")
-    if not isinstance(choices, list) or len(choices) != 4:
-        raise ValueError("Exactly four choice_ids are required")
-    if any(not isinstance(choice, str) or not choice.strip() for choice in choices) or len(set(choices)) != 4:
+    if not isinstance(choices, list) or len(choices) != choice_count:
+        raise ValueError(f"Exactly {choice_count} choice_ids are required")
+    if any(not isinstance(choice, str) or not choice.strip() for choice in choices) or len(set(choices)) != choice_count:
         raise ValueError("choice_ids must be nonempty and unique")
     ids = case.get("input_ids")
     mask = case.get("attention_mask")
-    if not isinstance(ids, list) or len(ids) != TOKEN_COUNT:
-        raise ValueError("input_ids must contain exactly 256 integers")
+    if not isinstance(ids, list) or len(ids) != token_count:
+        raise ValueError(f"input_ids must contain exactly {token_count} integers")
     if any(type(value) is not int or value < 0 or value > 2147483647 for value in ids):
         raise ValueError("input_ids must be nonnegative int32 values")
     if vocab_size is not None and any(value >= vocab_size for value in ids):
         raise ValueError("An input token exceeds the model vocabulary")
-    if not isinstance(mask, list) or len(mask) != TOKEN_COUNT:
-        raise ValueError("attention_mask must contain exactly 256 integers")
+    if not isinstance(mask, list) or len(mask) != token_count:
+        raise ValueError(f"attention_mask must contain exactly {token_count} integers")
     if any(type(value) is not int or value not in (0, 1) for value in mask) or not any(mask):
         raise ValueError("attention_mask must contain zeroes and ones with at least one active token")
     active = sum(mask)
-    if mask != [1] * active + [0] * (TOKEN_COUNT - active):
+    if mask != [1] * active + [0] * (token_count - active):
         raise ValueError("attention_mask must describe right-padded input")
-    for name, count in (("option_positions", 4), ("decision_position", 1)):
+    for name, count in (("option_positions", choice_count), ("decision_position", 1)):
         values = case.get(name)
         if not isinstance(values, list) or len(values) != count:
             raise ValueError(f"{name} must contain exactly {count} positions")
@@ -80,8 +84,8 @@ def validate_case(case, vocab_size=None):
     if case["decision_position"][0] in case["option_positions"]:
         raise ValueError("The decision token must be distinct from option tokens")
     probabilities = case.get("reference_probabilities")
-    if not isinstance(probabilities, list) or len(probabilities) != 4:
-        raise ValueError("reference_probabilities must contain exactly four values")
+    if not isinstance(probabilities, list) or len(probabilities) != choice_count:
+        raise ValueError(f"reference_probabilities must contain exactly {choice_count} values")
     if any(type(value) not in (int, float) or not math.isfinite(value) or value < 0 or value > 1 for value in probabilities):
         raise ValueError("reference_probabilities must be finite values in [0, 1]")
     if not math.isclose(sum(probabilities), 1.0, rel_tol=1e-5, abs_tol=1e-5):

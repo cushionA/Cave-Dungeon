@@ -54,6 +54,18 @@ PRレビューや実装中に発生した「今すぐではないが後で対応
 
 ---
 
+## Jev検証環境の残件（2026-11-06）
+
+- [ ] 🟢✓ **LLMUnityの運用コスト検証** — TinyJevの同じ入力でCPU・GPUと同時個体数を比較する
+  - **背景**: 学習済みbackboneと元のheadを保持したF16・Q8_0・Q4_K_Mは実行できた。受信IOの更新待ちを除いたQ8の4ケース平均はCPU約1.56秒、GPU約0.42秒。RTX 2070 SUPERへ29/29層のoffloadと全選択一致を確認した。
+  - **仕様**: 同じtoken入力・候補・参照確率を維持してGPU layersを設定し、誤差、起動時間、判断時間、メモリを測る。上位の作戦選択を低頻度・非同期で更新する運用として、許容更新間隔・同時個体数・判断品質を評価する。毎フレームの応答時間を必須条件にしない。
+  - **対象ファイル**: `experiments/JevValidation/Assets/Editor/LlmUnityCaseRunner.cs`、`experiments/JevValidation/Assets/Editor/ValidationReport.cs`、`experiments/JevValidation/README.md`
+
+- [ ] 🟡⚠ **Jevの上位作戦の品質・接続仕様の検証** — 作戦IDを行動プリセットやMLモデルのパラメータへ接続する
+  - **背景**: Python参照の18ケースでは、現在の作戦IDを含む入力への強い依存と、未設定時の個性・目的による選択差を確認した。小型NLI2モデルの比較でも、採用に足る改善は確認できていない。ゲーム内での品質や本体への接続は未評価。
+  - **仕様**: 目的・個性・戦況から上位の作戦IDを選ぶ。現在の作戦IDを入力する形式と、新しい候補の評価・維持判定を分ける形式を比較し、候補順の影響も評価する。誘導から攻撃までの各段階は行動プリセットやML側が実行する。作戦維持/変更の評価基準と更新契機、結果の有効期限・再評価条件・個体世代の検査を定義する。推論中も現在の作戦を継続し、追加学習の要否は品質評価後に判断する。
+  - **対象ファイル**: `experiments/JevValidation/Python/prepare_strategies.py`、`experiments/JevValidation/Python/compare_strategies.py`、`experiments/JevValidation/Assets/Editor/PreparedCases.cs`、`experiments/JevValidation/README.md`、`Architect/05_AIシステム.md`
+
 ## 3D化前のデータフロー整合（2026-10-26）
 
 敵・プレイヤー・シスターさんで入力元が異なっても、共通データの生成・反映・参照の契約を揃える。3D化とは分けて一項目ずつ進める。DF-00/01は実装・純ロジック検証済み。DF-02は装備付与フラグ・総重量に加え、攻防・6能力・最大HP/MP/SP/アーマーを共有データへ接続し、DF-05は共通実行側への入力転送を実装済み（Unity上の実行確認は保留）。DF-02の残りは重量上限・持ち方による性能の契約と接続。数式やバランス値が未確定の項目は、既存設定の意味を確認してから実装する。

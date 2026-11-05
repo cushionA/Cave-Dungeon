@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from prepare import build_smoke_cases, export_smoke, load_states, validate_case
+from prepare import CHOICE_IDS, _request, build_smoke_cases, export_smoke, load_states, validate_case
 
 
 class PreparedCaseTests(unittest.TestCase):
@@ -44,6 +44,26 @@ class PreparedCaseTests(unittest.TestCase):
         case["option_positions"][0] = 255
         with self.assertRaises(ValueError):
             validate_case(case)
+
+    def test_PersonalityPair_OnlyTraitChanges_PreservesCombatAndChoiceInstructions(self):
+        states = dict(load_states())
+        self.assertEqual(6, len(states))
+        aggressive = states["personality_aggressive"]
+        cautious = states["personality_cautious"]
+        combat, aggressive_trait = aggressive.split(" Personality: ")
+        cautious_combat, cautious_trait = cautious.split(" Personality: ")
+        self.assertEqual(combat, cautious_combat)
+        self.assertIn("Player health: 35/100", combat)
+        self.assertIn("Enemy health: 80/100", combat)
+        self.assertIn("Enemy distance: 1.5 meters", combat)
+        self.assertEqual("Aggressive, risk-tolerant, drawn to confrontation.", aggressive_trait)
+        self.assertEqual("Cautious, risk-averse, values safety.", cautious_trait)
+        first, second = (_request("personality", state) for state in (aggressive, cautious))
+        self.assertEqual(first["questions"], second["questions"])
+        self.assertEqual(CHOICE_IDS, list(first["questions"]["action"]["criteria"]))
+        first.pop("state")
+        second.pop("state")
+        self.assertEqual(first, second)
 
     def test_PreparedCase_InvalidProbabilityDistribution_IsRejected(self):
         for probabilities in ([0.25, 0.25, float("nan"), 0.25], [0.1] * 4, [-0.1, 0.2, 0.4, 0.5]):

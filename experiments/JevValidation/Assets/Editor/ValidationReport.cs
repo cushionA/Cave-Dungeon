@@ -14,6 +14,17 @@ namespace JevValidation
         public string model_sha256;
         public string model_kind;
         public string backend;
+        public string model_format;
+        public string head_sha256;
+        public string backbone_quantization;
+        public double model_load_ms;
+        public int requested_gpu_layers;
+        public int offloaded_gpu_layers;
+        public int offloadable_gpu_layers;
+        public bool gpu_offload_verified;
+        public float gpu_model_buffer_mib;
+        public string native_architecture;
+        public string[] native_gpu_log;
         public string model_asset_path;
         public string created_utc;
         public string timing_scope;
@@ -37,6 +48,8 @@ namespace JevValidation
         public float[] probabilities;
         public string chosen_id;
         public double inference_ms;
+        public double backbone_ms;
+        public double head_ms;
         public bool has_reference;
         public float[] reference_probabilities;
         public float max_reference_error;
@@ -66,6 +79,9 @@ namespace JevValidation
                 model_sha256 = suite.model_sha256,
                 model_kind = suite.model_id == "smoke" ? "smoke" : "real",
                 backend = backend,
+                model_format = string.IsNullOrEmpty(suite.model_format) ? "onnx" : suite.model_format,
+                head_sha256 = suite.head_sha256,
+                backbone_quantization = suite.backbone_quantization,
                 model_asset_path = modelPath,
                 created_utc = DateTime.UtcNow.ToString("O"),
                 timing_scope = "Schedule through completed readback; model load, tensor creation and one warm-up excluded.",
@@ -94,7 +110,7 @@ namespace JevValidation
                         continue;
                     var error = Math.Abs(values[choice] - item.reference_probabilities[choice]);
                     result.max_reference_error = Math.Max(result.max_reference_error, error);
-                    result.mean_reference_error += error / PreparedCaseFile.ChoiceCount;
+                    result.mean_reference_error += error / values.Length;
                 }
                 result.chosen_id = item.choice_ids[selected];
                 report.cases[index] = result;

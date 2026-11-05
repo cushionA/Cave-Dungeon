@@ -115,3 +115,5 @@ experiments/JevValidation/Assets/Models/*
 !experiments/JevValidation/Assets/Models/smoke.onnx
 !experiments/JevValidation/Assets/Models/smoke.onnx.meta
 experiments/JevValidation/Assets/PreparedCases/TinyJev*
+experiments/JevValidation/Assets/StreamingAssets/LlamaLib-v*/
+experiments/JevValidation/Assets/StreamingAssets/LlamaLib-v*.meta
