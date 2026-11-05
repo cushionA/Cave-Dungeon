@@ -114,13 +114,15 @@ namespace Game.Tests.PlayMode
             Assert.IsTrue(_controller.ExecuteAction(new ActionSlot { execType = ActionExecType.Attack }));
             long attack = CurrentAttack();
             _input.SetOverrideInput(new MovementInfo { dodgePressed = true, moveDirection = Vector2.left });
-            yield return FixedTick();
+            _simulationTime += Time.fixedDeltaTime;
+            GameManager.Instance.SimulationTick(Time.fixedDeltaTime, _simulationTime);
+            Assert.AreEqual(0f, _player.Rigidbody.linearVelocity.x);
+            yield return new WaitForFixedUpdate();
 
             Assert.AreEqual(attack, CurrentAttack());
             Assert.IsFalse(GameManager.Actions.IsDodging(_owner));
             Assert.AreEqual(93f, GameManager.Data.GetVitals(_owner).currentStamina);
             Assert.IsTrue(_input.CurrentInput.dodgePressed);
-            Assert.AreEqual(0f, _player.Rigidbody.linearVelocity.x);
 
             GameManager.Actions.Execution.Tick(0.6f);
             yield return FixedTick();
@@ -192,9 +194,8 @@ namespace Game.Tests.PlayMode
         [UnityTest]
         public IEnumerator PlayerInput_AcceptedJump_DoesNotReplayTheSnapshotAcrossFixedTicks()
         {
-            ref MoveParams move = ref GameManager.Data.GetMoveParams(_owner);
-            move.jumpForce = 10f;
-            move.jumpStaminaCost = 7f;
+            GameManager.Data.GetMoveParams(_owner).jumpForce = 10f;
+            GameManager.Data.GetMoveParams(_owner).jumpStaminaCost = 7f;
             _input.SetOverrideInput(new MovementInfo { jumpPressed = true, jumpHeld = true });
 
             yield return FixedTick();
@@ -216,9 +217,8 @@ namespace Game.Tests.PlayMode
         public IEnumerator PlayerInput_AcceptedDropThrough_ConsumesJumpWithoutStartingNormalJumpInTheSameTick()
         {
             _ground.AddComponent<DropThroughPlatform>();
-            ref MoveParams move = ref GameManager.Data.GetMoveParams(_owner);
-            move.jumpForce = 10f;
-            move.jumpStaminaCost = 7f;
+            GameManager.Data.GetMoveParams(_owner).jumpForce = 10f;
+            GameManager.Data.GetMoveParams(_owner).jumpStaminaCost = 7f;
             _input.SetOverrideInput(new MovementInfo
             {
                 jumpPressed = true, jumpHeld = true, moveDirection = Vector2.down,

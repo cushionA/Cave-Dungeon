@@ -61,25 +61,49 @@ namespace Game.Tests.PlayMode
             yield return null;
         }
 
-        /// <summary>右側に立つ壁 (Ground レイヤー) を作成する。</summary>
-        private GameObject CreateWallRight(float x, float width = 0.4f, float height = 6f)
+        // Player スポーン Y 位置 (各テストで共通)。
+        // 壁の下端 = Player スポーン Y にすることで、Player の足元 BoxCast 範囲 (Y [-0.475, -0.425] from spawn)
+        // が壁と重ならず、IsGrounded 誤検出を回避する。
+        private const float k_PlayerSpawnY = 2f;
+
+        /// <summary>
+        /// 右側に立つ壁 (Ground レイヤー) を作成する。
+        /// <para>
+        /// 配置の前提:
+        /// - 壁の下端 = Player スポーン Y (= 2)。これにより Player の足元 BoxCast (Y range [1.425, 1.575])
+        ///   と壁の Y range [2, 6] が重ならず、UpdateGroundCheck の地面誤検出を回避する。
+        /// - Player の collider 側面 (Y range [1.55, 2.45]) と壁の Y range は [2, 2.45] で重なるため、
+        ///   CheckWallContact の OverlapBox は機能する。
+        /// </para>
+        /// <para>
+        /// 重要: <c>Physics2D.autoSyncTransforms</c> のデフォルトは <c>false</c> のため、
+        /// <c>transform.position</c> や <c>collider.size</c> を変更しただけでは物理エンジン側の
+        /// Bounds キャッシュは更新されず、<c>Physics2D.BoxCast</c> / <c>OverlapBox</c> が
+        /// 古い (= 原点・デフォルトサイズの) collider を見てしまう。
+        /// テスト中は次の FixedUpdate を待たずに query を走らせるため、必ず <c>SyncTransforms()</c> を明示呼び出しする。
+        /// </para>
+        /// </summary>
+        private GameObject CreateWallRight(float x, float width = 0.4f, float height = 4f)
         {
             GameObject wall = new GameObject("TestWallRight");
             wall.layer = k_GroundLayer;
+            wall.transform.position = new Vector3(x, k_PlayerSpawnY + height / 2f, 0f);
             BoxCollider2D col = wall.AddComponent<BoxCollider2D>();
             col.size = new Vector2(width, height);
-            wall.transform.position = new Vector3(x, 2f, 0f);
+            // 物理エンジンの bounds キャッシュを最新化 (autoSyncTransforms=false 対策)
+            Physics2D.SyncTransforms();
             return wall;
         }
 
-        /// <summary>左側に立つ壁 (Ground レイヤー) を作成する。</summary>
-        private GameObject CreateWallLeft(float x, float width = 0.4f, float height = 6f)
+        /// <summary>左側に立つ壁。CreateWallRight と同じ Y 配置 + SyncTransforms 前提。</summary>
+        private GameObject CreateWallLeft(float x, float width = 0.4f, float height = 4f)
         {
             GameObject wall = new GameObject("TestWallLeft");
             wall.layer = k_GroundLayer;
+            wall.transform.position = new Vector3(x, k_PlayerSpawnY + height / 2f, 0f);
             BoxCollider2D col = wall.AddComponent<BoxCollider2D>();
             col.size = new Vector2(width, height);
-            wall.transform.position = new Vector3(x, 2f, 0f);
+            Physics2D.SyncTransforms();
             return wall;
         }
 
@@ -96,8 +120,7 @@ namespace Game.Tests.PlayMode
             _wallObject = CreateWallRight(x: 0.6f);
 
             CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo();
-            // プレイヤーを空中位置 (y=2 = 壁の中央付近) にスポーン
-            _playerObject = SpawnPlayer(info, new Vector3(0.05f, 2f, 0f));
+            _playerObject = SpawnPlayer(info, new Vector3(0.05f, k_PlayerSpawnY, 0f));
 
             yield return null; // Awake + Start (SoA 登録)
 
@@ -115,6 +138,12 @@ namespace Game.Tests.PlayMode
             // TryWallKick は facingRight=true で +k_WallKickForceX を返す (facingDir と同符号)
             // _jumpBufferTimer をリフレクションで直接セットして「空中ジャンプ入力」を再現
             SetJumpBufferTimer(pc, 0.1f);
+
+            // 壁蹴り後の物理衝突で velocity が上書きされないように Player-Wall 間の物理衝突を無効化
+            // (壁蹴り仕様は「壁に向かって蹴り進む」= facingDir と同符号のため、衝突無効化なしでは
+            // Player が壁にめり込んで物理エンジンが velocity.x を 0 にしてしまう)
+            // OverlapBox / BoxCast は layer mask 経由で動作するため壁検出には影響しない
+            IgnorePlayerWallCollision(_playerObject, _wallObject);
 
             // FixedUpdate を 1 回回す
             yield return new WaitForFixedUpdate();
@@ -138,7 +167,7 @@ namespace Game.Tests.PlayMode
             _wallObject = CreateWallLeft(x: -0.6f);
 
             CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo();
-            _playerObject = SpawnPlayer(info, new Vector3(-0.05f, 2f, 0f));
+            _playerObject = SpawnPlayer(info, new Vector3(-0.05f, k_PlayerSpawnY, 0f));
             yield return null;
 
             PlayerCharacter pc = _playerObject.GetComponent<PlayerCharacter>();
@@ -153,6 +182,9 @@ namespace Game.Tests.PlayMode
             SetAbilityFlags(pc.ObjectHash, AbilityFlag.WallKick);
 
             SetJumpBufferTimer(pc, 0.1f);
+
+            // Player-Wall 物理衝突を無効化 (壁検出には影響しない、上記コメント参照)
+            IgnorePlayerWallCollision(_playerObject, _wallObject);
 
             yield return new WaitForFixedUpdate();
 
@@ -173,7 +205,7 @@ namespace Game.Tests.PlayMode
             _wallObject = CreateWallRight(x: 0.6f);
 
             CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo();
-            _playerObject = SpawnPlayer(info, new Vector3(0.05f, 2f, 0f));
+            _playerObject = SpawnPlayer(info, new Vector3(0.05f, k_PlayerSpawnY, 0f));
             yield return null;
 
             PlayerCharacter pc = _playerObject.GetComponent<PlayerCharacter>();
@@ -204,7 +236,7 @@ namespace Game.Tests.PlayMode
         {
             // 壁を作らない or 遠くに配置
             CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo();
-            _playerObject = SpawnPlayer(info, new Vector3(0f, 2f, 0f));
+            _playerObject = SpawnPlayer(info, new Vector3(0f, k_PlayerSpawnY, 0f));
             yield return null;
 
             PlayerCharacter pc = _playerObject.GetComponent<PlayerCharacter>();
@@ -245,6 +277,8 @@ namespace Game.Tests.PlayMode
 
             PlayerCharacter pc = go.AddComponent<PlayerCharacter>();
             TestSceneHelper.SetCharacterInfo(pc, info);
+            // 物理エンジンの bounds キャッシュを最新化 (壁検出 / 地面検出を正確にするため)
+            Physics2D.SyncTransforms();
             return go;
         }
 
@@ -287,6 +321,23 @@ namespace Game.Tests.PlayMode
                 BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.IsNotNull(field, "BaseCharacter._isFacingRight が存在する");
             field.SetValue(pc, false);
+        }
+
+        /// <summary>
+        /// Player と Wall の物理衝突を無効化する。
+        /// 壁蹴り仕様は「壁に向かって蹴り進む」(facingDir と同符号) のため、
+        /// 衝突有効のままでは Player が壁にめり込んで物理エンジンが velocity.x を 0 にリセットし、
+        /// 壁蹴り直後の velocity を assert で検証できなくなる。
+        /// OverlapBox / BoxCast は layer mask 経由なので壁検出には影響しない。
+        /// </summary>
+        private static void IgnorePlayerWallCollision(GameObject player, GameObject wall)
+        {
+            Collider2D playerCol = player.GetComponent<Collider2D>();
+            Collider2D wallCol = wall.GetComponent<Collider2D>();
+            if (playerCol != null && wallCol != null)
+            {
+                Physics2D.IgnoreCollision(playerCol, wallCol, true);
+            }
         }
     }
 }

@@ -213,7 +213,7 @@ namespace Game.Editor
                     {
                         if (prop.propertyType == SerializedPropertyType.ObjectReference
                             && prop.objectReferenceValue == null
-                            && prop.objectReferenceInstanceIDValue != 0)
+                            && prop.objectReferenceEntityIdValue != EntityId.None)
                         {
                             Debug.LogWarning(
                                 $"Missing参照: {GetHierarchyPath(go)} → " +

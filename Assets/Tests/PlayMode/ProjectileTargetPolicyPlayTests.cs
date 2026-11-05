@@ -153,6 +153,10 @@ namespace Game.Tests.PlayMode
             BaseCharacter friend = CreateActor(CharacterBelong.Ally, new Vector2(-9f, 0f));
             BaseCharacter enemy = CreateActor(CharacterBelong.Enemy, new Vector2(-8f, 0f));
             yield return null;
+            GameManager.Instance.SimulationTick(0f, Time.time);
+            Assert.AreEqual(_owner.PhysicsPosition, GameManager.Data.GetVitals(_owner.ObjectHash).position);
+            Assert.AreEqual(friend.PhysicsPosition, GameManager.Data.GetVitals(friend.ObjectHash).position);
+            Assert.AreEqual(enemy.PhysicsPosition, GameManager.Data.GetVitals(enemy.ObjectHash).position);
             MagicDefinition magic = Magic(AttackTargetRelation.Self | AttackTargetRelation.Hostile);
             magic.bulletProfile.explodeRadius = 3f;
             ProjectileController projectile = Spawn(magic, new Vector2(-10f, 0f));

@@ -1,4 +1,3 @@
-using UniCli.Server.Editor;
 using System.Threading;
 using System;
 using System.Globalization;
@@ -119,7 +118,7 @@ namespace UniCli.Server.Editor.Handlers
     [Serializable]
     public class AnimatorSetParameterRequest
     {
-        public int instanceId;
+        public long instanceId;
         public string path = "";
         public string name = "";
         public string value = "";

@@ -19,6 +19,7 @@ namespace Game.Tests.PlayMode
         public IEnumerator SetUp()
         {
             TestSceneHelper.CreateGameManager();
+            GameManager.Instance.enabled = false;
             Game.Core.CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo();
             _created.Add(info);
             GameObject actor = TestSceneHelper.CreateBaseCharacterObject(info, new Vector3(0f, 2f, 0f));
@@ -385,7 +386,7 @@ namespace Game.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator AIExecution_RejectedQueuedChild_NotifiesCompletionWhenObserved()
+        public IEnumerator AIExecution_RejectedQueuedChild_NotifiesCompletionWhenGroupSettles()
         {
             AttackInfo parent = CreateAttack(0.1f);
             AttackInfo child = CreateAttack(0.2f);
@@ -397,11 +398,12 @@ namespace Game.Tests.PlayMode
             Assert.IsTrue(_executor.Execute(_owner, 0, new ActionSlot { execType = ActionExecType.Attack }));
             GameManager.Actions.Execution.Tick(0.11f);
             Assert.IsTrue(_executor.IsExecuting);
+            Assert.AreEqual(0, completed);
 
             GameManager.Actions.Execution.Tick(0f);
 
             Assert.IsFalse(_executor.IsExecuting);
-            Assert.AreEqual(0, completed);
+            Assert.AreEqual(1, completed);
             _executor.Tick(0f);
             Assert.AreEqual(1, completed);
             _executor.Tick(0f);

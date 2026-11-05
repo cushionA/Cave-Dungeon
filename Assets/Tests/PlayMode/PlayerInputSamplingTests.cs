@@ -167,8 +167,17 @@ namespace Game.Tests.PlayMode
         public void InputSampling_FixedInputMode_PublishesWithoutReadingActionsInTheSimulationEntry()
         {
             InputSystem.settings.updateMode = InputSettings.UpdateMode.ProcessEventsInFixedUpdate;
-            InputSystem.QueueStateEvent(_gamepad, new GamepadState().WithButton(GamepadButton.South));
-            InputSystem.Update(InputUpdateType.Fixed);
+            System.Action publishFixedState = () => InputState.Change(_gamepad,
+                new GamepadState().WithButton(GamepadButton.South), InputUpdateType.Fixed);
+            InputSystem.onBeforeUpdate += publishFixedState;
+            try
+            {
+                InputSystem.Update();
+            }
+            finally
+            {
+                InputSystem.onBeforeUpdate -= publishFixedState;
+            }
 
             _input.PrepareSimulationInput(_startTime + 0.02f);
             _input.PrepareSimulationInput(_startTime + 0.02f);

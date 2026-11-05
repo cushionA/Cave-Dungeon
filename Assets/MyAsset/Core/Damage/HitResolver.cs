@@ -180,7 +180,7 @@ namespace Game.Core
 
         private static int ScaleDamage(int damage, float multiplier)
         {
-            return (int)Math.Max(0d, Math.Min(int.MaxValue, Math.Floor(damage * multiplier)));
+            return (int)Math.Max(0d, Math.Min(int.MaxValue, (double)MathF.Floor(damage * multiplier)));
         }
 
         private static void ApplyReaction(ref CharacterFlags flags, HitReaction reaction, bool isKill, bool wasInFlinch)

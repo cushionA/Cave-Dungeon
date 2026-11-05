@@ -7,7 +7,7 @@
 | 項目 | 内容 |
 |------|------|
 | ジャンル | 2Dメトロイドヴァニア |
-| エンジン | Unity 6000.3.9f1 |
+| エンジン | Unity 6000.6.8f1 |
 | プラットフォーム | PC（将来コンソール検討） |
 | プレイ時間 | 本編約20時間 + エンドコンテンツ |
 
@@ -129,7 +129,7 @@ python tools/feature-db.py get "名前"  # 個別確認
 
 ### 必須環境
 
-- Unity 6000.3.9f1
+- Unity 6000.6.8f1
 - Python 3.x（tools/用）
 - Git
 
@@ -139,6 +139,31 @@ python tools/feature-db.py get "名前"  # 個別確認
 2. Unity Hubで `SisterGame/` フォルダを開く
 3. パッケージの自動解決を待つ
 4. `Assets/Scenes/` から任意のシーンを開く
+
+### Codex CloudでのUnity実行
+
+Codex Cloudの環境編集で、このリポジトリのルートを作業ディレクトリとして次を実行する。Editor版は`ProjectSettings/ProjectVersion.txt`から取得する。
+
+```bash
+bash scripts/setup-codex-unity.sh
+bash scripts/setup-codex-unity.sh --check
+bash scripts/run-unity-tests.sh All
+```
+
+Install scriptには`bash scripts/setup-codex-unity.sh`を設定する。Start skillには、リポジトリ更新後に`--check`で依存と認証を確認し、必要なテストを`run-unity-tests.sh`から実行する手順を設定する。保存後の再公開は利用者が行う。新しいタスクは公開済みのファイルシステムから開始し、既存タスクには環境の再公開が反映されない。[Codex Cloud公式手順](https://learn.chatgpt.com/docs/environments/cloud-environments)
+
+初回導入には次の準備が必要。
+
+- Unity Editorの利用条件への同意を済ませる。スクリプトから同意する場合だけ`UNITY_ACCEPT_EDITOR_TERMS=1`を明示する。
+- クラウド上のマシンでUnityライセンスを認証する。既存認証は`UNITY_LICENSE_MODE=existing`、正式なfloating設定済みなら`floating`、同じマシン用のライセンスファイルを読み込む場合は`file`と`UNITY_LICENSE_FILE`を指定する。Windowsの認証ファイルを別マシンへコピーして使わない。[Unityライセンス手順](https://github.com/Unity-Technologies/skills/blob/main/skills/unity-cli/references/auth-license-cloud.md)
+- 許諾済みのOdin、AnyPortrait、SensorToolkit、ProCamera2D、MasterAudio、Pixel CrushersのCommon・Dialogue System・Quest Machine・LoveHateをクラウドの非公開領域へ配置する。OdinにはAttributesに加えてInspector Editor・Validator EditorのDLLが必要。`Assets/`からの相対パスと`.meta`を保ったtarアーカイブを用意した場合は`UNITY_PRIVATE_ASSETS_ARCHIVE`で指定できる。実体はGitへ追加しない。NuGet依存は`Assets/packages.config`から復元する。
+- Unityのダウンロード・認証・UPM、GitHubとNuGetへのネットワークを許可する。HTTP secretはHTTPS先で代理置換される値なので、プロセスが直接読むライセンスファイルの内容として扱わない。
+
+各アセットはUnity 6.6（6000.6.8f1）に対応した版を使う。ローカルだけの互換修正はGitから復元されないため、投入する非公開アーカイブにも反映する。セットアップは必要ファイルの有無を判定し、API互換性はEditorのコンパイルとテストで確認する。
+
+2026-11-06にはOdin Inspector/Validator 4.1.0.0、AnyPortrait 1.7.0と正式UPM更新後の環境で、EditMode 2,097件・PlayMode 223件がすべて成功した。第三者アセットの実体はGitへ含めていない。
+
+テストのXML・Editorログ・CLI結果は実行ごとに別ディレクトリへ保存する。`UNITY_TEST_FILTER`で対象を絞り、`UNITY_TEST_TIMEOUT_SECONDS`で制限時間、`UNITY_TEST_RESULTS_DIR`で保存先を指定できる。XML未生成・0件・失敗は成功として扱わない。ローカルのシェル検証だけでクラウド上のEditor起動成功とは扱わず、環境編集で認証とテストを確認してから再公開する。
 
 ## 主要な外部パッケージ
 

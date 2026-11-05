@@ -104,7 +104,7 @@ namespace Game.Runtime
         public GroundInfo QueryGround(int layerMask)
         {
             if (_collider == null) { return GroundInfo.NotGrounded; }
-            Vector2 origin = (Vector2)_collider.transform.position + _collider.offset;
+            Vector2 origin = _body.position + _collider.offset;
             origin.y -= _collider.size.y * 0.5f;
             Vector2 size = new Vector2(_collider.size.x * k_GroundCheckWidthRatio, 0.05f);
             RaycastHit2D hit = Physics2D.BoxCast(origin, size, 0f, Vector2.down, k_GroundCheckDistance, layerMask);

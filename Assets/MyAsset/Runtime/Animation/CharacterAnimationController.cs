@@ -29,6 +29,7 @@ namespace Game.Runtime
         private AnimationBridge _bridge;
         private int _ownerHash;
         private bool _isInitialized;
+        private bool _started;
         private PlayableGraph _graph;
         private AnimationPlayableOutput _output;
         private AnimationLayerMixerPlayable _mixer;
@@ -44,8 +45,28 @@ namespace Game.Runtime
             _bridge = new AnimationBridge();
         }
 
-        private void OnDisable() { ReleaseGraph(); }
-        private void OnDestroy() { ReleaseGraph(); }
+        private void Start()
+        {
+            _started = true;
+            GameLoop.RegisterFrame(this);
+        }
+
+        private void OnEnable()
+        {
+            if (_started) { GameLoop.RegisterFrame(this); }
+        }
+
+        private void OnDisable()
+        {
+            GameLoop.UnregisterFrame(this);
+            ReleaseGraph();
+        }
+
+        private void OnDestroy()
+        {
+            GameLoop.UnregisterFrame(this);
+            ReleaseGraph();
+        }
 
         public void Initialize(int ownerHash)
         {
@@ -143,7 +164,7 @@ namespace Game.Runtime
             }
         }
 
-        private void Update()
+        public void TickFrame()
         {
             if (_bridge.IsDirty)
             {
