@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Game.Core;
+using Unity.Profiling;
 using CharacterInfo = Game.Core.CharacterInfo;
 
 namespace Game.Runtime
@@ -11,7 +12,7 @@ namespace Game.Runtime
     /// Singleton。static Data/Eventsでゲーム全体からアクセスする。
     /// </summary>
     [DefaultExecutionOrder(-100)]
-    public class GameManager : MonoBehaviour
+    public class GameManager : MonoBehaviour, ISimulationTickWorld
     {
         /// <summary>
         /// SoAコンテナ初期容量。同時登録キャラクター数（プレイヤー+仲間+敵+召喚+混乱+その他）を包含する。
@@ -27,6 +28,19 @@ namespace Game.Runtime
         private bool _capacityWarningFired;
 
         private GameManagerCore _core;
+        private GameLoop _loop;
+        private GameActionRuntime _actions;
+        private AIObservationCoordinator _observations;
+        private readonly List<int> _simulationHashes = new List<int>();
+        private readonly List<ActorRef> _simulationActors = new List<ActorRef>();
+        private readonly Dictionary<int, ActorRef> _decisionActors = new Dictionary<int, ActorRef>();
+        private Func<int, bool> _canApplyAIDecision;
+        private readonly SimulationTickRunner _simulation = new SimulationTickRunner();
+        private static readonly ProfilerMarker s_PrepareMarker = new ProfilerMarker("GameLoop.PrepareAI");
+        private static readonly ProfilerMarker s_DecisionMarker = new ProfilerMarker("GameLoop.AI.ScheduleAndComplete");
+        private static readonly ProfilerMarker s_ControlMarker = new ProfilerMarker("GameLoop.ApplyCharacterControl");
+        [SerializeField] private StatusEffectCatalog _statusEffectCatalog;
+        private StatusEffectPresentationController _statusEffectPresentation;
 
         /// <summary>
         /// 登録された IGameSubManager を型別にインデックスする。
@@ -36,8 +50,18 @@ namespace Game.Runtime
         private readonly Dictionary<Type, IGameSubManager> _subManagers = new Dictionary<Type, IGameSubManager>();
 
         public static GameManager Instance { get; private set; }
+        public GameLoop Loop => _loop;
         public static SoACharaDataDic Data => Instance != null ? Instance._core.Data : null;
         public static GameEvents Events => Instance != null ? Instance._core.Events : null;
+        public static StatusEffectSystem StatusEffects => Instance != null ? Instance._core.StatusEffects : null;
+        public static EquipmentStore Equipment => Instance != null ? Instance._core.Equipment : null;
+        public static AIDecisionSystem AIDecisions => Instance != null ? Instance._core.AIDecisions : null;
+        public static ActorRegistry Actors => Instance != null ? Instance._core.Actors : null;
+        public static CharacterStatsSystem Stats => Instance != null ? Instance._core.Stats : null;
+        public static AIObservationContext Observation => Instance != null ? Instance._observations?.Observation : null;
+        public static AITargetRelations TargetRelations => Instance != null ? Instance._observations?.Targets : null;
+        public static GameActionRuntime Actions => Instance != null ? Instance._actions : null;
+        public static StatusEffectCatalog StatusEffectCatalog => Instance != null ? Instance._statusEffectCatalog : null;
 
         /// <summary>
         /// ProjectileManager への薄いプロキシ。型別辞書からの解決を維持しつつ後方互換 API を提供する。
@@ -97,8 +121,138 @@ namespace Game.Runtime
 
             _core = new GameManagerCore();
             _core.Initialize(k_InitialContainerCapacity);
+            _actions = new GameActionRuntime(_core.Data, _core.Events, _core.Actions);
+            _observations = new AIObservationCoordinator(_core.Data, _core.Actors, _core.Events);
+            _statusEffectPresentation = new StatusEffectPresentationController(_core.Data, _core.StatusEffects.Store, _statusEffectCatalog);
+            _canApplyAIDecision = CanApplyAIDecision;
+            _loop = new GameLoop(this, _actions, _statusEffectPresentation);
+            _loop.Install();
 
             InitializeSubManagers();
+        }
+
+        /// <summary>物理観測→入力公開→共有実行/観測→全キャラ制御→物理適用を同じ固定tickで実行する。</summary>
+        public void SimulationTick(float deltaTime, float currentTime)
+        {
+            if (_core == null || _core.Data == null) { return; }
+            _simulation.Run(this, deltaTime, currentTime);
+        }
+
+        void ISimulationTickWorld.CaptureSimulationActors()
+        {
+            _simulationHashes.Clear();
+            _core.Data.GetAllHashes(_simulationHashes);
+            _simulationActors.Clear();
+            _decisionActors.Clear();
+            for (int i = 0; i < _simulationHashes.Count; i++)
+            {
+                if (_core.Actors.TryGet(_simulationHashes[i], out ActorRef actor))
+                {
+                    _simulationActors.Add(actor);
+                    _decisionActors.Add(actor.Hash, actor);
+                }
+            }
+        }
+
+        void ISimulationTickWorld.CaptureSimulationPhysics()
+        {
+            for (int i = 0; i < _simulationActors.Count; i++)
+            {
+                if (TryGetSimulationCharacter(i, false, out BaseCharacter character)) { character.CaptureSimulationPhysics(); }
+            }
+        }
+
+        void ISimulationTickWorld.PrepareSimulationInputs(float currentTime)
+        {
+            for (int i = 0; i < _simulationActors.Count; i++)
+            {
+                if (TryGetSimulationCharacter(i, true, out BaseCharacter character)) { character.PrepareSimulationInput(currentTime); }
+            }
+        }
+
+        void ISimulationTickWorld.AdvanceSharedSimulation(float deltaTime, float currentTime)
+        {
+            _observations.BeginTick(currentTime);
+            _core.StatusEffects.Tick(deltaTime);
+            _core.Actions.Tick(deltaTime);
+            _actions.Tick();
+            ProjectileManager projectiles = Projectiles;
+            if (projectiles != null) { projectiles.SimulationTick(deltaTime); }
+            for (int i = 0; i < _simulationActors.Count; i++)
+            {
+                if (TryGetSimulationCharacter(i, false, out BaseCharacter character)) { character.PrepareObservationTick(deltaTime); }
+            }
+        }
+
+        void ISimulationTickWorld.CaptureSimulationObservation(long tick, float currentTime) => _observations.Capture(tick, currentTime);
+
+        void ISimulationTickWorld.SimulateCharacters(float deltaTime, float currentTime)
+        {
+            using (s_PrepareMarker.Auto())
+            {
+                _core.AIDecisions.BeginTick(_observations.Observation);
+                for (int i = 0; i < _simulationActors.Count; i++)
+                {
+                    if (TryGetSimulationCharacter(i, true, out BaseCharacter character))
+                    {
+                        character.PrepareAIDecisionTick(deltaTime, currentTime, _core.AIDecisions);
+                    }
+                }
+            }
+            using (s_DecisionMarker.Auto())
+            {
+                _core.AIDecisions.Schedule();
+                _core.AIDecisions.CompleteAndApply(_canApplyAIDecision);
+            }
+            using (s_ControlMarker.Auto())
+            {
+                for (int i = 0; i < _simulationActors.Count; i++)
+                {
+                    if (TryGetSimulationCharacter(i, true, out BaseCharacter character))
+                    {
+                        character.SimulateCharacterTick(deltaTime, currentTime);
+                    }
+                }
+            }
+        }
+
+        private bool CanApplyAIDecision(int ownerHash)
+        {
+            if (!_decisionActors.TryGetValue(ownerHash, out ActorRef actor)
+                || !_core.Actors.IsCurrent(actor) || !_core.Data.TryGetValue(ownerHash, out _)) { return false; }
+            BaseCharacter character = _core.Data.GetManaged(ownerHash) as BaseCharacter;
+            return character != null && character.isActiveAndEnabled && character.CanApplyAIDecision;
+        }
+
+        void ISimulationTickWorld.ApplySimulationPhysics()
+        {
+            for (int i = 0; i < _simulationActors.Count; i++)
+            {
+                if (TryGetSimulationCharacter(i, true, out BaseCharacter character)) { character.ApplySimulationPhysics(); }
+            }
+        }
+
+        private bool TryGetSimulationCharacter(int index, bool requireEnabled, out BaseCharacter character)
+        {
+            character = null;
+            ActorRef actor = _simulationActors[index];
+            if (!_core.Actors.IsCurrent(actor) || !_core.Data.TryGetValue(actor.Hash, out _)) { return false; }
+            character = _core.Data.GetManaged(actor.Hash) as BaseCharacter;
+            return character != null && character.gameObject.activeInHierarchy && (!requireEnabled || character.isActiveAndEnabled);
+        }
+
+        public static bool TryGetObservation(int ownerHash, out AIObservationContext observation)
+        {
+            observation = Observation;
+            return observation != null && Actors != null && Actors.TryGet(ownerHash, out ActorRef actor)
+                && observation.Contains(actor);
+        }
+
+        public static Vector2 ObservedPosition(int hash, Vector2 fallback)
+        {
+            AIObservationContext observation = Observation;
+            return observation != null && observation.TryGetActor(hash, out AIActorObservation actor)
+                ? actor.position : fallback;
         }
 
         /// <summary>
@@ -163,54 +317,16 @@ namespace Game.Runtime
 
         private int RegisterCharacterInternal(int hash, CharacterInfo info, BaseCharacter chara)
         {
-            float gravity = Physics2D.gravity.magnitude * GameConstants.k_GravityScale;
-            float jumpForce = Mathf.Sqrt(2f * info.jumpHeight * gravity);
-
-            CharacterVitals vitals = new CharacterVitals
-            {
-                currentHp = info.maxHp,
-                maxHp = info.maxHp,
-                currentMp = info.maxMp,
-                maxMp = info.maxMp,
-                currentStamina = info.maxStamina,
-                maxStamina = info.maxStamina,
-                currentArmor = info.maxArmor,
-                maxArmor = info.maxArmor,
-                staminaRecoveryRate = info.staminaRecoveryRate,
-                staminaRecoveryDelay = info.staminaRecoveryDelay,
-                level = 1
-            };
-
-            CombatStats combat = new CombatStats
-            {
-                attack = info.baseAttack,
-                defense = info.baseDefense,
-                knockbackResistance = info.knockbackResistance
-            };
-
-            CharacterFlags flags = CharacterFlags.Pack(
-                info.belong, info.feature, info.initialActState, AbilityFlag.None);
-
-            MoveParams move = new MoveParams
-            {
-                moveSpeed = info.moveSpeed,
-                jumpForce = jumpForce,
-                dashSpeed = info.dashSpeed,
-                dashDuration = GameConstants.k_DefaultDashDuration,
-                gravityScale = GameConstants.k_GravityScale,
-                weightRatio = 0f,
-                jumpStaminaCost = info.jumpStaminaCost,
-                dodgeStaminaCost = info.dodgeStaminaCost,
-                sprintStaminaPerSecond = info.sprintStaminaPerSecond,
-                dodgeDuration = info.dodgeDuration,
-                dodgeSpeedMultiplier = info.dodgeSpeedMultiplier,
-                sprintSpeedMultiplier = info.sprintSpeedMultiplier,
-                coyoteTime = info.coyoteTime
-            };
-
-            int result = _core.RegisterCharacter(hash, vitals, combat, flags, move, chara);
+            CharacterRegistration registration = info.CreateRegistration(Physics2D.gravity.magnitude);
+            int result = _core.RegisterCharacter(hash, registration, chara);
+            if (chara != null) { GameLoop.BindFrameOwner(chara); }
             WarnIfCapacityUsageHigh();
             return result;
+        }
+
+        public void ApplyCharacterGrowth(int hash, in CharacterGrowth growth)
+        {
+            _core.ApplyCharacterGrowth(hash, growth);
         }
 
         public void UnregisterCharacter(int hash)
@@ -255,6 +371,10 @@ namespace Game.Runtime
         {
             if (Instance == this)
             {
+                _loop?.Dispose();
+                _observations?.Dispose();
+                _statusEffectPresentation?.Dispose();
+                _actions?.Dispose();
                 _core?.Dispose();
                 _subManagers.Clear();
                 Instance = null;

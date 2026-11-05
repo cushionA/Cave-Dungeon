@@ -82,7 +82,7 @@ namespace Game.Core
 
         /// <summary>
         /// 現在 Coyote Time 窓内か (定数フォールバック版)。既存テスト互換用に残置。
-        /// 本体 (TryStartJump) はデータ駆動版 <see cref="IsInCoyoteWindowFor(MoveParams)"/> を使用しており、
+        /// 本体 (TryStartJump) はデータ駆動版 <see cref="IsInCoyoteWindowFor(in MoveParams)"/> を使用しており、
         /// 本プロパティはプロダクションコードから呼ばれていない。
         /// 既存テスト (CoyoteTimeTests) が全て IsInCoyoteWindowFor 側へ移行した段階で削除予定。
         /// </summary>
@@ -92,7 +92,7 @@ namespace Game.Core
         /// 指定の MoveParams で Coyote Time 窓内か判定する (データ駆動版)。
         /// moveParams.coyoteTime &gt; 0 ならその値、それ以外は定数 <see cref="k_CoyoteTimeSeconds"/> にフォールバック。
         /// </summary>
-        public bool IsInCoyoteWindowFor(MoveParams moveParams)
+        public bool IsInCoyoteWindowFor(in MoveParams moveParams)
         {
             return _timeSinceLeftGround < GetEffectiveCoyoteTime(moveParams);
         }
@@ -102,13 +102,13 @@ namespace Game.Core
         /// 0 以下 (未設定) の場合は定数 <see cref="k_CoyoteTimeSeconds"/> にフォールバックし、
         /// 既存 CharacterInfo アセットで coyoteTime が未設定でも従来通りの挙動を保つ。
         /// </summary>
-        private static float GetEffectiveCoyoteTime(MoveParams p)
+        private static float GetEffectiveCoyoteTime(in MoveParams p)
         {
             return p.coyoteTime > 0f ? p.coyoteTime : k_CoyoteTimeSeconds;
         }
 
         /// <summary>水平移動速度を計算する。facingDir は回避時の方向（1=右, -1=左）。</summary>
-        public float CalculateHorizontalSpeed(float inputX, MoveParams moveParams, float facingDir = 1f)
+        public float CalculateHorizontalSpeed(float inputX, in MoveParams moveParams, float facingDir = 1f)
         {
             if (_isDodging)
             {
@@ -131,19 +131,19 @@ namespace Game.Core
         }
 
         /// <summary>MoveParams.dodgeDuration の有効値 (0 以下なら定数フォールバック)。</summary>
-        private static float GetEffectiveDodgeDuration(MoveParams p)
+        private static float GetEffectiveDodgeDuration(in MoveParams p)
         {
             return p.dodgeDuration > 0f ? p.dodgeDuration : k_DodgeDuration;
         }
 
         /// <summary>MoveParams.dodgeSpeedMultiplier の有効値 (0 以下なら定数フォールバック)。</summary>
-        private static float GetEffectiveDodgeSpeedMultiplier(MoveParams p)
+        private static float GetEffectiveDodgeSpeedMultiplier(in MoveParams p)
         {
             return p.dodgeSpeedMultiplier > 0f ? p.dodgeSpeedMultiplier : k_DodgeSpeedMultiplier;
         }
 
         /// <summary>MoveParams.sprintSpeedMultiplier の有効値 (0 以下なら定数フォールバック)。</summary>
-        private static float GetEffectiveSprintSpeedMultiplier(MoveParams p)
+        private static float GetEffectiveSprintSpeedMultiplier(in MoveParams p)
         {
             return p.sprintSpeedMultiplier > 0f ? p.sprintSpeedMultiplier : k_SprintSpeedMultiplier;
         }
@@ -153,7 +153,7 @@ namespace Game.Core
         /// 接地中、または接地を離れてから k_CoyoteTimeSeconds 秒以内なら許容する (Coyote Time)。
         /// ジャンプ成立時に Coyote 窓を消費する (空中で 2 回目のジャンプは不可)。
         /// </summary>
-        public float TryStartJump(bool jumpPressed, bool isGrounded, MoveParams moveParams,
+        public float TryStartJump(bool jumpPressed, bool isGrounded, in MoveParams moveParams,
             ref float currentStamina)
         {
             if (!jumpPressed)
@@ -172,16 +172,18 @@ namespace Game.Core
                 return 0f;
             }
 
+            // ref引数がMoveParams内のフィールドを指していても、更新前の跳躍力を返す。
+            float jumpForce = moveParams.jumpForce;
             currentStamina -= moveParams.jumpStaminaCost;
             _isJumping = true;
             _jumpHoldTimer = 0f;
             // Coyote 窓を消費して空中連打を防ぐ
             _timeSinceLeftGround = float.MaxValue;
-            return moveParams.jumpForce;
+            return jumpForce;
         }
 
         /// <summary>旧API互換（スタミナ消費なし版）。テスト用。</summary>
-        public float TryStartJump(bool jumpPressed, bool isGrounded, MoveParams moveParams)
+        public float TryStartJump(bool jumpPressed, bool isGrounded, in MoveParams moveParams)
         {
             float dummy = float.MaxValue;
             return TryStartJump(jumpPressed, isGrounded, moveParams, ref dummy);
@@ -213,7 +215,7 @@ namespace Game.Core
         }
 
         /// <summary>回避開始（単押し）。スタミナコストはMoveParamsから取得。</summary>
-        public bool TryStartDodge(bool dodgePressed, ref float currentStamina, MoveParams moveParams)
+        public bool TryStartDodge(bool dodgePressed, ref float currentStamina, in MoveParams moveParams)
         {
             float cost = moveParams.dodgeStaminaCost > 0f
                 ? moveParams.dodgeStaminaCost
@@ -231,7 +233,7 @@ namespace Game.Core
         }
 
         /// <summary>回避の時間経過処理。</summary>
-        public bool UpdateDodge(float deltaTime, MoveParams moveParams)
+        public bool UpdateDodge(float deltaTime, in MoveParams moveParams)
         {
             if (!_isDodging)
             {
@@ -251,7 +253,7 @@ namespace Game.Core
 
         /// <summary>スプリント更新（長押し）。スタミナコストはMoveParamsから取得。</summary>
         public void UpdateSprint(bool sprintHeld, ref float currentStamina,
-            float deltaTime, MoveParams moveParams)
+            float deltaTime, in MoveParams moveParams)
         {
             if (_isDodging)
             {
@@ -286,12 +288,12 @@ namespace Game.Core
         }
 
         // --- 旧API互換 ---
-        public bool TryStartDash(bool dashPressed, ref float currentStamina, MoveParams moveParams)
+        public bool TryStartDash(bool dashPressed, ref float currentStamina, in MoveParams moveParams)
         {
             return TryStartDodge(dashPressed, ref currentStamina, moveParams);
         }
 
-        public bool UpdateDash(float deltaTime, MoveParams moveParams)
+        public bool UpdateDash(float deltaTime, in MoveParams moveParams)
         {
             return UpdateDodge(deltaTime, moveParams);
         }

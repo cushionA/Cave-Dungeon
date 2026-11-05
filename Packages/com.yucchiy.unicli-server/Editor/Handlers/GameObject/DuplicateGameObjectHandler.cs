@@ -1,4 +1,3 @@
-using UniCli.Server.Editor;
 using System.Threading;
 using System;
 using System.Collections.Generic;
@@ -50,7 +49,7 @@ namespace UniCli.Server.Editor.Handlers
 
             return new ValueTask<CreateGameObjectResponse>(new CreateGameObjectResponse
             {
-                instanceId = duplicate.GetInstanceID(),
+                instanceId = UnityObjectIdentity.GetId(duplicate),
                 name = duplicate.name,
                 path = GameObjectResolver.BuildPath(duplicate.transform),
                 isActive = duplicate.activeSelf,
@@ -62,7 +61,7 @@ namespace UniCli.Server.Editor.Handlers
     [Serializable]
     public class DuplicateGameObjectRequest
     {
-        public int instanceId;
+        public long instanceId;
         public string path = "";
         public string name = "";
     }

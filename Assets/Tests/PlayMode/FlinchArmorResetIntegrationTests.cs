@@ -10,7 +10,7 @@ namespace Game.Tests.PlayMode
 {
     /// <summary>
     /// スタン解除時のアーマー満タンリセット結合テスト (FUTURE_TASKS L528)。
-    /// DamageReceiver.Update() が ActState のスタン (Flinch/GuardBroken/Stunned/Knockbacked) →
+    /// BaseCharacter.PrepareObservationTick() が ActState のスタン (Flinch/GuardBroken/Stunned/Knockbacked) →
     /// 非スタン遷移を検出し、SoA の currentArmor を maxArmor へ復帰させることを検証する。
     /// スタン同士の遷移 (例: Flinch → Knockbacked) はリセット対象外。
     /// </summary>
@@ -32,12 +32,15 @@ namespace Game.Tests.PlayMode
         {
             ref CharacterFlags f = ref GameManager.Data.GetFlags(hash);
             f.ActState = state;
+            BaseCharacter character = (BaseCharacter)GameManager.Data.GetManaged(hash);
+            character.PrepareObservationTick(0f);
         }
 
         [UnitySetUp]
         public IEnumerator Setup()
         {
             TestSceneHelper.CreateGameManager();
+            GameManager.Instance.enabled = false;
             TestSceneHelper.CreateGround();
             yield return null;
         }
@@ -69,13 +72,13 @@ namespace Game.Tests.PlayMode
             // Flinch 突入: armor=0 強制 + ActState=Flinch
             SetArmor(hash, 0f, 50f);
             SetActState(hash, ActState.Flinch);
-            yield return null;  // Update が走り _previousActState = Flinch にする
+            yield return null;
 
             Assert.AreEqual(0f, GetArmor(hash), "Flinch 中は armor=0");
 
             // Flinch 解除
             SetActState(hash, ActState.Neutral);
-            yield return null;  // Update が遷移を検出して armor をリセット
+            yield return null;
 
             Assert.AreEqual(50f, GetArmor(hash),
                 "Flinch → Neutral 遷移で currentArmor が maxArmor に満タン復帰");

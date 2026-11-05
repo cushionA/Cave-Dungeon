@@ -8,7 +8,7 @@ namespace Game.Tests.EditMode
     /// - ダメージ軽減はGuardStats属性別カットで決まる。GetDamageReductionは廃止。
     /// - JustGuardはダメージ完全0。通常窓(0.1s) or 連続JG窓中で成立。
     /// - 即ブレイク判定(attackPower > guardStrength)は廃止。
-    ///   ブレイクは「スタミナ削り(armorBreakValue - guardStrength)がcurrentStaminaを超えた時」のみ。
+    ///   ブレイクは「スタミナ削り(guardDamage - guardStrength)がcurrentStaminaを超えた時」のみ。
     /// - GuardAttack効果中はスタミナ不足でもブレイクしない。
     /// </summary>
     public class ParryGuardJudgmentTests
@@ -24,12 +24,12 @@ namespace Game.Tests.EditMode
             bool hasGuardAttackEffect = false,
             float currentStamina = 100f,
             float guardStrength = 100f,
-            float armorBreakValue = 0f)
+            float guardDamage = 0f)
         {
             return GuardJudgmentLogic.Judge(
                 isGuarding, guardTimeSinceStart, inContinuousJustGuardWindow,
                 feature, guardDirection, isAttackFromFront, hasGuardAttackEffect,
-                currentStamina, guardStrength, armorBreakValue);
+                currentStamina, guardStrength, guardDamage);
         }
 
         // --- 通常ガード判定 ---
@@ -149,7 +149,16 @@ namespace Game.Tests.EditMode
             // 削り量 = max(0, 50 - 30) = 20、スタミナ100 >= 20 → Guarded
             GuardResult result = Judge(
                 isGuarding: true, guardTimeSinceStart: 0.5f,
-                currentStamina: 100f, guardStrength: 30f, armorBreakValue: 50f);
+                currentStamina: 100f, guardStrength: 30f, guardDamage: 50f);
+            Assert.AreEqual(GuardResult.Guarded, result);
+        }
+
+        [Test]
+        public void GuardJudgmentLogic_Judge_StaminaEqualsGuardDrain_ReturnsGuarded()
+        {
+            GuardResult result = Judge(isGuarding: true, guardTimeSinceStart: 0.5f,
+                currentStamina: 20f, guardStrength: 30f, guardDamage: 50f);
+
             Assert.AreEqual(GuardResult.Guarded, result);
         }
 
@@ -159,7 +168,7 @@ namespace Game.Tests.EditMode
             // 削り量 = max(0, 100 - 10) = 90、スタミナ5 < 90 → GuardBreak
             GuardResult result = Judge(
                 isGuarding: true, guardTimeSinceStart: 0.5f,
-                currentStamina: 5f, guardStrength: 10f, armorBreakValue: 100f);
+                currentStamina: 5f, guardStrength: 10f, guardDamage: 100f);
             Assert.AreEqual(GuardResult.GuardBreak, result);
         }
 
@@ -170,7 +179,7 @@ namespace Game.Tests.EditMode
             GuardResult result = Judge(
                 isGuarding: true, guardTimeSinceStart: 0.5f,
                 hasGuardAttackEffect: true,
-                currentStamina: 5f, guardStrength: 10f, armorBreakValue: 100f);
+                currentStamina: 5f, guardStrength: 10f, guardDamage: 100f);
             Assert.AreEqual(GuardResult.Guarded, result);
         }
 
@@ -180,7 +189,7 @@ namespace Game.Tests.EditMode
             // 削り量 0 でスタミナ不足でもガード成立(完全受け流し)
             GuardResult result = Judge(
                 isGuarding: true, guardTimeSinceStart: 0.5f,
-                currentStamina: 0f, guardStrength: 50f, armorBreakValue: 30f);
+                currentStamina: 0f, guardStrength: 50f, guardDamage: 30f);
             Assert.AreEqual(GuardResult.Guarded, result);
         }
 

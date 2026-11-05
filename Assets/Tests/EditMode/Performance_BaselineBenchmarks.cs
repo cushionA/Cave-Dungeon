@@ -46,6 +46,87 @@ namespace Game.Tests.EditMode
         }
 
         [Test, Performance]
+        public void AIJudgment_100Characters_CompareSynchronousAndBurstBatch()
+        {
+            using (GameManagerCore core = new GameManagerCore())
+            {
+                core.Initialize(128);
+                SoACharaDataDic data = core.Data;
+                AIDecisionSystem decisions = core.AIDecisions;
+                using AIObservationCoordinator observations = new AIObservationCoordinator(data, core.Actors, core.Events);
+                System.Collections.Generic.List<int> candidates = new System.Collections.Generic.List<int>(100);
+                JudgmentLoop[] loops = new JudgmentLoop[100];
+                long tick = 0;
+                AIMode mode = new AIMode
+                {
+                    targetRules = new[] { new AIRule { actionIndex = 0 } },
+                    targetSelects = new[] { new AITargetSelect { sortKey = TargetSortKey.Distance } },
+                    actionRules = Array.Empty<AIRule>(),
+                    actions = Array.Empty<ActionSlot>(),
+                    defaultActionIndex = -1,
+                    judgeInterval = UnityEngine.Vector2.zero
+                };
+                for (int i = 0; i < loops.Length; i++)
+                {
+                    int hash = i + 1;
+                    core.RegisterCharacter(hash, new CharacterVitals
+                    {
+                        currentHp = 100, maxHp = 100, position = new UnityEngine.Vector2(i, 0f)
+                    }, default, default, default);
+                    candidates.Add(hash);
+                    loops[i] = new JudgmentLoop(new ActionExecutor(), data, hash);
+                    loops[i].SetMode(mode);
+                }
+
+                Measure.Method(() =>
+                {
+                    PrepareObservation();
+                    for (int i = 0; i < loops.Length; i++)
+                    {
+                        loops[i].Tick(0.02f, candidates, 0f);
+                    }
+                })
+                .SampleGroup("Synchronous")
+                .WarmupCount(5)
+                .MeasurementCount(20)
+                .IterationsPerMeasurement(10)
+                .GC()
+                .Run();
+
+                int expectedTarget = loops[0].CurrentTargetHash;
+                Measure.Method(() =>
+                {
+                    PrepareObservation();
+                    decisions.BeginTick(observations.Observation);
+                    for (int i = 0; i < loops.Length; i++)
+                    {
+                        loops[i].PrepareTick(0.02f, candidates, 0f, decisions);
+                    }
+                    decisions.Schedule();
+                    decisions.CompleteAndApply();
+                })
+                .SampleGroup("BurstBatch")
+                .WarmupCount(5)
+                .MeasurementCount(20)
+                .IterationsPerMeasurement(10)
+                .GC()
+                .Run();
+                Assert.AreEqual(2, expectedTarget);
+                Assert.AreEqual(expectedTarget, loops[0].CurrentTargetHash);
+                for (int i = 0; i < loops.Length; i++) { loops[i].Dispose(); }
+
+                void PrepareObservation()
+                {
+                    observations.Capture(++tick, 0f);
+                    for (int i = 0; i < loops.Length; i++)
+                    {
+                        loops[i].UseObservation(observations.Observation, observations.Targets);
+                    }
+                }
+            }
+        }
+
+        [Test, Performance]
         public void R3Subject_Fire_10Subscribers()
         {
             Subject<int> subject = new Subject<int>();

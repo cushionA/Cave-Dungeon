@@ -1,0 +1,723 @@
+{
+  "format_version": 1,
+  "recorded_at_utc": "2026-11-05T04:09:01.019183+00:00",
+  "base_commit": "727132a3de94e019c3ba7d75bd8a4cbc0e8e631c",
+  "scope": "構造体のまとめファイルを型名・責務で分割。実装/型identity/シリアライズfield/Native schemaは変更しない。",
+  "summary": {
+    "old_bundle_files": 5,
+    "structs": 38,
+    "related_enums": 1,
+    "new_type_files": 39,
+    "new_directories": 0,
+    "original_guids_preserved": 5,
+    "new_guids": 34,
+    "partial_types_added": 0
+  },
+  "file_moves": [
+    {
+      "source": "Assets/MyAsset/Core/Common/Section2Structs.cs",
+      "type": "CompanionMpSettings",
+      "target": "Assets/MyAsset/Core/AI/Companion/CompanionMpSettings.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "0ef35fe3fdb237a9813e5e0a56d6897dd17c1a5513d5daa558cd2e0c8049f301",
+      "declaration_sha256": "b3b7b23b183851fb2b93d09313eed18dc37e5d6516427ef5adc754a646c1313d",
+      "target_sha256": "a18912227703a7d6a0bfb6ca0ec2b8e00572b4ff476eef9dc3681f9d8a471067",
+      "guid": "0f31cc8827484157ab6022b12207de95",
+      "meta_sha256": "65d14ef9e194ca347db2db18e521f0b73723b3716df5cd6978b12da0f5090721"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Section2Structs.cs",
+      "type": "ActionSlot",
+      "target": "Assets/MyAsset/Core/Actions/ActionSlot.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "0ef35fe3fdb237a9813e5e0a56d6897dd17c1a5513d5daa558cd2e0c8049f301",
+      "declaration_sha256": "96ba2438fa77930c85b2ceea5e89879af69ecc1de87e5f2362f26cf278d646a0",
+      "target_sha256": "a6813b28a8d19376004c43f2374b0a39078a8ef1aa5396bd3680781b949b3569",
+      "guid": "2fc9f00c2fe84a1682df77c8e897757f",
+      "meta_sha256": "5b054bd38379d1f6c68cbdfacce9aa5098efc2309c51902d2ce06680fd006774"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Section2Structs.cs",
+      "type": "AICondition",
+      "target": "Assets/MyAsset/Core/AI/Core/AICondition.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "0ef35fe3fdb237a9813e5e0a56d6897dd17c1a5513d5daa558cd2e0c8049f301",
+      "declaration_sha256": "1dd78c0ff40fef547980bcde9c440f734ef610976d78393fa586e220b88cde07",
+      "target_sha256": "0312c083f47e5412d5456c90d91dcbac408badc60b7781f37d20dec59af27863",
+      "guid": "9cabd46bc26c4feb9ed710ff500d80a8",
+      "meta_sha256": "ef943659d12e78c54cbbb49842c5e20811b905a26b61dfc096efde39d2f22fb1"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Section2Structs.cs",
+      "type": "AITargetSelect",
+      "target": "Assets/MyAsset/Core/AI/Core/AITargetSelect.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "0ef35fe3fdb237a9813e5e0a56d6897dd17c1a5513d5daa558cd2e0c8049f301",
+      "declaration_sha256": "17de2709a2ec2ad6563eb0050672943e4033cfa6ddb88547ed63c9192e112241",
+      "target_sha256": "2f4bb66a549d8df9ffe73b845e6e512e3aee5c995b31dc399205d90fe5c57db4",
+      "guid": "2ef4f477ba514e49be776b68599c0688",
+      "meta_sha256": "2e4d68113eaff4eb5bc747dbf2b48909a7ad8c1837781fef3727c122efadf0a1"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Section2Structs.cs",
+      "type": "TargetFilter",
+      "target": "Assets/MyAsset/Core/AI/Core/TargetFilter.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "0ef35fe3fdb237a9813e5e0a56d6897dd17c1a5513d5daa558cd2e0c8049f301",
+      "declaration_sha256": "9db490647272b5b12051a9653acb21d8627de80e3138f2880d1ac9c14069ab1c",
+      "target_sha256": "ef97e74155dd227e016a432baca18284a55d67f7a50917e61550b49600a9d142",
+      "guid": "b482dda5a49a413ea534e71ecf7d7faa",
+      "meta_sha256": "1e48c6e000b7b806b73fbc989e9de7a841b58219d4cb8c59be718e1f55dfcf83"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Section2Structs.cs",
+      "type": "FilterBitFlag",
+      "target": "Assets/MyAsset/Core/AI/Core/FilterBitFlag.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "0ef35fe3fdb237a9813e5e0a56d6897dd17c1a5513d5daa558cd2e0c8049f301",
+      "declaration_sha256": "c00fdeca2d54b44f0923e8b00b578f3ecae321652fef64c4b251161ed20533c1",
+      "target_sha256": "5f1cc053abd230a720e9ddbc608e5517efd105fe92d23bb1b7d41899a8edca45",
+      "guid": "2a409dd922a549d8ae54cac017d65520",
+      "meta_sha256": "fd4592c4b41bbd395c5da74ea74065b57165056639a01fa4c20cf80f6d64e96b"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Section2Structs.cs",
+      "type": "AIRule",
+      "target": "Assets/MyAsset/Core/AI/Core/AIRule.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "0ef35fe3fdb237a9813e5e0a56d6897dd17c1a5513d5daa558cd2e0c8049f301",
+      "declaration_sha256": "8c9aa5788bb6d7fbf9294d3476b87ceb44d308c880b3dbea9072a96b9ba8cf24",
+      "target_sha256": "df2f67f3ca5502ac97349fbdbd63c80b3e6d7865b6294527858fcba0b91a24d9",
+      "guid": "b849c088f95641ff841bd52f19c7521d",
+      "meta_sha256": "599a07f214d34240b911f8cffdeb64e1241e31fa993a2c99fdc20ebc52453641"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Section2Structs.cs",
+      "type": "AIMode",
+      "target": "Assets/MyAsset/Core/AI/Core/AIMode.cs",
+      "retain_source_meta": true,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "0ef35fe3fdb237a9813e5e0a56d6897dd17c1a5513d5daa558cd2e0c8049f301",
+      "declaration_sha256": "af151f9b0bb2993b70bba5c27b227989638903d08448e81830e965eca8bdbb05",
+      "target_sha256": "f1d306f3fd6350052f94a40b47a4ecc5af2e2066aa4c2b962b938786a4df4197",
+      "guid": "e1293a49c7cf3d54987a74680493fe7e",
+      "meta_sha256": "e0807b2f0c2065b7115e841cf48131fd964ec1b11838d00cc68e47b5cac962d2"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Section2Structs.cs",
+      "type": "ReactionTrigger",
+      "target": "Assets/MyAsset/Core/AI/Core/ReactionTrigger.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "0ef35fe3fdb237a9813e5e0a56d6897dd17c1a5513d5daa558cd2e0c8049f301",
+      "declaration_sha256": "7ea0b0b4e020f5e3e983e0847483aa04e4446ab514abc8c0b3a4d9bb2dbdb2fd",
+      "target_sha256": "8187fd66c9e36206545f08f64748099e98bccd0acd590451e598f6ecdb4f9222",
+      "guid": "6b2be8f81a2a44c19a557c4432e10d95",
+      "meta_sha256": "860cbaca5d759a362dc4fdc13fef1712450249ed4e1e7757c318dc0734e8e74a"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Section3Structs.cs",
+      "type": "PhaseCondition",
+      "target": "Assets/MyAsset/Core/AI/Boss/PhaseCondition.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "45022468a0cf5de9fae51422cc9e37c15ca84fe3409b9d6d3d063344c368dffe",
+      "declaration_sha256": "616ab6b0b7d89f0ef24265a07b20e5ef6b754e271935994fffab43f7b98a58d5",
+      "target_sha256": "f06fea5512140c41c0bc8b658ee0331a4481eb28e225dd6285ba94a695bb0611",
+      "guid": "0c31e89b6eba4e8dbc5323ceab7d3f16",
+      "meta_sha256": "c48dd11a1b75d5f1a9544a98201644ce920f36c87b52da06f13edd5eb9c717bd"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Section3Structs.cs",
+      "type": "SummonSlot",
+      "target": "Assets/MyAsset/Core/AI/Summon/SummonSlot.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "45022468a0cf5de9fae51422cc9e37c15ca84fe3409b9d6d3d063344c368dffe",
+      "declaration_sha256": "d7b48a4014854d5685e8cb2af346d90321d27b26b424f8ce61f8317ea809e361",
+      "target_sha256": "ea908088ee8cef8d853859245abed039889472abdc9f55fd6586b01d9bcc125c",
+      "guid": "411e56b70c844a3ba01c66e2b69db1a8",
+      "meta_sha256": "13ede7e28f19c7dcb41f7da225d74f76dd21844812109f06e15b28ceb518764c"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Section3Structs.cs",
+      "type": "BacktrackEntry",
+      "target": "Assets/MyAsset/Core/World/Backtrack/BacktrackEntry.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "45022468a0cf5de9fae51422cc9e37c15ca84fe3409b9d6d3d063344c368dffe",
+      "declaration_sha256": "a1dc4662851ea04ca6afaaacfd94e22b26509e7299a7c0ccb84ce9c50f05abd3",
+      "target_sha256": "ba4ff4444272702d1802517c0af0205c61c77ae6414906725c86900cca6cee6d",
+      "guid": "82a5b4c1ce404668a62299b8cc0dcaa6",
+      "meta_sha256": "c25f1f93d0494f942f856a0ce79cf97613112b64c49f5ba8d664f32d8c241601"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Section3Structs.cs",
+      "type": "ElementalGateRequirement",
+      "target": "Assets/MyAsset/Core/World/Gate/ElementalGateRequirement.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "45022468a0cf5de9fae51422cc9e37c15ca84fe3409b9d6d3d063344c368dffe",
+      "declaration_sha256": "ba246f6f5a14951a4a86a00c208f70590e86ed50648e9ea74859a81dc3d7561a",
+      "target_sha256": "3257e8c83231f85e3bb73a85a0564e4127120d74c76cc48da80a64c2862bcdb0",
+      "guid": "014927c2d0b6406b9e6bc492e6d354b1",
+      "meta_sha256": "627f23435ec1c3442c5606f99c0c6988bf5a34d4cfbc703c48a367b1fbc650ca"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Section3Structs.cs",
+      "type": "ConfusionState",
+      "target": "Assets/MyAsset/Core/AI/Confusion/ConfusionState.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "45022468a0cf5de9fae51422cc9e37c15ca84fe3409b9d6d3d063344c368dffe",
+      "declaration_sha256": "3781c02a9472fc05fcde9d016869221293e45575ee5aed4bf5b13a024de90203",
+      "target_sha256": "8554505dc5723b3fb31dd32f263c0e5f9334672ab8263630820ec209c8727942",
+      "guid": "dd6f570bacda4d7b875621af0d94cb93",
+      "meta_sha256": "e673a05dfb983be3bf63fa7a8483e28065ddd467d985fd25c5cb10baa1a3ccb3"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Section3Structs.cs",
+      "type": "BossPhaseData",
+      "target": "Assets/MyAsset/Core/AI/Boss/BossPhaseData.cs",
+      "retain_source_meta": true,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "45022468a0cf5de9fae51422cc9e37c15ca84fe3409b9d6d3d063344c368dffe",
+      "declaration_sha256": "8034e14c381d5385e3c193f8fdfb93733221b7bf5d5f4df50f73eb5b214930db",
+      "target_sha256": "45db2b526a4592775e16f1834e2c1be4370d0adec413748ff6e9f178bf61a7bf",
+      "guid": "9d5100c863e3cbb409f4446e5830acf0",
+      "meta_sha256": "55835e6a7291cb845a0c27488973805cb5796dd11e8b84fe579975cc2aeee611"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Section4Structs.cs",
+      "type": "ChallengeResult",
+      "target": "Assets/MyAsset/Core/World/Challenge/ChallengeResult.cs",
+      "retain_source_meta": true,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "ae981faf1f94c187023aadea2572fd1af511f8db36fa0ea094b8d0ca3fba98fc",
+      "declaration_sha256": "33aee67f6a6d0ae29d244855d7b2a0780b84ffdb5e8371c874d5e33fb4c0c1f8",
+      "target_sha256": "453b455842a47e6f80fe3229f84d7095a8192b8b2c670f00ba511c697cf3a554",
+      "guid": "7ad99e6cdd345f14496bc04d9ba33083",
+      "meta_sha256": "e335b4a519ac6fa13e63c37ef3b603b0085550bcf60d60681cb6fee4c9f1451b"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Section4Structs.cs",
+      "type": "LeaderboardEntry",
+      "target": "Assets/MyAsset/Core/World/Challenge/LeaderboardEntry.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "ae981faf1f94c187023aadea2572fd1af511f8db36fa0ea094b8d0ca3fba98fc",
+      "declaration_sha256": "9e9ef91e861811f3d64db3208ef7b9de8363f56e0f66d3c6f3460678d4234346",
+      "target_sha256": "2c8618c153bf3be5565b4498614aeaca75eb9e51930c4e5a3c884ad52b3224ce",
+      "guid": "5d3ae95ccc464a9cbcb1ec8b1b5d1411",
+      "meta_sha256": "e057f582b31c8eac07de1a78f0d540afc67b23c514baa30477789bc7283a542a"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Section4Structs.cs",
+      "type": "AITemplateData",
+      "target": "Assets/MyAsset/Core/AI/Templates/AITemplateData.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "ae981faf1f94c187023aadea2572fd1af511f8db36fa0ea094b8d0ca3fba98fc",
+      "declaration_sha256": "913bdddfd0779182c03994f34dea8328fcea639e92e35080fb49024b82a68ca8",
+      "target_sha256": "dbc2dc903c1e8eb558e32907c9ebd386bed01099db257db2ba7a875115d6bcad",
+      "guid": "e8be4e78f596490ebfd718c8c8d5bc10",
+      "meta_sha256": "726145b4599681fa344fe86d3ebba340749bf3d05232fb286d2863fbdefb863a"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Structs.cs",
+      "type": "ElementalStatus",
+      "target": "Assets/MyAsset/Core/Common/ElementalStatus.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "8a0b1704b6db5756a77095ab1a1ccee9e3dfd961dbe2c9b81bc4082ce0eb9a47",
+      "declaration_sha256": "d27b9cc7ab83d759573b44a9dd4277ade5def6796a24e53ff72d8ef76e9e8f4c",
+      "target_sha256": "c5af30c09c579e1a0ef528c748e9e422948e3f23bce7aa6b46d5e916c38004ca",
+      "guid": "af046855ef7741c79a52db5daa015431",
+      "meta_sha256": "68d3c7631e49739d2f1ad43dad0f50c3ed953f0b7ac9bae0c0dbf23c42b3a877"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Structs.cs",
+      "type": "GuardStats",
+      "target": "Assets/MyAsset/Core/Guard/GuardStats.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "8a0b1704b6db5756a77095ab1a1ccee9e3dfd961dbe2c9b81bc4082ce0eb9a47",
+      "declaration_sha256": "389b9ce7e18bf45f4e365be67d77b086ff60f19279c493967cea12226ac1f081",
+      "target_sha256": "20c9685400ffc42b1b0dad146744834842fe2edde2845b7a325801aef5768bf0",
+      "guid": "603e69945f234577a6eaf678e5d94bd8",
+      "meta_sha256": "6d23ddf3a70632b0a0ba5563dc1f2aa58b13e46e2d3aa055718937b0266f41e1"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Structs.cs",
+      "type": "StatModifier",
+      "target": "Assets/MyAsset/Core/LevelUp/StatModifier.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "8a0b1704b6db5756a77095ab1a1ccee9e3dfd961dbe2c9b81bc4082ce0eb9a47",
+      "declaration_sha256": "f4d6e13662318ee42e6e500f0b2eef9dfe96c9a67df7de2da6a64d918cb79606",
+      "target_sha256": "ee746c49cb27ed60d54063d994f55f5003fe0513fe3715dace4c2dd7c0b5029a",
+      "guid": "306861bb185541709361e532d32bc41a",
+      "meta_sha256": "f2fb145baf1a90ae5edb2e6d347ee732b815f6899986ac4f781b1d8db8b0186e"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Structs.cs",
+      "type": "StatusEffectInfo",
+      "target": "Assets/MyAsset/Core/Damage/StatusEffectInfo.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "8a0b1704b6db5756a77095ab1a1ccee9e3dfd961dbe2c9b81bc4082ce0eb9a47",
+      "declaration_sha256": "7a1b98ddf3b034925eafa5931cb98c333d1446c1223d93bb2271289401598810",
+      "target_sha256": "fd04ccf35a945609a2d2a658a491c5054f4e47761fed21c1f3f0af3899267503",
+      "guid": "c41a494bfa3d498290adc610dd89bca8",
+      "meta_sha256": "3487e8b0e9f662121d40c89e0bf216338b33303dc7868a560936cf0ed01393ec"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Structs.cs",
+      "type": "PhysicalResistance",
+      "target": "Assets/MyAsset/Core/Damage/PhysicalResistance.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "8a0b1704b6db5756a77095ab1a1ccee9e3dfd961dbe2c9b81bc4082ce0eb9a47",
+      "declaration_sha256": "c5399126f3942f8b845fa3a2533d8ab806f9e92da48944de6b3e48628ccc3493",
+      "target_sha256": "687d99a7f51192325cf73fa510f4d05930a3fab065de856980652d787c1c9374",
+      "guid": "7023377340934be6b53591f8d1cf546d",
+      "meta_sha256": "17cc5a130ce5485fdfba455f8fcfd249bec73ac7f995b28df1ff5921eba9d2c7"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Structs.cs",
+      "type": "MovementInfo",
+      "target": "Assets/MyAsset/Core/Movement/MovementInfo.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "8a0b1704b6db5756a77095ab1a1ccee9e3dfd961dbe2c9b81bc4082ce0eb9a47",
+      "declaration_sha256": "68fd2c382fe7fa38358ee8840106e2822d635bfa3676963fc787018a620d5b63",
+      "target_sha256": "e9213b28882629afc6f163a9239e106b3fd2d79a444079d0e9e32b696064781c",
+      "guid": "1e73585981b24dba9f806af9435a7a6c",
+      "meta_sha256": "bd0d64310d281e5dc3eec3bfbd739f8b33093b1211fcb3a5919c3b4ad3da8d8e"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Structs.cs",
+      "type": "DamageData",
+      "target": "Assets/MyAsset/Core/Damage/DamageData.cs",
+      "retain_source_meta": true,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "8a0b1704b6db5756a77095ab1a1ccee9e3dfd961dbe2c9b81bc4082ce0eb9a47",
+      "declaration_sha256": "72c6037e935d766649ef3d9e891b66b6f0c4ac06c2a7d06f87c7fbe4d6eabd53",
+      "target_sha256": "09cfff16db5ce9e87530090991ccf3d27815f286e2829f7b84a3e417a288e7ed",
+      "guid": "37fd54ec2099e22498d058b479884ad2",
+      "meta_sha256": "f35eee4a7bf6650282e39e486fdd30cdcfd20f2b36ba8cdcce777bfda40b37ce"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Structs.cs",
+      "type": "DamageResult",
+      "target": "Assets/MyAsset/Core/Damage/DamageResult.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "8a0b1704b6db5756a77095ab1a1ccee9e3dfd961dbe2c9b81bc4082ce0eb9a47",
+      "declaration_sha256": "f850bd8b806fca495a5e24f212a8a12c73ef88a1b75109f59f42e263ff2c8f64",
+      "target_sha256": "a63cc7bae7d59e547b67b732d5a7d8af470d62070ca15a210515b628ed320ddd",
+      "guid": "507851883f9c4019be4b55e4880db350",
+      "meta_sha256": "7817cd3f619dcd2fb175100b1e6908a2fd7f294fad5d850c0a199e43105cf0f2"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Structs.cs",
+      "type": "ActionEffect",
+      "target": "Assets/MyAsset/Core/Actions/ActionEffect.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "8a0b1704b6db5756a77095ab1a1ccee9e3dfd961dbe2c9b81bc4082ce0eb9a47",
+      "declaration_sha256": "b4e0ba50310598d5a1d63077cdd16194540ada842011f40cbb0dba69396579fb",
+      "target_sha256": "78ba7142cc23ee440473dd5a1c7f9e7aa3d821f9be98a3459620903bc4f1edf7",
+      "guid": "f2d5d11e601342eca39de3b096a66aea",
+      "meta_sha256": "210dafbf3c371199b71125fcbd4609cc2414842a09a709ca6ae90d91a9adb5a8"
+    },
+    {
+      "source": "Assets/MyAsset/Core/Common/Structs.cs",
+      "type": "AttackMotionData",
+      "target": "Assets/MyAsset/Core/Combat/AttackMotionData.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "8a0b1704b6db5756a77095ab1a1ccee9e3dfd961dbe2c9b81bc4082ce0eb9a47",
+      "declaration_sha256": "f92ea70f8ac2acf28893e9f9973258e614a20e9570a06a318e61ef2e32c366d7",
+      "target_sha256": "5153b203dbfa75fcb8e9d97071323be2322d26160557cf83434462a45835ca0e",
+      "guid": "6c80153dd8e44370a6851e2a18d92ae4",
+      "meta_sha256": "c83b09546528f4a3b2d028680f4c8ea1e47a053f42eea6bd452396d04745ad13"
+    },
+    {
+      "source": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
+      "type": "CharacterVitals",
+      "target": "Assets/MyAsset/Core/DataContainer/CharacterVitals.cs",
+      "retain_source_meta": true,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da",
+      "declaration_sha256": "0bdaedc324af165f4a48229cf0ecbc2ce58362f513e37884019d7efad39bcdd1",
+      "target_sha256": "3b9c28f941fae3feedb99ff1c911524539f91bb25a900ba09f5e372571a8face",
+      "guid": "9d0a3b110b5dee048a34c99fab459ffb",
+      "meta_sha256": "0918d807bc3bf17b3c079172d4a99c45a88adc28f54b5ac739b75b18d254ed98"
+    },
+    {
+      "source": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
+      "type": "CharacterBaseStats",
+      "target": "Assets/MyAsset/Core/DataContainer/CharacterBaseStats.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da",
+      "declaration_sha256": "f7e4c00365c4b16fd9f9387ad5cafefdf49658bf99fbff0bc23c90df2611c9ba",
+      "target_sha256": "347b784ea57088279cc9d41b0d07a7e5c885c588a9aba29bf53c6664686f2f9d",
+      "guid": "2168d410daf54b7c88eb6198617c2eac",
+      "meta_sha256": "a094f9974d38b82a8ae42d9abba3e3b40d5b9228f4492bba5ba75f820261ac32"
+    },
+    {
+      "source": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
+      "type": "CharacterGrowth",
+      "target": "Assets/MyAsset/Core/DataContainer/CharacterGrowth.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da",
+      "declaration_sha256": "c0792d84268a3195411430169b9aad672608dbfbb1395aed1ae8efa85b28af46",
+      "target_sha256": "4d5e65bfae8a7ed5177a5adb0ec67f98fe7414cd702258cb8b57a6afa107058b",
+      "guid": "94ac7534e7f14b6782aac64b3e7aa801",
+      "meta_sha256": "e0dbf02163db1f5ff07bcba34f60df614c8d7f08f9bbf8b7410dba40834db6b5"
+    },
+    {
+      "source": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
+      "type": "CharacterRegistration",
+      "target": "Assets/MyAsset/Core/DataContainer/CharacterRegistration.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da",
+      "declaration_sha256": "20271150f06a89882e1a0ac670b6f340a9defa388e0c8d47e17307778710d59b",
+      "target_sha256": "fb28379f65c347c2c4af05ff8b5cfd2bfce8ec3f0979a322e126e5069d35d12f",
+      "guid": "c4d100bf77fa4fe6bbccd4842c46cacf",
+      "meta_sha256": "00f6b240575773b7fd717b63cdbaa2824787d3b9d42a1c42dcee7f1a3cce40a7"
+    },
+    {
+      "source": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
+      "type": "CombatStats",
+      "target": "Assets/MyAsset/Core/DataContainer/CombatStats.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da",
+      "declaration_sha256": "f77c092544b82c161348db05ddf8ab1ed1c58661a25ca001fb868b058110c8f9",
+      "target_sha256": "a4b34206461990769895c0c7f7aef720ef9276681a714bc12814d18b7bc66e16",
+      "guid": "d7fe66741b6046cd989ad8e1e9b2d669",
+      "meta_sha256": "928571cdf8a859ca68323591e5bcf7bc669682f03df36d3e505f78b4fae8cafd"
+    },
+    {
+      "source": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
+      "type": "CharacterFlags",
+      "target": "Assets/MyAsset/Core/DataContainer/CharacterFlags.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da",
+      "declaration_sha256": "a8756fb253ab2b475bcc5df6bdfe22da0073d665429e55ca73cb4ebc77af4d59",
+      "target_sha256": "82232a760285fb46942fcfc23d06a125d4dc760c80df0666566b418e30398069",
+      "guid": "89a225784b604370b802fef28f4a08c1",
+      "meta_sha256": "eac6dff0cd9f17a431a6d6ea30f13837325bb7842a1039fc66e4fe5caa51ec19"
+    },
+    {
+      "source": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
+      "type": "MoveParams",
+      "target": "Assets/MyAsset/Core/Movement/MoveParams.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da",
+      "declaration_sha256": "9bee8948e537c87cc7d7258a4afcb3dc34fc745347bca159ea994b3f477c8f79",
+      "target_sha256": "0ad7cc6bc1e941fd8e4b72583451e1aaebdbd34fc25493809ba0243dd7ab9781",
+      "guid": "e58a7d2ce9e348b8acf1d6560dacb149",
+      "meta_sha256": "8803ff8c56cb8104502449626b74f33becf52960ddba1048b8c62b016230fb9b"
+    },
+    {
+      "source": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
+      "type": "EquipmentStatus",
+      "target": "Assets/MyAsset/Core/Equipment/EquipmentStatus.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da",
+      "declaration_sha256": "a778b7866fd0c6f575e8861430caedff695521649d2bdf8006908a8957f03788",
+      "target_sha256": "4b555446656574abb98da3fb1075e7f453e0cdc6c12ca85696c77bdb86236648",
+      "guid": "61c0745aea044e9ea4045bf402b80ddf",
+      "meta_sha256": "a760368b59f940de3cc8ca6a2a56b2a4cd7b87d07647469819bb28345854b1a7"
+    },
+    {
+      "source": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
+      "type": "CharacterStatusEffects",
+      "target": "Assets/MyAsset/Core/Damage/CharacterStatusEffects.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da",
+      "declaration_sha256": "59c7327b4fc609813d051e6f50daa83150a168f5cba17aae22587e10ae507f80",
+      "target_sha256": "4685846978f416fc4fec7bfa15a78fa0c81cca7b41863a8f6742d7ffead1421b",
+      "guid": "708c8f7be5de4176893f4e67ec136008",
+      "meta_sha256": "b6c3161d840dc9ae42640f4040052b9e32230dfe6488c824a6c756d3d59ea107"
+    },
+    {
+      "source": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
+      "type": "GroundInfo",
+      "target": "Assets/MyAsset/Core/Movement/GroundInfo.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da",
+      "declaration_sha256": "914105e794a636fce2bb158f3d1eb371fe9646b93371be71ed32bf7acf8e4211",
+      "target_sha256": "e8a2e8d99dbf96068d047b2d3c873c1eae87ea4bd38a8bc6021a7d39d377e0ed",
+      "guid": "6666616fb8e342859ea6657068108021",
+      "meta_sha256": "e515fba6c223a2ed347c99a55a1d7ae2dc64a756834ae45655943d89eb73d6cd"
+    },
+    {
+      "source": "Assets/MyAsset/Core/DataContainer/SoAStructs.cs",
+      "type": "AnimationStateData",
+      "target": "Assets/MyAsset/Core/Animation/AnimationStateData.cs",
+      "retain_source_meta": false,
+      "namespace": "Game.Core",
+      "assembly": "Game.Core",
+      "source_sha256": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da",
+      "declaration_sha256": "fe90fdc4a35dc6fbf2029d6436a655ca2cfbed129900daa6a8bdac806629d0b3",
+      "target_sha256": "89ed45c29bbcbf887b25e2e4ff5ad0de743903b21b91a8e83a463f02e465defb",
+      "guid": "751e812e17784334aabe3c4ebe479acf",
+      "meta_sha256": "caa8bbfba082740e64a2f02747c409394543bf2e0def09b8f150073bca10bef0"
+    }
+  ],
+  "preserved_contracts": [
+    "型名・Game.Core namespace・Game.Core asmdef所属",
+    "using・属性・コメント・宣言本文の原文",
+    "field名/型/順序・property/method実装",
+    "既存ContainerSettingの登録型と順序",
+    "既存の値コピー/ref/in/readonly・所有権・保存形式の意味"
+  ],
+  "metadata_reference_check_before": {
+    "Assets/MyAsset/Core/Common/Section2Structs.cs": {
+      "guid": "e1293a49c7cf3d54987a74680493fe7e",
+      "references": [
+        "Assets/MyAsset/Core/Common/Section2Structs.cs.meta"
+      ]
+    },
+    "Assets/MyAsset/Core/Common/Section3Structs.cs": {
+      "guid": "9d5100c863e3cbb409f4446e5830acf0",
+      "references": [
+        "Assets/MyAsset/Core/Common/Section3Structs.cs.meta"
+      ]
+    },
+    "Assets/MyAsset/Core/Common/Section4Structs.cs": {
+      "guid": "7ad99e6cdd345f14496bc04d9ba33083",
+      "references": [
+        "Assets/MyAsset/Core/Common/Section4Structs.cs.meta"
+      ]
+    },
+    "Assets/MyAsset/Core/Common/Structs.cs": {
+      "guid": "37fd54ec2099e22498d058b479884ad2",
+      "references": [
+        "Assets/MyAsset/Core/Common/Structs.cs.meta"
+      ]
+    },
+    "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": {
+      "guid": "9d0a3b110b5dee048a34c99fab459ffb",
+      "references": [
+        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs.meta"
+      ]
+    }
+  },
+  "independent_review": "/workspace/.cave-dungeon/struct-organization/independent-path-review.json",
+  "verification": {
+    "pure_passed": 694,
+    "pure_failed": 0,
+    "new_tests": 0,
+    "source_changed_during_run": [],
+    "proof_prefix": "/workspace/.cave-dungeon/action-flow-harness/struct-organization-final",
+    "readme": "/workspace/.cave-dungeon/action-flow-harness/StructOrganizationFlow-README.txt",
+    "summary": "/workspace/.cave-dungeon/struct-organization/verification-summary.json",
+    "current_executed_source_sha_count": 175,
+    "unchanged_existing_cs_files": 508,
+    "declaration_equivalence": {
+      "types": 39,
+      "mismatches": [],
+      "proof": "/workspace/.cave-dungeon/struct-organization/declaration-comparison.json"
+    },
+    "field_and_clr_layout_equivalence": {
+      "types": 39,
+      "mismatches": [],
+      "proof": "/workspace/.cave-dungeon/struct-organization/layout-comparison.json",
+      "limits": "CLR参考値。Unity Native ABI/インポート実行の証明ではない。"
+    },
+    "registered_native_row_equivalence": "/workspace/.cave-dungeon/struct-organization/native-row-layout-comparison.json",
+    "pinned_generator": {
+      "kind": "actual_pinned_generator_source_output_equivalence_only_not_Unity_compile_or_Native_execution",
+      "pinned_commit": "2991db197cfdfbbe8eb2d4f20ee55a30cc18c7fd",
+      "before_proof": "/workspace/.cave-dungeon/struct-organization/generator-before.json",
+      "after_proof": "/workspace/.cave-dungeon/struct-organization/generator-after.json",
+      "generated_files_equal": true,
+      "generated": [
+        {
+          "name": "SoACharaDataDic.Container.g.cs",
+          "length": 80456,
+          "sha256": "ec9d2576a818903d69254369a68d60a14d7664fac21c277e0c43e93e7dacf85f"
+        }
+      ],
+      "generator_diagnostics": [],
+      "generator_exceptions": [],
+      "input_diagnostics_before": [
+        "ManagedCharacter.cs(5,46): error CS0246: The type or namespace name 'MonoBehaviour' could not be found (are you missing a using directive or an assembly reference?)",
+        "SoACharaDataDic.cs(23,29): error CS8795: Partial method 'SoACharaDataDic.Dispose()' must have an implementation part because it has accessibility modifiers."
+      ],
+      "input_diagnostics_after": [
+        "ManagedCharacter.cs(5,46): error CS0246: The type or namespace name 'MonoBehaviour' could not be found (are you missing a using directive or an assembly reference?)",
+        "SoACharaDataDic.cs(23,29): error CS8795: Partial method 'SoACharaDataDic.Dispose()' must have an implementation part because it has accessibility modifiers."
+      ],
+      "input_diagnostics_equal": true
+    },
+    "syntax": {
+      "files": 39,
+      "configurations": [
+        "editor_tests",
+        "standalone_player",
+        "android_player"
+      ],
+      "errors": 0,
+      "source_changes": [],
+      "proof": "/workspace/.cave-dungeon/action-flow-harness/syntax/struct-organization-results.json"
+    },
+    "native_and_unity_api_execution": "not_run",
+    "unity_import": "not_run",
+    "test_selection": "既存694。HitResolverTestsは消滅拒否1件のみ、CombatDataHelperTestsは純8件でNative2件を除外。Unity値/参照adapterと原文抜粋の限界を維持。",
+    "call_paths": {
+      "total": 97,
+      "old_steps_migrated": 12,
+      "logic_paths_refreshed": 39,
+      "added": 2
+    },
+    "feature_db": {
+      "feature": "Core_StructOrganization",
+      "status": "complete",
+      "new_test_count_increment": 0,
+      "total_unique_pure_suite": 694
+    }
+  },
+  "historical_moved_path_evidence": [
+    {
+      "feature": "DamageSystem_StatusEffects",
+      "key": "hit-to-shared-state",
+      "before_moved_source_hashes": {
+        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "15f53473f68d7071c823b0a9d385b0369018554f876fb3f423a1eb95b87f54f8"
+      }
+    },
+    {
+      "feature": "ParryGuard_GuardJudgment",
+      "key": "guard-evaluation",
+      "before_moved_source_hashes": {
+        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "15f53473f68d7071c823b0a9d385b0369018554f876fb3f423a1eb95b87f54f8"
+      }
+    },
+    {
+      "feature": "CompanionAI_SharedMp",
+      "key": "shared-mp-core",
+      "before_moved_source_hashes": {
+        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da"
+      }
+    },
+    {
+      "feature": "CharacterStats_SharedRegistration",
+      "key": "base-growth-derivation",
+      "before_moved_source_hashes": {
+        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "15f53473f68d7071c823b0a9d385b0369018554f876fb3f423a1eb95b87f54f8"
+      }
+    },
+    {
+      "feature": "EquipmentSystem_EquipUnequip",
+      "key": "equipment-derived-stats",
+      "before_moved_source_hashes": {
+        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da"
+      }
+    },
+    {
+      "feature": "CompanionAI_SharedMp",
+      "key": "shared-availability",
+      "before_moved_source_hashes": {
+        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da"
+      }
+    },
+    {
+      "feature": "ActionDefinition_Compilation",
+      "key": "target-policy-packets",
+      "before_moved_source_hashes": {
+        "Assets/MyAsset/Core/Common/Structs.cs": "8a0b1704b6db5756a77095ab1a1ccee9e3dfd961dbe2c9b81bc4082ce0eb9a47"
+      }
+    },
+    {
+      "feature": "DamageSystem_StatusDefense",
+      "key": "authoring-and-equipment",
+      "before_moved_source_hashes": {
+        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da"
+      }
+    },
+    {
+      "feature": "SoA_DataFlowAudit",
+      "key": "native-row-value-boundary",
+      "before_moved_source_hashes": {
+        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da"
+      }
+    },
+    {
+      "feature": "SoA_DataFlowAudit",
+      "key": "armor-recovery-authority",
+      "before_moved_source_hashes": {
+        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da"
+      }
+    },
+    {
+      "feature": "SoA_CopyReduction",
+      "key": "readonly-core-stat-reads",
+      "before_moved_source_hashes": {
+        "Assets/MyAsset/Core/Common/Structs.cs": "8a0b1704b6db5756a77095ab1a1ccee9e3dfd961dbe2c9b81bc4082ce0eb9a47",
+        "Assets/MyAsset/Core/DataContainer/SoAStructs.cs": "84bfd1d5d5d0d5021063227cafa9b89ca900b77034db09bb007d04da88b711da"
+      }
+    }
+  ],
+  "historical_reports": "既存監査の旧パス/SHAは各実施時点の履歴。現在の配置は本対応表とdesigns/call-paths.jsonを参照。",
+  "remaining_validation": [
+    "Unityでのインポートと型/API/Native登録・シリアライズの実行確認。"
+  ]
+}

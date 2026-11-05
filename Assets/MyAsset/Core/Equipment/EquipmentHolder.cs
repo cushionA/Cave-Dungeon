@@ -1,16 +1,37 @@
 using System;
+using System.Collections.Generic;
 
 namespace Game.Core
 {
+    public interface IReadOnlyEquipmentHolder
+    {
+        IEquippable Weapon { get; }
+        IEquippable Shield { get; }
+        IEquippable Core { get; }
+        bool HasWeapon { get; }
+        bool HasShield { get; }
+        bool HasCore { get; }
+        AbilityFlag GetCombinedAbilityFlags();
+        int GetTotalWeight();
+    }
+
     /// <summary>
     /// 装備スロット管理のピュアロジック。3スロット（Weapon/Shield/Core）を管理。
     /// </summary>
-    public class EquipmentHolder
+    public class EquipmentHolder : IReadOnlyEquipmentHolder
     {
         private IEquippable _weapon;
         private IEquippable _shield;
         private IEquippable _core;
         private readonly int _ownerHash;
+        private StatusEffectApplicationData[] _weaponEffects = Array.Empty<StatusEffectApplicationData>();
+        private StatusEffectApplicationData[] _shieldEffects = Array.Empty<StatusEffectApplicationData>();
+        private StatusEffectApplicationData[] _coreEffects = Array.Empty<StatusEffectApplicationData>();
+        private StatusEffectApplicationData[] _weaponCombinedEffects = Array.Empty<StatusEffectApplicationData>();
+        private StatusEffectApplicationData[] _shieldCombinedEffects = Array.Empty<StatusEffectApplicationData>();
+        private IReadOnlyList<StatusEffectApplicationData> _coreEffectView = Array.Empty<StatusEffectApplicationData>();
+        private IReadOnlyList<StatusEffectApplicationData> _weaponEffectView = Array.Empty<StatusEffectApplicationData>();
+        private IReadOnlyList<StatusEffectApplicationData> _shieldEffectView = Array.Empty<StatusEffectApplicationData>();
 
         public IEquippable Weapon => _weapon;
         public IEquippable Shield => _shield;
@@ -35,8 +56,16 @@ namespace Game.Core
             {
                 throw new ArgumentNullException(nameof(item));
             }
+            if (item is IEquipmentStatsProvider provider)
+            {
+                provider.StatModifiers.statusDefense.Validate();
+            }
 
             IEquippable previous = null;
+            StatusEffectApplicationData[] effects = item.OnHitEffects;
+            effects = effects == null || effects.Length == 0
+                ? Array.Empty<StatusEffectApplicationData>()
+                : (StatusEffectApplicationData[])effects.Clone();
 
             switch (item.Slot)
             {
@@ -47,6 +76,7 @@ namespace Game.Core
                         previous.OnUnequip(_ownerHash);
                     }
                     _weapon = item;
+                    _weaponEffects = effects;
                     break;
 
                 case EquipSlot.Shield:
@@ -56,6 +86,7 @@ namespace Game.Core
                         previous.OnUnequip(_ownerHash);
                     }
                     _shield = item;
+                    _shieldEffects = effects;
                     break;
 
                 case EquipSlot.Core:
@@ -65,12 +96,14 @@ namespace Game.Core
                         previous.OnUnequip(_ownerHash);
                     }
                     _core = item;
+                    _coreEffects = effects;
                     break;
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(item), $"Unknown EquipSlot: {item.Slot}");
             }
 
+            RebuildEffectSnapshots();
             item.OnEquip(_ownerHash);
             return previous;
         }
@@ -89,28 +122,69 @@ namespace Game.Core
                 case EquipSlot.Weapon:
                     removed = _weapon;
                     _weapon = null;
+                    _weaponEffects = Array.Empty<StatusEffectApplicationData>();
                     break;
 
                 case EquipSlot.Shield:
                     removed = _shield;
                     _shield = null;
+                    _shieldEffects = Array.Empty<StatusEffectApplicationData>();
                     break;
 
                 case EquipSlot.Core:
                     removed = _core;
                     _core = null;
+                    _coreEffects = Array.Empty<StatusEffectApplicationData>();
                     break;
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(slot), $"Unknown EquipSlot: {slot}");
             }
 
+            RebuildEffectSnapshots();
             if (removed != null)
             {
                 removed.OnUnequip(_ownerHash);
             }
 
             return removed;
+        }
+
+        public IReadOnlyList<StatusEffectApplicationData> GetOnHitEffects(AttackEquipmentSource source)
+        {
+            switch (source)
+            {
+                case AttackEquipmentSource.None: return _coreEffectView;
+                case AttackEquipmentSource.Weapon: return _weaponEffectView;
+                case AttackEquipmentSource.Shield: return _shieldEffectView;
+                default: throw new ArgumentOutOfRangeException(nameof(source));
+            }
+        }
+
+        private void RebuildEffectSnapshots()
+        {
+            _weaponCombinedEffects = Combine(_weaponEffects, _coreEffects);
+            _shieldCombinedEffects = Combine(_shieldEffects, _coreEffects);
+            _coreEffectView = Array.AsReadOnly(_coreEffects);
+            _weaponEffectView = Array.AsReadOnly(_weaponCombinedEffects);
+            _shieldEffectView = Array.AsReadOnly(_shieldCombinedEffects);
+        }
+
+        private static StatusEffectApplicationData[] Combine(StatusEffectApplicationData[] first,
+            StatusEffectApplicationData[] second)
+        {
+            if (first.Length == 0)
+            {
+                return second;
+            }
+            if (second.Length == 0)
+            {
+                return first;
+            }
+            StatusEffectApplicationData[] result = new StatusEffectApplicationData[first.Length + second.Length];
+            Array.Copy(first, 0, result, 0, first.Length);
+            Array.Copy(second, 0, result, first.Length, second.Length);
+            return result;
         }
 
         /// <summary>

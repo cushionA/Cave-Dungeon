@@ -173,6 +173,23 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
+        public void SoACharaDataDic_TryGetManaged_DestroyedOrUnsetReference_ReturnsFalseAndTrueNull()
+        {
+            using SoACharaDataDic dic = new SoACharaDataDic(4);
+            dic.Add(12, default, default, default, default);
+            Assert.IsFalse(dic.TryGetManaged(12, out ManagedCharacter unset));
+            Assert.IsTrue(unset is null);
+            GameObject go = new GameObject("try_managed_destroy");
+            DummyManagedCharacter managed = go.AddComponent<DummyManagedCharacter>();
+            managed.SetHashForTest(13);
+            dic.Add(13, default, default, default, default, managed: managed);
+            Object.DestroyImmediate(go);
+
+            Assert.IsFalse(dic.TryGetManaged(13, out ManagedCharacter destroyed));
+            Assert.IsTrue(destroyed is null);
+        }
+
+        [Test]
         public void SoACharaDataDic_ComputedApis_ThrowObjectDisposedExceptionAfterDispose()
         {
             SoACharaDataDic dic = new SoACharaDataDic(4);

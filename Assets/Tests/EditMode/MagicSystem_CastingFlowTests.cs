@@ -47,6 +47,37 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(30, v.currentMp);
         }
 
+        [TestCase(50.5f, 100, 20, 30.5f, 30)]
+        [TestCase(50f, 100, 50, 0f, 0)]
+        [TestCase(0f, 0, 0, 0f, 0)]
+        public void MagicCaster_StartCast_PublishesSynchronizedMpRatio(float currentMp, int maxMp,
+            int cost, float expectedMp, int expectedRatio)
+        {
+            _data.GetVitals(_casterHash).currentMp = currentMp;
+            _data.GetVitals(_casterHash).maxMp = maxMp;
+            using MagicCaster caster = new MagicCaster();
+            MagicDefinition magic = new MagicDefinition { magicId = 1, mpCost = cost };
+            int started = 0;
+            int fired = 0;
+            caster.OnCastStarted += (hash, definition) =>
+            {
+                started++;
+                Assert.AreEqual(expectedMp, _data.GetVitals(hash).currentMp);
+                Assert.AreEqual(expectedRatio, _data.GetVitals(hash).mpRatio);
+            };
+            caster.OnFired += (hash, definition) =>
+            {
+                fired++;
+                Assert.AreEqual(expectedRatio, _data.GetVitals(hash).mpRatio);
+            };
+
+            Assert.IsTrue(caster.StartCast(magic, _casterHash, _data, 0f));
+
+            Assert.AreEqual(1, started);
+            Assert.AreEqual(1, fired);
+            Assert.AreEqual(expectedRatio, _data.GetVitals(_casterHash).mpRatio);
+        }
+
         [Test]
         public void MagicCaster_CastTime_FiresAfterDelay()
         {

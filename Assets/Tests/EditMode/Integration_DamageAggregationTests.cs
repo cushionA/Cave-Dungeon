@@ -26,7 +26,7 @@ namespace Game.Tests.EditMode
             // 敵
             CharacterVitals enemyVitals = new CharacterVitals
             {
-                currentHp = 500, maxHp = 500, position = Vector2.zero, hpRatio = 100
+                currentHp = 500, maxHp = 500, position = Vector2.zero
             };
             CharacterFlags enemyFlags = CharacterFlags.Pack(
                 CharacterBelong.Enemy, CharacterFeature.Minion, AbilityFlag.None);
@@ -35,7 +35,7 @@ namespace Game.Tests.EditMode
             // プレイヤー1: 距離2
             CharacterVitals p1Vitals = new CharacterVitals
             {
-                currentHp = 80, maxHp = 100, position = new Vector2(2f, 0f), hpRatio = 80
+                currentHp = 80, maxHp = 100, position = new Vector2(2f, 0f)
             };
             CharacterFlags p1Flags = CharacterFlags.Pack(
                 CharacterBelong.Ally, CharacterFeature.Player, AbilityFlag.None);
@@ -44,7 +44,7 @@ namespace Game.Tests.EditMode
             // プレイヤー2: 距離4
             CharacterVitals p2Vitals = new CharacterVitals
             {
-                currentHp = 100, maxHp = 100, position = new Vector2(4f, 0f), hpRatio = 100
+                currentHp = 100, maxHp = 100, position = new Vector2(4f, 0f)
             };
             CharacterFlags p2Flags = CharacterFlags.Pack(
                 CharacterBelong.Ally, CharacterFeature.Companion, AbilityFlag.None);

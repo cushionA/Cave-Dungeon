@@ -83,6 +83,7 @@ namespace Game.Tests.PlayMode
                 damage = new ElementalStatus { slash = 10 },
                 motionValue = 1.0f,
                 attackElement = Element.Slash,
+                guardDamage = 5f,
                 armorBreakValue = 5f,  // 通常ならアーマー 50→45 だが、Flinch で強制 0 にされた後さらに削られる
                 feature = AttackFeature.None
             };
@@ -241,6 +242,7 @@ namespace Game.Tests.PlayMode
                 damage = new ElementalStatus { slash = 5 },
                 motionValue = 1.0f,
                 attackElement = Element.Slash,
+                guardDamage = 15f,
                 armorBreakValue = 15f,
                 feature = AttackFeature.None
             };

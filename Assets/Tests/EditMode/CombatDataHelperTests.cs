@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using UnityEngine;
 using Game.Core;
+using System.Collections.Generic;
 
 namespace Game.Tests.EditMode
 {
@@ -9,18 +10,47 @@ namespace Game.Tests.EditMode
     /// </summary>
     public class CombatDataHelperTests
     {
-        private static AttackInfo CreateAttackInfo(float justGuardResistance = 0f)
+        [Test]
+        public void CombatDataHelper_DistinctGuardAndArmorDamage_PreservesBothAcrossMotionAndPacket()
+        {
+            AttackInfo info = CreateAttackInfo();
+            info.guardDamage = 7f;
+            info.armorBreakValue = 31f;
+
+            AttackMotionData motion = CombatDataHelper.BuildMotionData(info);
+            DamageData packet = CombatDataHelper.BuildDamageData(1, 2, motion, default);
+
+            Assert.AreEqual(7f, motion.guardDamage);
+            Assert.AreEqual(31f, motion.armorBreakValue);
+            Assert.AreEqual(7f, packet.guardDamage);
+            Assert.AreEqual(31f, packet.armorBreakValue);
+        }
+
+        private readonly List<ScriptableObject> _created = new List<ScriptableObject>();
+
+        [TearDown]
+        public void TearDown()
+        {
+            for (int i = 0; i < _created.Count; i++)
+            {
+                Object.DestroyImmediate(_created[i]);
+            }
+            _created.Clear();
+        }
+
+        private AttackInfo CreateAttackInfo(float justGuardResistance = 0f)
         {
             AttackInfo info = ScriptableObject.CreateInstance<AttackInfo>();
+            _created.Add(info);
             info.attackName = "TestAttack";
             info.damageMultiplier = 1.5f;
             info.attackElement = Element.Fire | Element.Slash;
             info.feature = AttackFeature.Heavy;
+            info.guardDamage = 20f;
             info.armorBreakValue = 20f;
             info.staminaCost = 10f;
             info.mpCost = 5;
-            info.attackMoveDistance = 2f;
-            info.attackMoveDuration = 0.3f;
+            info.movement = new ActionMovementProfile { speed = 2f / 0.3f, duration = 0.3f };
             info.contactType = AttackContactType.StopOnHit;
             info.isAutoChain = true;
             info.isChainEndPoint = false;
@@ -31,10 +61,21 @@ namespace Game.Tests.EditMode
                 hasKnockback = true,
                 force = new Vector2(5f, 0f)
             };
-            info.statusEffectInfo = new StatusEffectInfo
+            StatusEffectDefinition burn = ScriptableObject.CreateInstance<StatusEffectDefinition>();
+            _created.Add(burn);
+            burn.effect = StatusEffectId.Burn;
+            burn.duration = 5f;
+            burn.tickDamage = 2f;
+            burn.tickInterval = 1f;
+            info.statusEffects = new[]
             {
-                effect = StatusEffectId.Burn,
-                accumulateValue = 30f
+                new StatusEffectApplication
+                {
+                    definition = burn, accumulateValue = 30f,
+                    mode = StatusEffectApplicationMode.Accumulate,
+                    target = StatusEffectTarget.HitTarget,
+                    guardRule = StatusEffectGuardRule.Block
+                }
             };
             return info;
         }
@@ -77,7 +118,45 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(0.4f, motion.inputWindow, 0.001f);
             Assert.AreEqual(50f, motion.justGuardResistance, 0.001f);
             Assert.AreEqual(new Vector2(5f, 0f), motion.knockbackForce);
-            Assert.AreEqual(StatusEffectId.Burn, motion.statusEffect.effect);
+            Assert.AreEqual(1, motion.statusEffects.Length);
+            Assert.AreEqual(StatusEffectId.Burn, motion.statusEffects[0].info.effect);
+            Assert.AreEqual(30f, motion.statusEffects[0].info.accumulateValue);
+            Assert.AreEqual(StatusEffectApplicationMode.Accumulate, motion.statusEffects[0].mode);
+            Assert.AreEqual(StatusEffectTarget.HitTarget, motion.statusEffects[0].target);
+            Assert.AreEqual(StatusEffectGuardRule.Block, motion.statusEffects[0].guardRule);
+        }
+
+        [Test]
+        public void CombatDataHelper_BuildMotionData_SnapshotsDefinitionAndPropagatesAllApplications()
+        {
+            AttackInfo info = CreateAttackInfo();
+            StatusEffectDefinition speed = ScriptableObject.CreateInstance<StatusEffectDefinition>();
+            _created.Add(speed);
+            speed.effect = StatusEffectId.SpeedUp;
+            speed.duration = 8f;
+            speed.modifier = 0.5f;
+            info.statusEffects = new[]
+            {
+                info.statusEffects[0],
+                new StatusEffectApplication
+                {
+                    definition = speed,
+                    mode = StatusEffectApplicationMode.Immediate,
+                    target = StatusEffectTarget.Source,
+                    guardRule = StatusEffectGuardRule.Ignore
+                }
+            };
+
+            AttackMotionData motion = CombatDataHelper.BuildMotionData(info);
+            speed.duration = 20f;
+            DamageData damage = CombatDataHelper.BuildDamageData(1, 2, motion, default);
+
+            Assert.AreEqual(2, motion.statusEffects.Length);
+            Assert.AreEqual(8f, motion.statusEffects[1].info.duration);
+            Assert.AreEqual(StatusEffectApplicationMode.Immediate, motion.statusEffects[1].mode);
+            Assert.AreEqual(StatusEffectTarget.Source, motion.statusEffects[1].target);
+            Assert.AreEqual(StatusEffectGuardRule.Ignore, motion.statusEffects[1].guardRule);
+            Assert.AreSame(motion.statusEffects, damage.statusEffects);
         }
 
         [Test]
@@ -100,6 +179,7 @@ namespace Game.Tests.EditMode
             AttackMotionData motion = new AttackMotionData
             {
                 justGuardResistance = 60f,
+                guardDamage = 15f,
                 armorBreakValue = 15f,
                 attackElement = Element.Fire,
                 motionValue = 1.2f,

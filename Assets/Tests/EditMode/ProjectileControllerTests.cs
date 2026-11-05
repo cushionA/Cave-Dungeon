@@ -63,14 +63,16 @@ namespace Game.Tests.EditMode
             {
                 attack = new ElementalStatus { slash = 50 }
             };
-            data.Add(casterHash, casterVitals, casterCombat, default, default);
+            data.Add(casterHash, casterVitals, casterCombat,
+                CharacterFlags.Pack(CharacterBelong.Ally, CharacterFeature.Player, AbilityFlag.None), default);
 
             CharacterVitals targetVitals = new CharacterVitals { currentHp = 100, maxHp = 100 };
             CombatStats targetCombat = new CombatStats
             {
                 defense = new ElementalStatus { slash = 10 }
             };
-            data.Add(targetHash, targetVitals, targetCombat, default, default);
+            data.Add(targetHash, targetVitals, targetCombat,
+                CharacterFlags.Pack(CharacterBelong.Enemy, CharacterFeature.Minion, AbilityFlag.None), default);
 
             Projectile p = _pool.Get();
             p.Initialize(casterHash, _defaultProfile, Vector2.zero, Vector2.right);

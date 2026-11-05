@@ -110,7 +110,11 @@ namespace Game.Core
         public ActType actType;
 
         [FoldoutGroup("基本")]
-        [Tooltip("AttackInfo配列のインデックス")]
+        [Tooltip("攻撃/魔法の永続定義ID。空の場合だけ旧attackInfoIndexを使用")]
+        public string actionDefinitionId;
+
+        [FoldoutGroup("基本")]
+        [Tooltip("旧データ互換用のAttackInfo配列インデックス")]
         public int attackInfoIndex;
 
         [FoldoutGroup("基本")]

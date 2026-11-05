@@ -1,3 +1,5 @@
+using System;
+
 namespace Game.Core
 {
     /// <summary>
@@ -9,6 +11,11 @@ namespace Game.Core
         private const float k_WeightPenaltyThreshold = 0.7f;
         private const float k_MinPerformanceMultiplier = 0.5f;
         private const float k_PenaltyRange = 0.3f; // 1.0 - 0.7
+
+        /// <summary>互換入口。キャラ全体の導出はCharacterStatCalculatorが所有する。</summary>
+        public static EquipmentDerivedStats Calculate(in CharacterBaseStats basis, in CharacterGrowth growth,
+            in CharacterVitals current, in EquipmentStatModifiers weapon, in EquipmentStatModifiers shield,
+            in EquipmentStatModifiers core) => CharacterStatCalculator.CalculateDerived(basis, growth, current, weapon, shield, core);
 
         /// <summary>
         /// 攻撃力スケーリング。基礎攻撃力 * (1 + scalingFactor * statValue / 100)

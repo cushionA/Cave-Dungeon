@@ -45,10 +45,6 @@ namespace Game.Tests.EditMode
                 ref vitals.currentHp, ref vitals.currentArmor,
                 raw, data.armorBreakValue, ref actionArmor);
 
-            vitals.hpRatio = vitals.maxHp > 0
-                ? (byte)(100 * vitals.currentHp / vitals.maxHp)
-                : (byte)0;
-
             if (isKill)
             {
                 _isAlive = false;

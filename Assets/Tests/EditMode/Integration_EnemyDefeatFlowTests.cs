@@ -26,7 +26,6 @@ namespace Game.Tests.EditMode
                 maxHp = 100,
                 position = new Vector2(10f, 0f),
                 level = 3,
-                hpRatio = 1
             };
             CharacterFlags enemyFlags = CharacterFlags.Pack(
                 CharacterBelong.Enemy, CharacterFeature.Minion, AbilityFlag.None);

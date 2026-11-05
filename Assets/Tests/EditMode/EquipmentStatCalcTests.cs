@@ -9,7 +9,7 @@ namespace Game.Tests.EditMode
         public void EquipmentStatCalculator_CalculateScaledAttack_AppliesScaling()
         {
             // Arrange
-            int baseAttack = 100;
+            int baseAttack = 101;
             float scalingFactor = 0.8f;
             int statValue = 50;
 
@@ -17,8 +17,9 @@ namespace Game.Tests.EditMode
             int result = EquipmentStatCalculator.CalculateScaledAttack(baseAttack, scalingFactor, statValue);
 
             // Assert
-            // 100 * (1 + 0.8 * 50 / 100) = 100 * 1.4 ≈ 139 (float精度によるint切り捨て)
-            Assert.AreEqual(139, result);
+            // 101 * (1 + 0.8 * 50 / 100) = 141.4 → 141。
+            // 整数境界を避け、浮動小数点の中間精度に依存せず切り捨てを検証する。
+            Assert.AreEqual(141, result);
         }
 
         [Test]

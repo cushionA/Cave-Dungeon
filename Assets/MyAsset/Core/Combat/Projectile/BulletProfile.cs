@@ -12,10 +12,11 @@ namespace Game.Core
         public float angle;
         public float spreadAngle;
         public float lifeTime;
+        /// <summary>非 Pierce 弾の総命中上限。0 以下は 1。Pierce は旧仕様どおり寿命まで貫通する。</summary>
         public int hitLimit;
 
         /// <summary>各ターゲットに与える最大ヒット数。0 以下の場合は 1 として扱う (既定動作互換)。
-        /// 総ヒット上限 <see cref="hitLimit"/> と組み合わせて二段管理する。
+        /// 非 Pierce の総ヒット上限 <see cref="hitLimit"/> と組み合わせて二段管理する。
         /// NOTE: この上限は <see cref="ProjectileController.TryRegisterHit"/> 経路でのみ適用される。
         /// AoE 爆発 (<c>ProjectileManager.ProcessExplosion</c>) では
         /// 範囲内の全キャラクターに 1 回ずつヒットするため本値は参照されない。</summary>
@@ -52,25 +53,25 @@ namespace Game.Core
         public float homingAcceleration;
 
         /// <summary>startScale を安全に取得する（0 は 1f として扱う）。</summary>
-        public float GetEffectiveStartScale()
+        public readonly float GetEffectiveStartScale()
         {
             return startScale == 0f ? 1f : startScale;
         }
 
         /// <summary>endScale を安全に取得する（0 は 1f として扱う）。</summary>
-        public float GetEffectiveEndScale()
+        public readonly float GetEffectiveEndScale()
         {
             return endScale == 0f ? 1f : endScale;
         }
 
         /// <summary>homingStrength を安全に取得する（0 は旧ハードコード 5f にフォールバック）。</summary>
-        public float GetEffectiveHomingStrength()
+        public readonly float GetEffectiveHomingStrength()
         {
             return homingStrength == 0f ? 5f : homingStrength;
         }
 
         /// <summary>perTargetHitLimit を安全に取得する（0 以下は 1 として扱い、旧 HashSet 互換にフォールバック）。</summary>
-        public int GetEffectivePerTargetHitLimit()
+        public readonly int GetEffectivePerTargetHitLimit()
         {
             return perTargetHitLimit > 0 ? perTargetHitLimit : 1;
         }

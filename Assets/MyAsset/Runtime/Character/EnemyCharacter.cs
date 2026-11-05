@@ -28,6 +28,8 @@ namespace Game.Runtime
         private readonly List<int> _candidates = new List<int>(8);
 
         public DamageDealer DamageDealer => _damageDealer;
+        public override bool CanApplyAIDecision => base.CanApplyAIDecision
+            && _enemyController != null && _enemyController.IsActive;
 
         /// <summary>テスト/エディタ用: AIInfoを設定する。</summary>
         public void SetAIInfo(AIInfo aiInfo) { _aiInfo = aiInfo; }
@@ -63,14 +65,18 @@ namespace Game.Runtime
             // AttackActionHandlerを監視する
         }
 
-        private void FixedUpdate()
+        public override void PrepareAIDecisionTick(float deltaTime, float currentTime, AIDecisionSystem decisions)
         {
             if (!IsAlive)
             {
                 return;
             }
 
-            UpdateGroundCheck();
+
+            if (GameManager.Actions != null && GameManager.Actions.IsPhysicsControlled(ObjectHash))
+            {
+                return;
+            }
 
             // AI Tick
             if (_enemyController != null)
@@ -78,19 +84,18 @@ namespace Game.Runtime
                 // 候補リスト構築（プレイヤー + 味方）
                 PopulateAITargetCandidates(_candidates, targetAllyFaction: true);
 
-                _enemyController.Tick(Time.fixedDeltaTime, _candidates, Time.time);
-
-                // AI が選択したアクションを ActionExecutorController に橋渡し
                 BridgeAIActionForJudgmentLoop(_enemyController.JudgmentLoop, _actionExecutorController);
-
-                // 簡易移動: ターゲットへ追尾（Sustained/MoveアクションはAI側で別途処理）
-                UpdateMovement();
+                if (!GameManager.TryGetObservation(ObjectHash, out AIObservationContext observation)) { return; }
+                _enemyController.PrepareTick(deltaTime, _candidates, observation.Time, decisions,
+                    observation, GameManager.TargetRelations);
             }
+        }
 
-            // 向き更新（ターゲット方向を向く）
+        public override void SimulateCharacterTick(float deltaTime, float currentTime)
+        {
+            if (!IsAlive || (GameManager.Actions != null && GameManager.Actions.IsPhysicsControlled(ObjectHash))) { return; }
+            if (_enemyController != null) { UpdateMovement(); }
             UpdateFacingToTarget();
-
-            SyncPositionToData();
         }
 
         /// <summary>
@@ -111,7 +116,8 @@ namespace Game.Runtime
 
             ref CharacterVitals targetVitals = ref GameManager.Data.GetVitals(targetHash);
             ref CharacterVitals myVitals = ref GameManager.Data.GetVitals(ObjectHash);
-            float diff = targetVitals.position.x - myVitals.position.x;
+            float diff = GameManager.ObservedPosition(targetHash, targetVitals.position).x
+                - GameManager.ObservedPosition(ObjectHash, myVitals.position).x;
 
             if (diff > 0.1f)
             {
@@ -130,25 +136,27 @@ namespace Game.Runtime
         /// </summary>
         private void UpdateMovement()
         {
+            if (_actionExecutorController != null && _actionExecutorController.HasMovementRequest) { return; }
             // 攻撃中は移動しない
             if (_actionExecutorController != null && _actionExecutorController.IsExecuting)
             {
-                _rb.linearVelocity = new Vector2(0f, _rb.linearVelocity.y);
+                SetPhysicsVelocity(new Vector2(0f, PhysicsVelocity.y));
                 return;
             }
 
             int targetHash = _enemyController.JudgmentLoop?.CurrentTargetHash ?? 0;
             if (targetHash == 0 || !GameManager.IsCharacterValid(targetHash))
             {
-                _rb.linearVelocity = new Vector2(0f, _rb.linearVelocity.y);
+                SetPhysicsVelocity(new Vector2(0f, PhysicsVelocity.y));
                 return;
             }
 
             ref CharacterVitals targetVitals = ref GameManager.Data.GetVitals(targetHash);
             ref CharacterVitals myVitals = ref GameManager.Data.GetVitals(ObjectHash);
-            ref MoveParams moveParams = ref GameManager.Data.GetMoveParams(ObjectHash);
+            MoveParams moveParams = GetEffectiveMoveParams(GameConstants.k_FallbackMoveSpeed);
 
-            float diff = targetVitals.position.x - myVitals.position.x;
+            float diff = GameManager.ObservedPosition(targetHash, targetVitals.position).x
+                - GameManager.ObservedPosition(ObjectHash, myVitals.position).x;
             float absDist = Mathf.Abs(diff);
 
             // 攻撃範囲の外ならターゲットへ移動
@@ -156,12 +164,12 @@ namespace Game.Runtime
             if (absDist > GameConstants.k_DefaultAttackRange)
             {
                 float dir = diff > 0f ? 1f : -1f;
-                float speed = moveParams.moveSpeed > 0f ? moveParams.moveSpeed : GameConstants.k_FallbackMoveSpeed;
-                _rb.linearVelocity = new Vector2(dir * speed, _rb.linearVelocity.y);
+                float speed = moveParams.moveSpeed;
+                SetPhysicsVelocity(new Vector2(dir * speed, PhysicsVelocity.y));
             }
             else
             {
-                _rb.linearVelocity = new Vector2(0f, _rb.linearVelocity.y);
+                SetPhysicsVelocity(new Vector2(0f, PhysicsVelocity.y));
             }
         }
 

@@ -22,8 +22,11 @@ Section: 4 — エンドコンテンツ
 ## データ構造
 
 ### LeaderboardEntry (Common_Section4 で定義)
+
+実装は`Assets/MyAsset/Core/World/Challenge/LeaderboardEntry.cs`。入力の`ChallengeResult`は同ディレクトリの`ChallengeResult.cs`にある。型別ファイルへの移動後も、型名・`Game.Core` namespace・データ定義は維持する。
+
 ```csharp
-// Section4Structs.cs に定義済み
+// Core/World/Challenge/LeaderboardEntry.cs に定義済み
 [Serializable]
 public struct LeaderboardEntry
 {

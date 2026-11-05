@@ -1,4 +1,3 @@
-using UniCli.Server.Editor;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -56,7 +55,7 @@ namespace UniCli.Server.Editor.Handlers
                     objects.Add(go);
                     selected.Add(new SelectedGameObjectInfo
                     {
-                        instanceId = go.GetInstanceID(),
+                        instanceId = UnityObjectIdentity.GetId(go),
                         name = go.name,
                         path = GameObjectResolver.BuildPath(go.transform)
                     });

@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using UnityEngine;
 using Game.Core;
+using R3;
 
 namespace Game.Tests.EditMode
 {
@@ -10,6 +11,83 @@ namespace Game.Tests.EditMode
     /// </summary>
     public class DamageProjectileHitProcessorTests
     {
+        [Test]
+        public void ProjectileHitProcessor_CapturedShooterRemovedOrReused_UsesOriginalSnapshot()
+        {
+            ActorRegistry actors = new ActorRegistry();
+            ActorRef source = actors.Register(_casterHash);
+            ActorRef target = actors.Register(_targetHash);
+            Projectile projectile = new Projectile();
+            projectile.Initialize(source, new BulletProfile { speed = 1f, lifeTime = 3f }, Vector2.zero, Vector2.right);
+            MagicDefinition magic = new MagicDefinition
+            {
+                magicType = MagicType.Attack, motionValue = 1f,
+                attackContext = AttackContext.Capture(source, _data.GetCombatStats(_casterHash).attack,
+                    1.5f, CharacterBelong.Ally, null),
+            };
+            actors.Unregister(_casterHash);
+            _data.Remove(_casterHash);
+            StubDamageable receiver = new StubDamageable { ObjectHash = _targetHash };
+            ProjectileHitProcessor.ProcessHit(projectile, receiver, _data, magic, actors: actors, observedTarget: target);
+            Assert.AreEqual(1, receiver.ReceiveCount);
+            Assert.AreEqual(50, receiver.LastReceived.damage.fire);
+            Assert.AreEqual(1.5f, receiver.LastReceived.attackContext.AttackMultiplier);
+            _data.Add(_casterHash, new CharacterVitals { currentHp = 100, maxHp = 100 },
+                new CombatStats { attack = new ElementalStatus { fire = 999 } },
+                CharacterFlags.Pack(CharacterBelong.Ally, CharacterFeature.Player, AbilityFlag.None), default);
+            ActorRef replacement = actors.Register(_casterHash);
+            ProjectileHitProcessor.ProcessHit(projectile, receiver, _data, magic, actors: actors, observedTarget: target);
+            Assert.AreEqual(2, receiver.ReceiveCount);
+            Assert.AreEqual(source, receiver.LastReceived.attackerRef);
+            Assert.AreNotEqual(replacement, receiver.LastReceived.attackerRef);
+            Assert.AreEqual(50, receiver.LastReceived.damage.fire);
+        }
+
+        [Test]
+        public void ProjectileHitProcessor_CapturedTargetReused_RejectsOldObservedTarget()
+        {
+            ActorRegistry actors = new ActorRegistry();
+            ActorRef source = actors.Register(_casterHash);
+            ActorRef target = actors.Register(_targetHash);
+            Projectile projectile = new Projectile();
+            projectile.Initialize(source, new BulletProfile { lifeTime = 3f }, Vector2.zero, Vector2.right);
+            MagicDefinition magic = new MagicDefinition
+            {
+                magicType = MagicType.Attack,
+                attackContext = AttackContext.Capture(source, _data.GetCombatStats(_casterHash).attack,
+                    1f, CharacterBelong.Ally, null),
+            };
+            actors.Unregister(_targetHash);
+            actors.Register(_targetHash);
+            StubDamageable receiver = new StubDamageable { ObjectHash = _targetHash };
+            ProjectileHitProcessor.ProcessHit(projectile, receiver, _data, magic, actors: actors, observedTarget: target);
+            Assert.AreEqual(0, receiver.ReceiveCount);
+        }
+
+        [Test]
+        public void ProjectileHitProcessor_AttackMagic_PropagatesIndependentGuardArmorAndReactionSettings()
+        {
+            StubDamageable receiver = new StubDamageable { ObjectHash = _targetHash };
+            MagicDefinition magic = new MagicDefinition
+            {
+                magicType = MagicType.Attack,
+                guardDamage = 9f,
+                armorBreakValue = 27f,
+                justGuardResistance = 45f,
+                feature = AttackFeature.Unguardable,
+                knockbackForce = new Vector2(-3f, 2f),
+            };
+
+            ProjectileHitProcessor.ProcessHit(CreateProjectile(_casterHash), receiver, _data, magic);
+
+            Assert.AreEqual(9f, receiver.LastReceived.guardDamage);
+            Assert.AreEqual(27f, receiver.LastReceived.armorBreakValue);
+            Assert.AreEqual(45f, receiver.LastReceived.justGuardResistance);
+            Assert.AreEqual(AttackFeature.Unguardable, receiver.LastReceived.feature);
+            Assert.AreEqual(new Vector2(-3f, 2f), receiver.LastReceived.knockbackForce);
+            Assert.IsTrue(receiver.LastReceived.isProjectile);
+        }
+
         private SoACharaDataDic _data;
         private int _casterHash;
         private int _targetHash;
@@ -70,6 +148,138 @@ namespace Game.Tests.EditMode
             BulletProfile profile = new BulletProfile { speed = 10f, lifeTime = 5f, hitLimit = 1 };
             p.Initialize(casterHash, profile, Vector2.zero, Vector2.right);
             return p;
+        }
+
+        [TestCase(10, 90, 90)]
+        [TestCase(50, 100, 100)]
+        public void ProjectileHitProcessor_RecoverMagic_UpdatesHpRatioBeforeEffectNotifications(
+            int healAmount, int expectedHp, int expectedRatio)
+        {
+            using GameEvents events = new GameEvents();
+            using StatusEffectSystem effects = new StatusEffectSystem(_data, events);
+            effects.Register(_allyHash);
+            int notifications = 0;
+            using System.IDisposable subscription = events.OnStatusEffectApplied.Subscribe(change =>
+            {
+                notifications++;
+                Assert.AreEqual(expectedHp, _data.GetVitals(_allyHash).currentHp);
+                Assert.AreEqual(expectedRatio, _data.GetVitals(_allyHash).hpRatio);
+            });
+            MagicDefinition magic = new MagicDefinition
+            {
+                magicType = MagicType.Recover, healAmount = healAmount,
+                statusEffects = new[]
+                {
+                    new StatusEffectApplicationData
+                    {
+                        info = new StatusEffectInfo { effect = StatusEffectId.DefenseUp, duration = 5f, modifier = 0.25f },
+                        mode = StatusEffectApplicationMode.Immediate,
+                    },
+                },
+            };
+
+            ProjectileHitProcessor.ProcessHit(CreateProjectile(_casterHash),
+                new StubDamageable { ObjectHash = _allyHash }, _data, magic, events, effects);
+
+            Assert.AreEqual(1, notifications);
+            Assert.AreEqual(expectedRatio, _data.GetVitals(_allyHash).hpRatio);
+        }
+
+        [Test]
+        public void ProjectileHitProcessor_RecoverMagicWithZeroMaximumHp_StoresZeroRatio()
+        {
+            _data.GetVitals(_allyHash).currentHp = 0;
+            _data.GetVitals(_allyHash).maxHp = 0;
+
+            ProjectileHitProcessor.ProcessHit(CreateProjectile(_casterHash),
+                new StubDamageable { ObjectHash = _allyHash }, _data,
+                new MagicDefinition { magicType = MagicType.Recover, healAmount = 10 });
+
+            Assert.AreEqual(0, _data.GetVitals(_allyHash).currentHp);
+            Assert.AreEqual(0, _data.GetVitals(_allyHash).hpRatio);
+        }
+
+        [TestCase(MagicType.Support, 80)]
+        [TestCase(MagicType.Recover, 85)]
+        public void ProjectileHitProcessor_NonAttackMagic_UsesExplicitApplicationModes(MagicType magicType, int expectedHp)
+        {
+            using GameEvents events = new GameEvents();
+            using StatusEffectSystem effects = new StatusEffectSystem(_data, events);
+            MagicDefinition magic = new MagicDefinition
+            {
+                magicType = magicType, healAmount = 5,
+                targetPolicy = new AttackTargetPolicy { overrideTargets = true, targets = AttackTargetRelation.Friendly },
+                statusEffects = new[]
+                {
+                    new StatusEffectApplicationData
+                    {
+                        info = new StatusEffectInfo { effect = StatusEffectId.Poison, accumulateValue = 40f, duration = 5f },
+                        mode = StatusEffectApplicationMode.Accumulate,
+                    },
+                    new StatusEffectApplicationData
+                    {
+                        info = new StatusEffectInfo { effect = StatusEffectId.DefenseUp, duration = 5f, modifier = 0.25f },
+                        mode = StatusEffectApplicationMode.Immediate,
+                    },
+                }
+            };
+
+            ProjectileHitProcessor.ProcessHit(CreateProjectile(_casterHash),
+                new StubDamageable { ObjectHash = _allyHash }, _data, magic, events, effects);
+
+            Assert.AreEqual(40f, effects.Store.GetAccumulation(_allyHash, StatusEffectId.Poison));
+            Assert.IsFalse(effects.Store.IsActive(_allyHash, StatusEffectId.Poison));
+            Assert.AreEqual(1.25f, _data.GetStatusEffects(_allyHash).DefenseMultiplier);
+            Assert.AreEqual(expectedHp, _data.GetVitals(_allyHash).currentHp);
+        }
+
+        [Test]
+        public void ProjectileHitProcessor_AttackMagic_ForwardsAllEffectsWithoutApplyingTwice()
+        {
+            StatusEffectApplicationData[] applications =
+            {
+                new StatusEffectApplicationData { info = new StatusEffectInfo { effect = StatusEffectId.Burn, duration = 5f } },
+                new StatusEffectApplicationData { info = new StatusEffectInfo { effect = StatusEffectId.Slow, duration = 5f } },
+            };
+            StubDamageable receiver = new StubDamageable { ObjectHash = _targetHash };
+            MagicDefinition magic = new MagicDefinition { magicType = MagicType.Attack, statusEffects = applications };
+
+            ProjectileHitProcessor.ProcessHit(CreateProjectile(_casterHash), receiver, _data, magic);
+
+            Assert.AreEqual(1, receiver.ReceiveCount);
+            Assert.AreSame(applications, receiver.LastReceived.statusEffects);
+            Assert.AreEqual(_casterHash, receiver.LastReceived.attackerHash);
+        }
+
+        [Test]
+        public void ProjectileHitProcessor_SupportMagic_PublishesBuffToSharedStateWithCaster()
+        {
+            using GameEvents events = new GameEvents();
+            using StatusEffectSystem effects = new StatusEffectSystem(_data, events);
+            effects.Register(_allyHash);
+            Projectile projectile = CreateProjectile(_casterHash);
+            MagicDefinition magic = new MagicDefinition
+            {
+                magicType = MagicType.Support,
+                targetPolicy = new AttackTargetPolicy { overrideTargets = true, targets = AttackTargetRelation.Friendly },
+                statusEffects = new[]
+                {
+                    new StatusEffectApplicationData
+                    {
+                        info = new StatusEffectInfo { effect = StatusEffectId.AttackUp, duration = 8f, modifier = 0.5f },
+                        mode = StatusEffectApplicationMode.Immediate,
+                    }
+                }
+            };
+
+            ProjectileHitProcessor.ProcessHit(projectile, new StubDamageable { ObjectHash = _allyHash },
+                _data, magic, events, effects);
+
+            Assert.IsTrue(effects.Store.TryGetEffect(_allyHash, StatusEffectId.AttackUp, out ActiveEffect effect));
+            Assert.AreEqual(_casterHash, effect.sourceHash);
+            Assert.AreEqual(8f, effect.remainTime);
+            Assert.AreEqual(1.5f, _data.GetStatusEffects(_allyHash).AttackMultiplier);
+            Assert.AreEqual(80, _data.GetVitals(_allyHash).currentHp);
         }
 
         // --- ProjectileHitProcessor: Attack (IDamageable経由) ---
@@ -183,7 +393,7 @@ namespace Game.Tests.EditMode
         [Test]
         public void ProjectileHitProcessor_RecoverMagic_HealsTarget()
         {
-            ref CharacterVitals v = ref _data.GetVitals(_targetHash);
+            ref CharacterVitals v = ref _data.GetVitals(_allyHash);
             v.currentHp = 50;
 
             Projectile projectile = CreateProjectile(_casterHash);
@@ -193,20 +403,20 @@ namespace Game.Tests.EditMode
                 healAmount = 30,
             };
             // Recover は ObjectHash だけ使用。IDamageable の実装は何でもOK
-            StubDamageable stub = new StubDamageable { ObjectHash = _targetHash };
+            StubDamageable stub = new StubDamageable { ObjectHash = _allyHash };
 
             ProjectileHitProcessor.HitResult result =
                 ProjectileHitProcessor.ProcessHit(projectile, stub, _data, magic);
 
             Assert.AreEqual(30, result.healAmount);
-            ref CharacterVitals after = ref _data.GetVitals(_targetHash);
+            ref CharacterVitals after = ref _data.GetVitals(_allyHash);
             Assert.AreEqual(80, after.currentHp, "HP50+回復30=HP80");
         }
 
         [Test]
         public void ProjectileHitProcessor_RecoverMagic_ClampsToMaxHp()
         {
-            ref CharacterVitals v = ref _data.GetVitals(_targetHash);
+            ref CharacterVitals v = ref _data.GetVitals(_allyHash);
             v.currentHp = 90;
 
             Projectile projectile = CreateProjectile(_casterHash);
@@ -215,11 +425,11 @@ namespace Game.Tests.EditMode
                 magicType = MagicType.Recover,
                 healAmount = 50,
             };
-            StubDamageable stub = new StubDamageable { ObjectHash = _targetHash };
+            StubDamageable stub = new StubDamageable { ObjectHash = _allyHash };
 
             ProjectileHitProcessor.ProcessHit(projectile, stub, _data, magic);
 
-            ref CharacterVitals after = ref _data.GetVitals(_targetHash);
+            ref CharacterVitals after = ref _data.GetVitals(_allyHash);
             Assert.AreEqual(100, after.currentHp, "maxHPを超えない");
         }
 

@@ -156,7 +156,7 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
-        public void StatusEffect_MaxThreeSimultaneous_FourthRejected()
+        public void StatusEffect_FourSimultaneous_AllRemainActive()
         {
             StatusEffectManager manager = new StatusEffectManager();
 
@@ -171,16 +171,17 @@ namespace Game.Tests.EditMode
                 manager.Accumulate(info, 0f);
             }
 
-            Assert.AreEqual(3, manager.ActiveCount, "最大3スロット同時");
+            Assert.AreEqual(3, manager.ActiveCount);
 
-            // 4つ目は拒否
             StatusEffectInfo fourthInfo = new StatusEffectInfo
             {
                 effect = StatusEffectId.Stun, accumulateValue = 100f, duration = 5f,
                 tickDamage = 0f, tickInterval = 1f,
             };
             bool fourthTriggered = manager.Accumulate(fourthInfo, 0f);
-            Assert.IsFalse(fourthTriggered, "4つ目は発症しない");
+            Assert.IsTrue(fourthTriggered);
+            Assert.AreEqual(4, manager.ActiveCount);
+            Assert.IsTrue(manager.IsActive(StatusEffectId.Stun));
         }
 
         // --- ガードスタミナコスト: GuardJudgmentLogicのガードブレイク境界 ---
@@ -200,7 +201,7 @@ namespace Game.Tests.EditMode
                 hasGuardAttackEffect: false,
                 currentStamina: 5f,
                 guardStrength: 10f,
-                armorBreakValue: 100f);
+                guardDamage: 100f);
 
             Assert.AreEqual(GuardResult.GuardBreak, result);
         }
@@ -219,7 +220,7 @@ namespace Game.Tests.EditMode
                 hasGuardAttackEffect: false,
                 currentStamina: 100f,
                 guardStrength: 100f,
-                armorBreakValue: 30f);
+                guardDamage: 30f);
 
             Assert.AreEqual(GuardResult.Guarded, result);
         }

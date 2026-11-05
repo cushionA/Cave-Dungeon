@@ -68,6 +68,8 @@ namespace Game.Core
         /// </summary>
         public void Dispose()
         {
+            _isActive = false;
+            _judgmentLoop.Dispose();
             _confusionClearedSubscription?.Dispose();
             _confusionClearedSubscription = null;
             _executor?.CancelCurrent();
@@ -85,7 +87,8 @@ namespace Game.Core
         /// Drives one frame of enemy AI: checks liveness, evaluates mode transitions,
         /// and ticks the judgment loop.
         /// </summary>
-        public void Tick(float deltaTime, List<int> candidates, float currentTime)
+        public void Tick(float deltaTime, List<int> candidates, float currentTime,
+            AIObservationContext observation = null, AITargetRelations targets = null)
         {
             if (!_isActive)
             {
@@ -105,9 +108,20 @@ namespace Game.Core
                 return;
             }
 
-            _modeController.EvaluateTransitions(
-                _enemyHash, _judgmentLoop.CurrentTargetHash, _data, currentTime);
+            if (observation != null && !_judgmentLoop.UseObservation(observation, targets)) { return; }
+            if (observation != null) { _modeController.EvaluateTransitions(_enemyHash, _judgmentLoop.CurrentTargetHash, observation); }
+            else { _modeController.EvaluateTransitions(_enemyHash, _judgmentLoop.CurrentTargetHash, _data, currentTime); }
             _judgmentLoop.Tick(deltaTime, candidates, currentTime);
+        }
+
+        public void PrepareTick(float deltaTime, List<int> candidates, float currentTime,
+            AIDecisionSystem decisions, AIObservationContext observation, AITargetRelations targets)
+        {
+            if (!_isActive || observation == null || !observation.TryGetActor(_enemyHash, out AIActorObservation owner)
+                || owner.currentHp <= 0 || owner.flags.ActState == ActState.Dead || owner.flags.IsVanished
+                || !_judgmentLoop.UseObservation(observation, targets)) { return; }
+            _modeController.EvaluateTransitions(_enemyHash, _judgmentLoop.CurrentTargetHash, observation);
+            _judgmentLoop.PrepareTick(deltaTime, candidates, currentTime, decisions);
         }
 
         /// <summary>
@@ -116,6 +130,7 @@ namespace Game.Core
         public void Deactivate()
         {
             _isActive = false;
+            _judgmentLoop.InvalidateDecision();
             _executor.CancelCurrent();
         }
 
@@ -124,6 +139,7 @@ namespace Game.Core
         /// </summary>
         public void Activate()
         {
+            _judgmentLoop.ResetActorLifetime();
             _isActive = true;
         }
     }

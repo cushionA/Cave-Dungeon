@@ -1,3 +1,5 @@
+using System;
+
 namespace Game.Core
 {
     /// <summary>
@@ -16,18 +18,40 @@ namespace Game.Core
             public MagicType magicType;
         }
 
+        /// <summary>接触・爆発・追尾で共有する対象ゲート。命中数を消費する前に呼ぶ。</summary>
+        public static bool CanAffect(Projectile projectile, in MagicDefinition magic,
+            SoACharaDataDic data, ActorRegistry actors, ActorRef target)
+        {
+            if (projectile == null || data == null) { return false; }
+            bool captured = magic.attackContext.IsCaptured;
+            if (captured || projectile.CasterRef.IsValid || actors != null)
+            {
+                if (actors == null || !captured || magic.attackContext.Owner != projectile.CasterRef
+                    || !projectile.CanHit(target, actors)) { return false; }
+                return CombatDataHelper.CanAffectTarget(magic.attackContext, target, data, actors);
+            }
+            // Hash-only callers still use the same relation rules, with current source data as their input.
+            if (!data.TryGetValue(projectile.CasterHash, out int _) || !data.TryGetValue(target.Hash, out int _)) { return false; }
+            CharacterFlags targetFlags = data.GetFlags(target.Hash);
+            return !targetFlags.IsVanished && AttackTargetRules.CanAffect(data.GetFlags(projectile.CasterHash).Belong,
+                targetFlags.Belong, projectile.CasterHash == target.Hash, magic.targetPolicy.Resolve(magic.magicType));
+        }
+
         /// <summary>
         /// 飛翔体がターゲットに命中した時の処理。
         /// Attack: receiver.ReceiveDamage経由で共通パイプラインを通す。
         /// Recover/Support: receiver.ObjectHash から SoA を直接書き換える。
         /// </summary>
-        /// <param name="projectile">飛翔体(生存・キャスター有効性は呼び出し側で保証)</param>
+        /// <param name="projectile">飛翔体。捕捉済み攻撃は射手消失後も元個体の入力で成立する。</param>
         /// <param name="receiver">被弾側 IDamageable (通常 DamageReceiver)。null はスキップ</param>
         /// <param name="data">SoAコンテナ(Recover/Support で必要)</param>
         /// <param name="magic">魔法定義</param>
-        /// <param name="events">Recover系のイベント発火(Attack系はDamageReceiverが発火)</param>
+        /// <param name="events">互換引数。Attack系のイベントはDamageReceiverが発火する。</param>
+        /// <param name="actors">Runtimeの世代照合。省略はhashだけの既存呼出しの互換経路。</param>
+        /// <param name="observedTarget">接触・範囲検索時に観測した対象個体。</param>
         public static HitResult ProcessHit(Projectile projectile, IDamageable receiver,
-            SoACharaDataDic data, MagicDefinition magic, GameEvents events = null)
+            SoACharaDataDic data, MagicDefinition magic, GameEvents events = null,
+            StatusEffectSystem statusEffects = null, ActorRegistry actors = null, ActorRef observedTarget = default)
         {
             HitResult result = new HitResult { magicType = magic.magicType };
 
@@ -36,15 +60,25 @@ namespace Game.Core
                 return result;
             }
 
-            if (data == null || !data.TryGetValue(projectile.CasterHash, out int _))
-            {
-                return result;
-            }
-
+            bool captured = magic.attackContext.IsCaptured;
             int targetHash = receiver.ObjectHash;
-            if (!data.TryGetValue(targetHash, out int _))
+            ActorRef targetRef = observedTarget;
+            if (captured || projectile.CasterRef.IsValid || actors != null)
             {
-                return result;
+                if (actors == null) { return result; }
+                if (!targetRef.IsValid && !actors.TryGet(targetHash, out targetRef)) { return result; }
+                if (targetRef.Hash != targetHash) { return result; }
+            }
+            else { targetRef = new ActorRef(targetHash, 0); }
+            if (!CanAffect(projectile, magic, data, actors, targetRef)) { return result; }
+
+            bool appliesEffects = magic.magicType != MagicType.Attack && (captured
+                ? magic.attackContext.HasStatusEffects
+                : ((magic.statusEffects != null && magic.statusEffects.Length > 0)
+                    || (magic.equipmentStatusEffects != null && magic.equipmentStatusEffects.Count > 0)));
+            if (appliesEffects && statusEffects == null)
+            {
+                throw new InvalidOperationException("Configured magic effects require a StatusEffectSystem.");
             }
 
             switch (magic.magicType)
@@ -54,6 +88,7 @@ namespace Game.Core
                     // IDamageable経由でガード/無敵/HitReaction/イベント発火まで一括処理
                     DamageData damageData = BuildProjectileDamageData(
                         projectile.CasterHash, targetHash, magic, data);
+                    if (captured) { magic.attackContext.ApplyTo(ref damageData, targetRef); }
 
                     DamageResult damageResult = receiver.ReceiveDamage(damageData);
                     result.damage = damageResult.totalDamage;
@@ -82,6 +117,20 @@ namespace Game.Core
                 }
             }
 
+            if (appliesEffects)
+            {
+                float statusCut = data.GetCombatStats(targetHash).guardStats.statusCut;
+                if (captured)
+                {
+                    statusEffects.ApplyApplications(magic.attackContext, targetHash, GuardResult.NoGuard, statusCut);
+                }
+                else
+                {
+                    statusEffects.ApplyApplications(magic.statusEffects, projectile.CasterHash,
+                        targetHash, GuardResult.NoGuard, statusCut, magic.equipmentStatusEffects);
+                }
+            }
+
             // 総ヒット数の消費 (Projectile.RegisterHit) は ProjectileController.TryRegisterHit 側で
             // ターゲット別上限ゲートと合わせて実行する。ここでは呼ばない (二重消費防止)。
             // AoE 爆発 (ProjectileManager.ProcessExplosion) は 1 弾丸に対し 1 回の発動なので
@@ -92,25 +141,28 @@ namespace Game.Core
         /// <summary>
         /// 飛翔体の DamageData を組み立てる。isProjectile=true でDamageReceiverが
         /// JustGuard時のアーマー削り0扱いに分岐する。
-        /// TODO: MagicDefinition にノックバック/状態異常/feature/armorBreakValue が拡張された際は
-        ///       ここから伝搬する。現時点では仕様未定のため default 固定。
         /// </summary>
         private static DamageData BuildProjectileDamageData(
-            int attackerHash, int defenderHash, MagicDefinition magic, SoACharaDataDic data)
+            int attackerHash, int defenderHash, in MagicDefinition magic, SoACharaDataDic data)
         {
-            ElementalStatus attackStats = CombatDataHelper.GetAttackStats(data, attackerHash);
+            ElementalStatus attackStats = magic.attackContext.IsCaptured
+                ? magic.attackContext.AttackStats : CombatDataHelper.GetAttackStats(data, attackerHash);
             return new DamageData
             {
+                actionInstanceId = magic.actionInstanceId,
+                targetPolicy = magic.targetPolicy,
                 attackerHash = attackerHash,
                 defenderHash = defenderHash,
                 damage = attackStats,
                 motionValue = magic.motionValue,
-                knockbackForce = default,           // TODO: magic.knockback 追加時に伝搬
+                knockbackForce = magic.knockbackForce,
                 attackElement = magic.attackElement,
-                statusEffectInfo = default,         // TODO: magic.statusEffect 追加時に伝搬
-                feature = AttackFeature.None,       // TODO: magic.feature 追加時に伝搬
-                armorBreakValue = 0f,               // 飛翔体は仕様上アーマー削りなし
-                justGuardResistance = 0f,
+                statusEffects = magic.statusEffects,
+                equipmentStatusEffects = magic.equipmentStatusEffects,
+                feature = magic.feature,
+                guardDamage = magic.guardDamage,
+                armorBreakValue = magic.armorBreakValue,
+                justGuardResistance = magic.justGuardResistance,
                 isProjectile = true
             };
         }

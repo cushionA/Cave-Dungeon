@@ -56,7 +56,13 @@ public enum AITemplateCategory : byte
 }
 ```
 
-## 共通Struct（Section4Structs.cs）
+## 共通Struct（型別ファイル）
+
+実装の配置は次のとおり。ファイル整理に伴う移動のみで、型名・`Game.Core` namespace・データ定義は維持する。
+
+- `ChallengeResult`: `Assets/MyAsset/Core/World/Challenge/ChallengeResult.cs`
+- `LeaderboardEntry`: `Assets/MyAsset/Core/World/Challenge/LeaderboardEntry.cs`
+- `AITemplateData`: `Assets/MyAsset/Core/AI/Templates/AITemplateData.cs`
 
 ```csharp
 using System;
@@ -154,7 +160,7 @@ _onNewRecord.Dispose();
 
 | asmdef | 追加内容 | 追加ディレクトリ |
 |--------|---------|----------------|
-| Game.Core (既存拡張) | Section 4共通Enum/Struct | `Core/Common/Section4Structs.cs`, `Core/Common/Enums.cs` 追記 |
+| Game.Core (既存拡張) | Section 4共通Enum/Struct | `Core/World/Challenge/ChallengeResult.cs`, `Core/World/Challenge/LeaderboardEntry.cs`, `Core/AI/Templates/AITemplateData.cs`, `Core/Common/Enums.cs` 追記 |
 | Game.AI (既存拡張) | AITemplateManager, AITemplateSuggester | `Core/AI/Templates/` |
 | Game.World (既存拡張) | ChallengeRunner, ChallengeScoreCalculator, ChallengeManager, LeaderboardManager | `Core/World/Challenge/` |
 | Game.Tests.EditMode (既存拡張) | 全EditModeテスト | `Tests/EditMode/` |

@@ -31,6 +31,7 @@ namespace Game.Core
         private float _manualOverrideTimer;
         private float _manualOverrideTimeoutSeconds;
         private IDisposable _confusionClearedSubscription;
+        private bool _disposed;
 
         public JudgmentLoop JudgmentLoop => _judgmentLoop;
         public ModeController ModeController => _modeController;
@@ -56,7 +57,6 @@ namespace Game.Core
             int companionHash,
             int playerHash,
             SoACharaDataDic data,
-            float maxMp,
             int initialReserveMp,
             CompanionMpSettings mpSettings,
             GameEvents events,
@@ -82,7 +82,8 @@ namespace Game.Core
                 _modeController, _manualOverrideTimeoutSeconds);
             _followBehavior = new FollowBehavior();
             _stanceManager = new StanceManager();
-            _mpManager = new CompanionMpManager(maxMp, initialReserveMp, mpSettings);
+            _mpManager = new CompanionMpManager(new SoAExecutionWorld(data), companionHash, initialReserveMp, mpSettings);
+            _mpManager.OnVanish += _judgmentLoop.InvalidateDecision;
 
             if (events != null)
             {
@@ -102,16 +103,17 @@ namespace Game.Core
             }
         }
 
-        /// <summary>
-        /// 購読解除 + 保持リソースの後始末。キャラ破棄時に必ず呼ぶ。
-        /// MpManager / StanceManager は CompanionCharacter 側の OnDestroy で別途 Dispose される
-        /// ため、ここでは二重解放を避けて購読解除と ActionExecutor のキャンセルのみ行う。
-        /// </summary>
         public void Dispose()
         {
+            if (_disposed) { return; }
+            _disposed = true;
+            _judgmentLoop.Dispose();
+            _mpManager.OnVanish -= _judgmentLoop.InvalidateDecision;
             _confusionClearedSubscription?.Dispose();
             _confusionClearedSubscription = null;
             _executor?.CancelCurrent();
+            _mpManager.Dispose();
+            _stanceManager.Dispose();
         }
 
         /// <summary>
@@ -143,16 +145,19 @@ namespace Game.Core
         /// Teleports the companion if too far from the player.
         /// Vanished state skips AI judgment and only ticks MP recovery.
         /// </summary>
-        public void Tick(float deltaTime, List<int> candidates, float currentTime)
+        public void Tick(float deltaTime, List<int> candidates, float currentTime,
+            AIObservationContext observation = null, AITargetRelations targets = null)
         {
-            if (!_data.TryGetValue(_companionHash, out int _) ||
-                !_data.TryGetValue(_playerHash, out int _))
+            if (_disposed || !_data.TryGetValue(_companionHash, out int _))
             {
                 return;
             }
 
             // MP回復は常にTick（消滅中も回復する）
-            _mpManager.Tick(deltaTime);
+            if (observation == null) { TickResources(deltaTime); }
+            else if (!_judgmentLoop.UseObservation(observation, targets)) { return; }
+
+            if (_disposed || !_data.TryGetValue(_companionHash, out _) || !_data.TryGetValue(_playerHash, out _)) { return; }
 
             // 消滅中はAI判定をスキップ
             if (_mpManager.IsVanished)
@@ -163,12 +168,21 @@ namespace Game.Core
             ref CharacterVitals companionVitals = ref _data.GetVitals(_companionHash);
             ref CharacterVitals playerVitals = ref _data.GetVitals(_playerHash);
 
-            FollowState followState = _followBehavior.Evaluate(
-                companionVitals.position, playerVitals.position);
-
-            if (followState == FollowState.Teleporting)
+            Vector2 companionPosition = companionVitals.position;
+            Vector2 playerPosition = playerVitals.position;
+            if (observation != null && observation.TryGetActor(_companionHash, out AIActorObservation observedCompanion)
+                && observation.TryGetActor(_playerHash, out AIActorObservation observedPlayer))
             {
-                companionVitals.position = playerVitals.position;
+                companionPosition = observedCompanion.position;
+                playerPosition = observedPlayer.position;
+            }
+            FollowState followState = _followBehavior.Evaluate(companionPosition, playerPosition);
+
+            // RuntimeではFollowStateを物理出力へ変換した後に位置を公開する。
+            // 純SoA互換経路だけが従来の直接位置更新を保持する。
+            if (followState == FollowState.Teleporting && observation == null)
+            {
+                companionVitals.position = playerPosition;
             }
 
             // 手動オーバーライドタイマーを消化。タイマー中は自動遷移を抑制する。
@@ -182,16 +196,41 @@ namespace Game.Core
             }
             else
             {
-                _modeController.EvaluateTransitions(
-                    _companionHash, _judgmentLoop.CurrentTargetHash, _data, currentTime);
+                if (observation != null) { _modeController.EvaluateTransitions(_companionHash, _judgmentLoop.CurrentTargetHash, observation); }
+                else { _modeController.EvaluateTransitions(_companionHash, _judgmentLoop.CurrentTargetHash, _data, currentTime); }
             }
 
             _judgmentLoop.Tick(deltaTime, candidates, currentTime);
         }
 
+        public void PrepareTick(float deltaTime, List<int> candidates, float currentTime,
+            AIDecisionSystem decisions, AIObservationContext observation, AITargetRelations targets)
+        {
+            if (_disposed || _mpManager.IsVanished || observation == null
+                || !observation.TryGetActor(_companionHash, out AIActorObservation companion)
+                || !observation.TryGetActor(_playerHash, out AIActorObservation player)
+                || !_judgmentLoop.UseObservation(observation, targets)) { return; }
+            _followBehavior.Evaluate(companion.position, player.position);
+            if (_manualOverrideTimer > 0f)
+            {
+                _manualOverrideTimer = Mathf.Max(0f, _manualOverrideTimer - deltaTime);
+            }
+            else
+            {
+                _modeController.EvaluateTransitions(_companionHash, _judgmentLoop.CurrentTargetHash, observation);
+            }
+            _judgmentLoop.PrepareTick(deltaTime, candidates, currentTime, decisions);
+        }
+
         /// <summary>
-        /// 連携発動可否。消滅中は連携拒否。
+        /// 観測確定前に、消滅中を含む共有MPの回復を一度だけ進める。
         /// </summary>
+        public void TickResources(float deltaTime)
+        {
+            if (!_disposed && _data.TryGetValue(_companionHash, out _)) { _mpManager.Tick(deltaTime); }
+        }
+
+        /// <summary>連携発動可否。消滅中は連携拒否。</summary>
         public bool CanAcceptCoop()
         {
             return !_mpManager.IsVanished;

@@ -25,12 +25,14 @@ namespace Game.Core
     public class ModeController
     {
         private AIMode[] _modes;
+        private AICompiledMode[] _compiledModes;
         private ModeTransitionRule[] _transitionRules;
         private int _currentModeIndex;
         private JudgmentLoop _judgmentLoop;
 
         public int CurrentModeIndex => _currentModeIndex;
-        public AIMode CurrentMode => _modes != null && _currentModeIndex < _modes.Length ? _modes[_currentModeIndex] : default;
+        public AIMode CurrentMode => _modes != null && _currentModeIndex < _modes.Length
+            ? AIConfigurationCopy.Clone(_modes[_currentModeIndex]) : default;
 
         public event Action<int> OnModeChanged;
 
@@ -44,11 +46,18 @@ namespace Game.Core
         /// </summary>
         public void SetModes(AIMode[] modes, ModeTransitionRule[] transitionRules)
         {
-            _modes = modes;
-            _transitionRules = transitionRules;
+            _modes = AIConfigurationCopy.CloneModes(modes);
+            _compiledModes = new AICompiledMode[_modes == null ? 0 : _modes.Length];
+            for (int i = 0; i < _compiledModes.Length; i++) { _compiledModes[i] = new AICompiledMode(_modes[i]); }
+            _transitionRules = AIConfigurationCopy.CloneTransitions(transitionRules);
             if (_modes != null && _modes.Length > 0)
             {
                 SwitchMode(0);
+            }
+            else
+            {
+                _currentModeIndex = 0;
+                _judgmentLoop.SetCapturedMode(default);
             }
         }
 
@@ -56,8 +65,13 @@ namespace Game.Core
         /// Evaluates transition rules in order. First matching rule triggers a mode switch.
         /// Does not switch if already in the target mode.
         /// </summary>
+        public void EvaluateTransitions(int ownerHash, int targetHash, AIObservationContext observation)
+        {
+            if (observation != null) { EvaluateTransitions(ownerHash, targetHash, null, observation.Time, observation); }
+        }
+
         public void EvaluateTransitions(int ownerHash, int targetHash,
-            SoACharaDataDic data, float currentTime)
+            SoACharaDataDic data, float currentTime, AIObservationContext observation = null)
         {
             if (_transitionRules == null)
             {
@@ -74,7 +88,10 @@ namespace Game.Core
                     continue;
                 }
 
-                if (ConditionEvaluator.EvaluateAll(rule.conditions, ownerHash, targetHash, data, currentTime))
+                bool matched = observation != null
+                    ? ConditionEvaluator.EvaluateAll(rule.conditions, ownerHash, targetHash, observation)
+                    : ConditionEvaluator.EvaluateAll(rule.conditions, ownerHash, targetHash, data, currentTime);
+                if (matched)
                 {
                     if (rule.targetModeIndex != _currentModeIndex)
                     {
@@ -96,7 +113,7 @@ namespace Game.Core
             }
 
             _currentModeIndex = modeIndex;
-            _judgmentLoop.SetMode(_modes[_currentModeIndex]);
+            _judgmentLoop.SetCapturedMode(_modes[_currentModeIndex], _compiledModes, _currentModeIndex);
             OnModeChanged?.Invoke(_currentModeIndex);
         }
     }

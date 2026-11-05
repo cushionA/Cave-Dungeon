@@ -46,6 +46,12 @@ namespace Game.Core
 
         public AnimationStateData CurrentState => _currentState;
 
+        public void ApplyExecutionState(AnimationStateData state)
+        {
+            _currentState = state;
+            _phaseDirty = true;
+        }
+
         /// <summary>
         /// いずれかのパラメータまたはフェーズ状態に変更があるか。
         /// パラメータ単位 dirty 集合が空でない、未消費トリガーがある、または

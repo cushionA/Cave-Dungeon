@@ -7,8 +7,8 @@ namespace Game.Runtime
     /// <summary>
     /// プレイヤーキャラクターMonoBehaviour。
     /// PlayerInputHandler → GroundMovementLogic → Rigidbody2D を橋渡しする。
-    /// 攻撃は ActionExecutorController.ExecuteAction(ActionSlot) 経由で実行する。
-    /// コンボ段数管理は AttackInfo[] の inputWindow を参照して PlayerCharacter 側で行う。
+    /// 攻撃は ActionExecutorController.ExecuteAttack 経由で共通実行グループへ渡す。
+    /// コンボ段数管理と空中物理は受理した実行の登録済み設定を参照する。
     /// </summary>
     public class PlayerCharacter : BaseCharacter
     {
@@ -31,18 +31,14 @@ namespace Game.Runtime
         // ジャンプ入力バッファ
         private float _jumpBufferTimer;
 
-        // --- コンボ（paramId管理。実行はActionExecutorController経由）---
+        // --- コンボの入力選択（実行はActionExecutorController経由）---
         private int _comboStep;           // 0=なし、1~N
         private float _comboWindowTimer;  // コンボ受付タイマー
         private bool _comboQueued;        // コンボ次段の先行入力
+        private float _queuedComboChargeMultiplier = 1f;
 
         // --- 攻撃入力消費 ---
-        private bool _attackConsumed;     // 今回のFixedUpdateで攻撃入力を消費済みか
-
-        // --- 攻撃移動 ---
-        private float _attackMoveTimer;
-        private float _attackMoveSpeed;
-        private float _attackMoveDir;
+        private bool _attackConsumed;     // 今回の固定tickで攻撃入力を消費済みか
 
         // --- フラッシュ（デバッグUI補助）---
         private const float k_AttackFlashDuration = 0.12f;
@@ -55,24 +51,39 @@ namespace Game.Runtime
             new Color(1f, 0f, 1f)
         };
 
-        // --- 空中攻撃浮遊 ---
-        private float _airHangTimer;
-        private bool _isAirAttacking;
-        private Vector2 _aerialMoveDir;
-        private float _aerialMoveSpeed;
+        // 空中攻撃の寿命は共通実行が所有する。ここには参照と物理パラメータだけを置く。
+        private long _aerialInstanceId;
+        private long _aerialGroupId;
+        private AerialPhysicsProfile _aerialPhysics;
+        private ActionExecutionSystem _observedExecution;
 
-        // --- 空中攻撃パラメータ（現在の攻撃のAttackInfoからキャッシュ）---
-        private float _currentAirHangDuration;
-        private float _currentAirHangGravityScale;
+        private readonly struct AerialPhysicsProfile
+        {
+            public readonly ActionVariant Variant;
+            public readonly float HangDuration;
+            public readonly float HangGravityScale;
+            public readonly float DiveGravityScale;
+            public readonly float DiveForwardSpeed;
+            public readonly Vector2 MoveDirection;
+            public readonly float MoveSpeed;
+            public readonly AudioClip LandingSound;
+
+            public AerialPhysicsProfile(in AttackExecutionSettings settings, ActionVariant variant)
+            {
+                Variant = variant;
+                HangDuration = settings.AirHangDuration;
+                HangGravityScale = settings.AirHangGravityScale;
+                DiveGravityScale = GameConstants.k_GravityScale * settings.DivingGravityMultiplier;
+                DiveForwardSpeed = settings.DivingForwardSpeed;
+                MoveDirection = settings.AerialMoveDirection.sqrMagnitude > 0.01f
+                    ? settings.AerialMoveDirection.normalized : new Vector2(0f, 0.3f);
+                MoveSpeed = settings.MovementSpeed > 0f ? settings.MovementSpeed : settings.AerialMoveSpeedDefault;
+                LandingSound = settings.LandingSound;
+            }
+        }
 
         // --- 空中攻撃制限 ---
         private bool _aerialComboUsed;    // 空中コンボを使い切ったら着地までロック
-
-        // --- 空中強攻撃（落下攻撃）---
-        private bool _isDivingAttack;     // 落下攻撃中（接地まで攻撃継続）
-        private AttackInfo _divingAttackInfo; // 落下攻撃に使用したAttackInfo（着地処理用）
-        private float _divingLandingTimer;   // 着地リカバリータイマー
-        private bool _isDivingLanding;       // 着地リカバリー中
 
         // --- スタミナ回復遅延 ---
         private float _staminaRecoveryDelayTimer;
@@ -86,14 +97,10 @@ namespace Game.Runtime
         // --- 壁蹴り左右交互制約 ---
         private int _lastKickedWallId;
 
-        // --- 回避無敵追跡 ---
-        private bool _wasDodging;
-
         // --- Drop-through (一方通行プラットフォームすり抜け) ---
         // 発動中はプレイヤーのレイヤーを CharaInvincible (Ground とは衝突するため足場貫通には別途 PlatformEffector2D が必要) へ切替え、
         // タイマー経過後に CharaPassThrough に戻す。
         private float _dropThroughTimer;
-        private int _dropThroughOriginalLayer = -1;
 
         /// <summary>drop-through 発動中か（外部参照・テスト用）。</summary>
         public bool IsDropThrough => _dropThroughTimer > 0f;
@@ -110,19 +117,21 @@ namespace Game.Runtime
         /// </summary>
         public void ResetInternalState()
         {
-            // 落下攻撃
-            _isDivingAttack = false;
-            _isDivingLanding = false;
-            _divingLandingTimer = 0f;
-            _divingAttackInfo = null;
+            ResetPlayerState();
+        }
+#endif
 
-            // 空中攻撃
-            _isAirAttacking = false;
+        private void ResetPlayerState()
+        {
+            GameManager.Actions?.StopActor(ObjectHash);
+            _jumpBufferTimer = 0f;
+            ClearAerialPhysics();
             _aerialComboUsed = false;
 
             // コンボ
             _comboStep = 0;
             _comboQueued = false;
+            _queuedComboChargeMultiplier = 1f;
             _comboWindowTimer = 0f;
             _attackConsumed = false;
 
@@ -132,7 +141,11 @@ namespace Game.Runtime
 
             // チャージ・回避
             _isCharging = false;
-            _wasDodging = false;
+            if (_inputHandler != null)
+            {
+                _inputHandler.ConsumeAttackInput();
+                _inputHandler.ConsumeDodgeInput();
+            }
             if (_collisionController != null)
             {
                 _collisionController.SetInvincible(false);
@@ -149,15 +162,26 @@ namespace Game.Runtime
             _lastKickedWallId = AdvancedMovementLogic.k_NoWallId;
 
             // MovementLogicの状態リセット（ジャンプ・回避・スプリント）
-            _movementLogic?.Reset();
+            _movementLogic = new GroundMovementLogic();
 
             // 重力リセット
-            if (_rb != null)
+            if (PhysicsBackend != null)
             {
-                _rb.gravityScale = GameConstants.k_GravityScale;
+                SetPhysicsGravityScale(GameConstants.k_GravityScale);
             }
         }
-#endif
+
+        public override void OnPoolReturn()
+        {
+            ResetPlayerState();
+            base.OnPoolReturn();
+        }
+
+        public override void OnPoolAcquire()
+        {
+            ResetPlayerState();
+            base.OnPoolAcquire();
+        }
 
         protected override void Awake()
         {
@@ -185,33 +209,78 @@ namespace Game.Runtime
         protected override void Start()
         {
             base.Start();
+            ObserveExecution();
             CharacterRegistry.RegisterPlayer(ObjectHash);
+        }
+
+        private void OnEnable()
+        {
+            ObserveExecution();
+        }
+
+        private void OnDisable()
+        {
+            ResetPlayerState();
+            StopObservingExecution();
         }
 
         private int MaxCombo => _lightAttacks != null ? _lightAttacks.Length : 0;
 
-        private void FixedUpdate()
+        public override void PrepareSimulationInput(float currentTime)
+        {
+            if (_inputHandler != null) { _inputHandler.PrepareSimulationInput(currentTime); }
+        }
+
+        public override void SimulateCharacterTick(float deltaTime, float currentTime)
         {
             if (!IsAlive)
             {
+                CancelAerialExecution();
                 return;
             }
 
-            UpdateGroundCheck();
 
             MovementInfo input = _inputHandler != null ? _inputHandler.CurrentInput : default;
-            ref MoveParams moveParams = ref GameManager.Data.GetMoveParams(ObjectHash);
+            CharacterStatusEffects effects = GameManager.Data.GetStatusEffects(ObjectHash);
+            input = StatusEffectSystem.RestrictInput(input, effects);
+            Vector2 requestedMoveDirection = input.moveDirection;
+            bool movementBlocked = GameManager.Actions.IsMovementBlocked(ObjectHash);
+            ActState actState = GameManager.Data.GetFlags(ObjectHash).ActState;
+            bool preserveVelocity = actState == ActState.Knockbacked;
+            bool reactionBlocksMovement = HitReactionLogic.IsArmorResetStun(actState) || WakeUpLogic.IsWakeUpState(actState);
+            if (movementBlocked)
+            {
+                input.moveDirection = Vector2.zero;
+                input.jumpPressed = false;
+                input.jumpHeld = false;
+                input.sprintHeld = false;
+                _jumpBufferTimer = 0f;
+            }
+            if (effects.BlocksMovement || reactionBlocksMovement)
+            {
+                _jumpBufferTimer = 0f;
+            }
+            MoveParams moveParams = GetEffectiveMoveParams();
             ref CharacterVitals vitals = ref GameManager.Data.GetVitals(ObjectHash);
 
             // Drop-through タイマー更新 (接地より先に行い、発動判定時にはタイマー 0 で正しく評価する)
-            UpdateDropThroughTimer(Time.fixedDeltaTime);
+            UpdateDropThroughTimer(deltaTime);
 
             // 下入力 + ジャンプ入力 + 接地 + 真下が DropThroughPlatform → 発動
-            TryStartDropThrough(input);
+            TryStartDropThrough(ref input);
 
             // 着地時に空中攻撃制限・壁蹴りIDをリセット
             if (IsGrounded)
             {
+                if (PhysicsVelocity.y <= 0f)
+                {
+                    GameManager.Actions.EndJump(ObjectHash);
+                    if (!GameManager.IsCharacterValid(ObjectHash))
+                    {
+                        return;
+                    }
+                    vitals = ref GameManager.Data.GetVitals(ObjectHash);
+                }
                 _lastKickedWallId = AdvancedMovementLogic.k_NoWallId;
 
                 if (_aerialComboUsed)
@@ -219,24 +288,22 @@ namespace Game.Runtime
                     _aerialComboUsed = false;
                 }
 
-                // 落下攻撃着地 → リカバリーフェーズへ遷移
-                if (_isDivingAttack && !_isDivingLanding)
-                {
-                    BeginDivingLanding();
-                }
+                NotifyAerialGrounded();
             }
-
-            // 落下攻撃着地リカバリー中
-            if (_isDivingLanding)
+            RefreshAerialGravity();
+            // 接地による後続行動も同じ占有情報から判断する。
+            movementBlocked = GameManager.Actions.IsMovementBlocked(ObjectHash);
+            if (movementBlocked)
             {
-                UpdateDivingLanding();
-                // リカバリー中は他の入力を受け付けない
-                SyncPositionToData();
-                return;
+                input.moveDirection = Vector2.zero;
+                input.jumpPressed = false;
+                input.jumpHeld = false;
+                input.sprintHeld = false;
+                _jumpBufferTimer = 0f;
             }
 
             // チャージ状態更新（InputHandlerのボタンホールド状態を参照）
-            _isCharging = _inputHandler != null && _inputHandler.IsCharging;
+            _isCharging = !effects.BlocksActions && _inputHandler != null && _inputHandler.IsCharging;
 
             // ジャンプ入力バッファ
             if (input.jumpPressed)
@@ -245,92 +312,86 @@ namespace Game.Runtime
             }
             else
             {
-                _jumpBufferTimer -= Time.fixedDeltaTime;
+                _jumpBufferTimer -= deltaTime;
             }
 
             bool bufferedJump = _jumpBufferTimer > 0f;
 
             // Coyote Time 判定のため接地状態を MovementLogic に通知する (TryStartJump の直前)
-            _movementLogic.UpdateGroundedState(IsGrounded, Time.fixedDeltaTime);
+            _movementLogic.UpdateGroundedState(IsGrounded, deltaTime);
 
-            // ジャンプ（スタミナ消費あり）
             float prevStamina = vitals.currentStamina;
-            float jumpForce = _movementLogic.TryStartJump(
-                bufferedJump, IsGrounded, moveParams, ref vitals.currentStamina);
+            float jumpForce = 0f;
+            bool canJump = bufferedJump && !movementBlocked && moveParams.jumpForce > 0f
+                && (IsGrounded || _movementLogic.IsInCoyoteWindowFor(moveParams));
+            if (canJump && GameManager.Actions.BeginJump(ObjectHash))
+            {
+                if (!GameManager.IsCharacterValid(ObjectHash))
+                {
+                    return;
+                }
+                vitals = ref GameManager.Data.GetVitals(ObjectHash);
+                MoveParams jumpParams = moveParams;
+                jumpParams.jumpStaminaCost = 0f;
+                float unusedStamina = 0f;
+                jumpForce = _movementLogic.TryStartJump(true, IsGrounded, jumpParams, ref unusedStamina);
+            }
             if (jumpForce > 0f)
             {
                 _jumpBufferTimer = 0f;
+                if (_inputHandler != null) { _inputHandler.ConsumeJumpInput(); }
                 if (vitals.currentStamina < prevStamina)
                 {
                     ResetStaminaRecoveryDelay(ref vitals);
                 }
             }
-            float jumpHoldFactor = _movementLogic.UpdateJumpHold(input.jumpHeld, Time.fixedDeltaTime);
+            float jumpHoldFactor = _movementLogic.UpdateJumpHold(input.jumpHeld, deltaTime);
 
-            // 回避（単押し）+ 無敵連動
             prevStamina = vitals.currentStamina;
-            bool dodgeStarted = _movementLogic.TryStartDodge(
-                input.dodgePressed, ref vitals.currentStamina, moveParams);
-            if (dodgeStarted)
+            if (input.dodgePressed)
             {
-                _wasDodging = true;
-                if (_collisionController != null)
+                Vector2 dodgeDirection = Mathf.Abs(requestedMoveDirection.x) > _moveInputDeadzone
+                    ? new Vector2(Mathf.Sign(requestedMoveDirection.x), 0f)
+                    : new Vector2(_isFacingRight ? 1f : -1f, 0f);
+                if (GameManager.Actions.TryDodge(ObjectHash, dodgeDirection))
                 {
-                    _collisionController.SetInvincible(true);
-                }
-                if (vitals.currentStamina < prevStamina)
-                {
-                    ResetStaminaRecoveryDelay(ref vitals);
+                    if (!GameManager.IsCharacterValid(ObjectHash))
+                    {
+                        return;
+                    }
+                    vitals = ref GameManager.Data.GetVitals(ObjectHash);
+                    if (_inputHandler != null) { _inputHandler.ConsumeDodgeInput(); }
+                    // 実行系が割込みを受理してから、前の攻撃の入力・物理補助を片付ける。
+                    _comboStep = 0;
+                    _comboQueued = false;
+                    _comboWindowTimer = 0f;
+                    ClearAerialPhysics();
+                    if (vitals.currentStamina < prevStamina)
+                    {
+                        ResetStaminaRecoveryDelay(ref vitals);
+                    }
                 }
             }
-            _movementLogic.UpdateDodge(Time.fixedDeltaTime, moveParams);
-
-            // 回避終了時に無敵解除
-            if (_wasDodging && !_movementLogic.IsDodging)
-            {
-                _wasDodging = false;
-                if (_collisionController != null)
-                {
-                    _collisionController.SetInvincible(false);
-                }
-            }
-
-            // 攻撃中は通常移動・スプリントを無効化（攻撃移動のみ許可）
-            bool actionBusy = IsActionExecutorBusy();
+            bool dodging = GameManager.Actions.IsDodging(ObjectHash);
+            movementBlocked = GameManager.Actions.IsMovementBlocked(ObjectHash);
 
             // スプリント（長押し・継続スタミナ消費、移動入力がある場合のみ）
             bool hasMovement = Mathf.Abs(input.moveDirection.x) > _moveInputDeadzone;
             prevStamina = vitals.currentStamina;
             _movementLogic.UpdateSprint(
-                input.sprintHeld && hasMovement && !actionBusy,
-                ref vitals.currentStamina, Time.fixedDeltaTime, moveParams);
+                input.sprintHeld && hasMovement && !movementBlocked,
+                ref vitals.currentStamina, deltaTime, moveParams);
             if (vitals.currentStamina < prevStamina)
             {
                 ResetStaminaRecoveryDelay(ref vitals);
             }
 
-            // 水平速度（回避時はfacingDir使用）
             float facingDir = _isFacingRight ? 1f : -1f;
-            float horizontalSpeed;
-            if (_attackMoveTimer > 0f)
-            {
-                // 攻撃移動（AttackInfoのデータ駆動）
-                _attackMoveTimer -= Time.fixedDeltaTime;
-                horizontalSpeed = _attackMoveDir * _attackMoveSpeed;
-            }
-            else if (actionBusy)
-            {
-                // 攻撃中は停止（攻撃移動終了後）
-                horizontalSpeed = 0f;
-            }
-            else
-            {
-                horizontalSpeed = _movementLogic.CalculateHorizontalSpeed(
-                    input.moveDirection.x, moveParams, facingDir);
-            }
+            float horizontalSpeed = movementBlocked ? 0f
+                : _movementLogic.CalculateHorizontalSpeed(input.moveDirection.x, moveParams, facingDir);
 
-            // Rigidbody2Dに適用
-            Vector2 velocity = _rb.linearVelocity;
+            // 共通物理境界へ渡す速度を計算
+            Vector2 velocity = PhysicsVelocity;
             velocity.x = horizontalSpeed;
 
             if (jumpForce > 0f)
@@ -352,6 +413,7 @@ namespace Game.Runtime
                     velocity.x = wallKick.x;
                     velocity.y = wallKick.y;
                     _jumpBufferTimer = 0f;
+                    if (_inputHandler != null) { _inputHandler.ConsumeJumpInput(); }
                     _lastKickedWallId = newLastId;
                 }
             }
@@ -360,25 +422,23 @@ namespace Game.Runtime
                 velocity.y *= _jumpReleaseVelocityDamping;
             }
 
-            // 空中攻撃: 移動方向ベクトル適用
-            if (_isAirAttacking && _airHangTimer > 0f && !_isDivingAttack)
+            ApplyAerialMovement(ref velocity);
+
+            if (effects.BlocksMovement)
             {
-                velocity.x += _aerialMoveDir.x * _aerialMoveSpeed;
-                velocity.y = _aerialMoveDir.y * _aerialMoveSpeed;
+                velocity.x = 0f;
             }
-
-            // 落下攻撃: 高速落下
-            if (_isDivingAttack)
+            GameManager.Actions.SetLocomotion(ObjectHash,
+                new Vector2(velocity.x == 0f ? 0f : Mathf.Sign(velocity.x), 0f), Mathf.Abs(velocity.x));
+            if (!GameManager.IsCharacterValid(ObjectHash))
             {
-                float fwdSpeed = _divingAttackInfo != null ? _divingAttackInfo.divingForwardSpeed : 1f;
-                velocity.x = facingDir * fwdSpeed;
-                // y速度はgravityScaleによる自然落下（高重力）
+                return;
             }
-
-            _rb.linearVelocity = velocity;
-
-            // 空中攻撃浮遊の重力制御
-            UpdateAirHang();
+            vitals = ref GameManager.Data.GetVitals(ObjectHash);
+            if (!preserveVelocity)
+            {
+                SetPhysicsVelocity(velocity);
+            }
 
             // 向き更新
             if (input.moveDirection.x > _moveInputDeadzone)
@@ -391,7 +451,7 @@ namespace Game.Runtime
             }
 
             // スタミナ回復（回避中・スプリント中・チャージ中は回復しない、遅延考慮）
-            _staminaRecoveryDelayTimer -= Time.fixedDeltaTime;
+            _staminaRecoveryDelayTimer -= deltaTime;
 
             // スタミナ枯渇判定
             if (vitals.currentStamina <= 0f && !_isExhausted)
@@ -405,52 +465,55 @@ namespace Game.Runtime
             }
 
             if (vitals.currentStamina < vitals.maxStamina
-                && !_movementLogic.IsDashing
+                && !dodging
+                && !_movementLogic.IsSprinting
                 && !_isCharging
                 && _staminaRecoveryDelayTimer <= 0f)
             {
                 vitals.currentStamina = Mathf.Min(
                     vitals.maxStamina,
-                    vitals.currentStamina + vitals.staminaRecoveryRate * Time.fixedDeltaTime);
+                    vitals.currentStamina + vitals.staminaRecoveryRate * deltaTime);
             }
 
             // ガード接続
             if (_damageReceiver != null)
             {
                 _damageReceiver.SetGuarding(input.guardHeld);
+                if (!GameManager.IsCharacterValid(ObjectHash))
+                {
+                    return;
+                }
+                vitals = ref GameManager.Data.GetVitals(ObjectHash);
             }
 
             // 攻撃処理（ActionExecutorController経由）
             _attackConsumed = false;
-            HandleAttack(input, ref vitals);
+            HandleAttack(input, ref vitals, deltaTime);
 
             // フラッシュ更新（デバッグ補助）
-            UpdateAttackFlash();
+            UpdateAttackFlash(deltaTime);
 
             // 位置同期
-            SyncPositionToData();
+            if (TryGetAerialExecution(out ActionExecution aerial))
+            {
+                GameManager.Actions.SetMovementOutput(ObjectHash, aerial.instanceId, PhysicsVelocity);
+            }
         }
 
         // ============================================================
         //  攻撃・コンボ（ActionExecutorController経由）
         // ============================================================
 
-        private void HandleAttack(MovementInfo input, ref CharacterVitals vitals)
+        private void HandleAttack(in MovementInfo input, ref CharacterVitals vitals, float deltaTime)
         {
-            // 落下攻撃中は新しい攻撃を受け付けない
-            if (_isDivingAttack)
-            {
-                return;
-            }
-
-            float dt = Time.fixedDeltaTime;
+            float dt = deltaTime;
             _comboWindowTimer -= dt;
 
-            // コンボウィンドウ終了 → リセット
-            if (_comboWindowTimer <= 0f && _comboStep > 0 && !IsActionExecutorBusy())
+            // 受付窓を過ぎた先行入力は、行動が継続中でも持ち越さない。
+            if (_comboWindowTimer <= 0f)
             {
-                _comboStep = 0;
                 _comboQueued = false;
+                if (!IsActionExecutorBusy()) { _comboStep = 0; }
             }
 
             bool wantsAttack = input.attackInput.HasValue && !_attackConsumed;
@@ -468,24 +531,19 @@ namespace Game.Runtime
                 }
             }
 
-            // コンボ先行入力（弱攻撃系のみコンボ対象）
-            if (wantsAttack && executorBusy && _comboStep < MaxCombo)
-            {
-                AttackInputType attackType = input.attackInput.Value;
-                if (attackType == AttackInputType.LightAttack || attackType == AttackInputType.AerialLight)
-                {
-                    _comboQueued = true;
-                }
-            }
-
-            // 弱攻撃コンボ判定
             bool isLightAttack = wantsAttack && input.attackInput.HasValue
                 && (input.attackInput.Value == AttackInputType.LightAttack
                     || input.attackInput.Value == AttackInputType.AerialLight
                     || input.attackInput.Value == AttackInputType.ChargeLight);
-            bool canStartAttack = isLightAttack && !executorBusy && _comboStep == 0;
-            bool canCombo = _comboQueued && !executorBusy
-                && _comboWindowTimer > 0f && _comboStep < MaxCombo;
+            bool inComboWindow = _comboStep > 0 && _comboWindowTimer > 0f && _comboStep < MaxCombo;
+            // 入力側は次段の先行入力を保持し、占有・キャンセル時刻は実行系に判断させる。
+            if (isLightAttack && executorBusy && inComboWindow)
+            {
+                _comboQueued = true;
+                _queuedComboChargeMultiplier = input.chargeMultiplier > 0f ? input.chargeMultiplier : 1f;
+            }
+            bool canCombo = inComboWindow && (isLightAttack || (_comboQueued && !wantsAttack));
+            bool canStartAttack = isLightAttack && !canCombo;
 
             if ((canStartAttack || canCombo) && _actionExecutor != null && MaxCombo > 0)
             {
@@ -493,19 +551,21 @@ namespace Game.Runtime
                 int paramId = nextStep - 1;
                 AttackInfo info = _lightAttacks[paramId];
 
-                ActionSlot slot = new ActionSlot
-                {
-                    execType = ActionExecType.Attack,
-                    paramId = paramId,
-                    paramValue = input.chargeMultiplier > 0f ? input.chargeMultiplier : 1f,
-                    displayName = info.attackName
-                };
-
-                bool executed = _actionExecutor.ExecuteAction(slot);
+                float chargeMultiplier = canCombo && !wantsAttack ? _queuedComboChargeMultiplier
+                    : input.chargeMultiplier > 0f ? input.chargeMultiplier : 1f;
+                ActionVariant variant = isAerial ? ActionVariant.Aerial : ActionVariant.Default;
+                bool executed = _actionExecutor.ExecuteAttack(info, 0, chargeMultiplier, variant,
+                    out long instanceId, out long groupId);
                 if (!executed)
                 {
                     return;
                 }
+                if (!GameManager.IsCharacterValid(ObjectHash))
+                {
+                    return;
+                }
+                vitals = ref GameManager.Data.GetVitals(ObjectHash);
+                GameManager.Actions.TryGetAttackSettings(info, variant, out AttackExecutionSettings settings);
 
                 _attackConsumed = true;
                 if (_inputHandler != null) { _inputHandler.ConsumeAttackInput(); }
@@ -516,18 +576,8 @@ namespace Game.Runtime
                 _comboStep = nextStep;
                 _comboQueued = false;
 
-                float comboWindow = info.inputWindow > 0f ? info.inputWindow : 0.6f;
+                float comboWindow = settings.InputWindow > 0f ? settings.InputWindow : 0.6f;
                 _comboWindowTimer = comboWindow;
-
-                float dir = _isFacingRight ? 1f : -1f;
-
-                // 攻撃移動（AttackInfoのデータ駆動）
-                if (info.attackMoveDuration > 0f)
-                {
-                    _attackMoveTimer = info.attackMoveDuration;
-                    _attackMoveSpeed = info.attackMoveDistance / info.attackMoveDuration;
-                    _attackMoveDir = dir;
-                }
 
                 // デバッグフラッシュ
                 _flashTimer = k_AttackFlashDuration;
@@ -537,29 +587,7 @@ namespace Game.Runtime
                     _spriteRenderer.color = k_ComboColors[colorIdx];
                 }
 
-                // 空中攻撃浮遊
-                if (isAerial && !_isAirAttacking)
-                {
-                    _isAirAttacking = true;
-                    _currentAirHangDuration = info.airHangDuration;
-                    _currentAirHangGravityScale = info.airHangGravityScale;
-                    _airHangTimer = _currentAirHangDuration;
-                    _rb.gravityScale = _currentAirHangGravityScale;
-
-                    _aerialMoveDir = info.aerialMoveDirection.sqrMagnitude > 0.01f
-                        ? info.aerialMoveDirection.normalized
-                        : new Vector2(0f, 0.3f);
-                    _aerialMoveSpeed = info.attackMoveDistance > 0f
-                        ? info.attackMoveDistance / Mathf.Max(info.attackMoveDuration, 0.1f)
-                        : info.aerialMoveSpeedDefault;
-
-                    Vector2 vel = _rb.linearVelocity;
-                    if (vel.y < 0f)
-                    {
-                        vel.y = 0f;
-                        _rb.linearVelocity = vel;
-                    }
-                }
+                TrackAerialExecution(settings, variant, instanceId, groupId);
 
                 // 空中コンボ最終段で使い切り判定
                 if (isAerial && nextStep >= MaxCombo)
@@ -573,7 +601,7 @@ namespace Game.Runtime
                 && (input.attackInput.Value == AttackInputType.HeavyAttack
                     || input.attackInput.Value == AttackInputType.AerialHeavy
                     || input.attackInput.Value == AttackInputType.ChargeHeavy);
-            if (isHeavyAttack && !executorBusy && _actionExecutor != null && MaxCombo > 0)
+            if (isHeavyAttack && _actionExecutor != null && MaxCombo > 0)
             {
                 // 空中強攻撃 → 落下攻撃
                 bool aerialHeavy = isAerial
@@ -584,35 +612,29 @@ namespace Game.Runtime
                 int heavyParamId = MaxCombo - 1;
                 AttackInfo heavyInfo = _lightAttacks[heavyParamId];
 
-                ActionSlot slot = new ActionSlot
-                {
-                    execType = ActionExecType.Attack,
-                    paramId = heavyParamId,
-                    paramValue = input.chargeMultiplier > 0f ? input.chargeMultiplier : 1f,
-                    displayName = heavyInfo.attackName
-                };
-
-                bool executed = _actionExecutor.ExecuteAction(slot);
+                float chargeMultiplier = input.chargeMultiplier > 0f ? input.chargeMultiplier : 1f;
+                ActionVariant variant = aerialHeavy ? ActionVariant.Diving
+                    : isAerial ? ActionVariant.Aerial : ActionVariant.Default;
+                bool executed = _actionExecutor.ExecuteAttack(heavyInfo, 0, chargeMultiplier, variant,
+                    out long instanceId, out long groupId);
                 if (executed)
                 {
+                    if (!GameManager.IsCharacterValid(ObjectHash))
+                    {
+                        return;
+                    }
+                    vitals = ref GameManager.Data.GetVitals(ObjectHash);
+                    GameManager.Actions.TryGetAttackSettings(heavyInfo, variant, out AttackExecutionSettings settings);
                     _attackConsumed = true;
                     if (_inputHandler != null) { _inputHandler.ConsumeAttackInput(); }
                     ResetStaminaRecoveryDelay(ref vitals);
                     _comboStep = 0;
                     _comboQueued = false;
                     _comboWindowTimer = 0f;
-
-                    float dir = _isFacingRight ? 1f : -1f;
+                    TrackAerialExecution(settings, variant, instanceId, groupId);
 
                     if (aerialHeavy)
                     {
-                        // 落下攻撃開始
-                        _isDivingAttack = true;
-                        _isAirAttacking = true;
-                        _divingAttackInfo = heavyInfo;
-                        _rb.gravityScale = GameConstants.k_GravityScale * heavyInfo.divingGravityMultiplier;
-                        _attackMoveTimer = 0f; // 水平移動なし
-
                         // フラッシュ
                         _flashTimer = k_AttackFlashDuration;
                         if (_spriteRenderer != null)
@@ -622,14 +644,6 @@ namespace Game.Runtime
                     }
                     else
                     {
-                        // 地上強攻撃
-                        if (heavyInfo.attackMoveDuration > 0f)
-                        {
-                            _attackMoveTimer = heavyInfo.attackMoveDuration;
-                            _attackMoveSpeed = heavyInfo.attackMoveDistance / heavyInfo.attackMoveDuration;
-                            _attackMoveDir = dir;
-                        }
-
                         _flashTimer = k_AttackFlashDuration;
                         if (_spriteRenderer != null)
                         {
@@ -654,7 +668,7 @@ namespace Game.Runtime
         /// プレイヤーのレイヤーを CharaInvincible に一時切替し、
         /// 一定時間後に CharaPassThrough へ復帰させる。
         /// </summary>
-        private void TryStartDropThrough(MovementInfo input)
+        private void TryStartDropThrough(ref MovementInfo input)
         {
             // 既に drop-through 中なら再発動しない (二重呼びガード)
             if (_dropThroughTimer > 0f)
@@ -672,14 +686,12 @@ namespace Game.Runtime
             }
 
             // 真下の Collider に DropThroughPlatform が付いているか確認
-            DropThroughPlatform platform = FindDropThroughPlatformBelow();
-            if (platform == null)
+            if (!TryGetDropThroughDuration(out float durationOverride))
             {
                 return;
             }
 
             // Inspector で個別時間指定があれば優先
-            float durationOverride = platform.DropThroughDurationOverride;
             if (durationOverride > 0f)
             {
                 duration = durationOverride;
@@ -689,40 +701,14 @@ namespace Game.Runtime
 
             // ジャンプ入力はすり抜けに消費したとみなしバッファをクリア (誤ジャンプ防止)
             _jumpBufferTimer = 0f;
-        }
-
-        /// <summary>
-        /// プレイヤーの足元にある DropThroughPlatform を探す。
-        /// 接地判定用と同等の BoxCast を下方向に飛ばし、命中した Collider から取得する。
-        /// </summary>
-        private DropThroughPlatform FindDropThroughPlatformBelow()
-        {
-            if (_collider == null)
-            {
-                return null;
-            }
-
-            Bounds bounds = _collider.bounds;
-            Vector2 origin = new Vector2(bounds.center.x, bounds.min.y);
-            // 接地時の ground check より少し長めに飛ばして真下をしっかり拾う
-            const float k_DropThroughCastDistance = 0.2f;
-            Vector2 size = new Vector2(bounds.size.x * 0.9f, 0.05f);
-
-            RaycastHit2D hit = Physics2D.BoxCast(
-                origin, size, 0f, Vector2.down, k_DropThroughCastDistance, _groundLayer);
-            if (hit.collider == null)
-            {
-                return null;
-            }
-
-            return hit.collider.GetComponent<DropThroughPlatform>();
+            input.jumpPressed = false;
+            if (_inputHandler != null) { _inputHandler.ConsumeJumpInput(); }
         }
 
         /// <summary>drop-through を開始してレイヤー切替とタイマー開始を行う。</summary>
         private void BeginDropThrough(float duration)
         {
-            _dropThroughOriginalLayer = gameObject.layer;
-            gameObject.layer = GameConstants.k_LayerCharaInvincible;
+            BeginPhysicsDropThrough();
             _dropThroughTimer = duration;
         }
 
@@ -745,11 +731,7 @@ namespace Game.Runtime
         /// <summary>drop-through を終了してレイヤーを復帰させる。</summary>
         private void EndDropThrough()
         {
-            int restore = _dropThroughOriginalLayer >= 0
-                ? _dropThroughOriginalLayer
-                : GameConstants.k_LayerCharaPassThrough;
-            gameObject.layer = restore;
-            _dropThroughOriginalLayer = -1;
+            EndPhysicsDropThrough();
         }
 
         /// <summary>
@@ -762,67 +744,117 @@ namespace Game.Runtime
         }
 
         // ============================================================
-        //  空中攻撃浮遊
+        //  共通実行から空中攻撃の物理出力を作る
         // ============================================================
 
-        private void UpdateAirHang()
+        private void ObserveExecution()
         {
-            // 落下攻撃は接地で終了（FixedUpdateで処理）
-            if (_isDivingAttack)
+            ActionExecutionSystem execution = GameManager.Actions?.Execution;
+            if (_observedExecution == execution) { return; }
+            StopObservingExecution();
+            _observedExecution = execution;
+            if (_observedExecution != null)
             {
-                return;
-            }
-
-            if (!_isAirAttacking)
-            {
-                return;
-            }
-
-            _airHangTimer -= Time.fixedDeltaTime;
-
-            if (_airHangTimer <= 0f || IsGrounded)
-            {
-                _isAirAttacking = false;
-                _rb.gravityScale = GameConstants.k_GravityScale;
+                _observedExecution.Changed += HandleAerialExecution;
             }
         }
 
-        // ============================================================
-        //  落下攻撃着地リカバリー
-        // ============================================================
-
-        /// <summary>
-        /// 落下攻撃が接地した瞬間に呼ばれる。
-        /// 着地SE再生 → リカバリータイマー開始 → 攻撃判定終了。
-        /// </summary>
-        private void BeginDivingLanding()
+        private void StopObservingExecution()
         {
-            _isDivingAttack = false;
-            _isAirAttacking = false;
-            _isDivingLanding = true;
-            _rb.gravityScale = GameConstants.k_GravityScale;
-            _rb.linearVelocity = new Vector2(0f, _rb.linearVelocity.y);
-
-            float recoveryDuration = _divingAttackInfo != null
-                ? _divingAttackInfo.divingLandingRecoveryDuration
-                : 0.3f;
-            _divingLandingTimer = recoveryDuration;
-
-            // ActionExecutorの攻撃判定を終了（ヒットボックス停止）
-            if (_actionExecutor != null && _actionExecutor.IsExecuting)
+            if (_observedExecution != null)
             {
-                _actionExecutor.CancelAction();
+                _observedExecution.Changed -= HandleAerialExecution;
+                _observedExecution = null;
             }
+        }
 
-            // 着地SE再生
-            if (_divingAttackInfo != null
-                && _divingAttackInfo.effectSoundInfo.landingSound != null
-                && _audioSource != null)
+        private void HandleAerialExecution(ActionExecutionEvent notification)
+        {
+            if (notification.execution.ownerHash != ObjectHash || notification.execution.instanceId != _aerialInstanceId)
             {
-                _audioSource.PlayOneShot(_divingAttackInfo.effectSoundInfo.landingSound);
+                return;
             }
+            if (notification.kind == ActionSignalKind.Completed || notification.kind == ActionSignalKind.Interrupted)
+            {
+                ClearAerialPhysics();
+                if (notification.kind == ActionSignalKind.Interrupted)
+                {
+                    _comboStep = 0;
+                    _comboQueued = false;
+                    _comboWindowTimer = 0f;
+                }
+            }
+        }
 
-            // 着地フラッシュ
+        private bool TryGetAerialExecution(out ActionExecution execution)
+        {
+            execution = default;
+            return _aerialInstanceId != 0 && GameManager.Actions != null
+                && GameManager.Actions.IsGroupActive(_aerialGroupId)
+                && GameManager.Actions.Execution.TryGetInstance(_aerialInstanceId, out execution)
+                && execution.ownerHash == ObjectHash && execution.groupId == _aerialGroupId;
+        }
+
+        private void TrackAerialExecution(in AttackExecutionSettings settings, ActionVariant variant, long instanceId, long groupId)
+        {
+            ClearAerialPhysics();
+            if (variant == ActionVariant.Default || GameManager.Actions == null
+                || !GameManager.Actions.Execution.TryGetInstance(instanceId, out _))
+            {
+                return;
+            }
+            _aerialInstanceId = instanceId;
+            _aerialGroupId = groupId;
+            _aerialPhysics = new AerialPhysicsProfile(settings, variant);
+            RefreshAerialGravity();
+            if (variant == ActionVariant.Aerial && PhysicsVelocity.y < 0f)
+            {
+                Vector2 velocity = PhysicsVelocity;
+                velocity.y = 0f;
+                SetPhysicsVelocity(velocity);
+            }
+        }
+
+        private void RefreshAerialGravity()
+        {
+            if (_aerialInstanceId == 0) { return; }
+            if (!TryGetAerialExecution(out ActionExecution execution))
+            {
+                ClearAerialPhysics();
+                return;
+            }
+            SetPhysicsGravityScale(_aerialPhysics.Variant == ActionVariant.Diving
+                ? _aerialPhysics.DiveGravityScale
+                : !IsGrounded && execution.elapsed < _aerialPhysics.HangDuration
+                    ? _aerialPhysics.HangGravityScale : GameConstants.k_GravityScale);
+        }
+
+        private void ApplyAerialMovement(ref Vector2 velocity)
+        {
+            if (IsGrounded || !TryGetAerialExecution(out ActionExecution execution)) { return; }
+            if (_aerialPhysics.Variant == ActionVariant.Diving)
+            {
+                velocity.x = (_isFacingRight ? 1f : -1f) * _aerialPhysics.DiveForwardSpeed;
+            }
+            else if (execution.elapsed < _aerialPhysics.HangDuration)
+            {
+                velocity.x += _aerialPhysics.MoveDirection.x * _aerialPhysics.MoveSpeed;
+                velocity.y = _aerialPhysics.MoveDirection.y * _aerialPhysics.MoveSpeed;
+            }
+        }
+
+        private void NotifyAerialGrounded()
+        {
+            if (_aerialPhysics.Variant != ActionVariant.Diving || PhysicsVelocity.y > 0f
+                || !TryGetAerialExecution(out _)) { return; }
+            AudioClip landingSound = _aerialPhysics.LandingSound;
+            if (!GameManager.Actions.NotifyGrounded(ObjectHash, _aerialGroupId, out _)) { return; }
+            SetPhysicsGravityScale(GameConstants.k_GravityScale);
+            SetPhysicsVelocity(new Vector2(0f, PhysicsVelocity.y));
+            if (landingSound != null && _audioSource != null)
+            {
+                _audioSource.PlayOneShot(landingSound);
+            }
             _flashTimer = k_AttackFlashDuration;
             if (_spriteRenderer != null)
             {
@@ -830,39 +862,35 @@ namespace Game.Runtime
             }
         }
 
-        /// <summary>
-        /// 落下攻撃着地リカバリーの更新。タイマー消化で通常状態に復帰。
-        /// </summary>
-        private void UpdateDivingLanding()
+        private void CancelAerialExecution()
         {
-            _divingLandingTimer -= Time.fixedDeltaTime;
+            if (_aerialGroupId != 0) { GameManager.Actions?.Execution.CancelGroup(_aerialGroupId); }
+            ClearAerialPhysics();
+        }
 
-            // リカバリー中は水平速度を0に
-            Vector2 vel = _rb.linearVelocity;
-            vel.x = 0f;
-            _rb.linearVelocity = vel;
-
-            UpdateAttackFlash();
-
-            if (_divingLandingTimer <= 0f)
+        private void ClearAerialPhysics()
+        {
+            if (_aerialInstanceId != 0 && PhysicsBackend != null)
             {
-                _isDivingLanding = false;
-                _divingAttackInfo = null;
+                SetPhysicsGravityScale(GameConstants.k_GravityScale);
             }
+            _aerialInstanceId = 0;
+            _aerialGroupId = 0;
+            _aerialPhysics = default;
         }
 
         // ============================================================
         //  フラッシュ（デバッグ補助）
         // ============================================================
 
-        private void UpdateAttackFlash()
+        private void UpdateAttackFlash(float deltaTime)
         {
             if (_flashTimer <= 0f)
             {
                 return;
             }
 
-            _flashTimer -= Time.fixedDeltaTime;
+            _flashTimer -= deltaTime;
             if (_flashTimer <= 0f && _spriteRenderer != null)
             {
                 _spriteRenderer.color = _originalColor;
@@ -871,6 +899,9 @@ namespace Game.Runtime
 
         protected override void OnDestroy()
         {
+            GameManager.Actions?.StopActor(ObjectHash);
+            ClearAerialPhysics();
+            StopObservingExecution();
             if (_collisionController != null)
             {
                 _collisionController.SetInvincible(false);

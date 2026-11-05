@@ -10,6 +10,20 @@ namespace Game.Core
     {
         public const int k_MinDamage = 1;
 
+        public static ElementalStatus ScaleStats(in ElementalStatus stats, float multiplier)
+        {
+            return new ElementalStatus
+            {
+                slash = (int)(stats.slash * multiplier),
+                strike = (int)(stats.strike * multiplier),
+                pierce = (int)(stats.pierce * multiplier),
+                fire = (int)(stats.fire * multiplier),
+                thunder = (int)(stats.thunder * multiplier),
+                light = (int)(stats.light * multiplier),
+                dark = (int)(stats.dark * multiplier),
+            };
+        }
+
         /// <summary>
         /// 単一属性の基本ダメージ計算。
         /// 式: (atk² × motionValue) / (atk + def)
@@ -23,12 +37,12 @@ namespace Game.Core
 
             int atk = attack;
             int def = defense > 0 ? defense : 0;
-            int denominator = atk + def;
+            double denominator = (double)atk + def;
             if (denominator <= 0)
             {
                 return k_MinDamage;
             }
-            int raw = (int)((float)(atk * atk) * motionValue / denominator);
+            int raw = (int)System.Math.Min(int.MaxValue, (double)atk * atk * motionValue / denominator);
             return raw < k_MinDamage ? k_MinDamage : raw;
         }
 
@@ -37,9 +51,9 @@ namespace Game.Core
         /// 各属性: CalculateBaseDamage(atk, motionValue, def)
         /// </summary>
         public static int CalculateTotalDamage(
-            ElementalStatus attackStats,
+            in ElementalStatus attackStats,
             float motionValue,
-            ElementalStatus defenseStats)
+            in ElementalStatus defenseStats)
         {
             int total = 0;
             total += CalculateChannelDamage(attackStats.slash, motionValue, defenseStats.slash);
@@ -72,10 +86,10 @@ namespace Game.Core
         /// 各チャネル: CalculateBaseDamage × (1 - xxxCut) を floor して合算。
         /// </summary>
         public static int CalculateTotalDamageWithElementalCut(
-            ElementalStatus attackStats,
+            in ElementalStatus attackStats,
             float motionValue,
-            ElementalStatus defenseStats,
-            GuardStats guardCuts,
+            in ElementalStatus defenseStats,
+            in GuardStats guardCuts,
             bool applyCuts)
         {
             int total = 0;

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using UnityEngine;
 
 namespace Game.Core
 {
@@ -8,6 +10,9 @@ namespace Game.Core
     [Serializable]
     public struct MagicDefinition
     {
+        public AttackContext attackContext;
+        public AttackTargetPolicy targetPolicy;
+        public long actionInstanceId;
         public string magicName;
         public int magicId;
         public MagicType magicType;
@@ -18,9 +23,18 @@ namespace Game.Core
         public float castTime;
         public int bulletCount;
         public BulletProfile bulletProfile;
+        /// <summary>登録時に固定した表示Prefab。未指定時はProjectileManagerの既定Prefabを使う。</summary>
+        public GameObject projectilePrefab;
         public float motionValue;
         public Element attackElement;
-        public StatusEffectInfo statusEffect;
+        public float guardDamage;
+        public float armorBreakValue;
+        public float justGuardResistance;
+        public AttackFeature feature;
+        public Vector2 knockbackForce;
+        public StatusEffectApplicationData[] statusEffects;
+        public IReadOnlyList<StatusEffectApplicationData> equipmentStatusEffects;
+        public AttackEquipmentSource equipmentSource;
         public int healAmount;
         public ChildBulletConfig childBullet;
     }

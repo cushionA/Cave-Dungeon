@@ -12,9 +12,11 @@ namespace Game.Runtime
     public class CharacterCollisionController : MonoBehaviour
     {
         private int _ownerHash;
+        private BaseCharacter _character;
         private AttackContactType _currentMode;
         private CarryState _carryState;
-        private Transform _carriedTransform;
+        private BaseCharacter _carriedCharacter;
+        private ActorRef _carriedActor;
 
         // ハッシュ→コントローラーの辞書（O(1)検索）
         private static readonly Dictionary<int, CharacterCollisionController> s_controllerMap =
@@ -33,11 +35,25 @@ namespace Game.Runtime
         public CarryState CarryState => _carryState;
         public AttackContactType CurrentMode => _currentMode;
 
+        private void Awake()
+        {
+            _character = GetComponent<BaseCharacter>();
+        }
+
         private void OnEnable()
         {
             _ownerHash = gameObject.GetHashCode();
             s_controllerMap[_ownerHash] = this;
-            gameObject.layer = GameConstants.k_LayerCharaPassThrough;
+            SetPhysicsLayer(GameConstants.k_LayerCharaPassThrough);
+        }
+
+        private void Start()
+        {
+            if (_character == null)
+            {
+                _character = GetComponent<BaseCharacter>();
+                ApplyLayer();
+            }
         }
 
         private void OnDisable()
@@ -70,7 +86,7 @@ namespace Game.Runtime
         {
             if (invincible)
             {
-                gameObject.layer = GameConstants.k_LayerCharaInvincible;
+                SetPhysicsLayer(GameConstants.k_LayerCharaInvincible);
             }
             else
             {
@@ -84,7 +100,7 @@ namespace Game.Runtime
         public void ClearCollisionMode()
         {
             _currentMode = AttackContactType.PassThrough;
-            gameObject.layer = GameConstants.k_LayerCharaPassThrough;
+            SetPhysicsLayer(GameConstants.k_LayerCharaPassThrough);
             ReleaseCarry();
         }
 
@@ -112,13 +128,13 @@ namespace Game.Runtime
                 return false;
             }
 
-            _carryState = CarryState.Start(_ownerHash, targetHash);
+            if (!s_controllerMap.TryGetValue(targetHash, out CharacterCollisionController carried)
+                || carried == null || carried._character == null) { return false; }
 
-            // 運搬対象のTransformをキャッシュ（毎フレーム検索回避）
-            if (s_controllerMap.TryGetValue(targetHash, out CharacterCollisionController carried))
-            {
-                _carriedTransform = carried.transform;
-            }
+            _carryState = CarryState.Start(_ownerHash, targetHash);
+            _carriedCharacter = carried._character;
+            _carriedActor = default;
+            if (GameManager.Actors != null) { GameManager.Actors.TryGet(targetHash, out _carriedActor); }
 
             return true;
         }
@@ -134,14 +150,13 @@ namespace Game.Runtime
             }
 
             _carryState = CarryState.Release();
-            _carriedTransform = null;
+            _carriedCharacter = null;
+            _carriedActor = default;
         }
 
         /// <summary>
         /// 運搬中の対象位置を同期する。
-        /// 呼び出し元: <see cref="ActionExecutorController"/> の FixedUpdate から、
-        /// 運搬系 Sustained 行動（Carry / ShieldDeploy 等）の実行中に毎物理フレーム呼ぶ想定。
-        /// Rigidbody2D の物理解決と同じ周期で位置更新するため Update ではなく FixedUpdate 推奨。
+        /// 共通の固定更新から呼び、物理バックエンドへ運搬先を渡す。
         /// 対象キャラが SoA から居なくなっていたら自動で ReleaseCarry を呼んで運搬解除する。
         /// </summary>
         public void SyncCarriedPosition(Vector2 carrierPosition, Vector2 carryOffset)
@@ -151,7 +166,8 @@ namespace Game.Runtime
                 return;
             }
 
-            if (!GameManager.IsCharacterValid(_carryState.CarriedHash))
+            if (!GameManager.IsCharacterValid(_carryState.CarriedHash) || _carriedCharacter == null
+                || (_carriedActor.IsValid && (GameManager.Actors == null || !GameManager.Actors.IsCurrent(_carriedActor))))
             {
                 ReleaseCarry();
                 return;
@@ -159,29 +175,25 @@ namespace Game.Runtime
 
             Vector2 targetPos = carrierPosition + carryOffset;
 
-            ref CharacterVitals carriedVitals = ref GameManager.Data.GetVitals(_carryState.CarriedHash);
-            carriedVitals.position = targetPos;
-
-            if (_carriedTransform != null)
-            {
-                _carriedTransform.position = new Vector3(targetPos.x, targetPos.y, _carriedTransform.position.z);
-            }
-            else
-            {
-                ReleaseCarry();
-            }
+            _carriedCharacter.SetPhysicsPosition(targetPos);
+            _carriedCharacter.PublishPositionForObservation();
         }
 
         private void ApplyLayer()
         {
             if (CharacterCollisionLogic.ShouldBlockMovement(_currentMode))
             {
-                gameObject.layer = GameConstants.k_LayerCharaCollide;
+                SetPhysicsLayer(GameConstants.k_LayerCharaCollide);
             }
             else
             {
-                gameObject.layer = GameConstants.k_LayerCharaPassThrough;
+                SetPhysicsLayer(GameConstants.k_LayerCharaPassThrough);
             }
+        }
+
+        private void SetPhysicsLayer(int layer)
+        {
+            if (_character != null) { _character.SetPhysicsCollisionLayer(layer); }
         }
 
         private void OnCollisionEnter2D(Collision2D collision)

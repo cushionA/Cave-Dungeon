@@ -23,12 +23,12 @@ namespace Game.Tests.EditMode
         public void CompanionController_Initialize_HasComponents()
         {
             SoACharaDataDic data = new SoACharaDataDic();
-            data.Add(1, new CharacterVitals { position = Vector2.zero },
+            data.Add(1, new CharacterVitals { position = Vector2.zero, currentMp = 100, maxMp = 100 },
                 default, default, default);
             data.Add(2, new CharacterVitals { position = new Vector2(1f, 0f) },
                 default, default, default);
 
-            CompanionController controller = new CompanionController(1, 2, data, 100f, 50, DefaultMpSettings(), null);
+            CompanionController controller = new CompanionController(1, 2, data, 50, DefaultMpSettings(), null);
 
             Assert.IsNotNull(controller.JudgmentLoop);
             Assert.IsNotNull(controller.ModeController);
@@ -42,12 +42,12 @@ namespace Game.Tests.EditMode
         public void CompanionController_Teleport_WhenFarFromPlayer()
         {
             SoACharaDataDic data = new SoACharaDataDic();
-            data.Add(1, new CharacterVitals { position = Vector2.zero },
+            data.Add(1, new CharacterVitals { position = Vector2.zero, currentMp = 100, maxMp = 100 },
                 default, default, default);
             data.Add(2, new CharacterVitals { position = new Vector2(100f, 0f) },
                 default, default, default);
 
-            CompanionController controller = new CompanionController(1, 2, data, 100f, 50, DefaultMpSettings(), null);
+            CompanionController controller = new CompanionController(1, 2, data, 50, DefaultMpSettings(), null);
             AIMode[] modes = new AIMode[]
             {
                 new AIMode { modeName = "Default", judgeInterval = new Vector2(10f, 10f) }
@@ -66,12 +66,12 @@ namespace Game.Tests.EditMode
         public void CompanionController_SetStance_Works()
         {
             SoACharaDataDic data = new SoACharaDataDic();
-            data.Add(1, new CharacterVitals { position = Vector2.zero },
+            data.Add(1, new CharacterVitals { position = Vector2.zero, currentMp = 100, maxMp = 100 },
                 default, default, default);
             data.Add(2, new CharacterVitals { position = new Vector2(1f, 0f) },
                 default, default, default);
 
-            CompanionController controller = new CompanionController(1, 2, data, 100f, 50, DefaultMpSettings(), null);
+            CompanionController controller = new CompanionController(1, 2, data, 50, DefaultMpSettings(), null);
             controller.StanceManager.SetStance(CompanionStance.Supportive);
 
             Assert.AreEqual(CompanionStance.Supportive, controller.StanceManager.CurrentStance);
@@ -84,7 +84,7 @@ namespace Game.Tests.EditMode
         {
             SoACharaDataDic data = new SoACharaDataDic();
 
-            CompanionController controller = new CompanionController(999, 888, data, 100f, 50, DefaultMpSettings(), null);
+            CompanionController controller = new CompanionController(999, 888, data, 50, DefaultMpSettings(), null);
 
             Assert.DoesNotThrow(() => controller.Tick(0.1f, new List<int>(), 0f));
 
@@ -95,12 +95,12 @@ namespace Game.Tests.EditMode
         public void CompanionController_SetAIModes_AppliesMode()
         {
             SoACharaDataDic data = new SoACharaDataDic();
-            data.Add(1, new CharacterVitals { position = Vector2.zero },
+            data.Add(1, new CharacterVitals { position = Vector2.zero, currentMp = 100, maxMp = 100 },
                 default, default, default);
             data.Add(2, new CharacterVitals { position = new Vector2(1f, 0f) },
                 default, default, default);
 
-            CompanionController controller = new CompanionController(1, 2, data, 100f, 50, DefaultMpSettings(), null);
+            CompanionController controller = new CompanionController(1, 2, data, 50, DefaultMpSettings(), null);
             AIMode[] modes = new AIMode[]
             {
                 new AIMode { modeName = "Combat", judgeInterval = Vector2.one },

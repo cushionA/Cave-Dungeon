@@ -5,6 +5,25 @@ namespace Game.Tests.EditMode
 {
     public class DamageCorCalcTests
     {
+        [TestCase(64000, 0, 64000)]
+        [TestCase(100000, 100000, 50000)]
+        public void DamageCalculator_StackedAttackBuff_DoesNotOverflowSquare(int attack, int defense, int expected)
+        {
+            Assert.AreEqual(expected, DamageCalculator.CalculateBaseDamage(attack, 1f, defense));
+        }
+
+        [Test]
+        public void DamageCalculator_ScaleStats_ReturnsScaledCopyWithoutChangingBaseStats()
+        {
+            ElementalStatus original = new ElementalStatus { slash = 100, fire = 50 };
+            ElementalStatus scaled = DamageCalculator.ScaleStats(original, 1.5f);
+
+            Assert.AreEqual(150, scaled.slash);
+            Assert.AreEqual(75, scaled.fire);
+            Assert.AreEqual(100, original.slash);
+            Assert.AreEqual(50, original.fire);
+        }
+
         // --- 基本ダメージ計算 ---
 
         [Test]

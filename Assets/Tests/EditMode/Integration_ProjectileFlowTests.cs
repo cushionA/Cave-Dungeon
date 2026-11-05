@@ -33,7 +33,8 @@ namespace Game.Tests.EditMode
             {
                 attack = new ElementalStatus { fire = 40 }
             };
-            _data.Add(_casterHash, casterVitals, casterCombat, default, default);
+            _data.Add(_casterHash, casterVitals, casterCombat,
+                CharacterFlags.Pack(CharacterBelong.Ally, CharacterFeature.Player, AbilityFlag.None), default);
 
             CharacterVitals targetVitals = new CharacterVitals
             {
@@ -44,7 +45,8 @@ namespace Game.Tests.EditMode
             {
                 defense = new ElementalStatus { fire = 5 }
             };
-            _data.Add(_targetHash, targetVitals, targetCombat, default, default);
+            _data.Add(_targetHash, targetVitals, targetCombat,
+                CharacterFlags.Pack(CharacterBelong.Enemy, CharacterFeature.Minion, AbilityFlag.None), default);
 
             _attackMagic = new MagicDefinition
             {
@@ -144,7 +146,8 @@ namespace Game.Tests.EditMode
             {
                 currentHp = 100, maxHp = 100
             };
-            _data.Add(opHash, opVitals, overpower, default, default);
+            _data.Add(opHash, opVitals, overpower,
+                CharacterFlags.Pack(CharacterBelong.Ally, CharacterFeature.Player, AbilityFlag.None), default);
 
             Projectile p = _pool.Get();
             p.Initialize(opHash, _attackMagic.bulletProfile, Vector2.zero, Vector2.right);

@@ -33,7 +33,7 @@ namespace Game.Tests.EditMode
                 CharacterFlags.Pack(CharacterBelong.Enemy, 0, 0),
                 default);
             _data.Add(k_CompanionHash,
-                new CharacterVitals { position = Vector2.zero, currentHp = 100, maxHp = 100 },
+                new CharacterVitals { position = Vector2.zero, currentHp = 100, maxHp = 100, currentMp = 100, maxMp = 100 },
                 default,
                 CharacterFlags.Pack(CharacterBelong.Ally, 0, 0),
                 default);
@@ -193,7 +193,7 @@ namespace Game.Tests.EditMode
         public void CompanionController_OnConfusionClearedForSelf_CancelsCurrentAction()
         {
             CompanionController controller = new CompanionController(
-                k_CompanionHash, k_TargetHash, _data, 100f, 50, DefaultMpSettings(), _events);
+                k_CompanionHash, k_TargetHash, _data, 50, DefaultMpSettings(), _events);
             controller.SetAIModes(new AIMode[] { MakeLongSustainedMode() }, null);
 
             controller.Tick(0.1f, new List<int> { k_TargetHash }, 0f);
@@ -212,7 +212,7 @@ namespace Game.Tests.EditMode
         public void CompanionController_OnConfusionClearedForOther_DoesNotForceEvaluate()
         {
             CompanionController controller = new CompanionController(
-                k_CompanionHash, k_TargetHash, _data, 100f, 50, DefaultMpSettings(), _events);
+                k_CompanionHash, k_TargetHash, _data, 50, DefaultMpSettings(), _events);
             controller.SetAIModes(new AIMode[] { MakeLongSustainedMode() }, null);
 
             controller.Tick(0.1f, new List<int> { k_TargetHash }, 0f);
@@ -230,7 +230,7 @@ namespace Game.Tests.EditMode
         public void CompanionController_Dispose_UnsubscribesFromConfusionCleared()
         {
             CompanionController controller = new CompanionController(
-                k_CompanionHash, k_TargetHash, _data, 100f, 50, DefaultMpSettings(), _events);
+                k_CompanionHash, k_TargetHash, _data, 50, DefaultMpSettings(), _events);
             controller.SetAIModes(new AIMode[] { MakeLongSustainedMode() }, null);
 
             controller.Tick(0.1f, new List<int> { k_TargetHash }, 0f);

@@ -1,0 +1,303 @@
+{
+  "format_version": 1,
+  "recorded_at_utc": "2026-10-28T11:40:45.125978+00:00",
+  "scope": "頻繁な読取りで構造体引数を値渡ししている関数の追補監査と安全なin化",
+  "baseline": {
+    "pure_suite": 650,
+    "executed_source_sha_count": 134,
+    "baseline_current_source_mismatches": [],
+    "preserved_source_snapshot": "/workspace/.cave-dungeon/in-parameter-audit/start-source-hashes.json"
+  },
+  "inventory": {
+    "kind": "Roslyn_CSharp9_syntax_only_custom_struct_parameter_candidate_inventory",
+    "source_files": 241,
+    "configurations": [
+      "editor_tests",
+      "standalone_player",
+      "android_player"
+    ],
+    "counts": {
+      "custom_struct_declarations": 126,
+      "custom_struct_parameters": 511,
+      "by_value": 319,
+      "existing_in": 147,
+      "syntactic_read_only_candidates": 275,
+      "linked_pure_candidates": 123,
+      "candidates_with_nonreadonly_member_risks": 0
+    },
+    "full_inventory": "/workspace/.cave-dungeon/in-parameter-audit/custom-struct-parameters.json",
+    "enriched_inventory": "/workspace/.cave-dungeon/in-parameter-audit/custom-struct-parameters-enriched.json",
+    "candidate_csv": "/workspace/.cave-dungeon/in-parameter-audit/readonly-candidates.csv",
+    "limits": [
+      "Candidate generation only: there is no Unity semantic compilation or ownership/alias proof.",
+      "Same-name/shadowed identifiers, partial types, nested generics, extension methods and overload resolution may cause false positives/negatives.",
+      "No direct assignment/ref-out escape is insufficient to prove immutability: instance methods, reference fields, delegates and hidden aliases require manual review.",
+      "Converting a parameter to in may introduce defensive copies at nonreadonly struct instance members; reported member risks require review.",
+      "Arrays/pointers are excluded; Unity/System struct types not declared in Assets/MyAsset and generic struct constraints are not inventoried.",
+      "Interface/virtual/delegate signature compatibility and ref lifetime across callbacks/structural changes require manual review.",
+      "CopyFlow linkage is a source-file membership check, not proof every conditional method in that file compiled or executed."
+    ]
+  },
+  "implemented": {
+    "methods": 29,
+    "struct_parameters_changed_to_in": 31,
+    "production_files": 10,
+    "test_files": 1,
+    "groups": [
+      {
+        "area": "地上移動",
+        "methods": 13,
+        "detail": "MoveParamsを読む水平速度/Coyote/Jump/Dodge/Sprintとhelper/互換forwardingをin化。Jump forceはstamina書込前にscalar捕捉。"
+      },
+      {
+        "area": "命中データ構築",
+        "methods": 1,
+        "parameters": 2,
+        "detail": "BuildDamageDataのAttackMotionDataとElementalStatusは読むだけで新packetを構築する。"
+      },
+      {
+        "area": "状態異常内部転送",
+        "methods": 4,
+        "detail": "Store/System privateのStatusEffectInfoをinへ。公開受理・IStatusEffectWriterの値captureを維持。"
+      },
+      {
+        "area": "行動判定helper",
+        "methods": 3,
+        "parameters": 4,
+        "detail": "CanReplaceのrequest/existing、Blockedのactor、SnapshotDefinitionのdataをin化。8Bの定義snapshot引数は値渡しを維持。"
+      },
+      {
+        "area": "Runtime",
+        "methods": 8,
+        "detail": "近接Activate/Reset、Player入力/空中設定、popup結果、子弾生成でcallerのowned localを借用。保管/通知のcopyは維持。"
+      }
+    ]
+  },
+  "kept_by_value": [
+    {
+      "category": "入力を編集して返す",
+      "examples": [
+        "StatusEffectSystem.RestrictInput",
+        "AIConfigurationCopy.Clone",
+        "ModePresetRegistry.Save"
+      ],
+      "reason": "編集用の独立値コピーに意味がある。"
+    },
+    {
+      "category": "通知・生成・被弾の時点固定",
+      "examples": [
+        "GameEvents.FireActionExecution",
+        "DamageReceiver.ReceiveDamage",
+        "Projectile.Initialize",
+        "ProjectileHitProcessor.ProcessHit/ProcessExplosion"
+      ],
+      "reason": "callbackやResetで元領域が変化する境界ではowned snapshotまたは書換え用コピーが必要。"
+    },
+    {
+      "category": "固定型契約",
+      "examples": [
+        "IEquatable<ActorRef>.Equals",
+        "Action<ActionExecutionEvent> handlers",
+        "IStatusEffectWriter implementations",
+        "mutable struct TWriter"
+      ],
+      "reason": "delegate/interface互換や可変writerの状態意味を変えない。"
+    },
+    {
+      "category": "小型値",
+      "examples": [
+        "Vector2 (8B)",
+        "ActionDefinitionSnapshot (8B)",
+        "AnimationStateData (12B)"
+      ],
+      "reason": "小型値や既に参照1本のwrapperは一律in化しない。参照経由やUnityの非readonly APIによる防御copyとの比較が必要。"
+    }
+  ],
+  "lower_priority_unmodified_readonly_candidates": [
+    {
+      "file": "Assets/MyAsset/Core/AI/Core/ConditionEvaluator.Compat.cs",
+      "symbols": [
+        "Evaluate",
+        "GetConditionValue",
+        "ResolveTargetHash"
+      ],
+      "reason": "通常のsnapshot Runtimeルートは既にin。旧SoA互換側の候補。"
+    },
+    {
+      "file": "Assets/MyAsset/Core/AI/Core/TargetSelector.Compat.cs",
+      "symbols": [
+        "SelectTarget",
+        "FilterCandidates"
+      ],
+      "reason": "旧互換ルート。"
+    },
+    {
+      "file": "Assets/MyAsset/Core/AI/RuleBuilder/ActionSlotLabelTable.cs",
+      "symbols": [
+        "GetFallbackLabel"
+      ],
+      "reason": "UIラベル生成。"
+    },
+    {
+      "file": "Assets/MyAsset/Core/Combat/Magic/MagicCaster.cs",
+      "symbols": [
+        "CanCast"
+      ],
+      "reason": "旧詠唱入口。"
+    },
+    {
+      "file": "Assets/MyAsset/Core/Animation/MotionPresentationData.cs",
+      "symbols": [
+        "Capture"
+      ],
+      "reason": "設定捕捉時中心。"
+    }
+  ],
+  "safety_review": "/workspace/.cave-dungeon/in-parameter-audit/safety-review.json",
+  "owner_core_report": "/workspace/.cave-dungeon/in-parameter-audit/core-in-results.json",
+  "verification": {
+    "pure_passed": 694,
+    "pure_failed": 0,
+    "breakdown": {
+      "prior_suite": 650,
+      "existing_pure_tests_first_included": 43,
+      "new_alias_regression": 1
+    },
+    "existing_first_included_breakdown": {
+      "CombatDataHelper_pure": 8,
+      "CoyoteTime": 10,
+      "GroundMovementDataDriven_existing": 6,
+      "PlayerMovementGround": 19
+    },
+    "source_changed_during_run": [],
+    "current_executed_source_sha_count": 139,
+    "proof_prefix": "/workspace/.cave-dungeon/action-flow-harness/in-parameter-reviewed",
+    "readme": "/workspace/.cave-dungeon/action-flow-harness/InParameterFlow-README.txt",
+    "extractions": [
+      {
+        "source_file": "/workspace/Cave-Dungeon/Assets/MyAsset/Core/Combat/Magic/MagicCaster.cs",
+        "symbol": "MagicDefinition",
+        "source_sha256": "e630c6c97fc27c863c1bca484ed3c9806bbd6742056d244368d152e6024f43eb",
+        "excerpt_sha256": "0a380f48f37d7b72a47e8bf5b7ba940aa19e11772d8d63172f0965b21f381deb",
+        "generated_file": "ExtractedMagicDefinition.cs"
+      },
+      {
+        "source_file": "/workspace/Cave-Dungeon/Assets/MyAsset/Core/AI/Core/ModeController.cs",
+        "symbol": "ModeTransitionRule",
+        "source_sha256": "3419790f552a1d3d96ebbc30c557892c89d0d813922e1770e5ab7005fd94ff16",
+        "excerpt_sha256": "7c498fa0ac2fa838f1b362588bf43c4cc821d3e88f7a3f4f0fde02479c5e8395",
+        "generated_file": "ExtractedModeTransitionRule.cs"
+      },
+      {
+        "source_file": "/workspace/Cave-Dungeon/Assets/Tests/EditMode/CombatDataHelperTests.cs",
+        "symbol": "CombatDataHelperTests pure existing test methods and original support members",
+        "source_sha256": "88d0dce5e8bf3d16f1221dd9ed13fe58f254259432e286017c097c0f86e66f5a",
+        "excerpt_sha256": "708fbff4c0da4c75eb7e204e57ff2a958d2ed99cb1b16f82de4ac5c160fb6696",
+        "generated_file": "ExtractedPureCombatDataHelperTests.cs",
+        "kind": "exact_source_segments_concatenated_without_Native_only_test_methods",
+        "kept_source_ranges_zero_based_end_exclusive": [
+          [
+            0,
+            9045
+          ],
+          [
+            10010,
+            10018
+          ]
+        ],
+        "kept_segment_sha256": [
+          "2ebf91e6cf328b3c0422e497ddf1ba14f665b65535a57b7373c1f349c5b43140",
+          "3794d02a8121944d176d265e9bb9cc59f6ab890bcadf8aefdebdbbb4f2ea8444"
+        ],
+        "excluded_methods": [
+          "CombatDataHelper_GetAttackStats_ReturnsCombatStatsAttack",
+          "CombatDataHelper_GetAttackStats_InvalidHash_ReturnsDefault"
+        ],
+        "reason": "Both excluded methods require actual Native SoA and CombatDataHelper.SoA; no container behavior is recreated."
+      }
+    ],
+    "initial_harness_build_failure_retained": "/workspace/.cave-dungeon/action-flow-harness/in-parameter-final-source-hashes.json",
+    "syntax": {
+      "file_count": 107,
+      "configurations": [
+        "editor_tests",
+        "standalone_player",
+        "android_player"
+      ],
+      "errors": 0,
+      "source_changed_during_parse": [],
+      "proof": "/workspace/.cave-dungeon/action-flow-harness/syntax/in-parameter-results.json"
+    },
+    "native_and_unity_api_execution": "not_run",
+    "new_cs_files": 0,
+    "profiler_measurement": "not_run",
+    "call_paths": {
+      "total": 95,
+      "added": 3,
+      "refreshed_existing_logic_paths": 37
+    },
+    "feature_db": {
+      "feature": "Readonly_StructParameters",
+      "passed_increment": 44,
+      "total_unique_pure_suite": 694
+    },
+    "summary": "/workspace/.cave-dungeon/in-parameter-audit/verification-summary.json",
+    "source_signature_comparison": "/workspace/.cave-dungeon/in-parameter-audit/source-signature-comparison.json",
+    "pure_il_comparison": "/workspace/.cave-dungeon/in-parameter-audit/il-comparison.json",
+    "signature_change_count": {
+      "methods": 29,
+      "parameters": 31,
+      "scope": "source_syntax_comparison; pure subset additionally checked in compiled CLR IL"
+    }
+  },
+  "changed_source_sha256": {
+    "Assets/MyAsset/Core/Common/CombatDataHelper.cs": {
+      "before": "0a3cde3071ea1bc5e8c79b94568e933978ef45e0c0b523d433bb380404bc1b37",
+      "after": "161ae9d66b37e61e82f99e488e203ac5a98805e60cd713e9cb14ae011a4cff96"
+    },
+    "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs": {
+      "before": "2d471e9052d40e8b067f34411c98bac7eece5fee5e80c52daaf438b8d33ca89a",
+      "after": "07736920ccf4c9614a9ad6b9ed6693748b20694b3873574e9bc92fb94d2f3dad"
+    },
+    "Assets/MyAsset/Core/Damage/StatusEffectStore.cs": {
+      "before": "37ffaa37cfb1f7ab3e7601309a40df51e7ab5046c0dede4b7ff1d708a0938899",
+      "after": "aee886ffbd568c92f48d92961e91e145a68e81b50950bf0177ca2f46f3a005a9"
+    },
+    "Assets/MyAsset/Core/Movement/GroundMovementLogic.cs": {
+      "before": "4d7e549947f075b00c7648870be3995e561f3035b2da2d0329fbfe5a262f5146",
+      "after": "75a8ee25b84832aa6c012e3bde714f0f82d59d60912ce184042ed686e1a9dcd4"
+    },
+    "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": {
+      "before": "883453320d701bf489a06f686c57dbbc54899d4611a2a508f2eb4449d5999992",
+      "after": "4d4620da3fee0e3f12444905ad8fe9c7e60843881da803c65b4bcd10f7bb0ad3"
+    },
+    "Assets/MyAsset/Runtime/Character/PlayerCharacter.cs": {
+      "before": "f735995f9085597b35f0a3eb35ebf2f80eab70589c8e3b6483337c41d0cad391",
+      "after": "9e53462da2838a7f64af4ad652a7af05dcf7e6bc11d407cc87a50037b01d31fa"
+    },
+    "Assets/MyAsset/Runtime/Combat/DamageDealer.cs": {
+      "before": "94514d9401fc22901655ccd943c32e332750c97e40f46f3b0f6cd7333eba397a",
+      "after": "16b006de356bb0350ebf9e91726f57265ac9dd87df8fd8483c8d5617fe07b738"
+    },
+    "Assets/MyAsset/Runtime/Combat/HitBox.cs": {
+      "before": "691eaa2e886c341c60c1dc67ea061c8a18e5a7958b61675e2dc7900565ce5bd4",
+      "after": "46c650a97a461bea730975fc09683df5f1fd1e85d385e2e948e4c140aa1e8943"
+    },
+    "Assets/MyAsset/Runtime/UI/DamagePopupController.cs": {
+      "before": "4e1e7f40ca0948caebe7353bb1199b5c89394b1e5281f707bc589098202ceafb",
+      "after": "d04c479222b39af4b2e9554b0105c73fd0285f8c626b8321cda8bb89892a5f28"
+    },
+    "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs": {
+      "before": "da1833def63b1cf748a93e1a9274292a5ede4d06f8f9751d8252fc74762b1687",
+      "after": "bf55a3871a66cfa64392c49c9336bc4dadad2ceff54e36ef42f9039e193cb624"
+    },
+    "Assets/Tests/EditMode/GroundMovementDataDrivenTests.cs": {
+      "before": "d4de245b87fba173542a519f5fbd0ad9897b5ef664ab0b0cb142d3423959d0c2",
+      "after": "27113711384656b4004e6c4e3f764b8980e7f63ac774746ec372a4f6037384ba"
+    }
+  },
+  "follow_up_file_organization": {
+    "report": "designs/struct-organization.json",
+    "note": "本文とSHAはin追補完了時点の履歴。型別ファイル分割後の配置・694件の現source検証はfollow-upを参照。"
+  }
+}

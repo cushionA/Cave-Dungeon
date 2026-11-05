@@ -9,17 +9,11 @@ namespace Game.Core
     /// </summary>
     public static class BulletFeatureProcessor
     {
-        private static readonly Vector2 s_Gravity = new Vector2(0f, -9.81f);
         private static List<int> s_ExplosionBuffer = new List<int>();
 
         public static void ProcessFeatures(Projectile projectile, float deltaTime)
         {
-            BulletFeature features = projectile.Profile.features;
-
-            if ((features & BulletFeature.Gravity) != 0)
-            {
-                projectile.Velocity += s_Gravity * deltaTime;
-            }
+            projectile.Velocity = ProjectileMovement.ApplyGravity(in projectile.CapturedProfile, projectile.Velocity, deltaTime);
         }
 
         public static bool ShouldPierce(BulletFeature features)

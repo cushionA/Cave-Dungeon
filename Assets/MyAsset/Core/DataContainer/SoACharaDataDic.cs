@@ -12,7 +12,10 @@ namespace Game.Core
             typeof(MoveParams),
             typeof(EquipmentStatus),
             typeof(CharacterStatusEffects),
-            typeof(AnimationStateData)
+            typeof(AnimationStateData),
+            typeof(CharacterDefenseState),
+            typeof(CharacterBaseStats),
+            typeof(CharacterGrowth)
         },
         classType: new[] { typeof(ManagedCharacter) })]
     public partial class SoACharaDataDic : IDisposable

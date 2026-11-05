@@ -64,7 +64,9 @@ namespace Game.Tests.EditMode
                 hitReaction = HitReaction.Knockback,
                 isKill = false,
                 situationalBonus = SituationalBonus.Counter,
-                armorDamage = 10f
+                armorDamage = 10f,
+                guardDamage = 7f,
+                actionArmorDamage = 4f,
             };
 
             _events.FireDamageDealt(firedResult, 42, 99);
@@ -74,6 +76,9 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(GuardResult.NoGuard, receivedResult.guardResult);
             Assert.AreEqual(HitReaction.Knockback, receivedResult.hitReaction);
             Assert.AreEqual(SituationalBonus.Counter, receivedResult.situationalBonus);
+            Assert.AreEqual(7f, receivedResult.guardDamage);
+            Assert.AreEqual(10f, receivedResult.armorDamage);
+            Assert.AreEqual(4f, receivedResult.actionArmorDamage);
             Assert.AreEqual(42, receivedAttacker);
             Assert.AreEqual(99, receivedDefender);
         }

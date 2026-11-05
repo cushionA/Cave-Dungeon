@@ -38,6 +38,13 @@ namespace Game.Core
         // ─────────────────────────────────────────────
         [TitleGroup("基礎ステータス")]
         [MinValue(1)]
+        public int initialLevel = 1;
+
+        [TitleGroup("基礎ステータス")]
+        public StatModifier baseAttributes;
+
+        [TitleGroup("基礎ステータス")]
+        [MinValue(1)]
         public int maxHp;
 
         [TitleGroup("基礎ステータス")]
@@ -159,10 +166,14 @@ namespace Game.Core
         // ─────────────────────────────────────────────
         //  耐性
         // ─────────────────────────────────────────────
-        [TitleGroup("耐性")]
-        [Tooltip("基礎状態異常耐性（蓄積閾値のグローバル倍率）")]
+        [HideInInspector]
+        [Tooltip("旧基礎閾値倍率加算（閾値×(1+値)）。statusDefense.thresholdMultiplierBonusへ一度加算する互換入力。新規設定はstatusDefenseを使用")]
         [Range(0f, 1f)]
         public float statusResistance;
+
+        [TitleGroup("耐性")]
+        [Tooltip("状態異常の共通・個別蓄積軽減率、個別閾値・免疫。個別閾値0は既定100、共通閾値倍率は1+thresholdMultiplierBonus")]
+        public StatusEffectDefenseProfile statusDefense;
 
         [TitleGroup("耐性")]
         public PhysicalResistance physicalResistance;
@@ -234,5 +245,54 @@ namespace Game.Core
         [Tooltip("各ステータス (Str/Dex/Intel/Vit/Mnd/End) の個別上限値。動的最大レベル算出にも使用。要素数は 6 固定。")]
         [MinValue(0)]
         public int[] statCaps = new int[] { 99, 99, 99, 99, 99, 99 };
+
+        public CharacterRegistration CreateRegistration(float gravityMagnitude)
+        {
+            // 旧scalarは共通閾値倍率への互換入力。作者データへ書き戻さず一度だけ合成する。
+            StatusEffectDefenseProfile registeredDefense = StatusEffectDefenseProfile.Combine(statusDefense,
+                new StatusEffectDefenseProfile { thresholdMultiplierBonus = statusResistance }, default, default);
+            return new CharacterRegistration
+            {
+                baseStats = new CharacterBaseStats
+                {
+                    maxHp = maxHp,
+                    maxMp = maxMp,
+                    maxStamina = maxStamina,
+                    maxArmor = maxArmor,
+                    staminaRecoveryRate = staminaRecoveryRate,
+                    staminaRecoveryDelay = staminaRecoveryDelay,
+                    attributes = baseAttributes,
+                    combat = new CombatStats
+                    {
+                        attack = baseAttack,
+                        defense = baseDefense,
+                        knockbackResistance = knockbackResistance,
+                        statusDefense = registeredDefense,
+                    },
+                    movement = new MoveParams
+                    {
+                        moveSpeed = moveSpeed,
+                        jumpForce = (float)Math.Sqrt(2f * jumpHeight * gravityMagnitude * GameConstants.k_GravityScale),
+                        dashSpeed = dashSpeed,
+                        dashDuration = GameConstants.k_DefaultDashDuration,
+                        gravityScale = GameConstants.k_GravityScale,
+                        jumpStaminaCost = jumpStaminaCost,
+                        dodgeStaminaCost = dodgeStaminaCost,
+                        sprintStaminaPerSecond = sprintStaminaPerSecond,
+                        dodgeDuration = dodgeDuration,
+                        dodgeSpeedMultiplier = dodgeSpeedMultiplier,
+                        sprintSpeedMultiplier = sprintSpeedMultiplier,
+                        coyoteTime = coyoteTime,
+                    },
+                },
+                growth = new CharacterGrowth { level = initialLevel },
+                flags = CharacterFlags.Pack(belong, feature, initialActState, AbilityFlag.None),
+                defenseState = new CharacterDefenseState
+                {
+                    armorRecoveryRate = armorRecoveryRate,
+                    armorRecoveryDelay = armorRecoveryDelay,
+                },
+            };
+        }
     }
 }

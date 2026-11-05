@@ -10,6 +10,7 @@ description: Test-driven development workflow rules for Unity game features
 3. 実装コードを作成する
 4. テストが全てPassすることを確認する（Green）
 5. `python tools/feature-db.py` で feature-log.db に完了記録を追加する
+6. 確認した呼び出し経路を `designs/call-paths.json` へ登録し、`python tools/feature-db.py import-call-paths --file designs/call-paths.json` で反映する。入口・呼出先・共有データの読書き・通知先と、実装／接続／検証段階を分けて記録する。ソース変更後は該当経路を再確認し、実行した検証に対応するSHA-256だけ更新する。未確認の機能や未接続の区間を接続済み扱いしない。
 
 ## テスト命名規則
 - フォーマット: `[機能名]_[条件]_[期待結果]`

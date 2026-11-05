@@ -284,6 +284,10 @@ namespace Game.Core
         Weakness,
         Curse,
         Confusion,
+        AttackUp,
+        DefenseUp,
+        SpeedUp,
+        Count,
     }
 
     // ===== インタラクション・アイテム =====

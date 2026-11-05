@@ -38,7 +38,7 @@ namespace Game.Core
             string configId = Guid.NewGuid().ToString("N");
             config.configId = configId;
             config.configName = configName;
-            _configs[configId] = config;
+            _configs[configId] = AIConfigurationCopy.Clone(config);
             return configId;
         }
 
@@ -53,7 +53,7 @@ namespace Game.Core
             }
 
             config.configId = configId;
-            _configs[configId] = config;
+            _configs[configId] = AIConfigurationCopy.Clone(config);
             return true;
         }
 
@@ -64,7 +64,7 @@ namespace Game.Core
             {
                 return null;
             }
-            return config;
+            return AIConfigurationCopy.Clone(config);
         }
 
         /// <summary>IDを指定して削除する。存在しなければ false を返す。</summary>
@@ -81,7 +81,8 @@ namespace Game.Core
         public CompanionAIConfig[] GetAll()
         {
             CompanionAIConfig[] result = new CompanionAIConfig[_configs.Count];
-            _configs.Values.CopyTo(result, 0);
+            int index = 0;
+            foreach (CompanionAIConfig config in _configs.Values) { result[index++] = AIConfigurationCopy.Clone(config); }
             return result;
         }
 
@@ -142,7 +143,7 @@ namespace Game.Core
                 {
                     if (modes[i].modeId == modeId)
                     {
-                        modes[i] = updatedMode;
+                        modes[i] = AIConfigurationCopy.Clone(updatedMode);
                         changed = true;
                     }
                 }

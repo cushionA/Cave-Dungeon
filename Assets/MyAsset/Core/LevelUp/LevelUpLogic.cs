@@ -53,6 +53,7 @@ namespace Game.Core
         public int Level => _level;
         public int AvailablePoints => _availablePoints;
         public StatModifier AllocatedStats => _allocatedStats;
+        public CharacterGrowth Growth => new CharacterGrowth { level = _level, allocatedStats = _allocatedStats };
 
         /// <summary>このインスタンスが参照する最大レベルキャップ。</summary>
         public int MaxLevel => _config != null ? _config.maxLevel : k_DefaultMaxLevel;
@@ -303,17 +304,9 @@ namespace Game.Core
             return Math.Min(dynamicMaxLevel, hardCap);
         }
 
-        /// <summary>
-        /// Recalculates vitals based on allocated stats.
-        /// Applies Vit bonus to maxHp and Mnd bonus to maxMp, and updates level.
-        /// </summary>
-        public CharacterVitals RecalculateVitals(CharacterVitals baseVitals)
+        public CharacterVitals RecalculateVitals(in CharacterBaseStats basis, in CharacterVitals current)
         {
-            CharacterVitals result = baseVitals;
-            result.maxHp = baseVitals.maxHp + (_allocatedStats.vit * k_HpPerVit);
-            result.maxMp = baseVitals.maxMp + (_allocatedStats.mnd * k_MpPerMnd);
-            result.level = _level;
-            return result;
+            return CharacterStatCalculator.RecalculateVitals(basis, Growth, current);
         }
 
         // ===== ISaveable =====

@@ -58,7 +58,7 @@ GuardResult JudgeGuard(DamageData data, int defenderHash)
     }
 
     // 通常ガード: スタミナ消費チェック
-    float staminaCost = data.armorBreakValue / (equip.finalGuardStats.guardStrength / 100f);
+    float staminaCost = data.armorBreakValue / (combat.guardStats.guardStrength / 100f);
     if (CanConsumeStamina(defenderHash, staminaCost))
     {
         ConsumeStamina(defenderHash, staminaCost);

@@ -79,6 +79,7 @@ namespace Game.Tests.PlayMode
                 damage = new ElementalStatus { slash = 10 },
                 motionValue = 1.0f,
                 attackElement = Element.Slash,
+                guardDamage = 15f,
                 armorBreakValue = 15f,
                 feature = AttackFeature.None
             };
@@ -124,6 +125,7 @@ namespace Game.Tests.PlayMode
                 damage = new ElementalStatus { slash = 10 },
                 motionValue = 1.0f,
                 attackElement = Element.Slash,
+                guardDamage = 15f,
                 armorBreakValue = 15f,
                 feature = AttackFeature.None
             };

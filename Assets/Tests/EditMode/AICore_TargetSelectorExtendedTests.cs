@@ -90,7 +90,7 @@ namespace Game.Tests.EditMode
         // --- SortByTargetingCount ---
 
         [Test]
-        public void TargetSelector_SortByTargetingCount_SelectsHighestBitCount()
+        public void TargetSelector_SortByTargetingCount_RequiresSharedRelations()
         {
             ref CharacterFlags f1 = ref _data.GetFlags(_enemy1Hash);
             f1.RecognizeObjectType = 0b1111; // 4ビット
@@ -102,7 +102,7 @@ namespace Game.Tests.EditMode
             int result = TargetSelector.SortAndPick(
                 TargetSortKey.TargetingCount, true, _ownerHash, candidates, _data, 0f);
 
-            Assert.AreEqual(_enemy1Hash, result, "ビット数最大=enemy1(4)");
+            Assert.AreEqual(0, result, "認識bitsは狙われ人数ではない。関係を持たない互換APIは標的を返さない。");
         }
 
         // --- SortByLastAttacker ---

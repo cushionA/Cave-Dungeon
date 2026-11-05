@@ -12,7 +12,7 @@ namespace UniCli.Server.Editor.Handlers
     public sealed class FindGameObjectsHandler : CommandHandler<FindGameObjectsRequest, FindGameObjectsResponse>
     {
         public override string CommandName => "GameObject.Find";
-        public override string Description => "Find GameObjects by name, tag, layer, or component";
+        public override string Description => "Find GameObjects by exact name, name pattern, tag, layer, or component";
 
         protected override ValueTask<FindGameObjectsResponse> ExecuteAsync(FindGameObjectsRequest request, CancellationToken cancellationToken)
         {
@@ -76,7 +76,7 @@ namespace UniCli.Server.Editor.Handlers
 
                     results.Add(new GameObjectResult
                     {
-                        instanceId = go.GetInstanceID(),
+                        instanceId = UnityObjectIdentity.GetId(go),
                         name = go.name,
                         path = path,
                         isActive = go.activeSelf,
@@ -97,6 +97,14 @@ namespace UniCli.Server.Editor.Handlers
 
         private static bool MatchesFilter(GameObject go, FindGameObjectsRequest request)
         {
+            if (!string.IsNullOrEmpty(request.name))
+            {
+                if (!go.name.Equals(request.name, StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+
             if (!string.IsNullOrEmpty(request.namePattern))
             {
                 if (!go.name.Contains(request.namePattern, StringComparison.OrdinalIgnoreCase))
@@ -155,6 +163,7 @@ namespace UniCli.Server.Editor.Handlers
     [Serializable]
     public class FindGameObjectsRequest
     {
+        public string name;
         public string namePattern;
         public string tag;
         public int layer = -1;
@@ -173,7 +182,7 @@ namespace UniCli.Server.Editor.Handlers
     [Serializable]
     public class GameObjectResult
     {
-        public int instanceId;
+        public long instanceId;
         public string name;
         public string path;
         public bool isActive;

@@ -12,19 +12,16 @@ namespace Game.Runtime
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
     [RequireComponent(typeof(BoxCollider2D))]
-    public class BaseCharacter : ManagedCharacter
+    public partial class BaseCharacter : ManagedCharacter
     {
-        private const float k_GroundCheckDistance = 0.1f;
-        private const float k_GroundCheckWidthRatio = 0.9f;
-        private const float k_WallCheckExtend = 0.05f;
-        private const float k_WallCheckHeightRatio = 0.9f;
-
         [SerializeField] protected CharacterInfo _characterInfo;
 
         protected Rigidbody2D _rb;
         protected BoxCollider2D _collider;
         protected DamageReceiver _damageReceiver;
         protected CharacterAnimationController _animationController;
+        private CharacterCollisionController _collisionController;
+        private ActionExecutorController _actionController;
 
         private int _objectHash;
         private bool _isGrounded;
@@ -32,6 +29,9 @@ namespace Game.Runtime
         private bool _isRegistered;
 
         public override int ObjectHash => _objectHash;
+        public bool IsRegistered => _isRegistered;
+        public virtual bool CanApplyAIDecision => IsAlive && !PhysicsBodySuspended
+            && !(GameManager.Actions != null && GameManager.Actions.IsPhysicsControlled(_objectHash));
         public bool IsGrounded => _isGrounded;
         public GroundInfo GroundInfo => _groundInfo;
         // Unity bool 変換で破棄済み DamageReceiver (fake null) を C# native null に変換してから IDamageable に格納する。
@@ -39,6 +39,8 @@ namespace Game.Runtime
         public override IDamageable Damageable => _damageReceiver != null ? (IDamageable)_damageReceiver : null;
         public DamageReceiver DamageReceiver => _damageReceiver;
         public CharacterAnimationController AnimationController => _animationController;
+        public Rigidbody2D Rigidbody => _rb;
+        public CharacterCollisionController CollisionController => _collisionController;
         public CharacterInfo CharacterInfoRef => _characterInfo;
         public bool IsAlive
         {
@@ -68,12 +70,11 @@ namespace Game.Runtime
             _collider = GetComponent<BoxCollider2D>();
             _damageReceiver = GetComponent<DamageReceiver>();
             _animationController = GetComponent<CharacterAnimationController>();
+            _collisionController = GetComponent<CharacterCollisionController>();
+            _actionController = GetComponent<ActionExecutorController>();
             _objectHash = gameObject.GetHashCode();
 
-            // 物理設定
-            _rb.gravityScale = GameConstants.k_GravityScale;
-            _rb.constraints = RigidbodyConstraints2D.FreezeRotation;
-            _rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            InitializeCharacterPhysics();
         }
 
         protected virtual void Start()
@@ -101,14 +102,6 @@ namespace Game.Runtime
             // 名前→ハッシュのマッピングを登録（DialogueSystem等の外部連携用）
             CharacterRegistry.RegisterName(_characterInfo.name, _objectHash);
 
-            if (_damageReceiver != null)
-            {
-                _damageReceiver.SetArmorRecoveryParams(
-                    _characterInfo.maxArmor,
-                    _characterInfo.armorRecoveryRate,
-                    _characterInfo.armorRecoveryDelay);
-            }
-
             if (_animationController != null)
             {
                 _animationController.Initialize(_objectHash);
@@ -117,10 +110,33 @@ namespace Game.Runtime
 
         protected virtual void OnDestroy()
         {
+            GameManager.Actions?.StopActor(_objectHash);
             if (_isRegistered && GameManager.Instance != null)
             {
                 GameManager.Instance.UnregisterCharacter(_objectHash);
             }
+            _physicsBackend?.Dispose();
+        }
+
+        internal void BindDamageReceiver(DamageReceiver receiver)
+        {
+            _damageReceiver = receiver;
+        }
+
+        internal void BindAnimationController(CharacterAnimationController controller)
+        {
+            _animationController = controller;
+            if (_isRegistered) { controller.Initialize(_objectHash); }
+        }
+
+        protected MoveParams GetEffectiveMoveParams(float fallbackSpeed = 0f)
+        {
+            MoveParams move = GameManager.Data.GetMoveParams(_objectHash);
+            CharacterStatusEffects effects = GameManager.Data.GetStatusEffects(_objectHash);
+            float multiplier = effects.BlocksMovement ? 0f : effects.MoveSpeedMultiplier;
+            move.moveSpeed = (move.moveSpeed > 0f ? move.moveSpeed : fallbackSpeed) * multiplier;
+            move.dashSpeed *= multiplier;
+            return move;
         }
 
         /// <summary>
@@ -129,6 +145,8 @@ namespace Game.Runtime
         /// </summary>
         public virtual void OnPoolReturn()
         {
+            GameManager.Actions?.StopActor(_objectHash);
+            ResetPhysicsTransientState();
             if (_isRegistered && GameManager.Instance != null)
             {
                 GameManager.Instance.UnregisterCharacter(_objectHash);
@@ -156,10 +174,6 @@ namespace Game.Runtime
             {
                 // 前キャラの連続JG窓・ガード経過時間・行動特殊効果が残らないようクリア
                 _damageReceiver.ResetInternalState();
-                _damageReceiver.SetArmorRecoveryParams(
-                    _characterInfo.maxArmor,
-                    _characterInfo.armorRecoveryRate,
-                    _characterInfo.armorRecoveryDelay);
             }
         }
 
@@ -173,113 +187,22 @@ namespace Game.Runtime
         protected bool CheckWallContact(float facingDir, out int wallColliderId)
         {
             wallColliderId = AdvancedMovementLogic.k_NoWallId;
-            if (_collider == null)
-            {
-                return false;
-            }
-
-            Bounds bounds = _collider.bounds;
-            Vector2 origin = new Vector2(
-                bounds.center.x + facingDir * (bounds.extents.x + k_WallCheckExtend),
-                bounds.center.y);
-            Vector2 size = new Vector2(k_WallCheckExtend, bounds.size.y * k_WallCheckHeightRatio);
-
-            Collider2D hit = Physics2D.OverlapBox(origin, size, 0f, _groundLayer);
-            if (hit == null)
-            {
-                return false;
-            }
-
-            wallColliderId = hit.GetHashCode();
-            return true;
+            return _physicsBackend != null && _physicsBackend.QueryWall(facingDir, _groundLayer, out wallColliderId);
         }
 
-        /// <summary>
-        /// BoxCast接地判定。FixedUpdateで呼ぶ。
-        /// </summary>
+        /// <summary>接地情報を物理境界から一度取得する。</summary>
         public void UpdateGroundCheck()
         {
-            Vector2 origin = (Vector2)transform.position + _collider.offset;
-            origin.y -= _collider.size.y * 0.5f;
-
-            Vector2 size = new Vector2(
-                _collider.size.x * k_GroundCheckWidthRatio,
-                0.05f);
-
-            RaycastHit2D hit = Physics2D.BoxCast(
-                origin, size, 0f, Vector2.down, k_GroundCheckDistance, _groundLayer);
-
-            _isGrounded = hit.collider != null;
-            _groundInfo = hit.collider != null
-                ? new GroundInfo { isGrounded = true, normal = hit.normal }
-                : GroundInfo.NotGrounded;
+            _groundInfo = _physicsBackend != null ? _physicsBackend.QueryGround(_groundLayer) : GroundInfo.NotGrounded;
+            _isGrounded = _groundInfo.isGrounded;
         }
 
-        /// <summary>
-        /// AI内部ExecutorのAttack/Castアクションを
-        /// ActionExecutorController（MonoBehaviour側）に橋渡しする共通ヘルパー。
-        /// 橋渡し成功後にAI側のアクションをForceCompleteして二重実行を防ぐ。
-        /// </summary>
         protected static void BridgeAIActionToExecutor(
-            ActionExecutor aiExecutor, ActionExecutorController monoExecutor, int targetHash)
+            ActionExecutor aiExecutor, ActionExecutorController monoExecutor)
         {
-            if (aiExecutor == null || !aiExecutor.IsExecuting)
-            {
-                return;
-            }
-
-            if (monoExecutor.IsExecuting)
-            {
-                return;
-            }
-
-            ActionBase current = aiExecutor.CurrentAction;
-            if (current == null)
-            {
-                return;
-            }
-
-            ActionSlot slot;
-            if (current is AttackActionHandler attackHandler)
-            {
-                slot = new ActionSlot
-                {
-                    execType = ActionExecType.Attack,
-                    paramId = attackHandler.LastParamId,
-                    paramValue = 1f
-                };
-            }
-            else if (current is CastActionHandler castHandler)
-            {
-                slot = new ActionSlot
-                {
-                    execType = ActionExecType.Cast,
-                    paramId = castHandler.LastParamId,
-                    paramValue = 1f
-                };
-            }
-            else
-            {
-                return;
-            }
-
-            bool result = monoExecutor.ExecuteAction(slot, targetHash);
-            if (result)
-            {
-                current.ForceComplete();
-            }
+            if (aiExecutor != null && monoExecutor != null) { aiExecutor.SetExecutionBackend(monoExecutor); }
         }
 
-        /// <summary>
-        /// JudgmentLoop からターゲット情報を抜き出して BridgeAIActionToExecutor に橋渡しする共通ラッパー。
-        /// EnemyCharacter / CompanionCharacter で重複していた 8 行ロジックを集約 (Issue #79 M7-Reuse)。
-        /// </summary>
-        /// <param name="loop">AI controller の JudgmentLoop。null の場合は no-op。</param>
-        /// <param name="actionExecutorController">派生クラスが保持する MonoBehaviour 側 Executor。null なら no-op。</param>
-        /// <remarks>
-        /// 呼出側で AI controller (EnemyController / CompanionController 等) の null check を済ませること。
-        /// _actionExecutorController は派生クラス固有の private フィールドのため引数で受け取る (BaseCharacter には保持しない)。
-        /// </remarks>
         protected static void BridgeAIActionForJudgmentLoop(
             JudgmentLoop loop, ActionExecutorController actionExecutorController)
         {
@@ -288,9 +211,7 @@ namespace Game.Runtime
                 return;
             }
 
-            ActionExecutor aiExecutor = loop.Executor;
-            int targetHash = loop.CurrentTargetHash;
-            BridgeAIActionToExecutor(aiExecutor, actionExecutorController, targetHash);
+            BridgeAIActionToExecutor(loop.Executor, actionExecutorController);
         }
 
         /// <summary>
@@ -363,14 +284,60 @@ namespace Game.Runtime
         /// <summary>
         /// SoAコンテナの位置情報を同期する。
         /// </summary>
+        public void PublishPositionForObservation()
+        {
+            if (GameManager.IsCharacterValid(_objectHash))
+            {
+                GameManager.Data.GetVitals(_objectHash).position = PhysicsPosition;
+            }
+        }
+
+        /// <summary>共有固定更新が、全キャラクターの判断より前に入力を確定する。</summary>
+        public virtual void PrepareSimulationInput(float currentTime) { }
+
+        public virtual void PrepareAIDecisionTick(float deltaTime, float currentTime, AIDecisionSystem decisions) { }
+
+        /// <summary>共有固定更新が一度だけ呼ぶキャラクター制御。</summary>
+        public virtual void SimulateCharacterTick(float deltaTime, float currentTime) { }
+
+        public virtual void PrepareObservationTick(float deltaTime)
+        {
+            if (_damageReceiver != null && _damageReceiver.isActiveAndEnabled) { _damageReceiver.TickRecovery(deltaTime); }
+        }
+
+        /// <summary>前の物理ステップで確定した位置と接地を、全キャラの判断前に公開する。</summary>
+        public virtual void CaptureSimulationPhysics()
+        {
+            _hasSimulationVelocity = false;
+            PublishPositionForObservation();
+            UpdateGroundCheck();
+        }
+
+        /// <summary>全キャラの判断後、同じUnity物理ステップに間に合う位置で適用する。</summary>
+        public virtual void ApplySimulationPhysics() => SyncPositionToData();
+
         protected void SyncPositionToData()
         {
             if (!GameManager.IsCharacterValid(_objectHash))
             {
                 return;
             }
+            if (GameManager.Actions != null)
+            {
+                if (_hasSimulationVelocity && !GameManager.Actions.IsMovementBlocked(_objectHash)
+                    && !(_actionController != null && _actionController.HasMovementRequest))
+                {
+                    float speed = Mathf.Abs(PhysicsVelocity.x);
+                    GameManager.Actions.SetLocomotion(_objectHash, new Vector2(Mathf.Sign(PhysicsVelocity.x), 0f), speed);
+                }
+                GameManager.Actions.ApplyMovement(_objectHash, this);
+                if (_collisionController != null)
+                {
+                    _collisionController.SetInvincible(GameManager.Actions.Execution.EvaluateEffects(_objectHash).isInvincible);
+                }
+            }
             ref CharacterVitals vitals = ref GameManager.Data.GetVitals(_objectHash);
-            vitals.position = (Vector2)transform.position;
+            vitals.position = PhysicsPosition;
         }
     }
 }

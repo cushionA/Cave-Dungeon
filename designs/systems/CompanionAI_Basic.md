@@ -24,6 +24,16 @@ Section: 2 — AI・仲間・連携
 
 ## 仲間MPシステム
 
+### 実装の共有データ契約（2026-10-26 / DF-00）
+
+現在MPは全キャラ共通の `CharacterVitals.currentMp`、最大MPは `CharacterVitals.maxMp` が正本。`CompanionMpManager` は現在値・最大値を複製せず、共通行動エンジンと同じ `IExecutionWorld` を読む。Runtimeの `CompanionController` は `SoAExecutionWorld` を注入する。
+
+現在MPと独立した予備MP残量はfloat、最大MP・予備MP上限と技/アイテムの設定値は既存の整数を使う。自然回復は速度×経過時間・予備残量・現在MPの不足量の最小値を同量加減する。小数のバリアコスト後も、最大値を超えずMP総量を保存する。
+
+魔法などが共有MPを0にした場合も、次のMP更新で回復より先に消滅を観測する。プール返却時に旧管理を破棄し、再取得時は登録済みの現在値を読む新管理を作り、表示を同期する。
+
+以下のHPなし・通常被弾のバリア化・ワープ退場/復帰は設計仕様であり、Runtime接続はDF-13で整合させる。DF-00では `ApplyBarrierDamage` APIと共有MPの接続までを実装した。
+
 ### 概要
 
 仲間はHPを持たない。被ダメージはバリア（盾判定 = ダメージ計算式準拠）でMP消費して防ぐ。
@@ -59,7 +69,7 @@ public class CompanionMpManager
     // 状態
     public float CurrentMp { get; }
     public float MaxMp { get; }
-    public int ReserveMp { get; }
+    public float ReserveMp { get; }
     public int MaxReserveMp { get; }
     public bool IsVanished { get; }
     public bool IsRecovering { get; }  // MP回復行動中か
@@ -94,7 +104,7 @@ public class CompanionMpManager
 
 ```
 通常状態
-    ↓ バリアダメージでMP 0到達
+    ↓ 魔法/連携/バリア消費でMP 0到達
 消滅状態（OnVanish発火）
     - 連携ボタン使用不可
     - AI判定停止（Tickは回復のみ）

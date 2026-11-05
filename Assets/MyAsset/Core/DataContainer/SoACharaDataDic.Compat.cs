@@ -131,17 +131,65 @@ namespace Game.Core
         public bool TryGetManaged(int hash, out ManagedCharacter managed)
         {
             ThrowIfDisposed();
-            return TryGetManagedCharacterByHash(hash, out managed);
+            managed = GetManaged(hash);
+            return managed != null;
         }
 
         public int Add(int hash, CharacterVitals vitals, CombatStats combatStats,
             CharacterFlags flags, MoveParams moveParams,
             EquipmentStatus equipmentStatus = default, CharacterStatusEffects statusEffects = default,
-            AnimationStateData animationState = default, ManagedCharacter managed = null)
+            AnimationStateData animationState = default, ManagedCharacter managed = null,
+            CharacterDefenseState defenseState = default)
         {
             ThrowIfDisposed();
+            vitals.level = Math.Max(1, vitals.level);
             return AddByHash(hash, vitals, combatStats, flags, moveParams,
-                equipmentStatus, statusEffects, animationState, managed);
+                equipmentStatus, statusEffects, animationState, defenseState,
+                CharacterBaseStats.FromValues(vitals, combatStats, flags, moveParams),
+                new CharacterGrowth { level = vitals.level }, managed);
+        }
+
+        public ref CharacterBaseStats GetBaseStats(int hash)
+        {
+            ThrowIfDisposed();
+            if (!TryGetIndexByHash(hash, out int index))
+            {
+                throw new KeyNotFoundException($"Hash {hash} is not registered.");
+            }
+            return ref GetCharacterBaseStatsByIndex(index);
+        }
+
+        public ref CharacterGrowth GetGrowth(int hash)
+        {
+            ThrowIfDisposed();
+            if (!TryGetIndexByHash(hash, out int index))
+            {
+                throw new KeyNotFoundException($"Hash {hash} is not registered.");
+            }
+            return ref GetCharacterGrowthByIndex(index);
+        }
+
+        public StatModifier GetAttributes(int hash)
+        {
+            StatModifier attributes = CharacterStatCalculator.CalculateAttributes(GetBaseStats(hash), GetGrowth(hash));
+            StatModifier equipment = GetEquipmentStatus(hash).attributeModifiers;
+            attributes.str += equipment.str;
+            attributes.dex += equipment.dex;
+            attributes.intel += equipment.intel;
+            attributes.vit += equipment.vit;
+            attributes.mnd += equipment.mnd;
+            attributes.end += equipment.end;
+            return attributes;
+        }
+
+        public ref CharacterDefenseState GetDefenseState(int hash)
+        {
+            ThrowIfDisposed();
+            if (!TryGetIndexByHash(hash, out int index))
+            {
+                throw new KeyNotFoundException($"Hash {hash} is not registered.");
+            }
+            return ref GetCharacterDefenseStateByIndex(index);
         }
 
         public void Remove(int hash)

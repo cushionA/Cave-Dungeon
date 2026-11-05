@@ -125,7 +125,7 @@ namespace Game.Tests.EditMode
                 hasGuardAttackEffect: false,
                 currentStamina: 100f,
                 guardStrength: 100f,
-                armorBreakValue: 50f);
+                guardDamage: 50f);
 
             HitReaction reaction = HitReactionLogic.Determine(
                 hasSuperArmor: false,
@@ -154,7 +154,7 @@ namespace Game.Tests.EditMode
                 hasGuardAttackEffect: false,
                 currentStamina: 5f,
                 guardStrength: 10f,
-                armorBreakValue: 100f);
+                guardDamage: 100f);
 
             HitReaction reaction = HitReactionLogic.Determine(
                 hasSuperArmor: false,
@@ -182,7 +182,7 @@ namespace Game.Tests.EditMode
                 hasGuardAttackEffect: false,
                 currentStamina: 100f,
                 guardStrength: 30f,
-                armorBreakValue: 50f);
+                guardDamage: 50f);
 
             // ジャストガード回復
             float stamina = 50f;
@@ -220,7 +220,7 @@ namespace Game.Tests.EditMode
                 hasGuardAttackEffect: false,
                 currentStamina: 100f,
                 guardStrength: 100f,
-                armorBreakValue: 50f);
+                guardDamage: 50f);
 
             HitReaction reaction = HitReactionLogic.Determine(
                 hasSuperArmor: false,
@@ -248,7 +248,7 @@ namespace Game.Tests.EditMode
                 hasGuardAttackEffect: false,
                 currentStamina: 100f,
                 guardStrength: 100f,
-                armorBreakValue: 50f);
+                guardDamage: 50f);
 
             HitReaction reaction = HitReactionLogic.Determine(
                 hasSuperArmor: false,
@@ -280,7 +280,7 @@ namespace Game.Tests.EditMode
                 hasGuardAttackEffect: true,
                 currentStamina: 5f,
                 guardStrength: 10f,
-                armorBreakValue: 100f);
+                guardDamage: 100f);
 
             HitReaction reaction = HitReactionLogic.Determine(
                 hasSuperArmor: false,
@@ -567,7 +567,7 @@ namespace Game.Tests.EditMode
                 hasGuardAttackEffect: false,
                 currentStamina: 100f,
                 guardStrength: 100f,
-                armorBreakValue: 50f);
+                guardDamage: 50f);
 
             // DamageReceiverでの条件: NoGuard or GuardBreak 時のみボーナス適用
             bool shouldApplyBonus = guardResult == GuardResult.NoGuard
