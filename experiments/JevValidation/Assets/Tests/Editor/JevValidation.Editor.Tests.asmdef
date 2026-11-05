@@ -1,0 +1,6 @@
+{
+  "name": "JevValidation.Editor.Tests",
+  "references": ["JevValidation.Editor", "Unity.InferenceEngine"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

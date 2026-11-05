@@ -106,3 +106,12 @@ unity-*.txt
 # Wave 5 Phase 24: compound auto-extract drafts (人間レビュー前のノイズを ignore、ディレクトリ保持のため .gitkeep のみ track)
 docs/compound/_drafts/*.md
 !docs/compound/_drafts/.gitkeep
+
+experiments/JevValidation/ProfilerCaptures/
+experiments/JevValidation/Python/.venv/
+experiments/JevValidation/Python/Artifacts/
+experiments/JevValidation/Python/__pycache__/
+experiments/JevValidation/Assets/Models/*
+!experiments/JevValidation/Assets/Models/smoke.onnx
+!experiments/JevValidation/Assets/Models/smoke.onnx.meta
+experiments/JevValidation/Assets/PreparedCases/TinyJev*

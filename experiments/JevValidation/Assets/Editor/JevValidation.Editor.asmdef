@@ -1,0 +1,6 @@
+{
+  "name": "JevValidation.Editor",
+  "rootNamespace": "JevValidation",
+  "references": ["Unity.InferenceEngine"],
+  "includePlatforms": ["Editor"]
+}
