@@ -1,0 +1,197 @@
+{
+  "schema_version": 1,
+  "frozen_utc": "2026-11-10T03:46:13.533973+00:00",
+  "client_timezone": "Etc/GMT-9",
+  "exploratory": true,
+  "primary_quality_outputs_examined": false,
+  "purpose": "Evaluate one pinned native Saif CPU typed-decision pipeline on unchanged published synthetic cases. Previous Holm2 and prior artifacts remain unchanged.",
+  "cases": {
+    "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Python/Artifacts/expanded-diagnostics/decisions.json",
+    "bytes": 4505614,
+    "sha256": "064aad0db0e2c62353555a60ed8b89bfe05df6c45f7bbeff147fbbe098dac88f"
+  },
+  "controls_cases": {
+    "path": "/workspace/.cave-dungeon/unity/saif-lightning/simple-controls-cases.json",
+    "bytes": 4947,
+    "sha256": "7cc9699386b81ee27570294bdc76c013c79cf9376910da4e2b8f9be089c62aa6"
+  },
+  "model": {
+    "model_id": "GyrTechnology/saif-0.8b-lightning",
+    "revision": "0cc7d0954a7aa48e0ba7302c4839185eb5aa164d",
+    "license": "CC-BY-NC-4.0",
+    "authorized_use": "User explicitly authorized non-commercial testing",
+    "checkpoint_manifest": {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/model-manifest.json",
+      "bytes": 3110,
+      "sha256": "d5829a3fcb3a666c5949610e58937fecdd371cdcc2824aaf2aa2085ec1474884"
+    },
+    "source_manifest": {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/source-manifest.json",
+      "bytes": 1482,
+      "sha256": "7e6eb94c5ed46e44de4dc438a6cc960ace1b0552c2350386479f4fdc46d0c13e"
+    },
+    "sdk_manifest": {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/sdk-manifest.json",
+      "bytes": 935,
+      "sha256": "ac34f75e186d92213128244f2daf6e60388db322faa67f57126a48f8ad62fefd"
+    },
+    "temperatures": {
+      "choice": 1.3492052555084229,
+      "noul": 1.6690177917480469,
+      "score": 0.5360531806945801
+    },
+    "quantization": "none; native BF16decoder and FP32readout rows"
+  },
+  "baseline_sources": {
+    "expanded_statistics": {
+      "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Results/expanded-model-statistics.json",
+      "bytes": 264272,
+      "sha256": "16c0202aa6c4d22dbee8f9fc98336f22112ecb0ca1cf1c9d37fe12930a588d26"
+    },
+    "expanded_csv": {
+      "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Results/expanded-paired-outcomes.csv",
+      "bytes": 258901,
+      "sha256": "8f287109d49f74f8ccc562eb70ba61af563606965a2a0f5abd9d331e8475f98b"
+    },
+    "additional_statistics": {
+      "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Results/additional-model-statistics.json",
+      "bytes": 274720,
+      "sha256": "28dd5f00e2a2a3563c0d2cf3b94a851bda5dac541ad2c4d8b1c8ffc62a146819"
+    },
+    "additional_csv": {
+      "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Results/additional-model-outcomes.csv",
+      "bytes": 1733686,
+      "sha256": "33f17c521f7f360b9399ad6cc18374a33ba3713f0cb5e984ebcce3f7c398513b"
+    }
+  },
+  "baseline_names": [
+    "hindsight",
+    "tinyjev",
+    "unee-0.8b",
+    "unee-2b",
+    "lfm25-jp",
+    "lfm3"
+  ],
+  "frozen_sources": [
+    {
+      "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Python/compare_saif_lightning.py",
+      "bytes": 14147,
+      "sha256": "0ad65cb0a27dee149229503bdb0c8f7e43160b16d6501937e12c9aa717ce8412"
+    },
+    {
+      "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Python/run_saif_benchmark.py",
+      "bytes": 4270,
+      "sha256": "965eb5884648823f4998e5a0ca5bb6bc18a3de5a359e4a714980cdb17e0e735f"
+    },
+    {
+      "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Python/test_saif_lightning.py",
+      "bytes": 10890,
+      "sha256": "f5b43f27fd1d377bfa20e8b2bf34bf6c138f33e8a6c131645a5795f250eeb0b9"
+    },
+    {
+      "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Python/run_additional_candidates.py",
+      "bytes": 21824,
+      "sha256": "260ae5fba7ee925442bcd637e251d1eb0a7e8c6cc5ca444d44579ba61b01a58a"
+    },
+    {
+      "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Python/run_expanded_benchmark.py",
+      "bytes": 22079,
+      "sha256": "150567c4a99c0637c8ab9e6e1c9907c18bb6b9cf4632b495f824e4efa49bb498"
+    },
+    {
+      "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Python/analyze_expanded_decisions_repaired.py",
+      "bytes": 37423,
+      "sha256": "973d857c29137b0447bcae14351668755f7ed3d3f7c2987c78415f3631dff2da"
+    },
+    {
+      "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Python/analyze_additional_candidates.py",
+      "bytes": 34746,
+      "sha256": "6d297b03ce2b6e3019be95a7cbf0572666b4fa84e3c430718affa1c521ae3def"
+    },
+    {
+      "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Python/expanded_memory_cases.py",
+      "bytes": 22565,
+      "sha256": "b057cd9179455d4b9ced4316d98949cb43356a162e6ad339d983d340cf12a505"
+    },
+    {
+      "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Python/expanded_commander_cases.py",
+      "bytes": 31214,
+      "sha256": "7cd2dc628e35f2e19a2861e982eedccf41c2a62e310e41aabf758d00cd164b79"
+    },
+    {
+      "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Python/diagnose_candidate_controls.py",
+      "bytes": 16033,
+      "sha256": "5dfe7ddfd49b6d3033cae7b5ed1445153b877325d923bb08c43fad4ed8875495"
+    }
+  ],
+  "sample_sizes": {
+    "main_requests": 1200,
+    "primary_ja": {
+      "memory": 500,
+      "commander": 500
+    },
+    "secondary_en_paired_translations": {
+      "memory": 100,
+      "commander": 100
+    },
+    "separate_simple_controls": 8,
+    "unique_primary_worlds": 1000
+  },
+  "runtime": {
+    "device": "cpu",
+    "threads": 4,
+    "affinity": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "cpu_model": "AMD EPYC9V74 virtualCPU, cgroupquota4cores",
+    "python": "3.12.14",
+    "torch": "2.9.1+cpu",
+    "transformers": "5.17.0",
+    "accelerate": "1.15.0",
+    "huggingface_hub": "1.33.0",
+    "torch_version_note": "CardlistsTorch2.8; thisCPUtest uses2.9.1 and records actualruntime, not an exact reproduction of publishedGPUbenchmark.",
+    "inference": "OfficialSaifEngine.__call__ exactlyonce perrequest. No textgeneration, grammarreplacement, quantization, promptrewriting, calibrationfit or secondforward forlogits.",
+    "attention": "Official singlepass segmentedbidirectional, jointreading, read_twicefalse, nativefast_pathtrue. Dedicatedsequentialprocess forglobalattentionpatches.",
+    "kernels": "CPU PyTorchreferencefallback for unavailable causal_conv1d/flash-linear-attention CUDAkernels; native source unmodified.",
+    "warmup": "One fixed shared.WARMUP_REQUEST perrun, savedseparately andexcluded; no nativeEngine.warmup(two calls). Bothmain1200 andcontrol8 haveoneexcludedwarmup.",
+    "timing": "Imports/modelload/warmup excluded. Fulladapter includes post-call purelayout/tokenvalidation; native-only walltime also saved.",
+    "request_timeout_seconds": 300,
+    "backend": "native://cpu",
+    "packages_path": "/workspace/.cave-dungeon/unity/saif-deps:/workspace/.cave-dungeon/unity/hindsight-deps:/workspace/.cave-dungeon/unity/saif-lightning/decision-index",
+    "inter_op": "Native ownerleavesdefault; actual value recorded."
+  },
+  "statistical_plan": {
+    "main": "Task×language counts/rates and95%Wilson. JA500/taskprimary, EN100pairedtranslations/tasksecondary. Never pool translations into primaryN or overallCI.",
+    "paired": "SamecaseIDs versus all6baselines: b/c, difference, existing conservative paired95CPrectangle projection. Exploratory pointwiseCI only; no newconfirmatorypvalues or alteration of oldHolm2 family.",
+    "memory": "Nativeptrue>=0.5 fixed, TP/TN/FP/FN plusfailedpositive/negative observations.",
+    "commander": "Originalcandidate nativeargmax, knowninfeasible/feasiblebutnotbest/failed classes, fixed ordinalrankloss isnot gameutility.",
+    "performance": "Serialbatch1, onlyonemodel using4CPUthreads. NoKVprefixreuse or silenttruncation. Countactual nativeinputtokenIDs afterforward; nocharacterproxy. Allattemptlatencies retained.",
+    "controls": "Same8previouslypublished Japanese lamp/drawerfixtures selected beforeSaifquality inference. Separate8calls, noCI/pvalue/generalaccuracyclaim/primarypooling.",
+    "overall": "Descriptivecounts andlatency only; no mixedtask/languageCI orpairedinterval."
+  },
+  "fixed_rules": [
+    "Only original state/questions go tomodel; expected/audit/caseID/family remainoutside.",
+    "No output-based prompt/threshold/temperature/data/count/model change, no earlystop.",
+    "All1200observations required. Explicit runtime/parsefailure countswrong. Reject missing/duplicate/foreign rows.",
+    "Strictresume requiresidenticalcheckpoint/source/protocol/caseorder; completed orfailedobservations neverretried. Pending suffix afterinfrastructureinterruption may resume withevidence.",
+    "Keep nativecalibratedprobabilities unmodified; no floor, renormalization orposthoc calibration."
+  ],
+  "preflight": {
+    "official_readme_example": {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/official-example-smoke.json",
+      "bytes": 1821,
+      "sha256": "c7c381cb467439aa73ad4e5b9e519e185b835d836eaa467bb9dd544cf284e1f3"
+    },
+    "finding": "NativeCPUload and all3typedoutputs worked on excludedofficialexample. No maincases inferred.",
+    "new_mock_tests_passed": 6
+  },
+  "limitations": [
+    "Syntheticformalrules/givenplans only; no livegamewinrate, freeplan or toolargumentgeneration evaluation.",
+    "Primarycomparison onlyboolean/choice. Native score support demonstrated on excludedofficialexample.",
+    "Published18msmedian is RTX5070Ti, notCPU.",
+    "Unity/Sentis integration not tested."
+  ]
+}

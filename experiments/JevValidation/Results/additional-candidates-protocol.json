@@ -1,0 +1,321 @@
+{
+  "schema_version": 1,
+  "frozen_utc": "2026-11-06T15:42:09.162037+00:00",
+  "client_timezone": "Etc/GMT-9",
+  "status": "frozen before expanded candidate quality inference",
+  "purpose": "Exploratory evaluation of four preselected local candidate pipelines on the unchanged published synthetic cases; no amendment to the previous confirmatory Holm family.",
+  "quality_outputs_examined": false,
+  "cases": {
+    "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Python/Artifacts/expanded-diagnostics/decisions.json",
+    "bytes": 4505614,
+    "sha256": "064aad0db0e2c62353555a60ed8b89bfe05df6c45f7bbeff147fbbe098dac88f"
+  },
+  "original_protocol": {
+    "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Results/expanded-benchmark-protocol.json",
+    "bytes": 7188,
+    "sha256": "05a9df1bd6496b23d5f8e18eb4e7d62cafd8ae81bfff44f662f77966bacbf82f"
+  },
+  "original_statistics": {
+    "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Results/expanded-model-statistics.json",
+    "bytes": 264272,
+    "sha256": "16c0202aa6c4d22dbee8f9fc98336f22112ecb0ca1cf1c9d37fe12930a588d26"
+  },
+  "models": [
+    {
+      "key": "unee-0.8b",
+      "repository": "uneeverse/unee-0.8b-GGUF",
+      "revision": "6da4332bed7928e826f6c8144c7c11b2c890c16f",
+      "filename": "unee-0.8b-Q4_K_M.gguf",
+      "path": "/tmp/cave-additional-models/unee-0.8b-Q4_K_M.gguf",
+      "bytes": 529296928,
+      "sha256": "34b783d5882644efe89a33e532be29de160ee619e095bb60e1d089f300515e38",
+      "license": "apache-2.0",
+      "base_model_id": "uneeverse/unee-0.8b",
+      "base_source": {
+        "model_id": "uneeverse/unee-0.8b",
+        "revision": "60dfd958dc92a6065ab6987ee0de7ba51bfac09b",
+        "card_url": "https://huggingface.co/uneeverse/unee-0.8b/blob/60dfd958dc92a6065ab6987ee0de7ba51bfac09b/README.md",
+        "card_sha256": "36747acf37b5a67cfd9f1069ff92cbc54d35600bf4746f955508e3c7a71dc5ab",
+        "license": "apache-2.0",
+        "language": [
+          "af",
+          "ar",
+          "az",
+          "bn",
+          "da",
+          "de",
+          "el",
+          "en",
+          "es",
+          "fa",
+          "fi",
+          "fr",
+          "he",
+          "hi",
+          "hy",
+          "id",
+          "is",
+          "it",
+          "ja",
+          "kn",
+          "ko",
+          "lv",
+          "ml",
+          "ms",
+          "my",
+          "nb",
+          "nl",
+          "pl",
+          "pt",
+          "ro",
+          "ru",
+          "sl",
+          "sv",
+          "ta",
+          "te",
+          "th",
+          "tr",
+          "ur",
+          "vi",
+          "zh"
+        ]
+      },
+      "quantization": "Q4_K_M"
+    },
+    {
+      "key": "unee-2b",
+      "repository": "uneeverse/unee-2b-GGUF",
+      "revision": "f2fa68f6966dba6d1df5a91a0eefa6eb23096be9",
+      "filename": "unee-2b-Q4_K_M.gguf",
+      "path": "/tmp/cave-additional-models/unee-2b-Q4_K_M.gguf",
+      "bytes": 1274396192,
+      "sha256": "315f871fb99e2ca61bd3656d769bf35a04d43f313a512bcc3d2775ca99634cfb",
+      "license": "apache-2.0",
+      "base_model_id": "uneeverse/unee-2b",
+      "base_source": {
+        "model_id": "uneeverse/unee-2b",
+        "revision": "9b0d215730f664f75baf71629a792af2e02dad2c",
+        "card_url": "https://huggingface.co/uneeverse/unee-2b/blob/9b0d215730f664f75baf71629a792af2e02dad2c/README.md",
+        "card_sha256": "e14173a861ff2365a2c15fd4e90ccdc67e1dcf475cbe0f922c04c319877543f4",
+        "license": "apache-2.0",
+        "language": [
+          "af",
+          "ar",
+          "az",
+          "bn",
+          "da",
+          "de",
+          "el",
+          "en",
+          "es",
+          "fa",
+          "fi",
+          "fr",
+          "he",
+          "hi",
+          "hy",
+          "id",
+          "is",
+          "it",
+          "ja",
+          "kn",
+          "ko",
+          "lv",
+          "ml",
+          "ms",
+          "my",
+          "nb",
+          "nl",
+          "pl",
+          "pt",
+          "ro",
+          "ru",
+          "sl",
+          "sv",
+          "ta",
+          "te",
+          "th",
+          "tr",
+          "ur",
+          "vi",
+          "zh"
+        ]
+      },
+      "quantization": "Q4_K_M"
+    },
+    {
+      "key": "lfm25-jp",
+      "repository": "LiquidAI/LFM2.5-1.2B-JP-202606-GGUF",
+      "revision": "448ba3f7d408c2f5c32cec8038612f7c1ed9f054",
+      "filename": "LFM2.5-1.2B-JP-202606-Q4_K_M.gguf",
+      "path": "/tmp/cave-additional-models/LFM2.5-1.2B-JP-202606-Q4_K_M.gguf",
+      "bytes": 730894624,
+      "sha256": "23d4d4060cb06463563f6e8644bbbc7d1cb0bfe4cf21d5edf3ccc6f515fd44bb",
+      "license": "other",
+      "base_model_id": "LiquidAI/LFM2.5-1.2B-JP-202606",
+      "base_source": {
+        "model_id": "LiquidAI/LFM2.5-1.2B-JP-202606",
+        "revision": "52b8b4475311a63bf839c6494f78f8ad59d13515",
+        "card_url": "https://huggingface.co/LiquidAI/LFM2.5-1.2B-JP-202606/blob/52b8b4475311a63bf839c6494f78f8ad59d13515/README.md",
+        "card_sha256": "efc509d872990c90addc0e50342e0db09826f7d6c218df7c22995b2cc6e77b00",
+        "license": "other",
+        "language": [
+          "ja",
+          "en"
+        ]
+      },
+      "quantization": "Q4_K_M"
+    },
+    {
+      "key": "lfm3",
+      "repository": "LiquidAI/LFM3-1.7B-GGUF",
+      "revision": "cd0c74c575b5c416f3011b5b4c298077f26ca8c2",
+      "filename": "LFM3-1.7B-Q4_K_M.gguf",
+      "path": "/tmp/cave-additional-models/LFM3-1.7B-Q4_K_M.gguf",
+      "bytes": 1099627808,
+      "sha256": "3793e1e6e2266919d6e015287221b41100175a98eddaba92e111aed3b05c93c4",
+      "license": "other",
+      "base_model_id": "LiquidAI/LFM3-1.7B",
+      "base_source": {
+        "model_id": "LiquidAI/LFM3-1.7B",
+        "revision": "0dc4268b561499c648c7ba7c9466bf3d8d01517a",
+        "card_url": "https://huggingface.co/LiquidAI/LFM3-1.7B/blob/0dc4268b561499c648c7ba7c9466bf3d8d01517a/README.md",
+        "card_sha256": "5a51f6967177a403e93aa606eeff6f34b64c0629f62aef0e2790803a1975e9a7",
+        "license": "other",
+        "language": [
+          "en",
+          "ar",
+          "zh",
+          "fr",
+          "de",
+          "it",
+          "ja",
+          "ko",
+          "pt",
+          "es",
+          "vi",
+          "th",
+          "id",
+          "hi",
+          "ru",
+          "pl"
+        ]
+      },
+      "quantization": "Q4_K_M"
+    }
+  ],
+  "run_order": [
+    "unee-0.8b",
+    "lfm25-jp",
+    "unee-2b",
+    "lfm3"
+  ],
+  "planned_model_requests": 4800,
+  "per_model": {
+    "all": 1200,
+    "primary_ja": {
+      "memory": 500,
+      "commander": 500
+    },
+    "secondary_en_paired_translations": {
+      "memory": 100,
+      "commander": 100
+    }
+  },
+  "fixed_rules": [
+    "No output-based model selection, prompt changes, threshold fitting, sample-count changes or early stopping.",
+    "All original cases in original order once per model; errors and invalid outputs count wrong.",
+    "No dropped records, inferred missing answers or feasibility repair.",
+    "Only request.state and request.questions cross the adapter boundary; expected/audit/family remain outside.",
+    "Any infrastructure interruption must preserve durable records; failed rows never retried.",
+    "English translations remain secondary and are not pooled with Japanese."
+  ],
+  "statistical_plan": {
+    "reporting": "Descriptive exploratory estimates, no new confirmatory superiority claims or alteration of previous Holm2 outcomes.",
+    "accuracy_ci": "95% Wilson separately per task/language/model. Conditional on this fixed synthetic generator/family mix.",
+    "paired_comparison": "Against old Hindsight/TinyJev by identical case IDs: b/c, percentage-point difference, existing boundary-safe conservative paired95 interval. No equivalence conclusion.",
+    "memory": "TP/TN/FP/FN and failures separately, original balanced labels.",
+    "commander": "Known infeasible versus feasible-but-not-best versus failure/invalid; fixed ordinal rankloss is not game utility.",
+    "native_probability_diagnostics": "Report Unee native top20 missing-option/floor occurrences; never remove cases on that basis.",
+    "performance": "Warm resident model, serial one request at a time, four CPU inference threads, cache off. Latency is this pipeline on this CPU and prompt, not a Unity or target-machine benchmark."
+  },
+  "runtime": {
+    "llama_cpp_tag": "b12110",
+    "llama_cpp_commit": "cd959bae99ff4bed22bef2604f45241c09bbb8c8",
+    "official_archive_sha256": "368227edcc229be5f9bed16a2223d79b5e41d0ac2e19bcf5825e82291c060e55",
+    "server_sha256": "eaf9c1c664cc0ae1f4dea4b171bb91aac8409fcfea0574c9b6bcc93792ce2400",
+    "python": "3.12.14",
+    "cpu": "AMD EPYC 9V74 virtual CPU, cgroup quota four CPU cores",
+    "threads": 4,
+    "batch_threads": 4,
+    "affinity": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "context": 8192,
+    "parallel_slots": 1,
+    "gpu_layers": 0,
+    "cache_prompt": false,
+    "cache_ram_mib": 0,
+    "context_shift": false,
+    "loopback": "http://127.0.0.1:8831",
+    "quality_order": "Four complete model jobs serially; no other benchmark inference concurrently.",
+    "weights_storage": "/tmp/cave-additional-models temporary filesystem; all weight files verified against pinned Hugging Face LFS SHA256. Existing weights and old experiment files retained."
+  },
+  "interfaces": {
+    "unee": "Pinned official SDK0.3.2 compact prompt/parser/datefacts, one generated token with native top20 logprobs and official floor, native temperature1.0, no local calibration.",
+    "lfm": "Native model chat template, fixed Japanese instruction, grammar selecting exactly one original candidate symbol, temp0 seed20261107 max4 output tokens, enable_thinking false, native deepseek reasoning parser, no semantic repair.",
+    "lfm3_limit": "Fast constrained mode only. Full-thinking capability is not evaluated. Nonempty reasoning is invalid.",
+    "scope": "Memory relevance and given-plan choice only; this added experiment does not test free action/tool argument generation or live-game win rate."
+  },
+  "preflight": {
+    "unee_nonbenchmark_smoke": "Two simple lamp/drawer questions passed; no benchmark cases used.",
+    "lfmjp_nonbenchmark_smoke": "Two simple Japanese lamp/drawer questions passed.",
+    "lfm3_parser_compatibility": "Before quality inference, a nonbenchmark lamp reply exposed a template-generated empty thinking wrapper. Switched the native reasoning parser from none to deepseek; unchanged model/grammar/instructions/content. New native content B verified. No client trimming or semantic repair.",
+    "unit_tests": "6 Unee + 7 chat + 11 runner tests passed using synthetic/mocked outputs; no benchmark model outputs viewed."
+  },
+  "frozen_sources": [
+    {
+      "path": "Python/run_additional_candidates.py",
+      "bytes": 21824,
+      "sha256": "260ae5fba7ee925442bcd637e251d1eb0a7e8c6cc5ca444d44579ba61b01a58a"
+    },
+    {
+      "path": "Python/compare_unee_candidates.py",
+      "bytes": 8474,
+      "sha256": "b7426413a1f53e39c5f0dece4192e2bb46c8cb4c884d1a254e8bb8fca0d5f3d1"
+    },
+    {
+      "path": "Python/compare_llamacpp_candidates.py",
+      "bytes": 13020,
+      "sha256": "106f4fe28ec082cd1ea2b10dd95b53fca8c1c18bf7605b09ce787a7aabf60c0c"
+    },
+    {
+      "path": "Python/test_run_additional_candidates.py",
+      "bytes": 9365,
+      "sha256": "6082653ec3e557f024c10c7b9d787e2664b1d35234ee7c81ff8e5dddfc3b1a31"
+    },
+    {
+      "path": "Python/test_compare_unee_candidates.py",
+      "bytes": 4081,
+      "sha256": "58493938207019d2edec3776fbce473a3483e619f231db4ee45550f6822e03ad"
+    },
+    {
+      "path": "Python/test_compare_llamacpp_candidates.py",
+      "bytes": 7626,
+      "sha256": "675d37da5ff89d16d648e1aaa4beca06eb0620081f5fcbd18e214501499f108d"
+    },
+    {
+      "path": "Python/analyze_expanded_decisions_repaired.py",
+      "bytes": 37423,
+      "sha256": "973d857c29137b0447bcae14351668755f7ed3d3f7c2987c78415f3631dff2da"
+    }
+  ],
+  "external_orchestrator": {
+    "path": "/workspace/.cave-dungeon/unity/additional-candidates/run_all.py",
+    "bytes": 5512,
+    "sha256": "8636e10a9aaf5a17b1d9942ff03c5175a035e87bb4d76dbd73188583434dac64"
+  }
+}

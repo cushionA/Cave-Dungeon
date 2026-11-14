@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-11-06T13:41:32.380851+00:00",
+  "client_timezone": "Asia/Tokyo",
+  "frozen_before_expanded_model_inference": true,
+  "scope": "Confirmatory model comparison conditional on explicitly specified synthetic world generators; not combat strength or unrestricted natural-language accuracy.",
+  "primary": {
+    "language": "ja",
+    "tasks": [
+      "memory",
+      "commander"
+    ],
+    "worlds_per_task": 500,
+    "one_binary_correctness_outcome_per_world": true,
+    "domain_families_per_task": 25,
+    "worlds_per_domain_family": 20,
+    "higher_level_mechanisms_are_not_independent_domain_families": true,
+    "effect": "Hindsight exact-correct rate minus TinyJev exact-correct rate",
+    "test": "Two-sided exact paired McNemar, Holm correction across two primary tasks",
+    "familywise_alpha": 0.05,
+    "intervals": [
+      "95% Wilson individual rates",
+      "Conservative 95% paired Clopper-Pearson rectangle projection",
+      "Prespecified paired world-stratified bootstrap"
+    ],
+    "planning": {
+      "meaningful_absolute_difference": 0.1,
+      "discordance": 0.5,
+      "worst_holm_threshold": 0.025,
+      "exact_per_task_power": 0.8092294946933138,
+      "power_is_conditional_not_probability_both_tasks_reject": true
+    }
+  },
+  "secondary": {
+    "english_translations_per_task": 100,
+    "translations_never_add_primary_worlds": true,
+    "family_and_mechanism_block_bootstrap_are_robustness_diagnostics": true,
+    "measures": [
+      "FPR/FNR",
+      "domain/mechanism performance",
+      "leave-group-out sensitivity",
+      "commander hard-constraint violation",
+      "ordinal rank loss among supplied candidate plans"
+    ],
+    "no_additional_confirmatory_p_values": true
+  },
+  "needle": {
+    "japanese_worlds": 96,
+    "japanese_executable": 72,
+    "japanese_clarify": 24,
+    "english_translations": 32,
+    "english_executable": 24,
+    "english_clarify": 8,
+    "primary_descriptive_metrics": [
+      "exact correct executable coverage",
+      "issued action coverage",
+      "conditional correctness when issued",
+      "unsafe actions on clarify requests"
+    ],
+    "intervals": [
+      "95% Wilson",
+      "Exact one-sided 95% upper bounds"
+    ],
+    "suppressed_calls_never_accepted": true,
+    "native_gates_unchanged": true,
+    "max_new_tokens": 128,
+    "stateless": true,
+    "auto_date": false,
+    "selection_of_72_executable_worlds_fixed_before_outputs": true
+  },
+  "execution": {
+    "quality_runs_may_run_in_parallel": true,
+    "quality_wall_times_not_latency_benchmark": true,
+    "initial_cpu_allocation": {
+      "hindsight": {
+        "threads": 1,
+        "cpus": [
+          0
+        ]
+      },
+      "tinyjev": {
+        "threads": 2,
+        "cpus": [
+          1,
+          2
+        ]
+      },
+      "needle_ja": {
+        "cpus": [
+          3
+        ],
+        "native_thread_count_not_exposed": true
+      }
+    },
+    "one_separate_warmup_per_process": true,
+    "one_scored_pass_per_case": true,
+    "all_returned_runtime_failures_count_incorrect": true,
+    "missing_duplicate_or_foreign_records_rejected": true,
+    "resume_only_same_dataset_model_source_and_protocol": true,
+    "no_early_stopping_or_result_based_sample_changes": true,
+    "no_prompt_threshold_temperature_or_checkpoint_tuning": true,
+    "needle_affinity_may_expand_to_cpus_of_completed_peer_jobs": true,
+    "external_cpu_affinity_changes_are_logged_and_never_quality_based": true,
+    "resource_changes_do_not_change_inputs_models_decoding_or_sample_counts": true
+  },
+  "models": {
+    "hindsight": {
+      "model_id": "hindsight-ai/hs-decide-1-flash",
+      "revision": "b9a782058dbc81ad59d9397bf2a9fed946778cb3",
+      "dtype": "bfloat16",
+      "backend": "Official prompt and alias rules via Torch CPU adapter; vLLM numeric parity not measured"
+    },
+    "tinyjev": {
+      "model_id": "AnkitAI/TinyJev-0.6B",
+      "revision": "c559c2f7ea95069f92af8b999f512345bbb87d22",
+      "dtype": "float32",
+      "native_head_temperature": 1.4640856959456252
+    },
+    "needle": {
+      "model_id": "Cactus-Compute/needle3",
+      "revision": "c95d25b4efa1e9601e785d92438e4ade0dbddbf8",
+      "sdk": "4.0.1",
+      "native_runtime": "4.0.0"
+    }
+  },
+  "seeds": {
+    "memory": 20261106,
+    "commander": 2026110619,
+    "commands": 2026110603,
+    "case_order": 2026110627,
+    "bootstrap": 20261106
+  },
+  "bootstrap_repetitions": 10000,
+  "files": {
+    "decisions.json": {
+      "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Python/Artifacts/expanded-diagnostics/decisions.json",
+      "bytes": 4505614,
+      "sha256": "064aad0db0e2c62353555a60ed8b89bfe05df6c45f7bbeff147fbbe098dac88f"
+    },
+    "commands.json": {
+      "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Python/Artifacts/expanded-diagnostics/commands.json",
+      "bytes": 1032863,
+      "sha256": "0272359722dea9f26dde5a254a85cdcef7ef719496b75b066f0446d4e3ea7ca0"
+    },
+    "needle-ja.json": {
+      "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Python/Artifacts/expanded-diagnostics/needle-ja.json",
+      "bytes": 80305,
+      "sha256": "45ba79ee12c79ed72d02a0c6b37c4a5ff73e845a1b67f4f19b5d1c0af514927c"
+    },
+    "needle-en.json": {
+      "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Python/Artifacts/expanded-diagnostics/needle-en.json",
+      "bytes": 29152,
+      "sha256": "f15ae4d87211661cef53a967790aecb863303ab06c719e622f1db9d3bd99ca29"
+    }
+  },
+  "source_files": {
+    "prepare_expanded_diagnostics.py": "917fcfe8c0ec11a3e4a2cbab620b5196296a87dcdd9f836b4aa87182d765b351",
+    "expanded_memory_cases.py": "b057cd9179455d4b9ced4316d98949cb43356a162e6ad339d983d340cf12a505",
+    "expanded_commander_cases.py": "7cd2dc628e35f2e19a2861e982eedccf41c2a62e310e41aabf758d00cd164b79",
+    "expanded_command_cases.py": "56019b70df9f3008bc64a0d4bf57fbe4e093723a8fc4e60e2afe7eeccbce54e1",
+    "run_expanded_benchmark.py": "150567c4a99c0637c8ab9e6e1c9907c18bb6b9cf4632b495f824e4efa49bb498",
+    "analyze_expanded_decisions.py": "5ef49a47c5f43aa578e823a59cff0029eb6b46e2d3d53e83dc36e7e89d43a75e",
+    "compare_hindsight.py": "a43c7d4ddcb263284d10bba8fa6a9300d69ded6066b48094fe4e607325299d88",
+    "compare_tinyjev_diagnostics.py": "a9fcc8a24792702b4a76caf81560d581e1a7223474549d99635b4fa6f7b8c7e0",
+    "compare_needle3.py": "c0d05b61f02f64c9d0029cef074a00ba81aa441db2ff3450a42f179c1a80d254",
+    "compare_intern_decision.py": "d81642bd849e9e6dd92f9ea077189e81befb778b5ac8c3cca1acd4b4b006b37b",
+    "prepare_decision_diagnostics.py": "686e01252972a62faee8dcc07122dbd76e7c8d28a176e5c90539a8af3b773869",
+    "decision_diagnostic_cases.py": "6061d6d0feaf9cfcc736367bdc3b8947cdc8f0d3860482b031ff3187e22f18d9"
+  },
+  "limitations": [
+    "Repeated mathematical operators are tagged as shared mechanisms, not claimed as independent reasoning types.",
+    "Generator-specific significance does not establish performance in real gameplay or unseen task families.",
+    "Formal oracles validate stated constraints and answer sets; strategic taste and future combat outcomes are outside this target population."
+  ],
+  "resource_plan_finalized_before_any_expanded_inference": true
+}

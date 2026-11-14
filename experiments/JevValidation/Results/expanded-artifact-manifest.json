@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-11-06T15:25:08.281592+00:00",
+  "client_timezone": "Asia/Tokyo",
+  "evaluated_requests": 2528,
+  "primary_japanese_worlds_per_decision_task": 500,
+  "all_scheduled_processes_exited": true,
+  "files": [
+    {
+      "path": "Python/analyze_expanded_decisions.py",
+      "bytes": 37381,
+      "sha256": "5ef49a47c5f43aa578e823a59cff0029eb6b46e2d3d53e83dc36e7e89d43a75e"
+    },
+    {
+      "path": "Python/analyze_expanded_decisions_repaired.py",
+      "bytes": 37423,
+      "sha256": "973d857c29137b0447bcae14351668755f7ed3d3f7c2987c78415f3631dff2da"
+    },
+    {
+      "path": "Python/collect_expanded_results.py",
+      "bytes": 12835,
+      "sha256": "989bf7ee5c20a62d892b884ee1330f52ff1a42e027a568d69a37f7fbf564e85d"
+    },
+    {
+      "path": "Python/expanded_command_cases.py",
+      "bytes": 27539,
+      "sha256": "56019b70df9f3008bc64a0d4bf57fbe4e093723a8fc4e60e2afe7eeccbce54e1"
+    },
+    {
+      "path": "Python/expanded_commander_cases.py",
+      "bytes": 31214,
+      "sha256": "7cd2dc628e35f2e19a2861e982eedccf41c2a62e310e41aabf758d00cd164b79"
+    },
+    {
+      "path": "Python/expanded_memory_cases.py",
+      "bytes": 22565,
+      "sha256": "b057cd9179455d4b9ced4316d98949cb43356a162e6ad339d983d340cf12a505"
+    },
+    {
+      "path": "Python/plot_expanded_results.py",
+      "bytes": 4269,
+      "sha256": "02c06e3f06c89772bde86546c0263d4d97fa7b661c75da4c81c13a752a2808a4"
+    },
+    {
+      "path": "Python/prepare_expanded_diagnostics.py",
+      "bytes": 10119,
+      "sha256": "917fcfe8c0ec11a3e4a2cbab620b5196296a87dcdd9f836b4aa87182d765b351"
+    },
+    {
+      "path": "Python/run_expanded_benchmark.py",
+      "bytes": 22079,
+      "sha256": "150567c4a99c0637c8ab9e6e1c9907c18bb6b9cf4632b495f824e4efa49bb498"
+    },
+    {
+      "path": "Python/test_analyze_expanded_decisions.py",
+      "bytes": 11334,
+      "sha256": "83e6af598d72db4374cf513077fa08728dd8c5310044d0fd071f8577a26aba70"
+    },
+    {
+      "path": "Python/test_analyze_expanded_decisions_repaired.py",
+      "bytes": 7031,
+      "sha256": "16028a4f2ba05576b667a6b6a17b88698770c58b079a7f289c3c17bc36dc5ca6"
+    },
+    {
+      "path": "Python/test_expanded_command_cases.py",
+      "bytes": 10214,
+      "sha256": "4512f7852fcaff6b7bf0ccb09f514b259c3f25e7b381e74e75b8ce05f1d9a599"
+    },
+    {
+      "path": "Python/test_expanded_commander_cases.py",
+      "bytes": 8410,
+      "sha256": "c70fafb77468ee040f4d05173ec9661e1fb1b540e44a5a24137147c2c071d0d4"
+    },
+    {
+      "path": "Python/test_expanded_memory_cases.py",
+      "bytes": 5972,
+      "sha256": "1f728883bec052f3986af9d262eab9cafaccff3c00298691ad68c8c47c424995"
+    },
+    {
+      "path": "Python/test_prepare_expanded_diagnostics.py",
+      "bytes": 1792,
+      "sha256": "96dc09dbed75a3117ce3ce20b31a07f2072d1911114b8f3817ce30908a0777e0"
+    },
+    {
+      "path": "Python/test_run_expanded_benchmark.py",
+      "bytes": 10525,
+      "sha256": "fdee898061b556ea2eeaa72fbd7f2ef34d8c6ff6207f07b47ab4adca4b74dd74"
+    },
+    {
+      "path": "README.md",
+      "bytes": 50770,
+      "sha256": "37b9cf4b69b8b21b7d1cdbaab2200b671b7ad7c8ceebf5e24f1799d705c80491"
+    },
+    {
+      "path": "Results/expanded-analysis-amendment.json",
+      "bytes": 1706,
+      "sha256": "48831cf8a2a67bc45e83f3bebb72cfc72686962e000da7bee6a51288fe4f7e1d"
+    },
+    {
+      "path": "Results/expanded-benchmark-protocol.json",
+      "bytes": 7188,
+      "sha256": "05a9df1bd6496b23d5f8e18eb4e7d62cafd8ae81bfff44f662f77966bacbf82f"
+    },
+    {
+      "path": "Results/expanded-model-statistics.json",
+      "bytes": 264272,
+      "sha256": "16c0202aa6c4d22dbee8f9fc98336f22112ecb0ca1cf1c9d37fe12930a588d26"
+    },
+    {
+      "path": "Results/expanded-needle-outcomes.csv",
+      "bytes": 23586,
+      "sha256": "331c6056b49e2781dc637ffa7029a86a7bc504fd836c97a51061b7ad2a715189"
+    },
+    {
+      "path": "Results/expanded-paired-outcomes.csv",
+      "bytes": 258901,
+      "sha256": "8f287109d49f74f8ccc562eb70ba61af563606965a2a0f5abd9d331e8475f98b"
+    },
+    {
+      "path": "Results/expanded-primary-comparison.png",
+      "bytes": 141944,
+      "sha256": "9cc930d315cd0f69abbca55f50c3eff91650354747bbfe4e000d5000a83bbbe5"
+    },
+    {
+      "path": "Results/expanded-primary-comparison.svg",
+      "bytes": 83256,
+      "sha256": "1f18fba58f92fb5cc4f20270552bb5ee5e70036cbaab9e3e7525dffcb4d0a6c8"
+    }
+  ]
+}

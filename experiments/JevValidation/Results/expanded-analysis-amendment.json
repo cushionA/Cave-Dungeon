@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-11-06T13:56:20.699781+00:00",
+  "protocol_sha256": "05a9df1bd6496b23d5f8e18eb4e7d62cafd8ae81bfff44f662f77966bacbf82f",
+  "kind": "Implementation repair preserving prespecified analytical methods",
+  "found_by": "Source review before any live model outcomes were examined; quality inference had started",
+  "reason": "Generic memory oracle audit metadata incorrectly entered commander plan diagnostics. The registered code would fail on the actual mixed corpus.",
+  "registered_source": {
+    "path": "experiments/JevValidation/Python/analyze_expanded_decisions.py",
+    "sha256": "5ef49a47c5f43aa578e823a59cff0029eb6b46e2d3d53e83dc36e7e89d43a75e"
+  },
+  "repaired_source": {
+    "path": "experiments/JevValidation/Python/analyze_expanded_decisions_repaired.py",
+    "sha256": "973d857c29137b0447bcae14351668755f7ed3d3f7c2987c78415f3631dff2da"
+  },
+  "original_source_bytes_unchanged": true,
+  "models_inputs_labels_sample_sizes_protocol_and_statistical_methods_unchanged": true,
+  "changes": [
+    "Run plan-audit diagnostics only for commander groups",
+    "Require every commander row to contain the complete commander audit contract"
+  ],
+  "verification": [
+    "Registered 12 tests and new 6 integration/regression tests passed",
+    "Full frozen 1200 decision cases with synthetic oracle-perfect/wrong native-shaped outputs passed",
+    "Full 128 command cases with synthetic clean-abstention outputs passed",
+    "Repaired output numerically equals original after removing irrelevant memory-only audit metadata"
+  ],
+  "live_outputs_used_for_repair": false,
+  "test_source_sha256": "16028a4f2ba05576b667a6b6a17b88698770c58b079a7f289c3c17bc36dc5ca6"
+}

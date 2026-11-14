@@ -184,6 +184,7 @@ Install scriptには`bash scripts/setup-codex-unity.sh`を設定する。Start s
 | アーキテクチャ設計 | `Architect/` | SoA, GameManager, 戦闘, AI等の詳細設計 |
 | システム設計書 | `designs/systems/` | 各システムのAPI・データフロー定義 |
 | GDD | `designs/game-design.md` | ゲーム全体の設計 |
+| 仲間AIの有望モデル | [モデル候補一覧](experiments/JevValidation/MODEL_CANDIDATES.md) | SAIFを含む実測比較、用途別の評価、Unity検証状況 |
 | コード規約 | `.claude/rules/` | 命名, テスト, Git, アセット管理の規約 |
 
 詳細は [Wiki](../../wiki) を参照。

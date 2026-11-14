@@ -1,0 +1,539 @@
+{
+  "schema_version": 1,
+  "experiment": "TinyJev four-part ONNX import and Sentis CPU inference",
+  "date_utc": "2026-11-06",
+  "base_commit": "c32ceb395ac455a0e8a491b28d98a3f767cc2770",
+  "model_id": "AnkitAI/TinyJev-0.6B",
+  "model_revision": "c559c2f7ea95069f92af8b999f512345bbb87d22",
+  "source_onnx_sha256": "1ff148f370347e23345cf46422cd36e90989b1846cb2ef0c8c8317c76b242f97",
+  "case_sha256": "f4ba4f7221ca57aa1a51f4204457b874444b457cc966ab8b01e4be57dda508a4",
+  "conditions": {
+    "unity_version": "6000.6.8f1",
+    "sentis_version": "2.6.1",
+    "operating_system": "Linux 6.18 Debian GNU/Linux 13 64bit",
+    "processor": "AMD EPYC 9V74 80-Core Processor",
+    "cpu_quota_cores": 4,
+    "sentis_job_workers": 4,
+    "ort_intra_op_threads": 4,
+    "ort_inter_op_threads": 1,
+    "memory_limit_bytes": 17179869184,
+    "backend": "CPU",
+    "graphics_device": "llvmpipe (LLVM 19.1.7, 256 bits)",
+    "token_count": 256,
+    "candidate_count": 4,
+    "case_count": 6,
+    "source_backbone_dtype": "float16",
+    "source_head_dtype": "float32",
+    "sentis_weight_quantization": "none",
+    "warmup_cases": 1,
+    "timed_repetitions_per_case": 1,
+    "actual_discrete_gpu_available": false
+  },
+  "partition": {
+    "description": "Embedding / blocks 0-9 / blocks 10-18 / blocks 19-27 + final norm + trained pointer head",
+    "source_fp32_expanded_initializer_bytes": 2386365440,
+    "maximum_chunk_fp32_expanded_initializer_bytes": 629304320,
+    "maximum_payload_reduction_percent": 73.62917223608467,
+    "duplicated_fp32_expanded_initializer_bytes": 133120,
+    "split_seconds": 6.317709981998632,
+    "chunks": [
+      {
+        "name": "embedding",
+        "file": "embedding.onnx",
+        "sha256": "241d183023af35f9536212aab2868210d9ea7d8bbec60cedeb47031c576cfd22",
+        "file_bytes": 311165266,
+        "inputs": [
+          "input_ids"
+        ],
+        "outputs": [
+          "hidden_0"
+        ],
+        "fp32_expanded_initializer_bytes": 622329856
+      },
+      {
+        "name": "blocks_00_09",
+        "file": "blocks_00_09.onnx",
+        "sha256": "07eb15a7ed110b8db5cbaa694853bf36fbf189710d8acf6b98f80d385cf5569c",
+        "file_bytes": 314935972,
+        "inputs": [
+          "hidden_0",
+          "attention_mask"
+        ],
+        "outputs": [
+          "hidden_10"
+        ],
+        "fp32_expanded_initializer_bytes": 629304320
+      },
+      {
+        "name": "blocks_10_18",
+        "file": "blocks_10_18.onnx",
+        "sha256": "08dd22e85aeaa4cda91545ca889e16f2dcafad0fd99239a1c1d8f3328fcd6d0d",
+        "file_bytes": 283453386,
+        "inputs": [
+          "hidden_10",
+          "attention_mask"
+        ],
+        "outputs": [
+          "hidden_19"
+        ],
+        "fp32_expanded_initializer_bytes": 566380544
+      },
+      {
+        "name": "blocks_19_27_head",
+        "file": "blocks_19_27_head.onnx",
+        "sha256": "8872913235e609c79677b7046404808bd0b4458aff4829a34f6b1aa5b47770d1",
+        "file_bytes": 285557592,
+        "inputs": [
+          "hidden_19",
+          "attention_mask",
+          "option_positions",
+          "decision_position"
+        ],
+        "outputs": [
+          "probabilities"
+        ],
+        "fp32_expanded_initializer_bytes": 568483840
+      }
+    ]
+  },
+  "monolithic_import": {
+    "status": "interrupted_by_environment_oom_kill",
+    "last_recorded_stage": "import",
+    "editor_exit_signal": "SIGKILL",
+    "oom_kill_counter_before": 0,
+    "oom_kill_counter_after": 1,
+    "complete": false,
+    "memory": {
+      "created_utc": "2026-11-06T00:44:57.379274+00:00",
+      "interval_seconds": 0.1,
+      "elapsed_seconds": 36.71081557599973,
+      "command_exit_code": 6,
+      "timed_out": false,
+      "scope": "Sampled sum of current RSS of Editor and recursive child processes; shared pages may be counted more than once. CPU RAM only; not VRAM or an allocation-size measurement.",
+      "baseline_editor_rss_bytes": 1730465792,
+      "peak_sampled_editor_rss_bytes": 14230355968,
+      "peak_sampled_tree_rss_bytes": 17492856832,
+      "peak_sampled_cgroup_current_bytes": null,
+      "cgroup_initial": null,
+      "cgroup_final": null
+    }
+  },
+  "split_import": {
+    "success": true,
+    "imported_chunks": 4,
+    "total_import_ms": 20292.6524,
+    "copy_ms": 180.0728,
+    "chunks": [
+      {
+        "name": "embedding",
+        "import_ms": 5822.3813
+      },
+      {
+        "name": "blocks_00_09",
+        "import_ms": 5635.9667
+      },
+      {
+        "name": "blocks_10_18",
+        "import_ms": 4420.1945000000005
+      },
+      {
+        "name": "blocks_19_27_head",
+        "import_ms": 4414.1099
+      }
+    ],
+    "memory": {
+      "created_utc": "2026-11-06T00:47:15.163147+00:00",
+      "interval_seconds": 0.1,
+      "elapsed_seconds": 35.287693150999985,
+      "command_exit_code": 0,
+      "timed_out": false,
+      "scope": "Sampled sum of current RSS of Editor and recursive child processes; shared pages may be counted more than once. CPU RAM only; not VRAM or an allocation-size measurement.",
+      "baseline_editor_rss_bytes": 1118253056,
+      "peak_sampled_editor_rss_bytes": 10782089216,
+      "peak_sampled_tree_rss_bytes": 14546169856,
+      "peak_sampled_cgroup_current_bytes": 17179840512,
+      "cgroup_initial": {
+        "current_bytes": 8416952320,
+        "limit_bytes": 17179869184,
+        "events": {
+          "low": 0,
+          "high": 0,
+          "max": 63526,
+          "oom": 1,
+          "oom_kill": 1,
+          "oom_group_kill": 0
+        }
+      },
+      "cgroup_final": {
+        "current_bytes": 16309563392,
+        "limit_bytes": 17179869184,
+        "events": {
+          "low": 0,
+          "high": 0,
+          "max": 74806,
+          "oom": 1,
+          "oom_kill": 1,
+          "oom_group_kill": 0
+        }
+      }
+    }
+  },
+  "split_resident_cached": {
+    "success": true,
+    "execution_completed": true,
+    "parity_passed": true,
+    "imports_skipped": true,
+    "asset_lookup_ms": 1538.8608,
+    "model_load_ms": 894.0546,
+    "worker_creation_ms": 41.883500000000005,
+    "combined_initialization_ms": 2474.7989,
+    "warmup_ms": 2040.6308000000001,
+    "mean_inference_ms": 2139.6997333333334,
+    "reference_matches": 6,
+    "reference_case_count": 6,
+    "maximum_absolute_probability_error": 5.429983139038086e-05,
+    "absolute_tolerance": 0.004999999888241291,
+    "cases": [
+      {
+        "case_id": "verbal_healthy_melee",
+        "state_id": "verbal_healthy_melee",
+        "choice_ids": [
+          "wait",
+          "approach",
+          "attack",
+          "retreat"
+        ],
+        "probabilities": [
+          0.004160828422755003,
+          0.0513952262699604,
+          0.9420158863067627,
+          0.0024281032383441925
+        ],
+        "chosen_id": "attack",
+        "inference_ms": 2090.6731,
+        "backbone_ms": 0.0,
+        "head_ms": 0.0,
+        "has_reference": true,
+        "reference_probabilities": [
+          0.004160318989306688,
+          0.05137886852025986,
+          0.9420326948165894,
+          0.002428097417578101
+        ],
+        "max_reference_error": 1.6808509826660156e-05,
+        "mean_reference_error": 8.420378435403109e-06
+      },
+      {
+        "case_id": "verbal_critical_melee",
+        "state_id": "verbal_critical_melee",
+        "choice_ids": [
+          "wait",
+          "approach",
+          "attack",
+          "retreat"
+        ],
+        "probabilities": [
+          0.03744584321975708,
+          0.10304238647222519,
+          0.1624089479446411,
+          0.6971028447151184
+        ],
+        "chosen_id": "retreat",
+        "inference_ms": 2047.0983,
+        "backbone_ms": 0.0,
+        "head_ms": 0.0,
+        "has_reference": true,
+        "reference_probabilities": [
+          0.03744564577937126,
+          0.1030786857008934,
+          0.1624017059803009,
+          0.6970739364624023
+        ],
+        "max_reference_error": 3.629922866821289e-05,
+        "mean_reference_error": 1.8161721527576447e-05
+      },
+      {
+        "case_id": "numeric_hp90",
+        "state_id": "numeric_hp90",
+        "choice_ids": [
+          "wait",
+          "approach",
+          "attack",
+          "retreat"
+        ],
+        "probabilities": [
+          0.029661087319254875,
+          0.1022767424583435,
+          0.8143110275268555,
+          0.053751129657030106
+        ],
+        "chosen_id": "attack",
+        "inference_ms": 2027.3193,
+        "backbone_ms": 0.0,
+        "head_ms": 0.0,
+        "has_reference": true,
+        "reference_probabilities": [
+          0.029669709503650665,
+          0.1023031622171402,
+          0.8142567276954651,
+          0.053770408034324646
+        ],
+        "max_reference_error": 5.429983139038086e-05,
+        "mean_reference_error": 2.7155037969350815e-05
+      },
+      {
+        "case_id": "numeric_hp5",
+        "state_id": "numeric_hp5",
+        "choice_ids": [
+          "wait",
+          "approach",
+          "attack",
+          "retreat"
+        ],
+        "probabilities": [
+          0.027208207175135612,
+          0.10264628380537033,
+          0.8168739080429077,
+          0.05327162891626358
+        ],
+        "chosen_id": "attack",
+        "inference_ms": 2017.0302000000001,
+        "backbone_ms": 0.0,
+        "head_ms": 0.0,
+        "has_reference": true,
+        "reference_probabilities": [
+          0.027212833985686302,
+          0.10265613347291946,
+          0.8168423175811768,
+          0.05328872427344322
+        ],
+        "max_reference_error": 3.159046173095703e-05,
+        "mean_reference_error": 1.5790574252605438e-05
+      },
+      {
+        "case_id": "personality_aggressive",
+        "state_id": "personality_aggressive",
+        "choice_ids": [
+          "wait",
+          "approach",
+          "attack",
+          "retreat"
+        ],
+        "probabilities": [
+          0.0240926593542099,
+          0.10987906903028488,
+          0.8232718110084534,
+          0.04275643453001976
+        ],
+        "chosen_id": "attack",
+        "inference_ms": 2395.2675,
+        "backbone_ms": 0.0,
+        "head_ms": 0.0,
+        "has_reference": true,
+        "reference_probabilities": [
+          0.02409648895263672,
+          0.1098601296544075,
+          0.8232794404029846,
+          0.04276396334171295
+        ],
+        "max_reference_error": 1.893937587738037e-05,
+        "mean_reference_error": 9.481795132160187e-06
+      },
+      {
+        "case_id": "personality_cautious",
+        "state_id": "personality_cautious",
+        "choice_ids": [
+          "wait",
+          "approach",
+          "attack",
+          "retreat"
+        ],
+        "probabilities": [
+          0.04549957811832428,
+          0.13483504951000214,
+          0.7311182022094727,
+          0.08854719996452332
+        ],
+        "chosen_id": "attack",
+        "inference_ms": 2260.81,
+        "backbone_ms": 0.0,
+        "head_ms": 0.0,
+        "has_reference": true,
+        "reference_probabilities": [
+          0.045499056577682495,
+          0.134828120470047,
+          0.7311335802078247,
+          0.08853926509618759
+        ],
+        "max_reference_error": 1.537799835205078e-05,
+        "mean_reference_error": 7.690861821174622e-06
+      }
+    ],
+    "memory": {
+      "created_utc": "2026-11-06T00:50:50.664713+00:00",
+      "interval_seconds": 0.1,
+      "elapsed_seconds": 45.67681702099799,
+      "command_exit_code": 0,
+      "timed_out": false,
+      "scope": "Sampled sum of current RSS of Editor and recursive child processes; shared pages may be counted more than once. CPU RAM only; not VRAM or an allocation-size measurement.",
+      "baseline_editor_rss_bytes": 963321856,
+      "peak_sampled_editor_rss_bytes": 8363053056,
+      "peak_sampled_tree_rss_bytes": 13245149184,
+      "peak_sampled_cgroup_current_bytes": 15964200960,
+      "cgroup_initial": {
+        "current_bytes": 6869716992,
+        "limit_bytes": 17179869184,
+        "events": {
+          "low": 0,
+          "high": 0,
+          "max": 78108,
+          "oom": 1,
+          "oom_kill": 1,
+          "oom_group_kill": 0
+        }
+      },
+      "cgroup_final": {
+        "current_bytes": 15956987904,
+        "limit_bytes": 17179869184,
+        "events": {
+          "low": 0,
+          "high": 0,
+          "max": 78108,
+          "oom": 1,
+          "oom_kill": 1,
+          "oom_group_kill": 0
+        }
+      }
+    }
+  },
+  "split_ort_reference_check": {
+    "success": true,
+    "choice_matches": 6,
+    "max_reference_error": 0.0002617835998535156,
+    "mean_inference_ms": 1876.8250846672647
+  },
+  "tests": {
+    "python": {
+      "total": 26,
+      "passed": 26,
+      "failed": 0
+    },
+    "unity_initial": {
+      "total": 21,
+      "passed": 21,
+      "failed": 0
+    },
+    "unity_final": {
+      "total": 21,
+      "passed": 21,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 2.71,
+      "success": true
+    }
+  },
+  "limitations": [
+    "Payload reduction is calculated from initializer shapes/dtypes, not measured total RAM reduction.",
+    "Monolithic import did not complete, so successful full-import load time and runtime comparisons are unavailable.",
+    "RSS maxima are 100ms sampled lower bounds; tree RSS can double-count shared pages.",
+    "Cgroup memory includes all environment processes and file cache. Monolithic OOM is additionally confirmed by SIGKILL and memory.events.",
+    "Cached initialization includes asset lookup, ModelLoader.Load and Worker creation; excludes SHA verification, warmup and project startup.",
+    "Inference measures scheduling through final readback, with input construction, model load and warmup excluded.",
+    "Each of six fixed cases was timed once; these are not latency-distribution or throughput benchmarks.",
+    "This Linux CPU test uses 256 tokens and four candidates, not the separate Windows GPU 512-token/eight-strategy tests.",
+    "No game-runtime integration, discrete-GPU performance, sequential weight streaming or Sentis weight quantization was tested."
+  ],
+  "raw_evidence": [
+    {
+      "path": "/workspace/.cave-dungeon/unity/test-results/jev-split/monolithic-report.json",
+      "sha256": "9cabf3db8d5e0b3c986c27ddca10164f66f6c81f27a4359b706dc62eb885744e",
+      "bytes": 4032
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/test-results/jev-split/monolithic-memory.json",
+      "sha256": "9d5321cd108af542fadf7d34b6a5d0396214f7a2afacc904ff9c1826b5477329",
+      "bytes": 645897
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/test-results/jev-split/monolithic-memory.stdout.log",
+      "sha256": "7e10fdfe9d54418cf151bff0e7b65dd5590b6fda97676b8fd815764536c1d782",
+      "bytes": 327
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/test-results/jev-split/split-import-report.json",
+      "sha256": "b64f32be946494abfa6755e26c1206e2a7591470293c0a521f3effbe5d6612a6",
+      "bytes": 8659
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/test-results/jev-split/split-import-memory.json",
+      "sha256": "4e74ce71e5f66f22bb4ecf368a781f10c2e8bee4c90074713bdecb76f7ae9d51",
+      "bytes": 651975
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/test-results/jev-split/split-resident-report.json",
+      "sha256": "21405807da191ddcd7a733e6515413f00fda6706ec9df9a3d546910065269913",
+      "bytes": 21300
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/test-results/jev-split/split-resident-memory.json",
+      "sha256": "3ba54bbf910cd6e4f4cebdb5ee4236e6171f1280c7f99e64088278f8af7034c3",
+      "bytes": 836525
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/test-results/jev-split/unity-tests.json",
+      "sha256": "fcb60297762e149efa941423839655bf98e653295d4ce95fe1f1ce02e7f19221",
+      "bytes": 4321
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/test-results/jev-split/python-tests-final.log",
+      "sha256": "411c012166e625c792fbd4e5fa13a4e2d05fa2d93e719be02eb4388fbda5067a",
+      "bytes": 11666
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/test-results/jev-split/editor-held.log",
+      "sha256": "e09550bf3c067f9a98b093754763db64b105aeb308e687e20cd971811a12360e",
+      "bytes": 2056322
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/test-results/jev-split/editor-split-import.log",
+      "sha256": "3e04134bcfe14352cb4901c844577e776db8f5e0b461746b9f606af8049dcbf3",
+      "bytes": 105144
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/test-results/jev-split/editor-split-resident.log",
+      "sha256": "b972ce83b17ce684fa8efb4ce9bd057d076fc8a360dad4810c0b23da8ad4ee16",
+      "bytes": 114275
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/test-results/jev-split/unity-tests-final.json",
+      "sha256": "e4a15fa030d58b2f7a9099cbc54abc17c8bee90f960fa353504fd3248dd2de63",
+      "bytes": 4321
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/test-results/jev-split/checkpoint-download.log",
+      "sha256": "956f201f7dbb6152e45b1898771d2eda081c9bebfd090505e0cb8b411f39d925",
+      "bytes": 1216
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/test-results/jev-split/full-export.log",
+      "sha256": "5bca7fe65ea973c01b91b5a65fca287f6802a072a8bad270dbaa5e0136cf618c",
+      "bytes": 7659
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/test-results/jev-split/split-export.log",
+      "sha256": "2d48c248245d825bc1ff833ae1ef550a65b61cf583add4e057e8b9eb45a424d3",
+      "bytes": 737
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/test-results/jev-split/split-ort.log",
+      "sha256": "1d60cda9934d12464f57a6dd5e34e4492a0fda5c7110050d38a2321ae7e282c7",
+      "bytes": 3981
+    }
+  ],
+  "recorded_source_sha256_at_report_creation": {
+    "Python/prepare.py": "7737df12efb0d5261a47d5ec59474e30de08cb4b5fa93ef5f7aec6f4bc9c49b8",
+    "Python/prepare_split.py": "1cd74f849d03b786887d9dd1c985236cb86835bfd0d08eb4ddc8dd364cd73fd3",
+    "Python/measure_process.py": "a2280a4c7daa55a47a464c9795861ad7f4e7427594d4a787e06a31b4df4918eb",
+    "Assets/Editor/SplitSentisRunner.cs": "98b036a06d5b76c02521aa64f0216828a65a50360ff49debe76071910f50460e"
+  }
+}

@@ -1,0 +1,4064 @@
+{
+  "schema_version": 1,
+  "experiment": "Intern-Decision 0.8B/2B on 18 preserved game-strategy cases",
+  "date_utc": "2026-11-06",
+  "upstream_repository": "https://github.com/InternLM/Intern-Decision",
+  "upstream_commit": "565350244af860e1c276768cd80bdd9b8be93913",
+  "conditions": {
+    "cpu_quota_cores": 4,
+    "intra_op_threads": 4,
+    "inter_op_threads": 1,
+    "memory_limit_bytes": 17179869184,
+    "actual_gpu": false,
+    "image_inputs": false,
+    "warmup_cases": 1,
+    "timed_repetitions_per_case": 1,
+    "intern_temperature": 1.0,
+    "calibration_fit": false,
+    "unity_version": "6000.6.8f1",
+    "unity_cli_version": "1.0.0-beta.17",
+    "llm_unity_version": "3.0.3",
+    "llama_lib_version": "2.0.5",
+    "llama_cpp_commit": "872646b30c342c5fa98efec002f94fdb4f1f1ea5"
+  },
+  "models": [
+    {
+      "model_id": "AnkitAI/TinyJev-0.6B",
+      "revision": "c559c2f7ea95069f92af8b999f512345bbb87d22",
+      "backend": "tinyjev",
+      "adapter_sha256": "d81642bd849e9e6dd92f9ea077189e81befb778b5ac8c3cca1acd4b4b006b37b",
+      "inputs_sha256": "babb7747b523496af49cacfbf8840bfbeb183bac3e193bfc1e5ba0269eec1548",
+      "strategy_catalog_sha256": "8b9f8c7c00fb0f4aaf62512d4d947feb9a545c676b970c9c8fa067d8fe3cf26c",
+      "runtime": {
+        "python": "3.12.14",
+        "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+        "packages": {
+          "torch": "2.7.1+cpu",
+          "transformers": "5.3.0",
+          "numpy": "2.5.4",
+          "safetensors": "0.8.0",
+          "tinyjev": "0.1.3"
+        },
+        "device": "cpu",
+        "intra_op_threads": 4,
+        "inter_op_threads": 1,
+        "seed": 0,
+        "backend": "tinyjev.logits/torch",
+        "requested_dtype": "upstream default on CPU",
+        "temperature": 1.0,
+        "calibration_path": null,
+        "upstream_timing_scope": null,
+        "end_to_end_timing_scope": "Agent.logits: normalize request, native encode, backbone, pointer head and answer decoding; includes encoding.",
+        "actual_model_dtype": "torch.float32",
+        "model_parameter_count": 596049920
+      },
+      "initialization_ms": 4644.854830999975,
+      "warmup": {
+        "requests": 1,
+        "case_id": "strategy_cunning_protect_ally",
+        "end_to_end_predict_ms": 2633.297525000671,
+        "selected_strategy": "lure_ambush",
+        "selected_id": "lure_ambush",
+        "candidate_ids": [
+          "direct_assault",
+          "lure_ambush",
+          "flank",
+          "guard_ally",
+          "ranged_pressure",
+          "observe",
+          "disengage",
+          "bypass"
+        ],
+        "probabilities": {
+          "direct_assault": 0.03314571296450259,
+          "lure_ambush": 0.5822755798538317,
+          "flank": 0.06538033740585585,
+          "guard_ally": 0.07646685073788499,
+          "ranged_pressure": 0.04095427623882358,
+          "observe": 0.0935554617620909,
+          "disengage": 0.06282738942461855,
+          "bypass": 0.04539439161239192
+        },
+        "input_tokens": 355,
+        "upstream_inference_ms": null,
+        "raw_response": {
+          "strategy_cunning_protect_ally:strategy": {
+            "type": "choice",
+            "logits": [
+              1.416349172592163,
+              4.282379627227783,
+              2.0956573486328125,
+              2.252293109893799,
+              1.627892017364502,
+              2.4539902210235596,
+              2.0558269023895264,
+              1.73082435131073
+            ],
+            "probabilities": [
+              0.03314571296450259,
+              0.5822755798538317,
+              0.06538033740585585,
+              0.07646685073788499,
+              0.04095427623882358,
+              0.0935554617620909,
+              0.06282738942461855,
+              0.04539439161239192
+            ],
+            "answer": {
+              "type": "choice",
+              "choice": "lure_ambush",
+              "value": "lure_ambush",
+              "confidence": 0.52,
+              "probabilities": {
+                "direct_assault": 0.03314571296450259,
+                "lure_ambush": 0.5822755798538317,
+                "flank": 0.06538033740585585,
+                "guard_ally": 0.07646685073788499,
+                "ranged_pressure": 0.04095427623882358,
+                "observe": 0.0935554617620909,
+                "disengage": 0.06282738942461855,
+                "bypass": 0.04539439161239192
+              }
+            },
+            "path_token_counts": [
+              355
+            ],
+            "candidate_ids": [
+              "direct_assault",
+              "lure_ambush",
+              "flank",
+              "guard_ally",
+              "ranged_pressure",
+              "observe",
+              "disengage",
+              "bypass"
+            ]
+          }
+        }
+      },
+      "summary": {
+        "completed_cases": 18,
+        "selected_strategy_counts": {
+          "lure_ambush": 12,
+          "direct_assault": 2,
+          "observe": 1,
+          "disengage": 2,
+          "guard_ally": 1
+        },
+        "original_nine": {
+          "completed_cases": 9,
+          "kept_current_strategy": 9,
+          "selected_strategy_counts": {
+            "lure_ambush": 9
+          }
+        },
+        "no_current_grid": [
+          {
+            "case_id": "strategy_cunning_protect_ally_current_none",
+            "personality": "cunning",
+            "goal": "protect_ally",
+            "selected_id": "lure_ambush",
+            "probabilities": {
+              "direct_assault": 0.10997122148577161,
+              "lure_ambush": 0.30249872203510364,
+              "flank": 0.07085669715076583,
+              "guard_ally": 0.11448519643260954,
+              "ranged_pressure": 0.06747933135619143,
+              "observe": 0.11791121707559009,
+              "disengage": 0.12872278766076256,
+              "bypass": 0.08807482680320534
+            }
+          },
+          {
+            "case_id": "strategy_cunning_reach_exit_alive_current_none",
+            "personality": "cunning",
+            "goal": "reach_exit_alive",
+            "selected_id": "lure_ambush",
+            "probabilities": {
+              "direct_assault": 0.08377042766836022,
+              "lure_ambush": 0.262821161973158,
+              "flank": 0.07257797512936046,
+              "guard_ally": 0.06049770518893393,
+              "ranged_pressure": 0.06255368586247569,
+              "observe": 0.10642170076867258,
+              "disengage": 0.22487666823985372,
+              "bypass": 0.1264806751691853
+            }
+          },
+          {
+            "case_id": "strategy_aggressive_protect_ally_current_none",
+            "personality": "aggressive",
+            "goal": "protect_ally",
+            "selected_id": "direct_assault",
+            "probabilities": {
+              "direct_assault": 0.33943657793245724,
+              "lure_ambush": 0.052696905542299534,
+              "flank": 0.050486429234919285,
+              "guard_ally": 0.1549110947778793,
+              "ranged_pressure": 0.09082599257833016,
+              "observe": 0.11466827759486811,
+              "disengage": 0.11440421352036387,
+              "bypass": 0.08257050881888252
+            }
+          },
+          {
+            "case_id": "strategy_aggressive_reach_exit_alive_current_none",
+            "personality": "aggressive",
+            "goal": "reach_exit_alive",
+            "selected_id": "disengage",
+            "probabilities": {
+              "direct_assault": 0.24768032238179663,
+              "lure_ambush": 0.06556921042395672,
+              "flank": 0.05879494250416445,
+              "guard_ally": 0.06027422335402677,
+              "ranged_pressure": 0.06895740297844798,
+              "observe": 0.09563059521170544,
+              "disengage": 0.28139599914174745,
+              "bypass": 0.12169730400415452
+            }
+          },
+          {
+            "case_id": "strategy_cautious_protect_ally_current_none",
+            "personality": "cautious",
+            "goal": "protect_ally",
+            "selected_id": "guard_ally",
+            "probabilities": {
+              "direct_assault": 0.16350559421198424,
+              "lure_ambush": 0.06422008378155647,
+              "flank": 0.054143844490411035,
+              "guard_ally": 0.23241074634603395,
+              "ranged_pressure": 0.10580992965852651,
+              "observe": 0.1361417247435299,
+              "disengage": 0.15141089009000425,
+              "bypass": 0.09235718667795377
+            }
+          },
+          {
+            "case_id": "strategy_cautious_reach_exit_alive_current_none",
+            "personality": "cautious",
+            "goal": "reach_exit_alive",
+            "selected_id": "disengage",
+            "probabilities": {
+              "direct_assault": 0.10142365034655858,
+              "lure_ambush": 0.06823481001770347,
+              "flank": 0.05910600029392391,
+              "guard_ally": 0.09079888995948436,
+              "ranged_pressure": 0.07716580518764561,
+              "observe": 0.09868433230484384,
+              "disengage": 0.37082242158594486,
+              "bypass": 0.13376409030389552
+            }
+          }
+        ],
+        "current_strategy_controls": [
+          {
+            "case_id": "strategy_cunning_protect_ally_current_direct_assault",
+            "current_strategy": "direct_assault",
+            "base_selected_id": "lure_ambush",
+            "selected_id": "direct_assault",
+            "kept_current_strategy": true,
+            "id_aligned_total_variation": 0.4406061423017648,
+            "id_aligned_max_probability_difference": 0.42662993838752095
+          },
+          {
+            "case_id": "strategy_cunning_protect_ally_current_observe",
+            "current_strategy": "observe",
+            "base_selected_id": "lure_ambush",
+            "selected_id": "observe",
+            "kept_current_strategy": true,
+            "id_aligned_total_variation": 0.3551490074503178,
+            "id_aligned_max_probability_difference": 0.35082657290177555
+          },
+          {
+            "case_id": "strategy_cunning_protect_ally_current_none",
+            "current_strategy": "none",
+            "base_selected_id": "lure_ambush",
+            "selected_id": "lure_ambush",
+            "kept_current_strategy": false,
+            "id_aligned_total_variation": 0.2797768578187281,
+            "id_aligned_max_probability_difference": 0.2797768578187281
+          }
+        ],
+        "personality_goal_current_controls": [
+          {
+            "case_ids": [
+              "strategy_cunning_protect_ally",
+              "strategy_cunning_protect_ally_current_none"
+            ],
+            "selected_ids": [
+              "lure_ambush",
+              "lure_ambush"
+            ],
+            "id_aligned_total_variation": 0.2797768578187281,
+            "id_aligned_max_probability_difference": 0.2797768578187281
+          },
+          {
+            "case_ids": [
+              "strategy_cunning_reach_exit_alive",
+              "strategy_cunning_reach_exit_alive_current_none"
+            ],
+            "selected_ids": [
+              "lure_ambush",
+              "lure_ambush"
+            ],
+            "id_aligned_total_variation": 0.3033972741520552,
+            "id_aligned_max_probability_difference": 0.30339727415205525
+          },
+          {
+            "case_ids": [
+              "strategy_aggressive_protect_ally",
+              "strategy_aggressive_protect_ally_current_none"
+            ],
+            "selected_ids": [
+              "lure_ambush",
+              "direct_assault"
+            ],
+            "id_aligned_total_variation": 0.4584123513128115,
+            "id_aligned_max_probability_difference": 0.4401855555846365
+          },
+          {
+            "case_ids": [
+              "strategy_aggressive_reach_exit_alive",
+              "strategy_aggressive_reach_exit_alive_current_none"
+            ],
+            "selected_ids": [
+              "lure_ambush",
+              "disengage"
+            ],
+            "id_aligned_total_variation": 0.4883899074123199,
+            "id_aligned_max_probability_difference": 0.48056028538110074
+          },
+          {
+            "case_ids": [
+              "strategy_cautious_protect_ally",
+              "strategy_cautious_protect_ally_current_none"
+            ],
+            "selected_ids": [
+              "lure_ambush",
+              "guard_ally"
+            ],
+            "id_aligned_total_variation": 0.4620361997561419,
+            "id_aligned_max_probability_difference": 0.4547245461503386
+          },
+          {
+            "case_ids": [
+              "strategy_cautious_reach_exit_alive",
+              "strategy_cautious_reach_exit_alive_current_none"
+            ],
+            "selected_ids": [
+              "lure_ambush",
+              "disengage"
+            ],
+            "id_aligned_total_variation": 0.47490379077747447,
+            "id_aligned_max_probability_difference": 0.4732291298385072
+          }
+        ],
+        "order_control": {
+          "case_ids": [
+            "strategy_cunning_protect_ally",
+            "strategy_cunning_protect_ally_rotated4"
+          ],
+          "selected_ids": [
+            "lure_ambush",
+            "lure_ambush"
+          ],
+          "same_selected_id": true,
+          "id_aligned_total_variation": 0.05320407005111707,
+          "id_aligned_max_probability_difference": 0.03755039271933114
+        },
+        "interpretation": "Selection and sensitivity measurements only; no ground truth, accuracy or game win-rate measurement.",
+        "timing": {
+          "timed_requests": 18,
+          "total_end_to_end_predict_ms": 44868.843634998484,
+          "mean_end_to_end_predict_ms": 2492.7135352776936,
+          "median_end_to_end_predict_ms": 2429.3290759997035,
+          "mean_upstream_inference_ms": null
+        }
+      },
+      "artifact_name": "tinyjev",
+      "case_count": 18,
+      "input_token_range": [
+        349,
+        359
+      ],
+      "observed_peak_process_rss_bytes": 3951685632,
+      "case_results": [
+        {
+          "case_id": "strategy_cunning_protect_ally",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.03314571296450259,
+            "lure_ambush": 0.5822755798538317,
+            "flank": 0.06538033740585585,
+            "guard_ally": 0.07646685073788499,
+            "ranged_pressure": 0.04095427623882358,
+            "observe": 0.0935554617620909,
+            "disengage": 0.06282738942461855,
+            "bypass": 0.04539439161239192
+          },
+          "input_tokens": 355,
+          "end_to_end_predict_ms": 2565.6537510003545
+        },
+        {
+          "case_id": "strategy_cunning_reach_exit_alive",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.02419618388718802,
+            "lure_ambush": 0.5662184361252133,
+            "flank": 0.06717042490948759,
+            "guard_ally": 0.04188421024966936,
+            "ranged_pressure": 0.03632336081754474,
+            "observe": 0.08753289271059439,
+            "disengage": 0.11230437708910992,
+            "bypass": 0.06437011421119267
+          },
+          "input_tokens": 352,
+          "end_to_end_predict_ms": 2306.6218879976077
+        },
+        {
+          "case_id": "strategy_aggressive_protect_ally",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.07931883600624358,
+            "lure_ambush": 0.49288246112693607,
+            "flank": 0.06871322496309425,
+            "guard_ally": 0.09965701863840226,
+            "ranged_pressure": 0.05395891451868172,
+            "observe": 0.09966695084874952,
+            "disengage": 0.060174741305740215,
+            "bypass": 0.04562785259215243
+          },
+          "input_tokens": 357,
+          "end_to_end_predict_ms": 2403.537164998852
+        },
+        {
+          "case_id": "strategy_aggressive_reach_exit_alive",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.04421187904127369,
+            "lure_ambush": 0.5461294958050574,
+            "flank": 0.06662456453538369,
+            "guard_ally": 0.04185442013606442,
+            "ranged_pressure": 0.039207052939255645,
+            "observe": 0.07940699754965751,
+            "disengage": 0.12483875465969131,
+            "bypass": 0.05772683533361643
+          },
+          "input_tokens": 354,
+          "end_to_end_predict_ms": 2403.0948800027545
+        },
+        {
+          "case_id": "strategy_cautious_protect_ally",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.03998058902004063,
+            "lure_ambush": 0.518944629931895,
+            "flank": 0.06145549809621429,
+            "guard_ally": 0.12093122990709697,
+            "ranged_pressure": 0.05085307771137901,
+            "observe": 0.09449455873170017,
+            "disengage": 0.06845063542326582,
+            "bypass": 0.044889781178408035
+          },
+          "input_tokens": 359,
+          "end_to_end_predict_ms": 2368.0021680011123
+        },
+        {
+          "case_id": "strategy_cautious_reach_exit_alive",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.026736573805609655,
+            "lure_ambush": 0.5414639398562107,
+            "flank": 0.060780661232891116,
+            "guard_ally": 0.052634986818505834,
+            "ranged_pressure": 0.04053025668328715,
+            "observe": 0.07571478361503568,
+            "disengage": 0.1408219281106328,
+            "bypass": 0.06131686987782709
+          },
+          "input_tokens": 356,
+          "end_to_end_predict_ms": 2592.5594010004716
+        },
+        {
+          "case_id": "strategy_cunning_protect_ally_pursuit",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.035648548940464875,
+            "lure_ambush": 0.5897613562368426,
+            "flank": 0.06250587115617108,
+            "guard_ally": 0.07090163958105444,
+            "ranged_pressure": 0.03992556132977529,
+            "observe": 0.09465450863967974,
+            "disengage": 0.062022263516784415,
+            "bypass": 0.04458025059922766
+          },
+          "input_tokens": 355,
+          "end_to_end_predict_ms": 2363.3614190002845
+        },
+        {
+          "case_id": "strategy_cunning_protect_ally_ally_imminent",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.03398084835918044,
+            "lure_ambush": 0.5758124417423374,
+            "flank": 0.06803009309583449,
+            "guard_ally": 0.07616368255538139,
+            "ranged_pressure": 0.042262810904650915,
+            "observe": 0.10038643624547748,
+            "disengage": 0.06151669883816097,
+            "bypass": 0.041846988258977
+          },
+          "input_tokens": 357,
+          "end_to_end_predict_ms": 2379.5720679991064
+        },
+        {
+          "case_id": "strategy_cunning_protect_ally_enemy_weakened",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.03444021582469433,
+            "lure_ambush": 0.5831656202710133,
+            "flank": 0.06597435128423383,
+            "guard_ally": 0.07389911418082928,
+            "ranged_pressure": 0.039225221725549354,
+            "observe": 0.09649861567316752,
+            "disengage": 0.06371511951961198,
+            "bypass": 0.04308174152090056
+          },
+          "input_tokens": 356,
+          "end_to_end_predict_ms": 2501.149383999291
+        },
+        {
+          "case_id": "strategy_cunning_protect_ally_current_direct_assault",
+          "selected_id": "direct_assault",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.41468105085884416,
+            "lure_ambush": 0.1556456414663108,
+            "flank": 0.051404133491611874,
+            "guard_ally": 0.08809789264693374,
+            "ranged_pressure": 0.06015826063293611,
+            "observe": 0.10865267748521604,
+            "disengage": 0.06932806082626364,
+            "bypass": 0.05203228259188359
+          },
+          "input_tokens": 354,
+          "end_to_end_predict_ms": 2892.935348001629
+        },
+        {
+          "case_id": "strategy_cunning_protect_ally_current_observe",
+          "selected_id": "observe",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.07451875276261415,
+            "lure_ambush": 0.2314490069520562,
+            "flank": 0.06105790285731355,
+            "guard_ally": 0.0974612105152779,
+            "ranged_pressure": 0.056371058192536065,
+            "observe": 0.291509393253002,
+            "disengage": 0.11084850945687902,
+            "bypass": 0.0767841660103211
+          },
+          "input_tokens": 352,
+          "end_to_end_predict_ms": 2674.4688889993995
+        },
+        {
+          "case_id": "strategy_cunning_protect_ally_current_none",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.10997122148577161,
+            "lure_ambush": 0.30249872203510364,
+            "flank": 0.07085669715076583,
+            "guard_ally": 0.11448519643260954,
+            "ranged_pressure": 0.06747933135619143,
+            "observe": 0.11791121707559009,
+            "disengage": 0.12872278766076256,
+            "bypass": 0.08807482680320534
+          },
+          "input_tokens": 352,
+          "end_to_end_predict_ms": 2773.545179999928
+        },
+        {
+          "case_id": "strategy_cunning_protect_ally_rotated4",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass",
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally"
+          ],
+          "probabilities": {
+            "ranged_pressure": 0.03980405061931603,
+            "observe": 0.11953392584854686,
+            "disengage": 0.05734640023313149,
+            "bypass": 0.04738612919133484,
+            "direct_assault": 0.05837958135022074,
+            "lure_ambush": 0.5447251871345006,
+            "flank": 0.0595904440233367,
+            "guard_ally": 0.07323428159961277
+          },
+          "input_tokens": 355,
+          "end_to_end_predict_ms": 2708.7068149994593
+        },
+        {
+          "case_id": "strategy_cunning_reach_exit_alive_current_none",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.08377042766836022,
+            "lure_ambush": 0.262821161973158,
+            "flank": 0.07257797512936046,
+            "guard_ally": 0.06049770518893393,
+            "ranged_pressure": 0.06255368586247569,
+            "observe": 0.10642170076867258,
+            "disengage": 0.22487666823985372,
+            "bypass": 0.1264806751691853
+          },
+          "input_tokens": 349,
+          "end_to_end_predict_ms": 2728.8412699999753
+        },
+        {
+          "case_id": "strategy_aggressive_protect_ally_current_none",
+          "selected_id": "direct_assault",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.33943657793245724,
+            "lure_ambush": 0.052696905542299534,
+            "flank": 0.050486429234919285,
+            "guard_ally": 0.1549110947778793,
+            "ranged_pressure": 0.09082599257833016,
+            "observe": 0.11466827759486811,
+            "disengage": 0.11440421352036387,
+            "bypass": 0.08257050881888252
+          },
+          "input_tokens": 354,
+          "end_to_end_predict_ms": 2128.1603440002073
+        },
+        {
+          "case_id": "strategy_aggressive_reach_exit_alive_current_none",
+          "selected_id": "disengage",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.24768032238179663,
+            "lure_ambush": 0.06556921042395672,
+            "flank": 0.05879494250416445,
+            "guard_ally": 0.06027422335402677,
+            "ranged_pressure": 0.06895740297844798,
+            "observe": 0.09563059521170544,
+            "disengage": 0.28139599914174745,
+            "bypass": 0.12169730400415452
+          },
+          "input_tokens": 351,
+          "end_to_end_predict_ms": 2455.120987000555
+        },
+        {
+          "case_id": "strategy_cautious_protect_ally_current_none",
+          "selected_id": "guard_ally",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.16350559421198424,
+            "lure_ambush": 0.06422008378155647,
+            "flank": 0.054143844490411035,
+            "guard_ally": 0.23241074634603395,
+            "ranged_pressure": 0.10580992965852651,
+            "observe": 0.1361417247435299,
+            "disengage": 0.15141089009000425,
+            "bypass": 0.09235718667795377
+          },
+          "input_tokens": 356,
+          "end_to_end_predict_ms": 2340.833805999864
+        },
+        {
+          "case_id": "strategy_cautious_reach_exit_alive_current_none",
+          "selected_id": "disengage",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.10142365034655858,
+            "lure_ambush": 0.06823481001770347,
+            "flank": 0.05910600029392391,
+            "guard_ally": 0.09079888995948436,
+            "ranged_pressure": 0.07716580518764561,
+            "observe": 0.09868433230484384,
+            "disengage": 0.37082242158594486,
+            "bypass": 0.13376409030389552
+          },
+          "input_tokens": 353,
+          "end_to_end_predict_ms": 2282.678871997632
+        }
+      ],
+      "agreement_with_tinyjev": 18,
+      "raw_result": {
+        "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Python/Artifacts/intern-decision/tinyjev/result.json",
+        "sha256": "29268ed9a7a3c65b19b01cbeb6bf4481ae6f84a7057f428c52617b69036f4727"
+      }
+    },
+    {
+      "model_id": "internlm/Intern-Decision-0.8B",
+      "revision": "42457fafd13d10d0b0d9be46cb30a23caa409994",
+      "backend": "intern",
+      "adapter_sha256": "d81642bd849e9e6dd92f9ea077189e81befb778b5ac8c3cca1acd4b4b006b37b",
+      "inputs_sha256": "babb7747b523496af49cacfbf8840bfbeb183bac3e193bfc1e5ba0269eec1548",
+      "strategy_catalog_sha256": "8b9f8c7c00fb0f4aaf62512d4d947feb9a545c676b970c9c8fa067d8fe3cf26c",
+      "runtime": {
+        "python": "3.12.14",
+        "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+        "packages": {
+          "torch": "2.9.1+cpu",
+          "transformers": "5.14.1",
+          "numpy": "2.5.4",
+          "safetensors": "0.8.0"
+        },
+        "device": "cpu",
+        "intra_op_threads": 4,
+        "inter_op_threads": 1,
+        "seed": 0,
+        "backend": "upstream DecisionEngine/HFBackend",
+        "requested_dtype": "bfloat16",
+        "temperature": 1.0,
+        "calibration_path": null,
+        "attention": "sdpa",
+        "max_length": 8192,
+        "upstream_timing_scope": "HFBackend.score model forward plus batch device transfer; excludes encoding and probability decoding.",
+        "end_to_end_timing_scope": "DecisionEngine.predict: native encode, model forward and answer decoding.",
+        "actual_model_dtype": "torch.bfloat16",
+        "model_parameter_count": 852985920
+      },
+      "initialization_ms": 4220.649925999169,
+      "warmup": {
+        "requests": 1,
+        "case_id": "strategy_cunning_protect_ally",
+        "end_to_end_predict_ms": 1879.8079579974,
+        "selected_strategy": "lure_ambush",
+        "selected_id": "lure_ambush",
+        "candidate_ids": [
+          "direct_assault",
+          "lure_ambush",
+          "flank",
+          "guard_ally",
+          "ranged_pressure",
+          "observe",
+          "disengage",
+          "bypass"
+        ],
+        "probabilities": {
+          "direct_assault": 0.001321030780673027,
+          "lure_ambush": 0.99566650390625,
+          "flank": 3.9891674532555044e-05,
+          "guard_ally": 0.00026012639864347875,
+          "ranged_pressure": 0.00026012639864347875,
+          "observe": 0.0011658056173473597,
+          "disengage": 0.00037848169449716806,
+          "bypass": 0.0009079303126782179
+        },
+        "input_tokens": 504,
+        "upstream_inference_ms": 1855.58,
+        "raw_response": {
+          "answers": {
+            "strategy": {
+              "type": "choice",
+              "probabilities": {
+                "direct_assault": 0.001321030780673027,
+                "lure_ambush": 0.99566650390625,
+                "flank": 3.9891674532555044e-05,
+                "guard_ally": 0.00026012639864347875,
+                "ranged_pressure": 0.00026012639864347875,
+                "observe": 0.0011658056173473597,
+                "disengage": 0.00037848169449716806,
+                "bypass": 0.0009079303126782179
+              },
+              "confidence": 0.99566650390625,
+              "choice": "lure_ambush"
+            }
+          },
+          "usage": {
+            "input_tokens": 504,
+            "output_tokens": 1
+          },
+          "timing": {
+            "inference_ms": 1855.58
+          }
+        }
+      },
+      "summary": {
+        "completed_cases": 18,
+        "selected_strategy_counts": {
+          "lure_ambush": 12,
+          "direct_assault": 3,
+          "observe": 1,
+          "guard_ally": 2
+        },
+        "original_nine": {
+          "completed_cases": 9,
+          "kept_current_strategy": 9,
+          "selected_strategy_counts": {
+            "lure_ambush": 9
+          }
+        },
+        "no_current_grid": [
+          {
+            "case_id": "strategy_cunning_protect_ally_current_none",
+            "personality": "cunning",
+            "goal": "protect_ally",
+            "selected_id": "lure_ambush",
+            "probabilities": {
+              "direct_assault": 0.051960140466690063,
+              "lure_ambush": 0.4929841160774231,
+              "flank": 0.0010783984325826168,
+              "guard_ally": 0.2328692078590393,
+              "ranged_pressure": 0.06671814620494843,
+              "observe": 0.051960140466690063,
+              "disengage": 0.06671814620494843,
+              "bypass": 0.03571164980530739
+            }
+          },
+          {
+            "case_id": "strategy_cunning_reach_exit_alive_current_none",
+            "personality": "cunning",
+            "goal": "reach_exit_alive",
+            "selected_id": "lure_ambush",
+            "probabilities": {
+              "direct_assault": 0.01822618581354618,
+              "lure_ambush": 0.47005951404571533,
+              "flank": 0.0008008027216419578,
+              "guard_ally": 0.07208596169948578,
+              "ranged_pressure": 0.04954390600323677,
+              "observe": 0.08168409764766693,
+              "disengage": 0.1346743106842041,
+              "bypass": 0.17292523384094238
+            }
+          },
+          {
+            "case_id": "strategy_aggressive_protect_ally_current_none",
+            "personality": "aggressive",
+            "goal": "protect_ally",
+            "selected_id": "direct_assault",
+            "probabilities": {
+              "direct_assault": 0.8794336318969727,
+              "lure_ambush": 0.0019237532978877425,
+              "flank": 0.0019237532978877425,
+              "guard_ally": 0.06370595842599869,
+              "ranged_pressure": 0.002179898088797927,
+              "observe": 0.02068229764699936,
+              "disengage": 0.023436112329363823,
+              "bypass": 0.006714558694511652
+            }
+          },
+          {
+            "case_id": "strategy_aggressive_reach_exit_alive_current_none",
+            "personality": "aggressive",
+            "goal": "reach_exit_alive",
+            "selected_id": "direct_assault",
+            "probabilities": {
+              "direct_assault": 0.6544535756111145,
+              "lure_ambush": 0.0030307213310152292,
+              "flank": 0.0016222283011302352,
+              "guard_ally": 0.04183781519532204,
+              "ranged_pressure": 0.013582750223577023,
+              "observe": 0.04183781519532204,
+              "disengage": 0.16547177731990814,
+              "bypass": 0.07816333323717117
+            }
+          },
+          {
+            "case_id": "strategy_cautious_protect_ally_current_none",
+            "personality": "cautious",
+            "goal": "protect_ally",
+            "selected_id": "guard_ally",
+            "probabilities": {
+              "direct_assault": 0.03158153221011162,
+              "lure_ambush": 0.0015723520191386342,
+              "flank": 0.000742726435419172,
+              "guard_ally": 0.7187923789024353,
+              "ranged_pressure": 0.1415386199951172,
+              "observe": 0.04055149108171463,
+              "disengage": 0.059002071619033813,
+              "bypass": 0.006218772381544113
+            }
+          },
+          {
+            "case_id": "strategy_cautious_reach_exit_alive_current_none",
+            "personality": "cautious",
+            "goal": "reach_exit_alive",
+            "selected_id": "guard_ally",
+            "probabilities": {
+              "direct_assault": 0.014809099026024342,
+              "lure_ambush": 0.0015608675312250853,
+              "flank": 0.0008354722522199154,
+              "guard_ally": 0.3370535373687744,
+              "ranged_pressure": 0.23165328800678253,
+              "observe": 0.08522047847509384,
+              "disengage": 0.26249757409095764,
+              "bypass": 0.06636977940797806
+            }
+          }
+        ],
+        "current_strategy_controls": [
+          {
+            "case_id": "strategy_cunning_protect_ally_current_direct_assault",
+            "current_strategy": "direct_assault",
+            "base_selected_id": "lure_ambush",
+            "selected_id": "direct_assault",
+            "kept_current_strategy": true,
+            "id_aligned_total_variation": 0.9245752111964975,
+            "id_aligned_max_probability_difference": 0.9245751649141312
+          },
+          {
+            "case_id": "strategy_cunning_protect_ally_current_observe",
+            "current_strategy": "observe",
+            "base_selected_id": "lure_ambush",
+            "selected_id": "observe",
+            "kept_current_strategy": true,
+            "id_aligned_total_variation": 0.7785776263699518,
+            "id_aligned_max_probability_difference": 0.778577595949173
+          },
+          {
+            "case_id": "strategy_cunning_protect_ally_current_none",
+            "current_strategy": "none",
+            "base_selected_id": "lure_ambush",
+            "selected_id": "lure_ambush",
+            "kept_current_strategy": false,
+            "id_aligned_total_variation": 0.502682412196009,
+            "id_aligned_max_probability_difference": 0.5026823878288269
+          }
+        ],
+        "personality_goal_current_controls": [
+          {
+            "case_ids": [
+              "strategy_cunning_protect_ally",
+              "strategy_cunning_protect_ally_current_none"
+            ],
+            "selected_ids": [
+              "lure_ambush",
+              "lure_ambush"
+            ],
+            "id_aligned_total_variation": 0.502682412196009,
+            "id_aligned_max_probability_difference": 0.5026823878288269
+          },
+          {
+            "case_ids": [
+              "strategy_cunning_reach_exit_alive",
+              "strategy_cunning_reach_exit_alive_current_none"
+            ],
+            "selected_ids": [
+              "lure_ambush",
+              "lure_ambush"
+            ],
+            "id_aligned_total_variation": 0.5214171236693801,
+            "id_aligned_max_probability_difference": 0.5214170813560486
+          },
+          {
+            "case_ids": [
+              "strategy_aggressive_protect_ally",
+              "strategy_aggressive_protect_ally_current_none"
+            ],
+            "selected_ids": [
+              "lure_ambush",
+              "direct_assault"
+            ],
+            "id_aligned_total_variation": 0.9758745920953515,
+            "id_aligned_max_probability_difference": 0.97587464901153
+          },
+          {
+            "case_ids": [
+              "strategy_aggressive_reach_exit_alive",
+              "strategy_aggressive_reach_exit_alive_current_none"
+            ],
+            "selected_ids": [
+              "lure_ambush",
+              "direct_assault"
+            ],
+            "id_aligned_total_variation": 0.9700462611908733,
+            "id_aligned_max_probability_difference": 0.9700462778564543
+          },
+          {
+            "case_ids": [
+              "strategy_cautious_protect_ally",
+              "strategy_cautious_protect_ally_current_none"
+            ],
+            "selected_ids": [
+              "lure_ambush",
+              "guard_ally"
+            ],
+            "id_aligned_total_variation": 0.9595145410530677,
+            "id_aligned_max_probability_difference": 0.9595145768253133
+          },
+          {
+            "case_ids": [
+              "strategy_cautious_reach_exit_alive",
+              "strategy_cautious_reach_exit_alive_current_none"
+            ],
+            "selected_ids": [
+              "lure_ambush",
+              "guard_ally"
+            ],
+            "id_aligned_total_variation": 0.9432624854744063,
+            "id_aligned_max_probability_difference": 0.9432624571491033
+          }
+        ],
+        "order_control": {
+          "case_ids": [
+            "strategy_cunning_protect_ally",
+            "strategy_cunning_protect_ally_rotated4"
+          ],
+          "selected_ids": [
+            "lure_ambush",
+            "lure_ambush"
+          ],
+          "same_selected_id": true,
+          "id_aligned_total_variation": 0.05637105703499401,
+          "id_aligned_max_probability_difference": 0.05548495054244995
+        },
+        "interpretation": "Selection and sensitivity measurements only; no ground truth, accuracy or game win-rate measurement.",
+        "timing": {
+          "timed_requests": 18,
+          "total_end_to_end_predict_ms": 35274.718200998905,
+          "mean_end_to_end_predict_ms": 1959.7065667221614,
+          "median_end_to_end_predict_ms": 1960.6370514993614,
+          "mean_upstream_inference_ms": 1956.7172222222223
+        }
+      },
+      "artifact_name": "native-0.8B",
+      "case_count": 18,
+      "input_token_range": [
+        498,
+        508
+      ],
+      "observed_peak_process_rss_bytes": 2165837824,
+      "case_results": [
+        {
+          "case_id": "strategy_cunning_protect_ally",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.001321030780673027,
+            "lure_ambush": 0.99566650390625,
+            "flank": 3.9891674532555044e-05,
+            "guard_ally": 0.00026012639864347875,
+            "ranged_pressure": 0.00026012639864347875,
+            "observe": 0.0011658056173473597,
+            "disengage": 0.00037848169449716806,
+            "bypass": 0.0009079303126782179
+          },
+          "input_tokens": 504,
+          "end_to_end_predict_ms": 1751.6873339991434
+        },
+        {
+          "case_id": "strategy_cunning_reach_exit_alive",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.0014906247379258275,
+            "lure_ambush": 0.9914765954017639,
+            "flank": 5.1006376452278346e-05,
+            "guard_ally": 0.0002285947120981291,
+            "ranged_pressure": 0.0004839350003749132,
+            "observe": 0.002784853568300605,
+            "disengage": 0.0013154717162251472,
+            "bypass": 0.0021688463166356087
+          },
+          "input_tokens": 501,
+          "end_to_end_predict_ms": 1962.9149040010816
+        },
+        {
+          "case_id": "strategy_aggressive_protect_ally",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.01580463908612728,
+            "lure_ambush": 0.9777984023094177,
+            "flank": 7.318999996641651e-05,
+            "guard_ally": 0.00047725875629112124,
+            "ranged_pressure": 0.00028947205282747746,
+            "observe": 0.0027464344166219234,
+            "disengage": 0.001144884154200554,
+            "bypass": 0.0016657967353239655
+          },
+          "input_tokens": 506,
+          "end_to_end_predict_ms": 1837.3095649985771
+        },
+        {
+          "case_id": "strategy_aggressive_reach_exit_alive",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.013880197890102863,
+            "lure_ambush": 0.9730769991874695,
+            "flank": 7.283659215318039e-05,
+            "guard_ally": 0.00036989475484006107,
+            "ranged_pressure": 0.00047495425678789616,
+            "observe": 0.005106239579617977,
+            "disengage": 0.003509463742375374,
+            "bypass": 0.003509463742375374
+          },
+          "input_tokens": 503,
+          "end_to_end_predict_ms": 1891.2913390013273
+        },
+        {
+          "case_id": "strategy_cautious_protect_ally",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.002699495293200016,
+            "lure_ambush": 0.9610869288444519,
+            "flank": 0.00011860754602821544,
+            "guard_ally": 0.02260259911417961,
+            "ranged_pressure": 0.0021023692097514868,
+            "observe": 0.0064757526852190495,
+            "disengage": 0.003058929229155183,
+            "bypass": 0.0018553342670202255
+          },
+          "input_tokens": 508,
+          "end_to_end_predict_ms": 1958.3591989976412
+        },
+        {
+          "case_id": "strategy_cautious_reach_exit_alive",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.0030071656219661236,
+            "lure_ambush": 0.9448233246803284,
+            "flank": 0.00014971794735174626,
+            "guard_ally": 0.013477180153131485,
+            "ranged_pressure": 0.004375400021672249,
+            "observe": 0.01730504259467125,
+            "disengage": 0.010496038943529129,
+            "bypass": 0.006366169545799494
+          },
+          "input_tokens": 505,
+          "end_to_end_predict_ms": 2047.5298950004799
+        },
+        {
+          "case_id": "strategy_cunning_protect_ally_pursuit",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.0014953630743548274,
+            "lure_ambush": 0.9946282505989075,
+            "flank": 3.985007788287476e-05,
+            "guard_ally": 0.00020237539138179272,
+            "ranged_pressure": 0.00033366060233674943,
+            "observe": 0.0014953630743548274,
+            "disengage": 0.00048547331243753433,
+            "bypass": 0.001319653238169849
+          },
+          "input_tokens": 504,
+          "end_to_end_predict_ms": 1935.59538000045
+        },
+        {
+          "case_id": "strategy_cunning_protect_ally_ally_imminent",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.001321101444773376,
+            "lure_ambush": 0.9957197308540344,
+            "flank": 3.9893806388136e-05,
+            "guard_ally": 0.00020259746816009283,
+            "ranged_pressure": 0.00026014031027443707,
+            "observe": 0.001321101444773376,
+            "disengage": 0.0003340267576277256,
+            "bypass": 0.0008012885227799416
+          },
+          "input_tokens": 506,
+          "end_to_end_predict_ms": 1919.223916996998
+        },
+        {
+          "case_id": "strategy_cunning_protect_ally_enemy_weakened",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.0013207346200942993,
+            "lure_ambush": 0.9954432249069214,
+            "flank": 3.9882728742668405e-05,
+            "guard_ally": 0.0002946956956293434,
+            "ranged_pressure": 0.0002946956956293434,
+            "observe": 0.0013207346200942993,
+            "disengage": 0.00037839679862372577,
+            "bypass": 0.0009077267604880035
+          },
+          "input_tokens": 505,
+          "end_to_end_predict_ms": 2048.5924210006488
+        },
+        {
+          "case_id": "strategy_cunning_protect_ally_current_direct_assault",
+          "selected_id": "direct_assault",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.8660697937011719,
+            "lure_ambush": 0.07109133899211884,
+            "flank": 0.0013020832557231188,
+            "guard_ally": 0.023079978302121162,
+            "ranged_pressure": 0.0007897534524090588,
+            "observe": 0.010902210138738155,
+            "disengage": 0.01586262136697769,
+            "bypass": 0.010902210138738155
+          },
+          "input_tokens": 503,
+          "end_to_end_predict_ms": 1941.331762001937
+        },
+        {
+          "case_id": "strategy_cunning_protect_ally_current_observe",
+          "selected_id": "observe",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.005105441901832819,
+            "lure_ambush": 0.21708890795707703,
+            "flank": 0.0008871927857398987,
+            "guard_ally": 0.13167108595371246,
+            "ranged_pressure": 0.048439085483551025,
+            "observe": 0.5207692384719849,
+            "disengage": 0.042747341096401215,
+            "bypass": 0.033291663974523544
+          },
+          "input_tokens": 501,
+          "end_to_end_predict_ms": 2039.0525789989624
+        },
+        {
+          "case_id": "strategy_cunning_protect_ally_current_none",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.051960140466690063,
+            "lure_ambush": 0.4929841160774231,
+            "flank": 0.0010783984325826168,
+            "guard_ally": 0.2328692078590393,
+            "ranged_pressure": 0.06671814620494843,
+            "observe": 0.051960140466690063,
+            "disengage": 0.06671814620494843,
+            "bypass": 0.03571164980530739
+          },
+          "input_tokens": 501,
+          "end_to_end_predict_ms": 2005.6510319991503
+        },
+        {
+          "case_id": "strategy_cunning_protect_ally_rotated4",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass",
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally"
+          ],
+          "probabilities": {
+            "ranged_pressure": 0.007178374566137791,
+            "observe": 0.0006676928605884314,
+            "disengage": 0.0005892369081266224,
+            "bypass": 0.0005199997103773057,
+            "direct_assault": 0.00141350575722754,
+            "lure_ambush": 0.9401815533638,
+            "flank": 0.0026407763361930847,
+            "guard_ally": 0.0468088835477829
+          },
+          "input_tokens": 504,
+          "end_to_end_predict_ms": 1851.5461159986444
+        },
+        {
+          "case_id": "strategy_cunning_reach_exit_alive_current_none",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.01822618581354618,
+            "lure_ambush": 0.47005951404571533,
+            "flank": 0.0008008027216419578,
+            "guard_ally": 0.07208596169948578,
+            "ranged_pressure": 0.04954390600323677,
+            "observe": 0.08168409764766693,
+            "disengage": 0.1346743106842041,
+            "bypass": 0.17292523384094238
+          },
+          "input_tokens": 498,
+          "end_to_end_predict_ms": 1946.9060090013954
+        },
+        {
+          "case_id": "strategy_aggressive_protect_ally_current_none",
+          "selected_id": "direct_assault",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.8794336318969727,
+            "lure_ambush": 0.0019237532978877425,
+            "flank": 0.0019237532978877425,
+            "guard_ally": 0.06370595842599869,
+            "ranged_pressure": 0.002179898088797927,
+            "observe": 0.02068229764699936,
+            "disengage": 0.023436112329363823,
+            "bypass": 0.006714558694511652
+          },
+          "input_tokens": 503,
+          "end_to_end_predict_ms": 2064.3634400003066
+        },
+        {
+          "case_id": "strategy_aggressive_reach_exit_alive_current_none",
+          "selected_id": "direct_assault",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.6544535756111145,
+            "lure_ambush": 0.0030307213310152292,
+            "flank": 0.0016222283011302352,
+            "guard_ally": 0.04183781519532204,
+            "ranged_pressure": 0.013582750223577023,
+            "observe": 0.04183781519532204,
+            "disengage": 0.16547177731990814,
+            "bypass": 0.07816333323717117
+          },
+          "input_tokens": 500,
+          "end_to_end_predict_ms": 2003.9731430006213
+        },
+        {
+          "case_id": "strategy_cautious_protect_ally_current_none",
+          "selected_id": "guard_ally",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.03158153221011162,
+            "lure_ambush": 0.0015723520191386342,
+            "flank": 0.000742726435419172,
+            "guard_ally": 0.7187923789024353,
+            "ranged_pressure": 0.1415386199951172,
+            "observe": 0.04055149108171463,
+            "disengage": 0.059002071619033813,
+            "bypass": 0.006218772381544113
+          },
+          "input_tokens": 505,
+          "end_to_end_predict_ms": 2043.5856330004754
+        },
+        {
+          "case_id": "strategy_cautious_reach_exit_alive_current_none",
+          "selected_id": "guard_ally",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.014809099026024342,
+            "lure_ambush": 0.0015608675312250853,
+            "flank": 0.0008354722522199154,
+            "guard_ally": 0.3370535373687744,
+            "ranged_pressure": 0.23165328800678253,
+            "observe": 0.08522047847509384,
+            "disengage": 0.26249757409095764,
+            "bypass": 0.06636977940797806
+          },
+          "input_tokens": 502,
+          "end_to_end_predict_ms": 2025.8045330010646
+        }
+      ],
+      "agreement_with_tinyjev": 16,
+      "raw_result": {
+        "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Python/Artifacts/intern-decision/native-0.8B/result.json",
+        "sha256": "6dca6a6351d6753cb91a985b179a09a4e46d60147f0bc96217b1c52990b058a4"
+      }
+    },
+    {
+      "model_id": "internlm/Intern-Decision-2B",
+      "revision": "85c5657708a09884ff9fd8d7f57789b410a97b33",
+      "backend": "intern",
+      "adapter_sha256": "d81642bd849e9e6dd92f9ea077189e81befb778b5ac8c3cca1acd4b4b006b37b",
+      "inputs_sha256": "babb7747b523496af49cacfbf8840bfbeb183bac3e193bfc1e5ba0269eec1548",
+      "strategy_catalog_sha256": "8b9f8c7c00fb0f4aaf62512d4d947feb9a545c676b970c9c8fa067d8fe3cf26c",
+      "runtime": {
+        "python": "3.12.14",
+        "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+        "packages": {
+          "torch": "2.9.1+cpu",
+          "transformers": "5.14.1",
+          "numpy": "2.5.4",
+          "safetensors": "0.8.0"
+        },
+        "device": "cpu",
+        "intra_op_threads": 4,
+        "inter_op_threads": 1,
+        "seed": 0,
+        "backend": "upstream DecisionEngine/HFBackend",
+        "requested_dtype": "bfloat16",
+        "temperature": 1.0,
+        "calibration_path": null,
+        "attention": "sdpa",
+        "max_length": 8192,
+        "upstream_timing_scope": "HFBackend.score model forward plus batch device transfer; excludes encoding and probability decoding.",
+        "end_to_end_timing_scope": "DecisionEngine.predict: native encode, model forward and answer decoding.",
+        "actual_model_dtype": "torch.bfloat16",
+        "model_parameter_count": 2213241664
+      },
+      "initialization_ms": 4314.3692319972615,
+      "warmup": {
+        "requests": 1,
+        "case_id": "strategy_cunning_protect_ally",
+        "end_to_end_predict_ms": 4015.157696998358,
+        "selected_strategy": "lure_ambush",
+        "selected_id": "lure_ambush",
+        "candidate_ids": [
+          "direct_assault",
+          "lure_ambush",
+          "flank",
+          "guard_ally",
+          "ranged_pressure",
+          "observe",
+          "disengage",
+          "bypass"
+        ],
+        "probabilities": {
+          "direct_assault": 0.0038798816967755556,
+          "lure_ambush": 0.9493757486343384,
+          "flank": 0.0009809876792132854,
+          "guard_ally": 0.019703663885593414,
+          "ranged_pressure": 0.025300007313489914,
+          "observe": 0.0002480325347278267,
+          "disengage": 0.00019316794350743294,
+          "bypass": 0.0003184800734743476
+        },
+        "input_tokens": 504,
+        "upstream_inference_ms": 3990.58,
+        "raw_response": {
+          "answers": {
+            "strategy": {
+              "type": "choice",
+              "probabilities": {
+                "direct_assault": 0.0038798816967755556,
+                "lure_ambush": 0.9493757486343384,
+                "flank": 0.0009809876792132854,
+                "guard_ally": 0.019703663885593414,
+                "ranged_pressure": 0.025300007313489914,
+                "observe": 0.0002480325347278267,
+                "disengage": 0.00019316794350743294,
+                "bypass": 0.0003184800734743476
+              },
+              "confidence": 0.9493757486343384,
+              "choice": "lure_ambush"
+            }
+          },
+          "usage": {
+            "input_tokens": 504,
+            "output_tokens": 1
+          },
+          "timing": {
+            "inference_ms": 3990.58
+          }
+        }
+      },
+      "summary": {
+        "completed_cases": 18,
+        "selected_strategy_counts": {
+          "lure_ambush": 16,
+          "guard_ally": 2
+        },
+        "original_nine": {
+          "completed_cases": 9,
+          "kept_current_strategy": 9,
+          "selected_strategy_counts": {
+            "lure_ambush": 9
+          }
+        },
+        "no_current_grid": [
+          {
+            "case_id": "strategy_cunning_protect_ally_current_none",
+            "personality": "cunning",
+            "goal": "protect_ally",
+            "selected_id": "lure_ambush",
+            "probabilities": {
+              "direct_assault": 0.0015896514523774385,
+              "lure_ambush": 0.823459804058075,
+              "flank": 0.0023129291366785765,
+              "guard_ally": 0.1114431619644165,
+              "ranged_pressure": 0.05965122953057289,
+              "observe": 0.0007508981507271528,
+              "disengage": 0.0002762399963103235,
+              "bypass": 0.0005160842556506395
+            }
+          },
+          {
+            "case_id": "strategy_cunning_reach_exit_alive_current_none",
+            "personality": "cunning",
+            "goal": "reach_exit_alive",
+            "selected_id": "lure_ambush",
+            "probabilities": {
+              "direct_assault": 0.0020980199333280325,
+              "lure_ambush": 0.9590986967086792,
+              "flank": 0.0014419464860111475,
+              "guard_ally": 0.001633939566090703,
+              "ranged_pressure": 0.03281855210661888,
+              "observe": 0.0011229891097173095,
+              "disengage": 0.0001519800425739959,
+              "bypass": 0.001633939566090703
+            }
+          },
+          {
+            "case_id": "strategy_aggressive_protect_ally_current_none",
+            "personality": "aggressive",
+            "goal": "protect_ally",
+            "selected_id": "guard_ally",
+            "probabilities": {
+              "direct_assault": 0.003122224472463131,
+              "lure_ambush": 0.19316518306732178,
+              "flank": 0.013992839492857456,
+              "guard_ally": 0.5949906706809998,
+              "ranged_pressure": 0.19316518306732178,
+              "observe": 0.0005425612907856703,
+              "disengage": 0.00047880865167826414,
+              "bypass": 0.0005425612907856703
+            }
+          },
+          {
+            "case_id": "strategy_aggressive_reach_exit_alive_current_none",
+            "personality": "aggressive",
+            "goal": "reach_exit_alive",
+            "selected_id": "lure_ambush",
+            "probabilities": {
+              "direct_assault": 0.1013111025094986,
+              "lure_ambush": 0.5830051302909851,
+              "flank": 0.025615457445383072,
+              "guard_ally": 0.008316121064126492,
+              "ranged_pressure": 0.2753921151161194,
+              "observe": 0.0014451253227889538,
+              "disengage": 0.0018555775750428438,
+              "bypass": 0.003059330163523555
+            }
+          },
+          {
+            "case_id": "strategy_cautious_protect_ally_current_none",
+            "personality": "cautious",
+            "goal": "protect_ally",
+            "selected_id": "guard_ally",
+            "probabilities": {
+              "direct_assault": 0.001652996288612485,
+              "lure_ambush": 0.10226725786924362,
+              "flank": 0.007408215198665857,
+              "guard_ally": 0.7556585073471069,
+              "ranged_pressure": 0.131313756108284,
+              "observe": 0.0006890713702887297,
+              "disengage": 0.00047359138261526823,
+              "bypass": 0.0005366493132896721
+            }
+          },
+          {
+            "case_id": "strategy_cautious_reach_exit_alive_current_none",
+            "personality": "cautious",
+            "goal": "reach_exit_alive",
+            "selected_id": "lure_ambush",
+            "probabilities": {
+              "direct_assault": 0.003967358730733395,
+              "lure_ambush": 0.5888082385063171,
+              "flank": 0.017780467867851257,
+              "guard_ally": 0.020147910341620445,
+              "ranged_pressure": 0.3571302592754364,
+              "observe": 0.0065410686656832695,
+              "disengage": 0.0021235740277916193,
+              "bypass": 0.0035011819563806057
+            }
+          }
+        ],
+        "current_strategy_controls": [
+          {
+            "case_id": "strategy_cunning_protect_ally_current_direct_assault",
+            "current_strategy": "direct_assault",
+            "base_selected_id": "lure_ambush",
+            "selected_id": "lure_ambush",
+            "kept_current_strategy": false,
+            "id_aligned_total_variation": 0.05447817866661353,
+            "id_aligned_max_probability_difference": 0.05410728603601456
+          },
+          {
+            "case_id": "strategy_cunning_protect_ally_current_observe",
+            "current_strategy": "observe",
+            "base_selected_id": "lure_ambush",
+            "selected_id": "lure_ambush",
+            "kept_current_strategy": false,
+            "id_aligned_total_variation": 0.47728710835508537,
+            "id_aligned_max_probability_difference": 0.4765927791595459
+          },
+          {
+            "case_id": "strategy_cunning_protect_ally_current_none",
+            "current_strategy": "none",
+            "base_selected_id": "lure_ambush",
+            "selected_id": "lure_ambush",
+            "kept_current_strategy": false,
+            "id_aligned_total_variation": 0.1282061892125057,
+            "id_aligned_max_probability_difference": 0.12591594457626343
+          }
+        ],
+        "personality_goal_current_controls": [
+          {
+            "case_ids": [
+              "strategy_cunning_protect_ally",
+              "strategy_cunning_protect_ally_current_none"
+            ],
+            "selected_ids": [
+              "lure_ambush",
+              "lure_ambush"
+            ],
+            "id_aligned_total_variation": 0.1282061892125057,
+            "id_aligned_max_probability_difference": 0.12591594457626343
+          },
+          {
+            "case_ids": [
+              "strategy_cunning_reach_exit_alive",
+              "strategy_cunning_reach_exit_alive_current_none"
+            ],
+            "selected_ids": [
+              "lure_ambush",
+              "lure_ambush"
+            ],
+            "id_aligned_total_variation": 0.030607137126935413,
+            "id_aligned_max_probability_difference": 0.03025275468826294
+          },
+          {
+            "case_ids": [
+              "strategy_aggressive_protect_ally",
+              "strategy_aggressive_protect_ally_current_none"
+            ],
+            "selected_ids": [
+              "lure_ambush",
+              "guard_ally"
+            ],
+            "id_aligned_total_variation": 0.6664660769165494,
+            "id_aligned_max_probability_difference": 0.6612123250961304
+          },
+          {
+            "case_ids": [
+              "strategy_aggressive_reach_exit_alive",
+              "strategy_aggressive_reach_exit_alive_current_none"
+            ],
+            "selected_ids": [
+              "lure_ambush",
+              "lure_ambush"
+            ],
+            "id_aligned_total_variation": 0.3527986761764623,
+            "id_aligned_max_probability_difference": 0.3527987003326416
+          },
+          {
+            "case_ids": [
+              "strategy_cautious_protect_ally",
+              "strategy_cautious_protect_ally_current_none"
+            ],
+            "selected_ids": [
+              "lure_ambush",
+              "guard_ally"
+            ],
+            "id_aligned_total_variation": 0.780601048762037,
+            "id_aligned_max_probability_difference": 0.7794476822018623
+          },
+          {
+            "case_ids": [
+              "strategy_cautious_reach_exit_alive",
+              "strategy_cautious_reach_exit_alive_current_none"
+            ],
+            "selected_ids": [
+              "lure_ambush",
+              "lure_ambush"
+            ],
+            "id_aligned_total_variation": 0.35595186840509996,
+            "id_aligned_max_probability_difference": 0.35496675968170166
+          }
+        ],
+        "order_control": {
+          "case_ids": [
+            "strategy_cunning_protect_ally",
+            "strategy_cunning_protect_ally_rotated4"
+          ],
+          "selected_ids": [
+            "lure_ambush",
+            "lure_ambush"
+          ],
+          "same_selected_id": true,
+          "id_aligned_total_variation": 0.08328493089356925,
+          "id_aligned_max_probability_difference": 0.08328485488891602
+        },
+        "interpretation": "Selection and sensitivity measurements only; no ground truth, accuracy or game win-rate measurement.",
+        "timing": {
+          "timed_requests": 18,
+          "total_end_to_end_predict_ms": 67109.64328199043,
+          "mean_end_to_end_predict_ms": 3728.313515666135,
+          "median_end_to_end_predict_ms": 3710.8042584986833,
+          "mean_upstream_inference_ms": 3725.4016666666666
+        }
+      },
+      "artifact_name": "native-2B",
+      "case_count": 18,
+      "input_token_range": [
+        498,
+        508
+      ],
+      "observed_peak_process_rss_bytes": 4430745600,
+      "case_results": [
+        {
+          "case_id": "strategy_cunning_protect_ally",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.0038798816967755556,
+            "lure_ambush": 0.9493757486343384,
+            "flank": 0.0009809876792132854,
+            "guard_ally": 0.019703663885593414,
+            "ranged_pressure": 0.025300007313489914,
+            "observe": 0.0002480325347278267,
+            "disengage": 0.00019316794350743294,
+            "bypass": 0.0003184800734743476
+          },
+          "input_tokens": 504,
+          "end_to_end_predict_ms": 3406.108477000089
+        },
+        {
+          "case_id": "strategy_cunning_reach_exit_alive",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.002452357206493616,
+            "lure_ambush": 0.9893514513969421,
+            "flank": 0.00037608115235343575,
+            "guard_ally": 0.0006200529751367867,
+            "ranged_pressure": 0.006666197441518307,
+            "observe": 0.00020130172197241336,
+            "disengage": 7.405476208077744e-05,
+            "bypass": 0.000258476531598717
+          },
+          "input_tokens": 501,
+          "end_to_end_predict_ms": 3357.5101969981915
+        },
+        {
+          "case_id": "strategy_aggressive_protect_ally",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.00837602186948061,
+            "lure_ambush": 0.8543775081634521,
+            "flank": 0.0023997705429792404,
+            "guard_ally": 0.05461852625012398,
+            "ranged_pressure": 0.07946949452161789,
+            "observe": 0.0002529339399188757,
+            "disengage": 0.0002529339399188757,
+            "bypass": 0.0002529339399188757
+          },
+          "input_tokens": 506,
+          "end_to_end_predict_ms": 3479.2832259990973
+        },
+        {
+          "case_id": "strategy_aggressive_reach_exit_alive",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.024938326328992844,
+            "lure_ambush": 0.9358038306236267,
+            "flank": 0.0010957135818898678,
+            "guard_ally": 0.0010957135818898678,
+            "ranged_pressure": 0.036285050213336945,
+            "observe": 0.00019040648476220667,
+            "disengage": 0.0002770397695712745,
+            "bypass": 0.00031392721575684845
+          },
+          "input_tokens": 503,
+          "end_to_end_predict_ms": 3823.8064679972013
+        },
+        {
+          "case_id": "strategy_cautious_protect_ally",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.002806305419653654,
+            "lure_ambush": 0.881714940071106,
+            "flank": 0.001169842085801065,
+            "guard_ally": 0.04974295198917389,
+            "ranged_pressure": 0.06387121975421906,
+            "observe": 0.00026102704578079283,
+            "disengage": 0.00020328807295300066,
+            "bypass": 0.00023035558115225285
+          },
+          "input_tokens": 508,
+          "end_to_end_predict_ms": 3628.6526130024868
+        },
+        {
+          "case_id": "strategy_cautious_reach_exit_alive",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.0049524768255651,
+            "lure_ambush": 0.9437749981880188,
+            "flank": 0.0009752004407346249,
+            "guard_ally": 0.0020644995383918285,
+            "ranged_pressure": 0.04698779061436653,
+            "observe": 0.0004065240500494838,
+            "disengage": 0.0003166012465953827,
+            "bypass": 0.0005219872109591961
+          },
+          "input_tokens": 505,
+          "end_to_end_predict_ms": 3517.1351620010682
+        },
+        {
+          "case_id": "strategy_cunning_protect_ally_pursuit",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.0030533585231751204,
+            "lure_ambush": 0.9593366980552673,
+            "flank": 0.0006012419471517205,
+            "guard_ally": 0.022561436519026756,
+            "ranged_pressure": 0.013684202916920185,
+            "observe": 0.00028400655719451606,
+            "disengage": 0.00019519467605277896,
+            "bypass": 0.00028400655719451606
+          },
+          "input_tokens": 504,
+          "end_to_end_predict_ms": 3347.066788999655
+        },
+        {
+          "case_id": "strategy_cunning_protect_ally_ally_imminent",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.002658707555383444,
+            "lure_ambush": 0.9465654492378235,
+            "flank": 0.0004620141116902232,
+            "guard_ally": 0.04158918559551239,
+            "ranged_pressure": 0.008189396001398563,
+            "observe": 0.00019259612599853426,
+            "disengage": 0.0001499940117355436,
+            "bypass": 0.00019259612599853426
+          },
+          "input_tokens": 506,
+          "end_to_end_predict_ms": 3472.0648049988085
+        },
+        {
+          "case_id": "strategy_cunning_protect_ally_enemy_weakened",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.006254402920603752,
+            "lure_ambush": 0.9282357096672058,
+            "flank": 0.0012315649073570967,
+            "guard_ally": 0.046214133501052856,
+            "ranged_pressure": 0.017001230269670486,
+            "observe": 0.0002747992693912238,
+            "disengage": 0.0002747992693912238,
+            "bypass": 0.0005133926752023399
+          },
+          "input_tokens": 505,
+          "end_to_end_predict_ms": 4303.865255998971
+        },
+        {
+          "case_id": "strategy_cunning_protect_ally_current_direct_assault",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.0011930428445339203,
+            "lure_ambush": 0.8992014527320862,
+            "flank": 0.0013518946943804622,
+            "guard_ally": 0.07381094992160797,
+            "ranged_pressure": 0.02396290749311447,
+            "observe": 0.00020731976837851107,
+            "disengage": 0.00011097027163486928,
+            "bypass": 0.00016146080452017486
+          },
+          "input_tokens": 503,
+          "end_to_end_predict_ms": 4131.002031997923
+        },
+        {
+          "case_id": "strategy_cunning_protect_ally_current_observe",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.0031855865381658077,
+            "lure_ambush": 0.4727829694747925,
+            "flank": 0.004635001067072153,
+            "guard_ally": 0.07250361889600754,
+            "ranged_pressure": 0.11953825503587723,
+            "observe": 0.32493868470191956,
+            "disengage": 0.0007108004065230489,
+            "bypass": 0.0017051217146217823
+          },
+          "input_tokens": 501,
+          "end_to_end_predict_ms": 4050.829343002988
+        },
+        {
+          "case_id": "strategy_cunning_protect_ally_current_none",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.0015896514523774385,
+            "lure_ambush": 0.823459804058075,
+            "flank": 0.0023129291366785765,
+            "guard_ally": 0.1114431619644165,
+            "ranged_pressure": 0.05965122953057289,
+            "observe": 0.0007508981507271528,
+            "disengage": 0.0002762399963103235,
+            "bypass": 0.0005160842556506395
+          },
+          "input_tokens": 501,
+          "end_to_end_predict_ms": 4070.233663998806
+        },
+        {
+          "case_id": "strategy_cunning_protect_ally_rotated4",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass",
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally"
+          ],
+          "probabilities": {
+            "ranged_pressure": 0.08055900782346725,
+            "observe": 0.0027565776836127043,
+            "disengage": 0.01235412247478962,
+            "bypass": 0.0013021149206906557,
+            "direct_assault": 0.004544828087091446,
+            "lure_ambush": 0.8660908937454224,
+            "flank": 0.0027565776836127043,
+            "guard_ally": 0.029635999351739883
+          },
+          "input_tokens": 504,
+          "end_to_end_predict_ms": 3782.106605998706
+        },
+        {
+          "case_id": "strategy_cunning_reach_exit_alive_current_none",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.0020980199333280325,
+            "lure_ambush": 0.9590986967086792,
+            "flank": 0.0014419464860111475,
+            "guard_ally": 0.001633939566090703,
+            "ranged_pressure": 0.03281855210661888,
+            "observe": 0.0011229891097173095,
+            "disengage": 0.0001519800425739959,
+            "bypass": 0.001633939566090703
+          },
+          "input_tokens": 498,
+          "end_to_end_predict_ms": 3615.223459997651
+        },
+        {
+          "case_id": "strategy_aggressive_protect_ally_current_none",
+          "selected_id": "guard_ally",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.003122224472463131,
+            "lure_ambush": 0.19316518306732178,
+            "flank": 0.013992839492857456,
+            "guard_ally": 0.5949906706809998,
+            "ranged_pressure": 0.19316518306732178,
+            "observe": 0.0005425612907856703,
+            "disengage": 0.00047880865167826414,
+            "bypass": 0.0005425612907856703
+          },
+          "input_tokens": 503,
+          "end_to_end_predict_ms": 3780.2932630002033
+        },
+        {
+          "case_id": "strategy_aggressive_reach_exit_alive_current_none",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.1013111025094986,
+            "lure_ambush": 0.5830051302909851,
+            "flank": 0.025615457445383072,
+            "guard_ally": 0.008316121064126492,
+            "ranged_pressure": 0.2753921151161194,
+            "observe": 0.0014451253227889538,
+            "disengage": 0.0018555775750428438,
+            "bypass": 0.003059330163523555
+          },
+          "input_tokens": 500,
+          "end_to_end_predict_ms": 3746.419685998262
+        },
+        {
+          "case_id": "strategy_cautious_protect_ally_current_none",
+          "selected_id": "guard_ally",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.001652996288612485,
+            "lure_ambush": 0.10226725786924362,
+            "flank": 0.007408215198665857,
+            "guard_ally": 0.7556585073471069,
+            "ranged_pressure": 0.131313756108284,
+            "observe": 0.0006890713702887297,
+            "disengage": 0.00047359138261526823,
+            "bypass": 0.0005366493132896721
+          },
+          "input_tokens": 505,
+          "end_to_end_predict_ms": 3922.8534040012164
+        },
+        {
+          "case_id": "strategy_cautious_reach_exit_alive_current_none",
+          "selected_id": "lure_ambush",
+          "candidate_ids": [
+            "direct_assault",
+            "lure_ambush",
+            "flank",
+            "guard_ally",
+            "ranged_pressure",
+            "observe",
+            "disengage",
+            "bypass"
+          ],
+          "probabilities": {
+            "direct_assault": 0.003967358730733395,
+            "lure_ambush": 0.5888082385063171,
+            "flank": 0.017780467867851257,
+            "guard_ally": 0.020147910341620445,
+            "ranged_pressure": 0.3571302592754364,
+            "observe": 0.0065410686656832695,
+            "disengage": 0.0021235740277916193,
+            "bypass": 0.0035011819563806057
+          },
+          "input_tokens": 502,
+          "end_to_end_predict_ms": 3675.1888309991045
+        }
+      ],
+      "agreement_with_tinyjev": 13,
+      "raw_result": {
+        "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Python/Artifacts/intern-decision/native-2B/result.json",
+        "sha256": "8f809d26e5f9c3f567958172be878f70235170ca3ecc351fa9c8e287101e7ad4"
+      }
+    }
+  ],
+  "unity_embedding_baseline": {
+    "success": true,
+    "execution_completed": true,
+    "model_id": "internlm/Intern-Decision-0.8B",
+    "revision": "42457fafd13d10d0b0d9be46cb30a23caa409994",
+    "gguf_sha256": "f2cb5d0e215a52774bfaf5a0d61daac21bac5a96eeef4edcfda45a898e0ea45f",
+    "model_load_ms": 2104.2312,
+    "warmup_ms": 11913.9104,
+    "executed_cases": 18,
+    "selected_reference_matches": 18,
+    "max_reference_error": 0.02686828374862671,
+    "mean_inference_ms": 11512.289694444447,
+    "mean_backbone_ms": 11512.12236111111,
+    "mean_head_ms": 0.1673333333335702,
+    "diagnostic_parity_within_tolerance": false,
+    "diagnostic_absolute_tolerance": 0.019999999552965164,
+    "command": "-m \"/workspace/Cave-Dungeon/experiments/JevValidation/Python/Artifacts/intern-decision/unity-0.8B/intern-decision.f16.gguf\" --embedding --pooling none -c 1024 -b 1024 -ub 1024 -np 1 -ngl 0 -t 4 -tb 4 --log-verbosity 3",
+    "timing_scope": "HTTP request through all-token embedding JSON validation and original legal-token LM head. Model startup, file hashing and one separately recorded warm-up are excluded.",
+    "peak_sampled_editor_rss_bytes": 4252864512,
+    "whole_validation_seconds": 240.06575909000094,
+    "raw_report": {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/embedding-baseline/unity-0.8B-report.json",
+      "bytes": 49709,
+      "sha256": "6f5c166ccaf12459ae18ff949c11d277cf1e636fa8643011b837ffaef7bb50de"
+    },
+    "raw_memory_report": {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/embedding-baseline/unity-0.8B-memory.json",
+      "bytes": 4269926,
+      "sha256": "5d73a06e2cf9604d1204f6f45fc1ddcb02749ab6939ad70ac48ac6fa1c36c66d"
+    }
+  },
+  "limitations": [
+    "These 18 cases have no gold action labels or game outcomes; agreement with TinyJev is not accuracy.",
+    "TinyJev uses upstream Torch FP32 and Transformers 5.3; Intern uses upstream HF BF16 and Transformers 5.14.1. Timing/footprint are implementation-level observations, not architecture-only comparisons.",
+    "The same state/questions/candidate order are preserved, but native chat templates and token counts differ.",
+    "Published Intern-Decision paper Jev comparisons refer to a different hosted Jev baseline, not this TinyJev 0.6B trial.",
+    "Only text inputs and CPU were exercised; GPU/image performance and game integration were not measured. 2B was tested only in native Python; the Unity runner is pinned to 0.8B.",
+    "Unity uses F16 GGUF and original HF numeric token IDs. Native string tokenizer parity is not asserted.",
+    "Unity probability differences are recorded separately from selected-choice agreement; the 0.02 diagnostic threshold is not adjusted to turn failures into passes.",
+    "Each case was measured once after one warmup; these are observations for this 4-core cloud environment, not a latency distribution or game target performance guarantee.",
+    "Unity RSS observations reuse one Editor across routes and include Editor state; they do not establish minimum model-only memory."
+  ],
+  "unity_completion": {
+    "created_utc": "2026-11-06T01:45:31.0148470Z",
+    "unity_version": "6000.6.8f1",
+    "processor": "AMD EPYC 9V74 80-Core Processor",
+    "operating_system": "Linux 6.18 Debian GNU/Linux 13 64bit",
+    "model_id": "internlm/Intern-Decision-0.8B",
+    "revision": "42457fafd13d10d0b0d9be46cb30a23caa409994",
+    "manifest_sha256": "1a4eeb819fa7e023aa4f05e43c4e9c0cbe0a68a44a741898739e8510e8931490",
+    "gguf_sha256": "f2cb5d0e215a52774bfaf5a0d61daac21bac5a96eeef4edcfda45a898e0ea45f",
+    "head_sha256": "8db01ba4e8d8af68d21ed29b2573b6bfc8b4fa314c46734190ec59d706245572",
+    "reference_result_sha256": "6dca6a6351d6753cb91a985b179a09a4e46d60147f0bc96217b1c52990b058a4",
+    "reference_result_verified": true,
+    "decision_protocol_verified": true,
+    "context_size": 1024,
+    "hidden_size": 1024,
+    "cpu_threads": 4,
+    "requested_gpu_layers": 0,
+    "native_architecture": "libllamalib_linux-x64_avx512.so",
+    "route": "completion",
+    "processed_input_tokens": 8951,
+    "warmup_processed_input_tokens": 498,
+    "completion_vocabulary_size": 248320,
+    "completion_logit_bias_entries": 248312,
+    "backend": "LLMUnity 3.0.3 / LlamaLib 2.0.5 CPU, single-position original LM-head legal-token conditional probabilities",
+    "command": "-m \"/workspace/Cave-Dungeon/experiments/JevValidation/Python/Artifacts/intern-decision/unity-0.8B/intern-decision.f16.gguf\" -c 1024 -b 1024 -ub 1024 -np 1 -ngl 0 -t 4 -tb 4 --log-verbosity 3",
+    "stage": "complete",
+    "success": true,
+    "execution_completed": true,
+    "diagnostic_parity_within_tolerance": false,
+    "diagnostic_absolute_tolerance": 0.019999999552965164,
+    "parity_scope": "Agreement and probability difference against pinned original HF results. The 0.02 threshold is a numerical diagnostic, not decision quality or game success.",
+    "timing_scope": "Cached-mask request construction through native causal-prefix forward, original vocabulary LM head, explicit eight-token logit masking/T=1 probability calculation and HTTP parsing. No free-form answer is used; own argmax chooses the strategy. Native model/head/sampler costs are inseparable; head_ms=0 means no separate managed-head stage. Startup, file hashing and one separately recorded warm-up are excluded.",
+    "validation_ms": 16984.3806,
+    "model_load_ms": 2470.6366000000003,
+    "warmup_ms": 8318.0841,
+    "mean_inference_ms": 7960.425555555556,
+    "mean_backbone_ms": 7960.425555555556,
+    "mean_head_ms": 0.0,
+    "executed_cases": 18,
+    "selected_reference_matches": 18,
+    "max_reference_error": 0.02671593427658081,
+    "original_input_token_range": [
+      498,
+      508
+    ],
+    "processed_prefix_token_range": [
+      492,
+      502
+    ],
+    "mean_native_prompt_ms": 7436.607722222223,
+    "baseline_editor_rss_bytes": 1457721344,
+    "peak_sampled_editor_rss_bytes": 3661361152,
+    "whole_validation_seconds": 173.59793237099802,
+    "memory_sample_interval_seconds": 0.1,
+    "memory_scope": "Main Editor RSS sampled externally, including prior Editor state. This is the same Editor reused after the embedding baseline, not a fresh-process minimum or VRAM. Child RSS sum is omitted to avoid shared-page double counting.",
+    "additional_cgroup_oom_kills": 0,
+    "case_results": [
+      {
+        "case_id": "strategy_cunning_protect_ally",
+        "input_token_count": 504,
+        "processed_input_tokens": 498,
+        "route": "completion",
+        "probability_source": "Native original LM head, illegal vocabulary logits masked before top_k=8 and T=1 softmax; direct legal conditional probabilities. Raw logits are unavailable.",
+        "raw_logits_available": false,
+        "decision_position": 497,
+        "choice_ids": [
+          "direct_assault",
+          "lure_ambush",
+          "flank",
+          "guard_ally",
+          "ranged_pressure",
+          "observe",
+          "disengage",
+          "bypass"
+        ],
+        "symbol_token_ids": [
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39
+        ],
+        "logits": [],
+        "probabilities": [
+          0.0013531636213883758,
+          0.9955015778541565,
+          3.9016678783809766e-05,
+          0.00027678013429977,
+          0.0002953793155029416,
+          0.0012135164579376578,
+          0.0004049526178278029,
+          0.0009155910811387002
+        ],
+        "reference_probabilities": [
+          0.001321030780673027,
+          0.99566650390625,
+          3.9891674532555044e-05,
+          0.00026012639864347875,
+          0.00026012639864347875,
+          0.0011658056173473597,
+          0.00037848169449716806,
+          0.0009079303126782179
+        ],
+        "chosen_id": "lure_ambush",
+        "reference_chosen_id": "lure_ambush",
+        "selected_reference_matches": true,
+        "max_reference_error": 0.00016492605209350586,
+        "inference_ms": 7841.550700000001,
+        "backbone_ms": 7841.550700000001,
+        "head_ms": 0.0,
+        "has_native_timings": true,
+        "native_prompt_ms": 7387.99,
+        "native_predicted_ms": 0.001,
+        "native_tokens_predicted": 1
+      },
+      {
+        "case_id": "strategy_cunning_reach_exit_alive",
+        "input_token_count": 501,
+        "processed_input_tokens": 495,
+        "route": "completion",
+        "probability_source": "Native original LM head, illegal vocabulary logits masked before top_k=8 and T=1 softmax; direct legal conditional probabilities. Raw logits are unavailable.",
+        "raw_logits_available": false,
+        "decision_position": 494,
+        "choice_ids": [
+          "direct_assault",
+          "lure_ambush",
+          "flank",
+          "guard_ally",
+          "ranged_pressure",
+          "observe",
+          "disengage",
+          "bypass"
+        ],
+        "symbol_token_ids": [
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39
+        ],
+        "logits": [],
+        "probabilities": [
+          0.0016109384596347809,
+          0.991291344165802,
+          5.049691753811203e-05,
+          0.00024239560298155993,
+          0.0005078332615084946,
+          0.0027242787182331085,
+          0.0013506546383723617,
+          0.0022220287937670946
+        ],
+        "reference_probabilities": [
+          0.0014906247379258275,
+          0.9914765954017639,
+          5.1006376452278346e-05,
+          0.0002285947120981291,
+          0.0004839350003749132,
+          0.002784853568300605,
+          0.0013154717162251472,
+          0.0021688463166356087
+        ],
+        "chosen_id": "lure_ambush",
+        "reference_chosen_id": "lure_ambush",
+        "selected_reference_matches": true,
+        "max_reference_error": 0.00018525123596191406,
+        "inference_ms": 8018.709000000001,
+        "backbone_ms": 8018.709000000001,
+        "head_ms": 0.0,
+        "has_native_timings": true,
+        "native_prompt_ms": 7552.923,
+        "native_predicted_ms": 0.001,
+        "native_tokens_predicted": 1
+      },
+      {
+        "case_id": "strategy_aggressive_protect_ally",
+        "input_token_count": 506,
+        "processed_input_tokens": 500,
+        "route": "completion",
+        "probability_source": "Native original LM head, illegal vocabulary logits masked before top_k=8 and T=1 softmax; direct legal conditional probabilities. Raw logits are unavailable.",
+        "raw_logits_available": false,
+        "decision_position": 499,
+        "choice_ids": [
+          "direct_assault",
+          "lure_ambush",
+          "flank",
+          "guard_ally",
+          "ranged_pressure",
+          "observe",
+          "disengage",
+          "bypass"
+        ],
+        "symbol_token_ids": [
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39
+        ],
+        "logits": [],
+        "probabilities": [
+          0.01534072682261467,
+          0.9784536957740784,
+          6.360036786645651e-05,
+          0.00046289298916235566,
+          0.0002787014818750322,
+          0.002594610443338752,
+          0.0011552692158147693,
+          0.001650515478104353
+        ],
+        "reference_probabilities": [
+          0.01580463908612728,
+          0.9777984023094177,
+          7.318999996641651e-05,
+          0.00047725875629112124,
+          0.00028947205282747746,
+          0.0027464344166219234,
+          0.001144884154200554,
+          0.0016657967353239655
+        ],
+        "chosen_id": "lure_ambush",
+        "reference_chosen_id": "lure_ambush",
+        "selected_reference_matches": true,
+        "max_reference_error": 0.0006552934646606445,
+        "inference_ms": 7865.9975,
+        "backbone_ms": 7865.9975,
+        "head_ms": 0.0,
+        "has_native_timings": true,
+        "native_prompt_ms": 7297.953,
+        "native_predicted_ms": 0.001,
+        "native_tokens_predicted": 1
+      },
+      {
+        "case_id": "strategy_aggressive_reach_exit_alive",
+        "input_token_count": 503,
+        "processed_input_tokens": 497,
+        "route": "completion",
+        "probability_source": "Native original LM head, illegal vocabulary logits masked before top_k=8 and T=1 softmax; direct legal conditional probabilities. Raw logits are unavailable.",
+        "raw_logits_available": false,
+        "decision_position": 496,
+        "choice_ids": [
+          "direct_assault",
+          "lure_ambush",
+          "flank",
+          "guard_ally",
+          "ranged_pressure",
+          "observe",
+          "disengage",
+          "bypass"
+        ],
+        "symbol_token_ids": [
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39
+        ],
+        "logits": [],
+        "probabilities": [
+          0.01458072755485773,
+          0.972530722618103,
+          7.351442764047533e-05,
+          0.0003559738106559962,
+          0.0004959516227245331,
+          0.004594387020915747,
+          0.0036202347837388515,
+          0.00374846369959414
+        ],
+        "reference_probabilities": [
+          0.013880197890102863,
+          0.9730769991874695,
+          7.283659215318039e-05,
+          0.00036989475484006107,
+          0.00047495425678789616,
+          0.005106239579617977,
+          0.003509463742375374,
+          0.003509463742375374
+        ],
+        "chosen_id": "lure_ambush",
+        "reference_chosen_id": "lure_ambush",
+        "selected_reference_matches": true,
+        "max_reference_error": 0.0007005296647548676,
+        "inference_ms": 8410.160100000001,
+        "backbone_ms": 8410.160100000001,
+        "head_ms": 0.0,
+        "has_native_timings": true,
+        "native_prompt_ms": 7815.643,
+        "native_predicted_ms": 0.001,
+        "native_tokens_predicted": 1
+      },
+      {
+        "case_id": "strategy_cautious_protect_ally",
+        "input_token_count": 508,
+        "processed_input_tokens": 502,
+        "route": "completion",
+        "probability_source": "Native original LM head, illegal vocabulary logits masked before top_k=8 and T=1 softmax; direct legal conditional probabilities. Raw logits are unavailable.",
+        "raw_logits_available": false,
+        "decision_position": 501,
+        "choice_ids": [
+          "direct_assault",
+          "lure_ambush",
+          "flank",
+          "guard_ally",
+          "ranged_pressure",
+          "observe",
+          "disengage",
+          "bypass"
+        ],
+        "symbol_token_ids": [
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39
+        ],
+        "logits": [],
+        "probabilities": [
+          0.002806333126500249,
+          0.9598570466041565,
+          0.00012889534991700202,
+          0.023705381900072098,
+          0.002038158942013979,
+          0.00665744673460722,
+          0.002976497169584036,
+          0.0018302304670214653
+        ],
+        "reference_probabilities": [
+          0.002699495293200016,
+          0.9610869288444519,
+          0.00011860754602821544,
+          0.02260259911417961,
+          0.0021023692097514868,
+          0.0064757526852190495,
+          0.003058929229155183,
+          0.0018553342670202255
+        ],
+        "chosen_id": "lure_ambush",
+        "reference_chosen_id": "lure_ambush",
+        "selected_reference_matches": true,
+        "max_reference_error": 0.0012298822402954102,
+        "inference_ms": 8454.1586,
+        "backbone_ms": 8454.1586,
+        "head_ms": 0.0,
+        "has_native_timings": true,
+        "native_prompt_ms": 7915.068,
+        "native_predicted_ms": 0.001,
+        "native_tokens_predicted": 1
+      },
+      {
+        "case_id": "strategy_cautious_reach_exit_alive",
+        "input_token_count": 505,
+        "processed_input_tokens": 499,
+        "route": "completion",
+        "probability_source": "Native original LM head, illegal vocabulary logits masked before top_k=8 and T=1 softmax; direct legal conditional probabilities. Raw logits are unavailable.",
+        "raw_logits_available": false,
+        "decision_position": 498,
+        "choice_ids": [
+          "direct_assault",
+          "lure_ambush",
+          "flank",
+          "guard_ally",
+          "ranged_pressure",
+          "observe",
+          "disengage",
+          "bypass"
+        ],
+        "symbol_token_ids": [
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39
+        ],
+        "logits": [],
+        "probabilities": [
+          0.0029616968240588903,
+          0.944495677947998,
+          0.00015981354226823896,
+          0.012902425602078438,
+          0.004518046975135803,
+          0.017668789252638817,
+          0.010825464501976967,
+          0.006468077190220356
+        ],
+        "reference_probabilities": [
+          0.0030071656219661236,
+          0.9448233246803284,
+          0.00014971794735174626,
+          0.013477180153131485,
+          0.004375400021672249,
+          0.01730504259467125,
+          0.010496038943529129,
+          0.006366169545799494
+        ],
+        "chosen_id": "lure_ambush",
+        "reference_chosen_id": "lure_ambush",
+        "selected_reference_matches": true,
+        "max_reference_error": 0.0005747545510530472,
+        "inference_ms": 7972.964,
+        "backbone_ms": 7972.964,
+        "head_ms": 0.0,
+        "has_native_timings": true,
+        "native_prompt_ms": 7382.004,
+        "native_predicted_ms": 0.001,
+        "native_tokens_predicted": 1
+      },
+      {
+        "case_id": "strategy_cunning_protect_ally_pursuit",
+        "input_token_count": 504,
+        "processed_input_tokens": 498,
+        "route": "completion",
+        "probability_source": "Native original LM head, illegal vocabulary logits masked before top_k=8 and T=1 softmax; direct legal conditional probabilities. Raw logits are unavailable.",
+        "raw_logits_available": false,
+        "decision_position": 497,
+        "choice_ids": [
+          "direct_assault",
+          "lure_ambush",
+          "flank",
+          "guard_ally",
+          "ranged_pressure",
+          "observe",
+          "disengage",
+          "bypass"
+        ],
+        "symbol_token_ids": [
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39
+        ],
+        "logits": [],
+        "probabilities": [
+          0.0015430365456268191,
+          0.994650661945343,
+          4.149152300669812e-05,
+          0.0002082680002786219,
+          0.00031916479929350317,
+          0.0014585732715204358,
+          0.0005165725597180426,
+          0.0012622128706425428
+        ],
+        "reference_probabilities": [
+          0.0014953630743548274,
+          0.9946282505989075,
+          3.985007788287476e-05,
+          0.00020237539138179272,
+          0.00033366060233674943,
+          0.0014953630743548274,
+          0.00048547331243753433,
+          0.001319653238169849
+        ],
+        "chosen_id": "lure_ambush",
+        "reference_chosen_id": "lure_ambush",
+        "selected_reference_matches": true,
+        "max_reference_error": 5.744036752730608e-05,
+        "inference_ms": 7919.9793,
+        "backbone_ms": 7919.9793,
+        "head_ms": 0.0,
+        "has_native_timings": true,
+        "native_prompt_ms": 7353.484,
+        "native_predicted_ms": 0.001,
+        "native_tokens_predicted": 1
+      },
+      {
+        "case_id": "strategy_cunning_protect_ally_ally_imminent",
+        "input_token_count": 506,
+        "processed_input_tokens": 500,
+        "route": "completion",
+        "probability_source": "Native original LM head, illegal vocabulary logits masked before top_k=8 and T=1 softmax; direct legal conditional probabilities. Raw logits are unavailable.",
+        "raw_logits_available": false,
+        "decision_position": 499,
+        "choice_ids": [
+          "direct_assault",
+          "lure_ambush",
+          "flank",
+          "guard_ally",
+          "ranged_pressure",
+          "observe",
+          "disengage",
+          "bypass"
+        ],
+        "symbol_token_ids": [
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39
+        ],
+        "logits": [],
+        "probabilities": [
+          0.0014000851660966873,
+          0.9953646063804626,
+          3.978028689743951e-05,
+          0.00023621796572115272,
+          0.00027976237470284104,
+          0.0013722458388656378,
+          0.0003853279340546578,
+          0.0009219942148774862
+        ],
+        "reference_probabilities": [
+          0.001321101444773376,
+          0.9957197308540344,
+          3.9893806388136e-05,
+          0.00020259746816009283,
+          0.00026014031027443707,
+          0.001321101444773376,
+          0.0003340267576277256,
+          0.0008012885227799416
+        ],
+        "chosen_id": "lure_ambush",
+        "reference_chosen_id": "lure_ambush",
+        "selected_reference_matches": true,
+        "max_reference_error": 0.00035512447357177734,
+        "inference_ms": 8015.316900000001,
+        "backbone_ms": 8015.316900000001,
+        "head_ms": 0.0,
+        "has_native_timings": true,
+        "native_prompt_ms": 7472.24,
+        "native_predicted_ms": 0.001,
+        "native_tokens_predicted": 1
+      },
+      {
+        "case_id": "strategy_cunning_protect_ally_enemy_weakened",
+        "input_token_count": 505,
+        "processed_input_tokens": 499,
+        "route": "completion",
+        "probability_source": "Native original LM head, illegal vocabulary logits masked before top_k=8 and T=1 softmax; direct legal conditional probabilities. Raw logits are unavailable.",
+        "raw_logits_available": false,
+        "decision_position": 498,
+        "choice_ids": [
+          "direct_assault",
+          "lure_ambush",
+          "flank",
+          "guard_ally",
+          "ranged_pressure",
+          "observe",
+          "disengage",
+          "bypass"
+        ],
+        "symbol_token_ids": [
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39
+        ],
+        "logits": [],
+        "probabilities": [
+          0.001294382382184267,
+          0.9956507086753845,
+          3.8411530113080516e-05,
+          0.00027498716372065246,
+          0.00027852965286001563,
+          0.001168578746728599,
+          0.0003559989563655108,
+          0.000938377866987139
+        ],
+        "reference_probabilities": [
+          0.0013207346200942993,
+          0.9954432249069214,
+          3.9882728742668405e-05,
+          0.0002946956956293434,
+          0.0002946956956293434,
+          0.0013207346200942993,
+          0.00037839679862372577,
+          0.0009077267604880035
+        ],
+        "chosen_id": "lure_ambush",
+        "reference_chosen_id": "lure_ambush",
+        "selected_reference_matches": true,
+        "max_reference_error": 0.00020748376846313477,
+        "inference_ms": 7942.573600000001,
+        "backbone_ms": 7942.573600000001,
+        "head_ms": 0.0,
+        "has_native_timings": true,
+        "native_prompt_ms": 7473.568,
+        "native_predicted_ms": 0.001,
+        "native_tokens_predicted": 1
+      },
+      {
+        "case_id": "strategy_cunning_protect_ally_current_direct_assault",
+        "input_token_count": 503,
+        "processed_input_tokens": 497,
+        "route": "completion",
+        "probability_source": "Native original LM head, illegal vocabulary logits masked before top_k=8 and T=1 softmax; direct legal conditional probabilities. Raw logits are unavailable.",
+        "raw_logits_available": false,
+        "decision_position": 496,
+        "choice_ids": [
+          "direct_assault",
+          "lure_ambush",
+          "flank",
+          "guard_ally",
+          "ranged_pressure",
+          "observe",
+          "disengage",
+          "bypass"
+        ],
+        "symbol_token_ids": [
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39
+        ],
+        "logits": [],
+        "probabilities": [
+          0.8577917218208313,
+          0.07447504252195358,
+          0.0013467962853610516,
+          0.028014300391077995,
+          0.0008775412570685148,
+          0.011158335022628307,
+          0.015759412199258804,
+          0.010576878674328327
+        ],
+        "reference_probabilities": [
+          0.8660697937011719,
+          0.07109133899211884,
+          0.0013020832557231188,
+          0.023079978302121162,
+          0.0007897534524090588,
+          0.010902210138738155,
+          0.01586262136697769,
+          0.010902210138738155
+        ],
+        "chosen_id": "direct_assault",
+        "reference_chosen_id": "direct_assault",
+        "selected_reference_matches": true,
+        "max_reference_error": 0.008278071880340576,
+        "inference_ms": 7551.033100000001,
+        "backbone_ms": 7551.033100000001,
+        "head_ms": 0.0,
+        "has_native_timings": true,
+        "native_prompt_ms": 7113.533,
+        "native_predicted_ms": 0.001,
+        "native_tokens_predicted": 1
+      },
+      {
+        "case_id": "strategy_cunning_protect_ally_current_observe",
+        "input_token_count": 501,
+        "processed_input_tokens": 495,
+        "route": "completion",
+        "probability_source": "Native original LM head, illegal vocabulary logits masked before top_k=8 and T=1 softmax; direct legal conditional probabilities. Raw logits are unavailable.",
+        "raw_logits_available": false,
+        "decision_position": 494,
+        "choice_ids": [
+          "direct_assault",
+          "lure_ambush",
+          "flank",
+          "guard_ally",
+          "ranged_pressure",
+          "observe",
+          "disengage",
+          "bypass"
+        ],
+        "symbol_token_ids": [
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39
+        ],
+        "logits": [],
+        "probabilities": [
+          0.004865724127739668,
+          0.19622910022735596,
+          0.0009271512972190976,
+          0.1350059062242508,
+          0.05162801593542099,
+          0.5337530374526978,
+          0.04262800142168999,
+          0.034963060170412064
+        ],
+        "reference_probabilities": [
+          0.005105441901832819,
+          0.21708890795707703,
+          0.0008871927857398987,
+          0.13167108595371246,
+          0.048439085483551025,
+          0.5207692384719849,
+          0.042747341096401215,
+          0.033291663974523544
+        ],
+        "chosen_id": "observe",
+        "reference_chosen_id": "observe",
+        "selected_reference_matches": true,
+        "max_reference_error": 0.02085980772972107,
+        "inference_ms": 7859.312400000001,
+        "backbone_ms": 7859.312400000001,
+        "head_ms": 0.0,
+        "has_native_timings": true,
+        "native_prompt_ms": 7350.067,
+        "native_predicted_ms": 0.001,
+        "native_tokens_predicted": 1
+      },
+      {
+        "case_id": "strategy_cunning_protect_ally_current_none",
+        "input_token_count": 501,
+        "processed_input_tokens": 495,
+        "route": "completion",
+        "probability_source": "Native original LM head, illegal vocabulary logits masked before top_k=8 and T=1 softmax; direct legal conditional probabilities. Raw logits are unavailable.",
+        "raw_logits_available": false,
+        "decision_position": 494,
+        "choice_ids": [
+          "direct_assault",
+          "lure_ambush",
+          "flank",
+          "guard_ally",
+          "ranged_pressure",
+          "observe",
+          "disengage",
+          "bypass"
+        ],
+        "symbol_token_ids": [
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39
+        ],
+        "logits": [],
+        "probabilities": [
+          0.04510197043418884,
+          0.4981320798397064,
+          0.0010260838316753507,
+          0.23986496031284332,
+          0.06512720137834549,
+          0.0495915412902832,
+          0.06657633930444717,
+          0.034579820930957794
+        ],
+        "reference_probabilities": [
+          0.051960140466690063,
+          0.4929841160774231,
+          0.0010783984325826168,
+          0.2328692078590393,
+          0.06671814620494843,
+          0.051960140466690063,
+          0.06671814620494843,
+          0.03571164980530739
+        ],
+        "chosen_id": "lure_ambush",
+        "reference_chosen_id": "lure_ambush",
+        "selected_reference_matches": true,
+        "max_reference_error": 0.006995752453804016,
+        "inference_ms": 7722.8894,
+        "backbone_ms": 7722.8894,
+        "head_ms": 0.0,
+        "has_native_timings": true,
+        "native_prompt_ms": 7229.819,
+        "native_predicted_ms": 0.001,
+        "native_tokens_predicted": 1
+      },
+      {
+        "case_id": "strategy_cunning_protect_ally_rotated4",
+        "input_token_count": 504,
+        "processed_input_tokens": 498,
+        "route": "completion",
+        "probability_source": "Native original LM head, illegal vocabulary logits masked before top_k=8 and T=1 softmax; direct legal conditional probabilities. Raw logits are unavailable.",
+        "raw_logits_available": false,
+        "decision_position": 497,
+        "choice_ids": [
+          "ranged_pressure",
+          "observe",
+          "disengage",
+          "bypass",
+          "direct_assault",
+          "lure_ambush",
+          "flank",
+          "guard_ally"
+        ],
+        "symbol_token_ids": [
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39
+        ],
+        "logits": [],
+        "probabilities": [
+          0.0076091093942523,
+          0.0006801933632232249,
+          0.0005864773411303759,
+          0.0005230624810792506,
+          0.0014039910165593028,
+          0.9398353695869446,
+          0.002718353411182761,
+          0.0466434620320797
+        ],
+        "reference_probabilities": [
+          0.007178374566137791,
+          0.0006676928605884314,
+          0.0005892369081266224,
+          0.0005199997103773057,
+          0.00141350575722754,
+          0.9401815533638,
+          0.0026407763361930847,
+          0.0468088835477829
+        ],
+        "chosen_id": "lure_ambush",
+        "reference_chosen_id": "lure_ambush",
+        "selected_reference_matches": true,
+        "max_reference_error": 0.0004307348281145096,
+        "inference_ms": 8165.0196000000005,
+        "backbone_ms": 8165.0196000000005,
+        "head_ms": 0.0,
+        "has_native_timings": true,
+        "native_prompt_ms": 7605.555,
+        "native_predicted_ms": 0.001,
+        "native_tokens_predicted": 1
+      },
+      {
+        "case_id": "strategy_cunning_reach_exit_alive_current_none",
+        "input_token_count": 498,
+        "processed_input_tokens": 492,
+        "route": "completion",
+        "probability_source": "Native original LM head, illegal vocabulary logits masked before top_k=8 and T=1 softmax; direct legal conditional probabilities. Raw logits are unavailable.",
+        "raw_logits_available": false,
+        "decision_position": 491,
+        "choice_ids": [
+          "direct_assault",
+          "lure_ambush",
+          "flank",
+          "guard_ally",
+          "ranged_pressure",
+          "observe",
+          "disengage",
+          "bypass"
+        ],
+        "symbol_token_ids": [
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39
+        ],
+        "logits": [],
+        "probabilities": [
+          0.01990421488881111,
+          0.4931739270687103,
+          0.0007906510727480054,
+          0.07031049579381943,
+          0.048814162611961365,
+          0.07736913859844208,
+          0.1228058934211731,
+          0.16683150827884674
+        ],
+        "reference_probabilities": [
+          0.01822618581354618,
+          0.47005951404571533,
+          0.0008008027216419578,
+          0.07208596169948578,
+          0.04954390600323677,
+          0.08168409764766693,
+          0.1346743106842041,
+          0.17292523384094238
+        ],
+        "chosen_id": "lure_ambush",
+        "reference_chosen_id": "lure_ambush",
+        "selected_reference_matches": true,
+        "max_reference_error": 0.023114413022994995,
+        "inference_ms": 7861.9727,
+        "backbone_ms": 7861.9727,
+        "head_ms": 0.0,
+        "has_native_timings": true,
+        "native_prompt_ms": 7275.221,
+        "native_predicted_ms": 0.001,
+        "native_tokens_predicted": 1
+      },
+      {
+        "case_id": "strategy_aggressive_protect_ally_current_none",
+        "input_token_count": 503,
+        "processed_input_tokens": 497,
+        "route": "completion",
+        "probability_source": "Native original LM head, illegal vocabulary logits masked before top_k=8 and T=1 softmax; direct legal conditional probabilities. Raw logits are unavailable.",
+        "raw_logits_available": false,
+        "decision_position": 496,
+        "choice_ids": [
+          "direct_assault",
+          "lure_ambush",
+          "flank",
+          "guard_ally",
+          "ranged_pressure",
+          "observe",
+          "disengage",
+          "bypass"
+        ],
+        "symbol_token_ids": [
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39
+        ],
+        "logits": [],
+        "probabilities": [
+          0.8836929202079773,
+          0.0019322962034493685,
+          0.0018250907305628061,
+          0.06066738814115524,
+          0.0020725056529045105,
+          0.020617274567484856,
+          0.021868666633963585,
+          0.007323870435357094
+        ],
+        "reference_probabilities": [
+          0.8794336318969727,
+          0.0019237532978877425,
+          0.0019237532978877425,
+          0.06370595842599869,
+          0.002179898088797927,
+          0.02068229764699936,
+          0.023436112329363823,
+          0.006714558694511652
+        ],
+        "chosen_id": "direct_assault",
+        "reference_chosen_id": "direct_assault",
+        "selected_reference_matches": true,
+        "max_reference_error": 0.004259288311004639,
+        "inference_ms": 7806.4852,
+        "backbone_ms": 7806.4852,
+        "head_ms": 0.0,
+        "has_native_timings": true,
+        "native_prompt_ms": 7276.754,
+        "native_predicted_ms": 0.001,
+        "native_tokens_predicted": 1
+      },
+      {
+        "case_id": "strategy_aggressive_reach_exit_alive_current_none",
+        "input_token_count": 500,
+        "processed_input_tokens": 494,
+        "route": "completion",
+        "probability_source": "Native original LM head, illegal vocabulary logits masked before top_k=8 and T=1 softmax; direct legal conditional probabilities. Raw logits are unavailable.",
+        "raw_logits_available": false,
+        "decision_position": 493,
+        "choice_ids": [
+          "direct_assault",
+          "lure_ambush",
+          "flank",
+          "guard_ally",
+          "ranged_pressure",
+          "observe",
+          "disengage",
+          "bypass"
+        ],
+        "symbol_token_ids": [
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39
+        ],
+        "logits": [],
+        "probabilities": [
+          0.6277376413345337,
+          0.0031974948942661285,
+          0.0016071177087724209,
+          0.0468209870159626,
+          0.015602299943566322,
+          0.04468652606010437,
+          0.17657186090946198,
+          0.08377605676651001
+        ],
+        "reference_probabilities": [
+          0.6544535756111145,
+          0.0030307213310152292,
+          0.0016222283011302352,
+          0.04183781519532204,
+          0.013582750223577023,
+          0.04183781519532204,
+          0.16547177731990814,
+          0.07816333323717117
+        ],
+        "chosen_id": "direct_assault",
+        "reference_chosen_id": "direct_assault",
+        "selected_reference_matches": true,
+        "max_reference_error": 0.02671593427658081,
+        "inference_ms": 7979.4285,
+        "backbone_ms": 7979.4285,
+        "head_ms": 0.0,
+        "has_native_timings": true,
+        "native_prompt_ms": 7486.547,
+        "native_predicted_ms": 0.001,
+        "native_tokens_predicted": 1
+      },
+      {
+        "case_id": "strategy_cautious_protect_ally_current_none",
+        "input_token_count": 505,
+        "processed_input_tokens": 499,
+        "route": "completion",
+        "probability_source": "Native original LM head, illegal vocabulary logits masked before top_k=8 and T=1 softmax; direct legal conditional probabilities. Raw logits are unavailable.",
+        "raw_logits_available": false,
+        "decision_position": 498,
+        "choice_ids": [
+          "direct_assault",
+          "lure_ambush",
+          "flank",
+          "guard_ally",
+          "ranged_pressure",
+          "observe",
+          "disengage",
+          "bypass"
+        ],
+        "symbol_token_ids": [
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39
+        ],
+        "logits": [],
+        "probabilities": [
+          0.03330199792981148,
+          0.0015495544066652656,
+          0.0007374129490926862,
+          0.7168806791305542,
+          0.13984528183937073,
+          0.039493877440690994,
+          0.06161580979824066,
+          0.006575411651283503
+        ],
+        "reference_probabilities": [
+          0.03158153221011162,
+          0.0015723520191386342,
+          0.000742726435419172,
+          0.7187923789024353,
+          0.1415386199951172,
+          0.04055149108171463,
+          0.059002071619033813,
+          0.006218772381544113
+        ],
+        "chosen_id": "guard_ally",
+        "reference_chosen_id": "guard_ally",
+        "selected_reference_matches": true,
+        "max_reference_error": 0.002613738179206848,
+        "inference_ms": 7895.8961,
+        "backbone_ms": 7895.8961,
+        "head_ms": 0.0,
+        "has_native_timings": true,
+        "native_prompt_ms": 7364.95,
+        "native_predicted_ms": 0.001,
+        "native_tokens_predicted": 1
+      },
+      {
+        "case_id": "strategy_cautious_reach_exit_alive_current_none",
+        "input_token_count": 502,
+        "processed_input_tokens": 496,
+        "route": "completion",
+        "probability_source": "Native original LM head, illegal vocabulary logits masked before top_k=8 and T=1 softmax; direct legal conditional probabilities. Raw logits are unavailable.",
+        "raw_logits_available": false,
+        "decision_position": 495,
+        "choice_ids": [
+          "direct_assault",
+          "lure_ambush",
+          "flank",
+          "guard_ally",
+          "ranged_pressure",
+          "observe",
+          "disengage",
+          "bypass"
+        ],
+        "symbol_token_ids": [
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39
+        ],
+        "logits": [],
+        "probabilities": [
+          0.013551278971135616,
+          0.001386993215419352,
+          0.0007772747776471078,
+          0.3272389769554138,
+          0.22606907784938812,
+          0.08505918085575104,
+          0.27462467551231384,
+          0.07129253447055817
+        ],
+        "reference_probabilities": [
+          0.014809099026024342,
+          0.0015608675312250853,
+          0.0008354722522199154,
+          0.3370535373687744,
+          0.23165328800678253,
+          0.08522047847509384,
+          0.26249757409095764,
+          0.06636977940797806
+        ],
+        "chosen_id": "guard_ally",
+        "reference_chosen_id": "guard_ally",
+        "selected_reference_matches": true,
+        "max_reference_error": 0.012127101421356201,
+        "inference_ms": 8004.2133,
+        "backbone_ms": 8004.2133,
+        "head_ms": 0.0,
+        "has_native_timings": true,
+        "native_prompt_ms": 7505.62,
+        "native_predicted_ms": 0.001,
+        "native_tokens_predicted": 1
+      }
+    ],
+    "raw_report": {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/unity-0.8B-report.json",
+      "bytes": 53585,
+      "sha256": "3d2d7d3b6e5bedec343a459427a23b66f7e4370b092d7baf5f9ebf13798587a0"
+    },
+    "raw_memory_report": {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/unity-0.8B-memory.json",
+      "bytes": 3070230,
+      "sha256": "5e0de1ed0176eb41202ccd18ad24950165f4d45114b14618cd6baf00964bcf2c"
+    }
+  },
+  "unity_route_comparison": {
+    "same_pinned_gguf": true,
+    "case_count": 18,
+    "both_match_native_selected_ids": true,
+    "mean_time_reduction_fraction": 0.3085280368337965,
+    "max_aligned_probability_difference": 0.00017195940017700195,
+    "diagnostic_threshold_unchanged": true,
+    "diagnostic_parity_passes": false
+  },
+  "gguf_conversion": {
+    "provenance_file": {
+      "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Python/Artifacts/intern-decision/unity-0.8B/intern-decision.f16.gguf.provenance.json",
+      "bytes": 5942,
+      "sha256": "bed26200bc3ee29ca8cc6543955fd307c1b8e234eae10c9746bf7f258bd0391f"
+    },
+    "artifact_bytes": 1516744128,
+    "artifact_sha256": "f2cb5d0e215a52774bfaf5a0d61daac21bac5a96eeef4edcfda45a898e0ea45f",
+    "provenance": {
+      "adapter_sha256": "e0dac2b7fcf87866644c098d30c8e414d2a9ca90cd4f64908805105e7837779a",
+      "checkpoint_files": {
+        "added_tokens.json": {
+          "bytes": 928,
+          "sha256": "f1073c68b68e68ea82a576cf0865df14fc71408681b35724a4d17a214db5a97d"
+        },
+        "chat_template.jinja": {
+          "bytes": 7755,
+          "sha256": "273d8e0e683b885071fb17e08d71e5f2a5ddfb5309756181681de4f5a1822d80"
+        },
+        "config.json": {
+          "bytes": 2907,
+          "sha256": "b90b86f35c8e6925ef74ee04d0e758f0a845c83a42089ad82bbaa948de9b4204"
+        },
+        "download-provenance.json": {
+          "bytes": 3659,
+          "sha256": "1c736bcf5cb6d59deed839a0ee50731730c78261289de7cc39bccabb0a292588"
+        },
+        "merges.txt": {
+          "bytes": 3353273,
+          "sha256": "3bd640ba6d8da8f5844f3548b7e2184fc664dd670e1447e425a48dbaaad1ef43"
+        },
+        "model-language-0001-save_rank0.safetensors": {
+          "bytes": 1504832320,
+          "sha256": "4acc4bd67febb2466ef7c282099fd05ee0ba47b853b6c49b9e763fb642957820"
+        },
+        "model-projector-0001-save_rank0.safetensors": {
+          "bytes": 25177720,
+          "sha256": "7f81b4ab1b4434c4d0322c849525337c1746f0ca4b9beac107a94e23b2952fee"
+        },
+        "model-vision-0001-save_rank0.safetensors": {
+          "bytes": 176024696,
+          "sha256": "bf8e03e3be40018e51037b46bb8ebe0471e2aceb394ad988632cce2c87d2e177"
+        },
+        "model.safetensors.index.json": {
+          "bytes": 50211,
+          "sha256": "f71a08fca77f74382c1b358bbf958bdbc9f82008c1bd7e9a842fc412eeec3ba9"
+        },
+        "preprocessor_config.json": {
+          "bytes": 390,
+          "sha256": "27225450ac9c6529872ee1924fcb0962ff5634834f817040f444118116f4e516"
+        },
+        "special_tokens_map.json": {
+          "bytes": 735,
+          "sha256": "02c0c88f275a15197a3b600ccd6ae7976e9b8b67e8eb5d7500d256d91cb6791b"
+        },
+        "tokenizer.json": {
+          "bytes": 19989530,
+          "sha256": "94a639c4b33b192cc5a22cd3d7f0aaf6d97efa9577957a0382b55292ca4f0f00"
+        },
+        "tokenizer_config.json": {
+          "bytes": 7291,
+          "sha256": "f26d55ed6da1fc0de69fbaefae7b855f762e36d0052c05f4fdec312f72a22ae1"
+        },
+        "video_preprocessor_config.json": {
+          "bytes": 385,
+          "sha256": "7768af27c1fafa9cc9011c1dc20067e03f8915e03b63504550e11d5066986d13"
+        },
+        "vocab.json": {
+          "bytes": 5234494,
+          "sha256": "4ab0d5c096294054b66444a116a20baf6e29998fc1fae410ffe4b6fadbc56b5c"
+        }
+      },
+      "download_provenance_sha256": "1c736bcf5cb6d59deed839a0ee50731730c78261289de7cc39bccabb0a292588",
+      "model_id": "internlm/Intern-Decision-0.8B",
+      "outtype": "f16",
+      "revision": "42457fafd13d10d0b0d9be46cb30a23caa409994",
+      "text_only": true,
+      "tools": {
+        "converter_sha256": "744ae07c4c020504c2250eaa087da714df9c058eb837eb09898ceee269e02154",
+        "gguf_python_sha256": "aa18c9a8f4da8787ba229e7b34e48684a86353888fbd32d78e29d12a145c84ee",
+        "llama_cpp_commit": "872646b30c342c5fa98efec002f94fdb4f1f1ea5",
+        "pretokenizer_compatibility": {
+          "adapter": "Exact upstream Qwen3.5 pre-tokenizer recognition backport",
+          "check_hash": "1444df51289cfa8063b96f0e62b1125440111bc79a52003ea14b6eac7016fd5f",
+          "gguf_pre": "qwen35",
+          "loader_difference": "Transformers reconstructed a different effective pre-tokenizer from the untouched checkpoint JSON. The exported input IDs still use this exact native HF loader; GGUF qwen35 metadata describes the checkpoint regex.",
+          "mapping_source": {
+            "blob": "841efe7299cfd5685f1e65286bb9088bd6b6dee3",
+            "file": "conversion/base.py",
+            "git_commit": "e14a779719652200cec7ad58dfa4820edc347182",
+            "registry_url": "https://github.com/ggml-org/llama.cpp/blob/e14a779719652200cec7ad58dfa4820edc347182/convert_hf_to_gguf_update.py#L192",
+            "repository": "https://github.com/ggml-org/llama.cpp",
+            "url": "https://github.com/ggml-org/llama.cpp/blob/e14a779719652200cec7ad58dfa4820edc347182/conversion/base.py#L2116"
+          },
+          "normalizer": {
+            "type": "NFC"
+          },
+          "pinned_converter_modified": false,
+          "pre_tokenizer_sha256": "ba3d94a8f116467faf7fd81d79a2a168ddd697929083cb943b6e90f4ae7602b5",
+          "runtime_normalizer": {
+            "type": "NFC"
+          },
+          "runtime_pre_tokenizer": {
+            "pretokenizers": [
+              {
+                "behavior": "Isolated",
+                "invert": false,
+                "pattern": {
+                  "Regex": "(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\\r\\n\\p{L}\\p{N}]?\\p{L}+|\\p{N}| ?[^\\s\\p{L}\\p{N}]+[\\r\\n]*|\\s*[\\r\\n]+|\\s+(?!\\S)|\\s+"
+                },
+                "type": "Split"
+              },
+              {
+                "add_prefix_space": false,
+                "trim_offsets": true,
+                "type": "ByteLevel",
+                "use_regex": false
+              }
+            ],
+            "type": "Sequence"
+          },
+          "runtime_pre_tokenizer_matches_checkpoint": false,
+          "runtime_tokenizer_class": "transformers.models.qwen2.tokenization_qwen2.Qwen2Tokenizer",
+          "scope": "Recognition only; original tokenizer vocabulary, merges, IDs and trained weights are unchanged.",
+          "unity_input_scope": "Only the exported native HF raw token IDs are compared. Text tokenization parity is not asserted."
+        },
+        "python_dependencies": {
+          "numpy": "2.5.4",
+          "safetensors": "0.8.0",
+          "torch": "2.9.1+cpu",
+          "transformers": "5.14.1"
+        },
+        "source_pin": {
+          "archive_sha256": "a5a6dcb5345dc363fdb2ebe96da9b8927d5f04bb776d272ea6afff800d36dec8",
+          "commit": "872646b30c342c5fa98efec002f94fdb4f1f1ea5",
+          "converter_sha256": "744ae07c4c020504c2250eaa087da714df9c058eb837eb09898ceee269e02154"
+        }
+      },
+      "use_temp_file": true
+    },
+    "schema_version": 1
+  },
+  "verification": {
+    "python_new_tools": {
+      "passed": 11,
+      "failed": 0,
+      "log": {
+        "path": "/workspace/.cave-dungeon/unity/intern-decision/python-tests-final.log",
+        "bytes": 2537,
+        "sha256": "ac8bc44d0a994ceb6a4eea71fa98b9d23bfd8a1ffc67b0460ce9894c0579adfb"
+      }
+    },
+    "unity_editor_assembly": {
+      "summary": {
+        "Total": 30,
+        "Passed": 30,
+        "Failed": 0,
+        "Skipped": 0,
+        "Inconclusive": 0
+      },
+      "filter": "assembly: JevValidation.Editor.Tests",
+      "log": {
+        "path": "/workspace/.cave-dungeon/unity/intern-decision/unity-tests-final.json",
+        "bytes": 6129,
+        "sha256": "fcf06d05f200e3c55a1d8e0409b3664ac346fbb22a03a44b2cb3c3eafbf63e6e"
+      }
+    },
+    "unity_closed_gracefully": true
+  },
+  "source_files": [
+    {
+      "path": "Assets/Editor/InternDecisionUnityRunner.cs",
+      "sha256": "ab918c4bda203ae61513b06e21d695471d42846b091d37473f878fe91a3fd537"
+    },
+    {
+      "path": "Assets/Tests/Editor/InternDecisionUnityTests.cs",
+      "sha256": "143bfb8380718f3fe66b125a265405e6501f6e64c8c96f10b63d7a6dad414bb0"
+    },
+    {
+      "path": "Python/prepare_intern_decision.py",
+      "sha256": "8f8e0248c3077608a7317f5570939098d799549862a986763a94134d97bc02a5"
+    },
+    {
+      "path": "Python/compare_intern_decision.py",
+      "sha256": "d81642bd849e9e6dd92f9ea077189e81befb778b5ac8c3cca1acd4b4b006b37b"
+    },
+    {
+      "path": "Python/prepare_intern_gguf.py",
+      "sha256": "e0dac2b7fcf87866644c098d30c8e414d2a9ca90cd4f64908805105e7837779a"
+    },
+    {
+      "path": "Python/test_compare_intern_decision.py",
+      "sha256": "58993509671e979a083205db0f42abec3ef74896edf0267af716d4b87d2204b8"
+    },
+    {
+      "path": "Python/test_prepare_intern_gguf.py",
+      "sha256": "df30dff095a74d6f0203d9c32a05dd9d8dff6e35b5ffe522a2561364e3b666a7"
+    },
+    {
+      "path": "Python/measure_process.py",
+      "sha256": "a2280a4c7daa55a47a464c9795861ad7f4e7427594d4a787e06a31b4df4918eb"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/adapter-tests-final.log",
+      "bytes": 2537,
+      "sha256": "8678f3b3d4ddb36adcba3b4db8d3603e15b3180ffff60d926522b815c3224811"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/adapter-tests.log",
+      "bytes": 1766,
+      "sha256": "ca5ffb4aefc54c924afe00b9b1b66467c02988225b6d24a893f4c2e977b252d7"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/download-0.8B.log",
+      "bytes": 1639,
+      "sha256": "541bcd892902af1372af04f13d86e0fac4cfcc760b7016db2bd324bf759b8985"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/download-2B.log",
+      "bytes": 1565,
+      "sha256": "6cce79ecd3b242f835668f1157dbf1c9ae5699f4911013bf3b68ad9abae6a6db"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/embedding-baseline/unity-0.8B-memory.json",
+      "bytes": 4269926,
+      "sha256": "5d73a06e2cf9604d1204f6f45fc1ddcb02749ab6939ad70ac48ac6fa1c36c66d"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/embedding-baseline/unity-0.8B-memory.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/embedding-baseline/unity-0.8B-memory.stdout.log",
+      "bytes": 301,
+      "sha256": "cf55f3394bc71872f057472975b0b8d4081c158e78db2f7ec9cd1bdca143cabd"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/embedding-baseline/unity-0.8B-report.json",
+      "bytes": 49709,
+      "sha256": "6f5c166ccaf12459ae18ff949c11d277cf1e636fa8643011b837ffaef7bb50de"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/failed-startup/unity-0.8B-memory.json",
+      "bytes": 357369,
+      "sha256": "062f35d552ecf79d97a5f5e186277bb5cfd0ffa3a2ae13915916c28e6e8abdd3"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/failed-startup/unity-0.8B-memory.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/failed-startup/unity-0.8B-memory.stdout.log",
+      "bytes": 2640,
+      "sha256": "24d48aa40f962159efa8703b19146a7f0e5ad12f73cf4065220e289b92c1dadc"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/failed-startup/unity-0.8B-report.json",
+      "bytes": 4650,
+      "sha256": "2599974e47a733206bbdaf8a0820095b100bbe1a86c3fad86db90d98a5cee26c"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/failed-startup-stale/unity-0.8B-memory.json",
+      "bytes": 357393,
+      "sha256": "c9971430aa340804912020b26756a445ca25341f718694c1e28f3763e1723fae"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/failed-startup-stale/unity-0.8B-memory.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/failed-startup-stale/unity-0.8B-memory.stdout.log",
+      "bytes": 1839,
+      "sha256": "d330aa0c1cfc87306ab3377aecdd1111764aaa9fdd9f6ff4364816f844103360"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/failed-startup-stale/unity-0.8B-report.json",
+      "bytes": 3829,
+      "sha256": "e30b31bd14ac2be25cc232d5b046b35756df7293f44c85e3d8efc77736c9fbe9"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/gguf-0.8B-retry.log",
+      "bytes": 39846,
+      "sha256": "d6c574bf954f7851a5b079a2315c91ff5748339a4ba034eacc1275e8ab5bd487"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/gguf-0.8B.log",
+      "bytes": 35588,
+      "sha256": "60e6c46e7f4ec91c340119ed408a668884a485e3f392fad8c4ceb31d3e65958a"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/native-0.8B.log",
+      "bytes": 11689,
+      "sha256": "3e5073509f8741e25b9ce450d7da2e137f820cec8dd90b9e7e3f2ad88621fae8"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/native-2B.log",
+      "bytes": 11660,
+      "sha256": "c009b68c7ab3e5ecbef588f329ea107b330a22bb126639bd084530eb001adade"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/pip-deps.log",
+      "bytes": 14118,
+      "sha256": "9b9ca00a230d58790427bb277b1dc1f1646ffaf3c76be3bdb522481742f89a3e"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/pip-torch.log",
+      "bytes": 2684,
+      "sha256": "37ce0c40e90e46900d823c06d05e528e43733671a522abc25f97a5500a76e158"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/pip-vision.log",
+      "bytes": 2789,
+      "sha256": "79d66d89c76e97e5fb4f0ab5e07282913791abe56454ad83a1b7ade57a035314"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/python-tests-final.log",
+      "bytes": 2537,
+      "sha256": "ac8bc44d0a994ceb6a4eea71fa98b9d23bfd8a1ffc67b0460ce9894c0579adfb"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/tinyjev-run.log",
+      "bytes": 11628,
+      "sha256": "a3fd7eb2aa7c92b719ce707e60f1767c5bf8e1691d05f2ebadc1be16b66ab03d"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/unity-0.8B-memory.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/unity-0.8B-memory.stdout.log",
+      "bytes": 219,
+      "sha256": "b5526b091f0d4a82945b46d45e733619b75ec29f435d7f26de8da17faa331e3b"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/unity-editor-fresh.log",
+      "bytes": 197408,
+      "sha256": "31145c964fbc7aed03e178603d0fc7dcce3b8da108d765fb3faef7616004eb72"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/unity-editor.log",
+      "bytes": 75857,
+      "sha256": "82db4738bd60773f74cdfbd489c97b16b72de0bb2da26e5d6bc0a98252b688a4"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/intern-decision/unity-generated-settings.patch",
+      "bytes": 1209,
+      "sha256": "95daeda4206e99c18de44805867724d6c4704666ec49624a418229b1395de1c2"
+    },
+    {
+      "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Python/Artifacts/intern-decision/0.8B/download-provenance.json",
+      "bytes": 3659,
+      "sha256": "1c736bcf5cb6d59deed839a0ee50731730c78261289de7cc39bccabb0a292588"
+    },
+    {
+      "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Python/Artifacts/intern-decision/2B/download-provenance.json",
+      "bytes": 3655,
+      "sha256": "bf6487d7a9b4e965db7a8726279fce061fe069d1d3015f12f879720965861376"
+    },
+    {
+      "path": "/workspace/Cave-Dungeon/experiments/JevValidation/Python/Artifacts/intern-decision/unity-0.8B/cases.json",
+      "bytes": 151763,
+      "sha256": "1a4eeb819fa7e023aa4f05e43c4e9c0cbe0a68a44a741898739e8510e8931490"
+    }
+  ]
+}

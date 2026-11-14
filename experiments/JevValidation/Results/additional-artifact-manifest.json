@@ -1,0 +1,213 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-11-06T19:15:05.890684+00:00",
+  "client_timezone": "Etc/GMT-9",
+  "main_evaluations": 4800,
+  "primary_japanese_worlds_per_task_per_model": 500,
+  "secondary_english_paired_translations_per_task_per_model": 100,
+  "separate_post_hoc_controls": 32,
+  "new_automated_unit_tests_passed": 34,
+  "old_artifact_count_verified_unchanged": 24,
+  "main_native_cache_tokens": {
+    "0": 4800
+  },
+  "main_statuses": {
+    "complete": 4800
+  },
+  "files": [
+    {
+      "path": "Python/compare_unee_candidates.py",
+      "bytes": 8474,
+      "sha256": "b7426413a1f53e39c5f0dece4192e2bb46c8cb4c884d1a254e8bb8fca0d5f3d1"
+    },
+    {
+      "path": "Python/test_compare_unee_candidates.py",
+      "bytes": 4081,
+      "sha256": "58493938207019d2edec3776fbce473a3483e619f231db4ee45550f6822e03ad"
+    },
+    {
+      "path": "Python/compare_llamacpp_candidates.py",
+      "bytes": 13020,
+      "sha256": "106f4fe28ec082cd1ea2b10dd95b53fca8c1c18bf7605b09ce787a7aabf60c0c"
+    },
+    {
+      "path": "Python/test_compare_llamacpp_candidates.py",
+      "bytes": 7626,
+      "sha256": "675d37da5ff89d16d648e1aaa4beca06eb0620081f5fcbd18e214501499f108d"
+    },
+    {
+      "path": "Python/run_additional_candidates.py",
+      "bytes": 21824,
+      "sha256": "260ae5fba7ee925442bcd637e251d1eb0a7e8c6cc5ca444d44579ba61b01a58a"
+    },
+    {
+      "path": "Python/test_run_additional_candidates.py",
+      "bytes": 9365,
+      "sha256": "6082653ec3e557f024c10c7b9d787e2664b1d35234ee7c81ff8e5dddfc3b1a31"
+    },
+    {
+      "path": "Python/analyze_additional_candidates.py",
+      "bytes": 34746,
+      "sha256": "6d297b03ce2b6e3019be95a7cbf0572666b4fa84e3c430718affa1c521ae3def"
+    },
+    {
+      "path": "Python/test_analyze_additional_candidates.py",
+      "bytes": 18820,
+      "sha256": "cb55009a822daee9963a2d74193222a08b4623b84e49b4d1eee5209f4f8e8ec1"
+    },
+    {
+      "path": "Python/render_additional_candidates.py",
+      "bytes": 14801,
+      "sha256": "bb395acdfa0827d85785b525aa28648338b0d588b96277250d777976a883cfb5"
+    },
+    {
+      "path": "Python/diagnose_candidate_controls.py",
+      "bytes": 16033,
+      "sha256": "5dfe7ddfd49b6d3033cae7b5ed1445153b877325d923bb08c43fad4ed8875495"
+    },
+    {
+      "path": "Results/additional-analysis-notes.json",
+      "bytes": 2412,
+      "sha256": "ddad788465889fa24e960053fcf41dace422f4b06a5e5de926202d6a55081ac5"
+    },
+    {
+      "path": "Results/additional-candidates-comparison.html",
+      "bytes": 7542,
+      "sha256": "f5ef9e3d95fe12e7add5102f0dcee1b4f194749071e1054c02292444a58bcff2"
+    },
+    {
+      "path": "Results/additional-candidates-comparison.png",
+      "bytes": 154182,
+      "sha256": "6a1c31af0f9fb36011073ffa29ba3b6895119234c1c504dd10c986436c04a8fc"
+    },
+    {
+      "path": "Results/additional-candidates-comparison.svg",
+      "bytes": 100991,
+      "sha256": "d87b5db8b7597d11947a14d553ecba7eaff27e7b31250dc10874a2af90aa0f45"
+    },
+    {
+      "path": "Results/additional-candidates-protocol.json",
+      "bytes": 12078,
+      "sha256": "fa45d4f11a8475a6b78178fc8ee183e62586f508b9e35847699c8a810b741bbd"
+    },
+    {
+      "path": "Results/additional-controls-protocol.json",
+      "bytes": 14213,
+      "sha256": "bba8f3862c8f5341de40e24a722cd9c4fc560f2d341e5cdba07d014c4de81797"
+    },
+    {
+      "path": "Results/additional-model-outcomes.csv",
+      "bytes": 1733686,
+      "sha256": "33f17c521f7f360b9399ad6cc18374a33ba3713f0cb5e984ebcce3f7c398513b"
+    },
+    {
+      "path": "Results/additional-model-statistics.json",
+      "bytes": 274720,
+      "sha256": "28dd5f00e2a2a3563c0d2cf3b94a851bda5dac541ad2c4d8b1c8ffc62a146819"
+    },
+    {
+      "path": "Results/additional-simple-controls.json",
+      "bytes": 360744,
+      "sha256": "fafcfe839221619f18505e8805b866b1c9c414d26cfeb55185480be5e1074d49"
+    }
+  ],
+  "external_evidence": [
+    {
+      "path": "/workspace/.cave-dungeon/unity/additional-candidates/model-manifest.json",
+      "bytes": 1531,
+      "sha256": "260a88638b68b58c8d4295eda8e81313330530a22b94b183752d5bbbccafe36f"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/additional-candidates/source-manifest.json",
+      "bytes": 2645,
+      "sha256": "19e9650fe75b085cd6a65f0c350334650154117d5ae1b93151f10813fb0a7932"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/additional-candidates/run_all.py",
+      "bytes": 5512,
+      "sha256": "8636e10a9aaf5a17b1d9942ff03c5175a035e87bb4d76dbd73188583434dac64"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/additional-candidates/resume_lfm3.py",
+      "bytes": 5780,
+      "sha256": "e5242f442b6020a5ca361fea0af6d2c48f92cc7967a9c751557c3233a5fdc0cd"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/additional-candidates/run_controls_all.py",
+      "bytes": 4137,
+      "sha256": "99d85711d1f1b04010e12f0d455df3fa5c86ce6b32346515e4152130a12b5afd"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/additional-candidates/infrastructure-resume-event.json",
+      "bytes": 3275,
+      "sha256": "5e5d18799cef4b2a13211d5b1f4b0bb84d2c9cf2e396f6cecec9740b51e4d93d"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/additional-candidates/preflight-tests.log",
+      "bytes": 308,
+      "sha256": "b52ee33abe8fa06d4319cb8bf49ebd18610923e3f1b90328f105e1f8050e17a3"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/additional-candidates/analysis-tests.log",
+      "bytes": 98,
+      "sha256": "9a56ee17513a4d69cb1b9c439519f9f16fd0ef7d7fef07e5470e4e42a1f3456e"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/additional-candidates/final-analysis.log",
+      "bytes": 205,
+      "sha256": "6810cbf500960aedf615cb01e9eeabcd1f07f05961fc739766f8cc6787e5f674"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/additional-candidates/final-render.log",
+      "bytes": 71,
+      "sha256": "16c5e1841b98eaf7b24eb8b0d47aa1febb61ff694b54e7746113b2965e51cad8"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/additional-candidates/unee08-independent-audit.json",
+      "bytes": 16596,
+      "sha256": "21e42eeb787a98478f455b730998ec9c0139eb94edd6be7d16ed729dcade1555"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/additional-candidates/unee2b-independent-audit.json",
+      "bytes": 16808,
+      "sha256": "dcdbc19612e606b0025b0bbd09c36defb2c5bb90cd471e451de001a8907cdbbf"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/additional-candidates/lfm25-jp-independent-audit.json",
+      "bytes": 18122,
+      "sha256": "6e0831de1979d76c15cf5cdf7c4bb05dba09614c5315ec19eca4817abdf8e375"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/additional-candidates/lfm3-independent-audit.json",
+      "bytes": 19034,
+      "sha256": "8729affde424dfd8933f2ef2491a99f66b4fd47d50d55772d480e3d7867953e6"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/additional-candidates/unee-0.8b/resource-samples.json",
+      "bytes": 281035,
+      "sha256": "c1186f2fd6cb66e0f6ce88d561a54e405bfd48610cdb8c4e03b28a1522c2daca"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/additional-candidates/lfm25-jp/resource-samples.json",
+      "bytes": 439945,
+      "sha256": "ae0975181f5301a21dd371478b01e3b7a9199927c8104bef7b8b22ee1f885ea2"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/additional-candidates/unee-2b/resource-samples.json",
+      "bytes": 595793,
+      "sha256": "10b21d0c2134a2a233b7c6a50571801a7d3d680451af606efb00bd76ea43060b"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/additional-candidates/lfm3/resource-samples-resume.json",
+      "bytes": 55697,
+      "sha256": "751615a6ce39edcb85f327c52ea44fece4dacb4b1a4628f4ba760da7905d8a0b"
+    }
+  ],
+  "verification": "Independent all4800native+CSV and1200oracle checks, Wilson/pairedCP SciPy checks, all32control raw/gold checks, old1050LFM3journal bytes preserved on strictresume, old24artifacts unchanged. Figure visually inspected and HTML links/counts validated.",
+  "limitations": [
+    "Exploratory synthetic-case comparison only; prior Holm2 family unmodified. No pooled translation CIs.",
+    "Fast grammar-constrained LFM pipelines; fullthinking and free toolargumentgeneration not tested.",
+    "Linux fourCPUthread pipeline timings, not Unity or targetdevice speed or real-game win rate.",
+    "LFM3 interrupted at1050complete records; only150pending resumed. Its firstsession RSS history was not durable, so no whole-run LF3RSSpeak is reported."
+  ]
+}

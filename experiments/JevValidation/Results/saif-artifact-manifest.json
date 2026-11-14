@@ -1,0 +1,412 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-11-10T04:25:14.360716+00:00",
+  "client_timezone": "Etc/GMT-9",
+  "status": "complete",
+  "main_evaluations": 1200,
+  "primary_japanese_worlds_per_task": 500,
+  "secondary_english_paired_translations_per_task": 100,
+  "separate_simple_controls": 8,
+  "new_automated_unit_tests_passed": {
+    "adapter_runner": 6,
+    "statistics": 12,
+    "renderer": 10,
+    "total": 28
+  },
+  "primary_summary": {
+    "memory": {
+      "n": 500,
+      "correct": 282,
+      "accuracy": 0.564,
+      "wilson_95": [
+        0.5202096875439772,
+        0.6068143968769439
+      ],
+      "failures": 0
+    },
+    "commander": {
+      "n": 500,
+      "correct": 153,
+      "accuracy": 0.306,
+      "wilson_95": [
+        0.2672134637311364,
+        0.34774478036794587
+      ],
+      "failures": 0
+    }
+  },
+  "native_latency": {
+    "n": 1200,
+    "mean_ms": 1286.8413762016648,
+    "p50_ms": 1248.9195624998501,
+    "p95_ms": 1759.8751990000662
+  },
+  "full_adapter_latency": {
+    "n": 1200,
+    "mean_ms": 1287.5573537641644,
+    "p50_ms": 1249.7091379998437,
+    "p95_ms": 1760.4033001500736
+  },
+  "whole_worker_memory": {
+    "exit_code": 0,
+    "max_vmrss_kib": 2026532,
+    "max_vmhwm_kib": 2031284,
+    "scope": "Wholeworkerprocess includes imports/model load/warmup. Mappedcheckpoint/tmpfs storage and globalpagecache are distinct memoryscopes."
+  },
+  "model": {
+    "model_id": "GyrTechnology/saif-0.8b-lightning",
+    "revision": "0cc7d0954a7aa48e0ba7302c4839185eb5aa164d",
+    "license": "CC-BY-NC-4.0",
+    "authorized_use": "User explicitly authorized non-commercial testing",
+    "checkpoint_manifest": {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/model-manifest.json",
+      "bytes": 3110,
+      "sha256": "d5829a3fcb3a666c5949610e58937fecdd371cdcc2824aaf2aa2085ec1474884"
+    },
+    "source_manifest": {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/source-manifest.json",
+      "bytes": 1482,
+      "sha256": "7e6eb94c5ed46e44de4dc438a6cc960ace1b0552c2350386479f4fdc46d0c13e"
+    },
+    "sdk_manifest": {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/sdk-manifest.json",
+      "bytes": 935,
+      "sha256": "ac34f75e186d92213128244f2daf6e60388db322faa67f57126a48f8ad62fefd"
+    },
+    "temperatures": {
+      "choice": 1.3492052555084229,
+      "noul": 1.6690177917480469,
+      "score": 0.5360531806945801
+    },
+    "quantization": "none; native BF16decoder and FP32readout rows"
+  },
+  "parent_manifests_unchanged": [
+    {
+      "manifest": {
+        "path": "Results/expanded-artifact-manifest.json",
+        "bytes": 4388,
+        "sha256": "063160370aaf38d22bdd360212c2e073558de0e991cf693a0f82b000c73352eb"
+      },
+      "files_verified_unchanged": 24
+    },
+    {
+      "manifest": {
+        "path": "Results/additional-artifact-manifest.json",
+        "bytes": 8444,
+        "sha256": "82a8c7009aeeb41a6c9146cbe130d71bb030f793379bf34931f5a1e6e0a45c03"
+      },
+      "files_verified_unchanged": 19
+    }
+  ],
+  "verification": {
+    "native_interfaces_all1208": "passed",
+    "all1208_token_layouts_reconstructed": "passed",
+    "checkpoint_and_native_source_sha256": "passed",
+    "old6_native_baseline_csv_and_gold": "passed",
+    "independent_statistics_math_and_artifact_audit": "passed",
+    "actual_png_visual_review": "passed",
+    "git_diff_check": "passed",
+    "inference_settings_changed_after_start": false,
+    "model_forward_calls_added_for_audit": 0
+  },
+  "files": [
+    {
+      "path": "Python/compare_saif_lightning.py",
+      "bytes": 14147,
+      "sha256": "0ad65cb0a27dee149229503bdb0c8f7e43160b16d6501937e12c9aa717ce8412"
+    },
+    {
+      "path": "Python/run_saif_benchmark.py",
+      "bytes": 4270,
+      "sha256": "965eb5884648823f4998e5a0ca5bb6bc18a3de5a359e4a714980cdb17e0e735f"
+    },
+    {
+      "path": "Python/test_saif_lightning.py",
+      "bytes": 10890,
+      "sha256": "f5b43f27fd1d377bfa20e8b2bf34bf6c138f33e8a6c131645a5795f250eeb0b9"
+    },
+    {
+      "path": "Python/analyze_saif_benchmark.py",
+      "bytes": 38869,
+      "sha256": "a9f805b71d67cd5135adc7160f0ed4aa36f03946a801b746e155eee33526e1f6"
+    },
+    {
+      "path": "Python/test_analyze_saif_benchmark.py",
+      "bytes": 23691,
+      "sha256": "2f101170fd457233e1f9985e69b015b6e2084b3ca81ff7dea1ad02a1cb8cf6e2"
+    },
+    {
+      "path": "Python/render_saif_results.py",
+      "bytes": 37713,
+      "sha256": "b38fd3149e1b9175a9944a188f95603b9c40d82668fcfe16b9f281b066f4cae6"
+    },
+    {
+      "path": "Python/test_render_saif_results.py",
+      "bytes": 12247,
+      "sha256": "2fa42be82fd1e4e1664a2b1b6feb48fbad73bdd3165200504c92a38a05353dfb"
+    },
+    {
+      "path": "Python/audit_saif_native_interface.py",
+      "bytes": 15881,
+      "sha256": "b11908efa14c70e1db4df886fe365c117bedc5ebe6ed156faf2faf755f5a7187"
+    },
+    {
+      "path": "Results/saif-benchmark-protocol.json",
+      "bytes": 9594,
+      "sha256": "d017040630b5e1b31597730ef40e9224d7b9b014ba1daf130121afa3cad1d35a"
+    },
+    {
+      "path": "Results/saif-model-statistics.json",
+      "bytes": 107750,
+      "sha256": "041261d838ed29f74d21513b1861df4a70c0e67db28f5ca5323790fb0aec8c0e"
+    },
+    {
+      "path": "Results/saif-model-outcomes.csv",
+      "bytes": 559316,
+      "sha256": "38c1655e35e9965582782e4447c15804a3197095fc1e35d08ef839e5830582df"
+    },
+    {
+      "path": "Results/saif-comparison.html",
+      "bytes": 21827,
+      "sha256": "2124253e407a1528dc1146a79baf58cad21baaa594e1fd432bff8910c176111e"
+    },
+    {
+      "path": "Results/saif-comparison.png",
+      "bytes": 338835,
+      "sha256": "4d769b6fc6eb189a5145c6987119b5d0ae73e09c21038d8ed423c9f1e38750c3"
+    },
+    {
+      "path": "Results/saif-comparison.svg",
+      "bytes": 196042,
+      "sha256": "f14788af2e58325d6c22a3fa3091aba867a4a6067a46c81a4b0df97e5fe1562b"
+    },
+    {
+      "path": "Python/Artifacts/saif-lightning/main/manifest.json",
+      "bytes": 57332,
+      "sha256": "a64ab4ffda7e085858d27b90d1cf9b516ab90cbc3cb486add7588426787ee531"
+    },
+    {
+      "path": "Python/Artifacts/saif-lightning/main/requests.ndjson",
+      "bytes": 1289072,
+      "sha256": "b72208c6fce1328d7a91d760d1314e3676bc1be4d688813224ca943f2d469a03"
+    },
+    {
+      "path": "Python/Artifacts/saif-lightning/main/results.ndjson",
+      "bytes": 3361704,
+      "sha256": "6d1967f2e732ec0d83395ebfeeaa1126bdcc39b41d03dd5c184a1dbbaa45f724"
+    },
+    {
+      "path": "Python/Artifacts/saif-lightning/main/progress.json",
+      "bytes": 56553,
+      "sha256": "ac6bfab94925e04c4e3b3a6d28129a52301e41679c468d0a44e23b40e08366d6"
+    },
+    {
+      "path": "Python/Artifacts/saif-lightning/main/result.json",
+      "bytes": 3420237,
+      "sha256": "a473d0da047a0a3a0388d1f0365b24b8025fa49bf510c1e9c4f13ec98ae82d15"
+    },
+    {
+      "path": "Python/Artifacts/saif-lightning/controls/manifest.json",
+      "bytes": 11911,
+      "sha256": "12bb15689803cc851b805abf004ca1e271536152c31077b297b4e8447f1b675d"
+    },
+    {
+      "path": "Python/Artifacts/saif-lightning/controls/requests.ndjson",
+      "bytes": 2138,
+      "sha256": "afa1557ec04d3883459cfa15cd82d72afe25a00622701e1dcbff3690b1895955"
+    },
+    {
+      "path": "Python/Artifacts/saif-lightning/controls/results.ndjson",
+      "bytes": 16082,
+      "sha256": "dabbd326bf0ac210174fd429aa0509b5629f6f34c3d08cca1f4ca2752c5a5d19"
+    },
+    {
+      "path": "Python/Artifacts/saif-lightning/controls/progress.json",
+      "bytes": 10625,
+      "sha256": "2a712caab2f43beca0d5af8fa2beb6617fbca5860e516bcf96ae7d9a4624fe73"
+    },
+    {
+      "path": "Python/Artifacts/saif-lightning/controls/result.json",
+      "bytes": 28687,
+      "sha256": "5e6c96e89dcbd8755004239bb1c0e2fc5e2787a770b0f5f678e9a07f5822e5fc"
+    }
+  ],
+  "external_evidence": [
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/model-manifest.json",
+      "bytes": 3110,
+      "sha256": "d5829a3fcb3a666c5949610e58937fecdd371cdcc2824aaf2aa2085ec1474884"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/source-manifest.json",
+      "bytes": 1482,
+      "sha256": "7e6eb94c5ed46e44de4dc438a6cc960ace1b0552c2350386479f4fdc46d0c13e"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/sdk-manifest.json",
+      "bytes": 935,
+      "sha256": "ac34f75e186d92213128244f2daf6e60388db322faa67f57126a48f8ad62fefd"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/simple-controls-cases.json",
+      "bytes": 4947,
+      "sha256": "7cc9699386b81ee27570294bdc76c013c79cf9376910da4e2b8f9be089c62aa6"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/caller-facts.json",
+      "bytes": 689,
+      "sha256": "f3ea06df7396095ff581f2c9ae7cdec3479b38885b7bcb105f0bf16da9e3da76"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/official-example-smoke.json",
+      "bytes": 1821,
+      "sha256": "c7c381cb467439aa73ad4e5b9e519e185b835d836eaa467bb9dd544cf284e1f3"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/preflight-tests.log",
+      "bytes": 223,
+      "sha256": "fd6a6ffe96652211ccbbe8b2f1219de5c64b45abcaa76edb8f61285c5630c1df"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/live-interface-audit.json",
+      "bytes": 4747,
+      "sha256": "13a8664c48ed41b1bdbcd30056e999b7e93beba0d61241a3c2d23431f18b3557"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/final-interface-audit.json",
+      "bytes": 54408,
+      "sha256": "6b6208423cee7aee129f4d564919571431e75d4d6553366086eba736f7c08a7d"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/final-interface-audit.log",
+      "bytes": 163,
+      "sha256": "97e046ca9e4fc526951909d0be2418257baf2f51de73d1528463107ee79d9eb7"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/final-statistics-audit.json",
+      "bytes": 25607,
+      "sha256": "276e5889bd761668ba445d6a19e02327766008d0f8a534b7c60968d73023b8eb"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/analysis.log",
+      "bytes": 374,
+      "sha256": "669e072b152afd7a1ffaefbacadcb09af63555819fe41ff50434ecad9b1d5cbf"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/render.log",
+      "bytes": 101,
+      "sha256": "257300a61ceef6c4e39af20c0744d3e1a567301103295cdabcf215487b3549a7"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/prepare_protocol.py",
+      "bytes": 7249,
+      "sha256": "98373af8cdc084dfed98faf613cdd34b94fe465ca3a2ce364c387beb9148b529"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/run_all.py",
+      "bytes": 4477,
+      "sha256": "9cc9ca10ac2cd8df4c8494b28e7b61cf46f573f961c834358fec7b61a6f427f5"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/postprocess.py",
+      "bytes": 2618,
+      "sha256": "28fd60dbbac7ecf329a4d6035c7214decc56255fcda3d4caca4c7b22e9168d34"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/orchestrator.log",
+      "bytes": 239,
+      "sha256": "c4e42af2f82509c152d13049de0d1c68fed196a71a31609a7807b87d8da44472"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/main/command.json",
+      "bytes": 806,
+      "sha256": "b68f89510ecb0a59dbb48d2aa8967c757265f9c7c787f009ffe5e53223110664"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/main/runner.log",
+      "bytes": 6389,
+      "sha256": "ed185212f7d8dfea5e4b0674a2332f2c4069ea307c2acd228efdb917f31089bf"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/main/resource-summary.json",
+      "bytes": 224,
+      "sha256": "694937617a6e7d25fd7627915fa7d17d1b5e2af0f7186ecbe072645b827969df"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/main/resource-samples.ndjson",
+      "bytes": 194728,
+      "sha256": "07a354605ec16a04f540c278963c4981b70c9842dd8e1113f404746e92fad0dc"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/controls/command.json",
+      "bytes": 780,
+      "sha256": "3712500c4b0908b126e59166badbfe54f043d14af3fb6c6a99dc8959c4402137"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/controls/runner.log",
+      "bytes": 745,
+      "sha256": "072aed875f34742ebffab8b79b570f4c57cdb11acd13f7c893ea4652c0937156"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/controls/resource-summary.json",
+      "bytes": 224,
+      "sha256": "114b2afbf5431226815c4f8b56e443089c6c92a22e2855698757a93e3fe2cba1"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/controls/resource-samples.ndjson",
+      "bytes": 1354,
+      "sha256": "186a951ab1bf765f4db2484490c9aa59806c30d1aa28f9dba20d1d865c067f6f"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/source/decision_index_engine.py",
+      "bytes": 6400,
+      "sha256": "7a18d7efe6a337df3fcafb7249d43fa031b8a76860df1625e211d930ff1f736e"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/source/saif_v2_core.py",
+      "bytes": 18076,
+      "sha256": "091adf71ffe4266c916befde25f9c05cc3b2c98765e736a2a115a1b619eafe27"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/source/singlepass.py",
+      "bytes": 1651,
+      "sha256": "cd147cacfa9ba1ca3e5647df1600d3e5e37261784a0f0a3834192e5c6e2701d3"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/decision-index/decision_index/__init__.py",
+      "bytes": 20,
+      "sha256": "802fef8d0a617d28cd906facf8582b707ca7baa35475ce834ef8af41ab9aa54f"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/decision-index/decision_index/engines/__init__.py",
+      "bytes": 954,
+      "sha256": "808a0971ad2ce9f9a1afc3c071691001375aa73b26f3ba891beb8364dcabba77"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/decision-index/decision_index/engines/base.py",
+      "bytes": 2992,
+      "sha256": "ae548636cfbd583fe774b67e4d3d2cdc6db10f580f47d9559d5de44373b79ca5"
+    },
+    {
+      "path": "/workspace/.cave-dungeon/unity/saif-lightning/audit_final_statistics_local.py",
+      "bytes": 21558,
+      "sha256": "d72fcf2ecbefa275c47fe8c0bffd87de5fcf57294bbc0968a53b61fe9d5ab931"
+    }
+  ],
+  "limitations": [
+    "Exploratory reuse of the previously published fixed synthetic generator; no new confirmatory p-values or amendment to the previous Holm2 family.",
+    "Japanese500 worlds per task and English100 paired translations are separate. Overall combines inference attempts only, without pooled CI or paired inference.",
+    "All six paired-baseline intervals are pointwise conservative95% CP projections and are not multiplicity-adjusted or proof of equivalence.",
+    "Formal memory relevance and supplied-plan constraint/rank tests are not live-game success, free planning or future prediction.",
+    "Explicit failed observations remain incorrect. Missing, duplicate, foreign, changed or incomplete observations are rejected.",
+    "Native published temperatures are retained. Probabilities express conditional typed decisions, not success probabilities in the game.",
+    "Model formats, prompts, precision and historical CPU allocations differ. Recorded latency is a pipeline observation, not architecture-only superiority or Unity performance.",
+    "Token-layout counts/hashes are preserved and structurally validated; the analyzer does not load a tokenizer/model or perform another forward pass."
+  ],
+  "license_attribution": {
+    "author": "GyrTechnology",
+    "model": "https://huggingface.co/GyrTechnology/saif-0.8b-lightning/tree/0cc7d0954a7aa48e0ba7302c4839185eb5aa164d",
+    "license": "CC-BY-NC-4.0",
+    "use": "Noncommercial test explicitly requested by user. Official checkpoint/source/temperatures unchanged."
+  }
+}

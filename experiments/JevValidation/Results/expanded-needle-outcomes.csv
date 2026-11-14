@@ -1,0 +1,129 @@
+case_id,world_id,family_id,language,expected,accepted,response_valid,exact_match,abstained,expected_clarification,issued_game_action
+command_quoted_order_005_ja,command_quoted_order_005,quoted_order,ja,"[{""name"": ""scout"", ""arguments"": {""target_id"": ""zone_north_exit""}}]",[],True,False,True,False,False
+command_ambiguous_reference_000_ja,command_ambiguous_reference_000,ambiguous_reference,ja,"[{""name"": ""clarify"", ""arguments"": {}}]","[{""name"": ""hold_position"", ""arguments"": {}}]",True,False,False,True,True
+command_known_conditional_002_ja,command_known_conditional_002,known_conditional,ja,"[{""name"": ""follow"", ""arguments"": {""target_id"": ""player""}}]",[],True,False,True,False,False
+command_multiple_actions_003_ja,command_multiple_actions_003,multiple_actions,ja,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_ambiguous_reference_001_ja,command_ambiguous_reference_001,ambiguous_reference,ja,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_defend_reference_005_ja,command_defend_reference_005,defend_reference,ja,"[{""name"": ""defend_ally"", ""arguments"": {""target_id"": ""ally_nera""}}]",[],True,False,True,False,False
+command_negated_target_001_ja,command_negated_target_001,negated_target,ja,"[{""name"": ""defend_ally"", ""arguments"": {""target_id"": ""ally_nera""}}]",[],True,False,True,False,False
+command_unknown_condition_003_ja,command_unknown_condition_003,unknown_condition,ja,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_unsupported_action_005_ja,command_unsupported_action_005,unsupported_action,ja,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_quoted_order_001_ja,command_quoted_order_001,quoted_order,ja,"[{""name"": ""attack"", ""arguments"": {""target_id"": ""enemy_archer""}}]",[],True,False,True,False,False
+command_ambiguous_reference_003_ja,command_ambiguous_reference_003,ambiguous_reference,ja,"[{""name"": ""clarify"", ""arguments"": {}}]","[{""name"": ""hold_position"", ""arguments"": {}}]",True,False,False,True,True
+command_unknown_condition_001_ja,command_unknown_condition_001,unknown_condition,ja,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_retreat_reference_003_ja,command_retreat_reference_003,retreat_reference,ja,"[{""name"": ""retreat"", ""arguments"": {""target_id"": ""zone_east_balcony""}}]",[],True,False,True,False,False
+command_hold_until_ready_003_ja,command_hold_until_ready_003,hold_until_ready,ja,"[{""name"": ""hold_position"", ""arguments"": {}}]",[],True,False,True,False,False
+command_attack_reference_003_ja,command_attack_reference_003,attack_reference,ja,"[{""name"": ""attack"", ""arguments"": {""target_id"": ""enemy_raider""}}]","[{""name"": ""hold_position"", ""arguments"": {}}]",True,False,False,False,True
+command_interact_reference_005_ja,command_interact_reference_005,interact_reference,ja,"[{""name"": ""interact"", ""arguments"": {""target_id"": ""object_gate""}}]",[],True,False,True,False,False
+command_latest_order_004_ja,command_latest_order_004,latest_order,ja,"[{""name"": ""hold_position"", ""arguments"": {}}]",[],True,False,True,False,False
+command_unknown_condition_004_ja,command_unknown_condition_004,unknown_condition,ja,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_defend_reference_001_ja,command_defend_reference_001,defend_reference,ja,"[{""name"": ""defend_ally"", ""arguments"": {""target_id"": ""ally_mira""}}]",[],True,False,True,False,False
+command_negated_target_002_ja,command_negated_target_002,negated_target,ja,"[{""name"": ""retreat"", ""arguments"": {""target_id"": ""zone_east_balcony""}}]",[],True,False,True,False,False
+command_unknown_condition_000_ja,command_unknown_condition_000,unknown_condition,ja,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_multiple_actions_005_ja,command_multiple_actions_005,multiple_actions,ja,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_interact_reference_001_ja,command_interact_reference_001,interact_reference,ja,"[{""name"": ""interact"", ""arguments"": {""target_id"": ""object_gate""}}]",[],True,False,True,False,False
+command_pronoun_binding_000_ja,command_pronoun_binding_000,pronoun_binding,ja,"[{""name"": ""attack"", ""arguments"": {""target_id"": ""enemy_archer""}}]",[],True,False,True,False,False
+command_follow_reference_001_ja,command_follow_reference_001,follow_reference,ja,"[{""name"": ""follow"", ""arguments"": {""target_id"": ""ally_nera""}}]",[],True,False,True,False,False
+command_ambiguous_reference_004_ja,command_ambiguous_reference_004,ambiguous_reference,ja,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_negated_target_003_ja,command_negated_target_003,negated_target,ja,"[{""name"": ""attack"", ""arguments"": {""target_id"": ""enemy_raider""}}]",[],True,False,True,False,False
+command_retreat_reference_002_ja,command_retreat_reference_002,retreat_reference,ja,"[{""name"": ""retreat"", ""arguments"": {""target_id"": ""zone_north_exit""}}]",[],True,False,True,False,False
+command_defend_reference_004_ja,command_defend_reference_004,defend_reference,ja,"[{""name"": ""defend_ally"", ""arguments"": {""target_id"": ""ally_nera""}}]",[],True,False,True,False,False
+command_multiple_actions_001_ja,command_multiple_actions_001,multiple_actions,ja,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_known_conditional_003_ja,command_known_conditional_003,known_conditional,ja,"[{""name"": ""hold_position"", ""arguments"": {}}]",[],True,False,True,False,False
+command_follow_reference_000_ja,command_follow_reference_000,follow_reference,ja,"[{""name"": ""follow"", ""arguments"": {""target_id"": ""player""}}]",[],True,False,True,False,False
+command_latest_order_002_ja,command_latest_order_002,latest_order,ja,"[{""name"": ""scout"", ""arguments"": {""target_id"": ""zone_north_exit""}}]",[],True,False,True,False,False
+command_known_conditional_005_ja,command_known_conditional_005,known_conditional,ja,"[{""name"": ""attack"", ""arguments"": {""target_id"": ""enemy_raider""}}]",[],True,False,True,False,False
+command_negated_target_000_ja,command_negated_target_000,negated_target,ja,"[{""name"": ""attack"", ""arguments"": {""target_id"": ""enemy_archer""}}]",[],True,False,True,False,False
+command_ambiguous_reference_002_ja,command_ambiguous_reference_002,ambiguous_reference,ja,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_latest_order_003_ja,command_latest_order_003,latest_order,ja,"[{""name"": ""interact"", ""arguments"": {""target_id"": ""object_lever""}}]",[],True,False,True,False,False
+command_negated_target_005_ja,command_negated_target_005,negated_target,ja,"[{""name"": ""retreat"", ""arguments"": {""target_id"": ""zone_north_exit""}}]",[],True,False,True,False,False
+command_unsupported_action_004_ja,command_unsupported_action_004,unsupported_action,ja,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_quoted_order_003_ja,command_quoted_order_003,quoted_order,ja,"[{""name"": ""retreat"", ""arguments"": {""target_id"": ""zone_north_exit""}}]",[],True,False,True,False,False
+command_quoted_order_000_ja,command_quoted_order_000,quoted_order,ja,"[{""name"": ""follow"", ""arguments"": {""target_id"": ""player""}}]",[],True,False,True,False,False
+command_unknown_condition_005_ja,command_unknown_condition_005,unknown_condition,ja,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_pronoun_binding_005_ja,command_pronoun_binding_005,pronoun_binding,ja,"[{""name"": ""scout"", ""arguments"": {""target_id"": ""zone_east_balcony""}}]",[],True,False,True,False,False
+command_quoted_order_004_ja,command_quoted_order_004,quoted_order,ja,"[{""name"": ""interact"", ""arguments"": {""target_id"": ""object_lever""}}]",[],True,False,True,False,False
+command_scout_reference_004_ja,command_scout_reference_004,scout_reference,ja,"[{""name"": ""scout"", ""arguments"": {""target_id"": ""zone_east_balcony""}}]",[],True,False,True,False,False
+command_attack_reference_002_ja,command_attack_reference_002,attack_reference,ja,"[{""name"": ""attack"", ""arguments"": {""target_id"": ""enemy_raider""}}]",[],True,False,True,False,False
+command_defend_reference_002_ja,command_defend_reference_002,defend_reference,ja,"[{""name"": ""defend_ally"", ""arguments"": {""target_id"": ""ally_nera""}}]",[],True,False,True,False,False
+command_unsupported_action_000_ja,command_unsupported_action_000,unsupported_action,ja,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_known_conditional_000_ja,command_known_conditional_000,known_conditional,ja,"[{""name"": ""attack"", ""arguments"": {""target_id"": ""enemy_raider""}}]",[],True,False,True,False,False
+command_retreat_reference_001_ja,command_retreat_reference_001,retreat_reference,ja,"[{""name"": ""retreat"", ""arguments"": {""target_id"": ""zone_north_exit""}}]",[],True,False,True,False,False
+command_multiple_actions_000_ja,command_multiple_actions_000,multiple_actions,ja,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_hold_until_ready_001_ja,command_hold_until_ready_001,hold_until_ready,ja,"[{""name"": ""hold_position"", ""arguments"": {}}]",[],True,False,True,False,False
+command_follow_reference_002_ja,command_follow_reference_002,follow_reference,ja,"[{""name"": ""follow"", ""arguments"": {""target_id"": ""ally_mira""}}]",[],True,False,True,False,False
+command_unknown_condition_002_ja,command_unknown_condition_002,unknown_condition,ja,"[{""name"": ""clarify"", ""arguments"": {}}]","[{""name"": ""hold_position"", ""arguments"": {}}]",True,False,False,True,True
+command_multiple_actions_002_ja,command_multiple_actions_002,multiple_actions,ja,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_known_conditional_001_ja,command_known_conditional_001,known_conditional,ja,"[{""name"": ""retreat"", ""arguments"": {""target_id"": ""zone_east_balcony""}}]",[],True,False,True,False,False
+command_unsupported_action_003_ja,command_unsupported_action_003,unsupported_action,ja,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_interact_reference_002_ja,command_interact_reference_002,interact_reference,ja,"[{""name"": ""interact"", ""arguments"": {""target_id"": ""object_lever""}}]",[],True,False,True,False,False
+command_ambiguous_reference_005_ja,command_ambiguous_reference_005,ambiguous_reference,ja,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_hold_until_ready_000_ja,command_hold_until_ready_000,hold_until_ready,ja,"[{""name"": ""hold_position"", ""arguments"": {}}]",[],True,False,True,False,False
+command_attack_reference_005_ja,command_attack_reference_005,attack_reference,ja,"[{""name"": ""attack"", ""arguments"": {""target_id"": ""enemy_raider""}}]",[],True,False,True,False,False
+command_scout_reference_003_ja,command_scout_reference_003,scout_reference,ja,"[{""name"": ""scout"", ""arguments"": {""target_id"": ""zone_north_exit""}}]",[],True,False,True,False,False
+command_hold_until_ready_002_ja,command_hold_until_ready_002,hold_until_ready,ja,"[{""name"": ""hold_position"", ""arguments"": {}}]","[{""name"": ""hold_position"", ""arguments"": {}}]",True,True,False,False,True
+command_defend_reference_000_ja,command_defend_reference_000,defend_reference,ja,"[{""name"": ""defend_ally"", ""arguments"": {""target_id"": ""ally_nera""}}]",[],True,False,True,False,False
+command_multiple_actions_004_ja,command_multiple_actions_004,multiple_actions,ja,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_negated_target_004_ja,command_negated_target_004,negated_target,ja,"[{""name"": ""defend_ally"", ""arguments"": {""target_id"": ""ally_mira""}}]",[],True,False,True,False,False
+command_scout_reference_001_ja,command_scout_reference_001,scout_reference,ja,"[{""name"": ""scout"", ""arguments"": {""target_id"": ""zone_north_exit""}}]",[],True,False,True,False,False
+command_attack_reference_000_ja,command_attack_reference_000,attack_reference,ja,"[{""name"": ""attack"", ""arguments"": {""target_id"": ""enemy_raider""}}]",[],True,False,True,False,False
+command_known_conditional_004_ja,command_known_conditional_004,known_conditional,ja,"[{""name"": ""scout"", ""arguments"": {""target_id"": ""zone_north_exit""}}]",[],True,False,True,False,False
+command_quoted_order_002_ja,command_quoted_order_002,quoted_order,ja,"[{""name"": ""defend_ally"", ""arguments"": {""target_id"": ""ally_nera""}}]",[],True,False,True,False,False
+command_latest_order_005_ja,command_latest_order_005,latest_order,ja,"[{""name"": ""follow"", ""arguments"": {""target_id"": ""ally_mira""}}]",[],True,False,True,False,False
+command_pronoun_binding_001_ja,command_pronoun_binding_001,pronoun_binding,ja,"[{""name"": ""defend_ally"", ""arguments"": {""target_id"": ""ally_nera""}}]",[],True,False,True,False,False
+command_interact_reference_000_ja,command_interact_reference_000,interact_reference,ja,"[{""name"": ""interact"", ""arguments"": {""target_id"": ""object_lever""}}]","[{""name"": ""hold_position"", ""arguments"": {}}]",True,False,False,False,True
+command_latest_order_000_ja,command_latest_order_000,latest_order,ja,"[{""name"": ""attack"", ""arguments"": {""target_id"": ""enemy_raider""}}]",[],True,False,True,False,False
+command_pronoun_binding_003_ja,command_pronoun_binding_003,pronoun_binding,ja,"[{""name"": ""interact"", ""arguments"": {""target_id"": ""object_gate""}}]",[],True,False,True,False,False
+command_follow_reference_003_ja,command_follow_reference_003,follow_reference,ja,"[{""name"": ""follow"", ""arguments"": {""target_id"": ""player""}}]",[],True,False,True,False,False
+command_unsupported_action_002_ja,command_unsupported_action_002,unsupported_action,ja,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_unsupported_action_001_ja,command_unsupported_action_001,unsupported_action,ja,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_follow_reference_005_ja,command_follow_reference_005,follow_reference,ja,"[{""name"": ""follow"", ""arguments"": {""target_id"": ""ally_mira""}}]",[],True,False,True,False,False
+command_retreat_reference_000_ja,command_retreat_reference_000,retreat_reference,ja,"[{""name"": ""retreat"", ""arguments"": {""target_id"": ""zone_east_balcony""}}]",[],True,False,True,False,False
+command_hold_until_ready_005_ja,command_hold_until_ready_005,hold_until_ready,ja,"[{""name"": ""hold_position"", ""arguments"": {}}]",[],True,False,True,False,False
+command_attack_reference_004_ja,command_attack_reference_004,attack_reference,ja,"[{""name"": ""attack"", ""arguments"": {""target_id"": ""enemy_archer""}}]",[],True,False,True,False,False
+command_defend_reference_003_ja,command_defend_reference_003,defend_reference,ja,"[{""name"": ""defend_ally"", ""arguments"": {""target_id"": ""ally_nera""}}]",[],True,False,True,False,False
+command_latest_order_001_ja,command_latest_order_001,latest_order,ja,"[{""name"": ""follow"", ""arguments"": {""target_id"": ""ally_nera""}}]",[],True,False,True,False,False
+command_hold_until_ready_004_ja,command_hold_until_ready_004,hold_until_ready,ja,"[{""name"": ""hold_position"", ""arguments"": {}}]",[],True,False,True,False,False
+command_interact_reference_003_ja,command_interact_reference_003,interact_reference,ja,"[{""name"": ""interact"", ""arguments"": {""target_id"": ""object_gate""}}]",[],True,False,True,False,False
+command_scout_reference_002_ja,command_scout_reference_002,scout_reference,ja,"[{""name"": ""scout"", ""arguments"": {""target_id"": ""zone_north_exit""}}]",[],True,False,True,False,False
+command_interact_reference_004_ja,command_interact_reference_004,interact_reference,ja,"[{""name"": ""interact"", ""arguments"": {""target_id"": ""object_lever""}}]",[],True,False,True,False,False
+command_scout_reference_005_ja,command_scout_reference_005,scout_reference,ja,"[{""name"": ""scout"", ""arguments"": {""target_id"": ""zone_east_balcony""}}]",[],True,False,True,False,False
+command_follow_reference_004_ja,command_follow_reference_004,follow_reference,ja,"[{""name"": ""follow"", ""arguments"": {""target_id"": ""ally_mira""}}]",[],True,False,True,False,False
+command_retreat_reference_004_ja,command_retreat_reference_004,retreat_reference,ja,"[{""name"": ""retreat"", ""arguments"": {""target_id"": ""zone_north_exit""}}]",[],True,False,True,False,False
+command_pronoun_binding_004_ja,command_pronoun_binding_004,pronoun_binding,ja,"[{""name"": ""retreat"", ""arguments"": {""target_id"": ""zone_east_balcony""}}]",[],True,False,True,False,False
+command_retreat_reference_005_ja,command_retreat_reference_005,retreat_reference,ja,"[{""name"": ""retreat"", ""arguments"": {""target_id"": ""zone_north_exit""}}]",[],True,False,True,False,False
+command_pronoun_binding_002_ja,command_pronoun_binding_002,pronoun_binding,ja,"[{""name"": ""follow"", ""arguments"": {""target_id"": ""player""}}]",[],True,False,True,False,False
+command_scout_reference_000_ja,command_scout_reference_000,scout_reference,ja,"[{""name"": ""scout"", ""arguments"": {""target_id"": ""zone_east_balcony""}}]",[],True,False,True,False,False
+command_attack_reference_001_ja,command_attack_reference_001,attack_reference,ja,"[{""name"": ""attack"", ""arguments"": {""target_id"": ""enemy_raider""}}]","[{""name"": ""hold_position"", ""arguments"": {}}]",True,False,False,False,True
+command_negated_target_003_en,command_negated_target_003,negated_target,en,"[{""name"": ""attack"", ""arguments"": {""target_id"": ""enemy_raider""}}]",[],True,False,True,False,False
+command_follow_reference_003_en,command_follow_reference_003,follow_reference,en,"[{""name"": ""follow"", ""arguments"": {""target_id"": ""player""}}]",[],True,False,True,False,False
+command_ambiguous_reference_002_en,command_ambiguous_reference_002,ambiguous_reference,en,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_quoted_order_002_en,command_quoted_order_002,quoted_order,en,"[{""name"": ""defend_ally"", ""arguments"": {""target_id"": ""ally_nera""}}]",[],True,False,True,False,False
+command_quoted_order_005_en,command_quoted_order_005,quoted_order,en,"[{""name"": ""scout"", ""arguments"": {""target_id"": ""zone_north_exit""}}]",[],True,False,True,False,False
+command_unknown_condition_000_en,command_unknown_condition_000,unknown_condition,en,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_interact_reference_005_en,command_interact_reference_005,interact_reference,en,"[{""name"": ""interact"", ""arguments"": {""target_id"": ""object_gate""}}]",[],True,False,True,False,False
+command_attack_reference_004_en,command_attack_reference_004,attack_reference,en,"[{""name"": ""attack"", ""arguments"": {""target_id"": ""enemy_archer""}}]",[],True,False,True,False,False
+command_unsupported_action_002_en,command_unsupported_action_002,unsupported_action,en,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_ambiguous_reference_001_en,command_ambiguous_reference_001,ambiguous_reference,en,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_negated_target_001_en,command_negated_target_001,negated_target,en,"[{""name"": ""defend_ally"", ""arguments"": {""target_id"": ""ally_nera""}}]",[],True,False,True,False,False
+command_multiple_actions_004_en,command_multiple_actions_004,multiple_actions,en,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_defend_reference_001_en,command_defend_reference_001,defend_reference,en,"[{""name"": ""defend_ally"", ""arguments"": {""target_id"": ""ally_mira""}}]",[],True,False,True,False,False
+command_defend_reference_004_en,command_defend_reference_004,defend_reference,en,"[{""name"": ""defend_ally"", ""arguments"": {""target_id"": ""ally_nera""}}]",[],True,False,True,False,False
+command_retreat_reference_002_en,command_retreat_reference_002,retreat_reference,en,"[{""name"": ""retreat"", ""arguments"": {""target_id"": ""zone_north_exit""}}]",[],True,False,True,False,False
+command_scout_reference_001_en,command_scout_reference_001,scout_reference,en,"[{""name"": ""scout"", ""arguments"": {""target_id"": ""zone_north_exit""}}]",[],True,False,True,False,False
+command_unknown_condition_001_en,command_unknown_condition_001,unknown_condition,en,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_latest_order_004_en,command_latest_order_004,latest_order,en,"[{""name"": ""hold_position"", ""arguments"": {}}]",[],True,False,True,False,False
+command_pronoun_binding_001_en,command_pronoun_binding_001,pronoun_binding,en,"[{""name"": ""defend_ally"", ""arguments"": {""target_id"": ""ally_nera""}}]",[],True,False,True,False,False
+command_retreat_reference_003_en,command_retreat_reference_003,retreat_reference,en,"[{""name"": ""retreat"", ""arguments"": {""target_id"": ""zone_east_balcony""}}]",[],True,False,True,False,False
+command_attack_reference_003_en,command_attack_reference_003,attack_reference,en,"[{""name"": ""attack"", ""arguments"": {""target_id"": ""enemy_raider""}}]",[],True,False,True,False,False
+command_follow_reference_005_en,command_follow_reference_005,follow_reference,en,"[{""name"": ""follow"", ""arguments"": {""target_id"": ""ally_mira""}}]",[],True,False,True,False,False
+command_latest_order_000_en,command_latest_order_000,latest_order,en,"[{""name"": ""attack"", ""arguments"": {""target_id"": ""enemy_raider""}}]",[],True,False,True,False,False
+command_interact_reference_001_en,command_interact_reference_001,interact_reference,en,"[{""name"": ""interact"", ""arguments"": {""target_id"": ""object_gate""}}]",[],True,False,True,False,False
+command_multiple_actions_001_en,command_multiple_actions_001,multiple_actions,en,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_scout_reference_003_en,command_scout_reference_003,scout_reference,en,"[{""name"": ""scout"", ""arguments"": {""target_id"": ""zone_north_exit""}}]",[],True,False,True,False,False
+command_pronoun_binding_004_en,command_pronoun_binding_004,pronoun_binding,en,"[{""name"": ""retreat"", ""arguments"": {""target_id"": ""zone_east_balcony""}}]",[],True,False,True,False,False
+command_unsupported_action_003_en,command_unsupported_action_003,unsupported_action,en,"[{""name"": ""clarify"", ""arguments"": {}}]",[],True,False,True,True,False
+command_hold_until_ready_003_en,command_hold_until_ready_003,hold_until_ready,en,"[{""name"": ""hold_position"", ""arguments"": {}}]",[],True,False,True,False,False
+command_hold_until_ready_002_en,command_hold_until_ready_002,hold_until_ready,en,"[{""name"": ""hold_position"", ""arguments"": {}}]",[],True,False,True,False,False
+command_known_conditional_000_en,command_known_conditional_000,known_conditional,en,"[{""name"": ""attack"", ""arguments"": {""target_id"": ""enemy_raider""}}]",[],True,False,True,False,False
+command_known_conditional_002_en,command_known_conditional_002,known_conditional,en,"[{""name"": ""follow"", ""arguments"": {""target_id"": ""player""}}]",[],True,False,True,False,False

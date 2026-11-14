@@ -1,0 +1,50 @@
+<!doctype html><html lang="ja"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>追加小型モデルの探索的比較</title>
+<style>
+body{font:16px/1.8 system-ui,sans-serif;color:#172033;background:#f8fafc;margin:0}
+main{max-width:1040px;margin:32px auto;padding:28px;background:white;border:1px solid #e2e8f0;border-radius:12px}
+h1{line-height:1.4}h2{margin-top:32px}table{border-collapse:collapse;width:100%;margin:20px 0}
+th,td{text-align:left;vertical-align:top;padding:12px;border-bottom:1px solid #e2e8f0}th{background:#f1f5f9}
+small{display:block;font-size:13px;color:#475569}img{max-width:100%;height:auto}a{color:#1d4ed8}
+.note{background:#eff6ff;border-left:4px solid #3b82f6;padding:14px 18px}.scroll{overflow-x:auto}
+@media(max-width:600px){main{margin:0;padding:18px;border-radius:0}th,td{padding:9px;font-size:14px}}
+</style><main><h1>追加小型モデルの探索的比較</h1><p class="note"><strong>今回の高速設定では、追加候補に既存2実装を明確に上回る結果は得られませんでした。</strong>追加4候補の日本語正解率は、記憶判定が最大55.6%、作戦選択が最大28.0%。明示された制約に違反する作戦の選択は63.0%〜67.8%でした。本測定4,800件の実行失敗は0件です。</p>
+<p>4候補を事前に固定し、それぞれ同じ1,200入力を評価しました。主評価は日本語の記憶判定500場面と
+作戦選択500場面、英語の対応訳各100件は補助評価です。翻訳やモデル間の繰り返しを独立した場面数へ加えていません。</p>
+<p class="note">これは固定した合成問題と各実装設定での比較です。実戦勝率、自由な作戦生成、
+新しい問題構造への一般化、Unity・Sentis内の動作や速度は測っていません。
+前回の確証的なHolm補正2課題の解析は変更していません。</p>
+<h2>日本語の主評価</h2><div class="scroll"><table><thead><tr><th>モデル・実装</th>
+<th>記憶判定 / 500</th><th>作戦4択 / 500</th><th>実行条件</th></tr></thead><tbody><tr><td>Hindsight 0.8B</td><td><strong>55.8%</strong><small>95%区間 51.4%〜60.1%</small></td><td><strong>25.8%</strong><small>95%区間 22.2%〜29.8%</small></td><td>前回・native</td></tr><tr><td>TinyJev</td><td><strong>50.8%</strong><small>95%区間 46.4%〜55.2%</small></td><td><strong>24.0%</strong><small>95%区間 20.5%〜27.9%</small></td><td>前回・native</td></tr><tr><td>Unee 0.8B</td><td><strong>55.6%</strong><small>95%区間 51.2%〜59.9%</small></td><td><strong>26.2%</strong><small>95%区間 22.5%〜30.2%</small></td><td>追加・Q4_K_M</td></tr><tr><td>Unee 2B</td><td><strong>53.8%</strong><small>95%区間 49.4%〜58.1%</small></td><td><strong>28.0%</strong><small>95%区間 24.2%〜32.1%</small></td><td>追加・Q4_K_M</td></tr><tr><td>LFM2.5 JP 1.2B</td><td><strong>50.0%</strong><small>95%区間 45.6%〜54.4%</small></td><td><strong>23.0%</strong><small>95%区間 19.5%〜26.9%</small></td><td>追加・Q4_K_M</td></tr><tr><td>LFM3 1.7B (fast)</td><td><strong>50.0%</strong><small>95%区間 45.6%〜54.4%</small></td><td><strong>25.0%</strong><small>95%区間 21.4%〜29.0%</small></td><td>追加・Q4_K_M</td></tr></tbody></table></div>
+<img src="additional-candidates-comparison.png" alt="日本語各500場面の正解率と95% Wilson区間。追加4実装と前回2実装を比較。">
+<p>区間は固定した生成方法・分野構成に条件づけた、課題・実装ごとの区間です。
+複数モデルの比較を同時に95%で覆う区間ではありません。native prompt、量子化、
+回答方法が異なるため、モデル本体やパラメータ数だけの効果とは解釈しません。</p>
+<h2>CPUの応答時間</h2><table><thead><tr><th>追加候補</th><th>中央値</th><th>95パーセンタイル</th>
+</tr></thead><tbody><tr><td>Unee 0.8B</td><td>1.42秒</td><td>1.84秒</td></tr><tr><td>Unee 2B</td><td>3.01秒</td><td>3.88秒</td></tr><tr><td>LFM2.5 JP 1.2B</td><td>2.24秒</td><td>3.07秒</td></tr><tr><td>LFM3 1.7B (fast)</td><td>3.13秒</td><td>4.16秒</td></tr></tbody></table>
+<p>全1,200試行（日本語・英語、成功・失敗を含む）のHTTP・前後処理を含む所要時間です。
+同じLinux CPU環境、推論4スレッド、1モデルずつ直列実行、入力キャッシュ再利用なし。
+重みの初回ロードと固定warmupは別記録です。入力長とnative promptは実装ごとに違います。
+前回の並列CPU測定値との速度比較には使いません。</p>
+<h2>設定と採点</h2><ul>
+<li>Uneeは公式のcompact prompt・parser・date factsを使用。生成温度0、確率の補正温度1。
+公式どおりtop-20 logprobに含まれない候補へfloorを置くため、その発生件数も集計しています。</li>
+<li>LFMはnative chat templateと1文字の形式制約を使う低遅延向け設定です。
+LFM3の思考を有効にした能力は評価していません。native parserで空のthinking wrapperを扱い、
+クライアント側で回答を書き直す処理はありません。</li>
+<li>正解・監査情報はモデル入力へ渡さず、制約違反の選択肢も後処理で修正しません。
+失敗や形式不正は誤答に残します。Uneeの例外時にはraw応答が残らない場合があります。</li>
+<li>LFM3は実行環境の準備切替後、保存済み1,050件を保持して未完了150件だけ再開しました。
+モデル・入力・source・CPU設定を再照合し、完了回答は再実行していません。
+応答時間は保存された各試行の時間です。LFM3の最初のprocess RSS記録は失われているため、全実行のRSS最大値は示しません。</li>
+</ul><h2>単純な事実確認の補助診断</h2><p>日本語版LFMが主試験の記憶を全件「関連あり」と答えた後、色4問と引き出しの開閉4問を固定して、4候補で各1回ずつ確認しました。この8問は事後に選んだ対照です。主試験へ加算せず、信頼区間・有意差・一般的な精度は推定しません。</p><table><thead><tr><th>実装</th><th>正解</th><th>色</th><th>開閉の二択</th><th>実行失敗</th></tr></thead><tbody><tr><td>Unee 0.8B</td><td>8/8</td><td>4/4</td><td>4/4</td><td>0</td></tr><tr><td>LFM2.5 JP 1.2B</td><td>6/8</td><td>4/4</td><td>2/4</td><td>0</td></tr><tr><td>Unee 2B</td><td>8/8</td><td>4/4</td><td>4/4</td><td>0</td></tr><tr><td>LFM3 1.7B (fast)</td><td>6/8</td><td>4/4</td><td>2/4</td><td>0</td></tr></tbody></table><p><a href="additional-simple-controls.json">補助診断の全応答JSON</a> · <a href="additional-controls-protocol.json">補助診断の固定条件</a></p><h2>保存物</h2><p>
+<a href="additional-model-statistics.json">統計値・制約違反・対応差・実行来歴JSON</a> ·
+<a href="additional-model-outcomes.csv">ケース別CSV</a> ·
+<a href="additional-candidates-protocol.json">推論前の固定プロトコル</a> ·
+<a href="additional-analysis-notes.json">集計・再開の補足記録</a></p>
+<p>公式資料：<a href="https://huggingface.co/uneeverse/unee-0.8b">Unee 0.8B</a> ·
+<a href="https://huggingface.co/uneeverse/unee-2b">Unee 2B</a> ·
+<a href="https://huggingface.co/LiquidAI/LFM2.5-1.2B-JP-202606">LFM2.5日本語版</a> ·
+<a href="https://huggingface.co/LiquidAI/LFM3-1.7B">LFM3 1.7B</a>。
+UneeはApache 2.0、LFMはLFM Open License 1.0です。</p></main></html>

@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-11-06T16:12:06.127479+00:00",
+  "frozen_inference_protocol_preserved": true,
+  "notes": [
+    {
+      "topic": "Unee temperatures",
+      "clarification": "The frozen protocol wording native temperature1.0 refers to probability calibration temperature. Decode temperature is0, as fixed by the pinned SDK and adapter."
+    },
+    {
+      "topic": "Overall summary",
+      "implementation_review": "Before export, the new analyzer was corrected to suppress pooled Wilson and paired intervals across Japanese worlds and their English translations. Overall counts are descriptive attempts only. Task/language-specific estimators follow the unchanged frozen plan."
+    },
+    {
+      "topic": "Failure evidence",
+      "limitation": "Unee exceptions may retain error information without a raw response. Do not claim complete raw-response retention for failed calls."
+    },
+    {
+      "topic": "Infrastructure resumption",
+      "execution_event": "The selected environment re-entered starting and returned ready. LFM3 had1050 durablecompleted records; the firstthree1200-casejobs were complete. Identical frozen source, model hashes, CPU model/quota, Python and CLIsettings were verified, and only the150unfinished LFM3 cases were resumed. Completedobservations were not retried; an extra fixed nonbenchmark warmup is recorded by the native strict-resume runner.",
+      "performance_scope": "All complete per-request durations remain in the journal. LFM3 processRSSsamples from its firstsession were only in memory and did not survive; resume resource samples cover only the remaining150 requests. No overallLF3processpeak is asserted.",
+      "evidence": "/workspace/.cave-dungeon/unity/additional-candidates/infrastructure-resume-event.json"
+    }
+  ],
+  "analysis_sources": [
+    {
+      "path": "Python/analyze_additional_candidates.py",
+      "bytes": 34746,
+      "sha256": "6d297b03ce2b6e3019be95a7cbf0572666b4fa84e3c430718affa1c521ae3def"
+    },
+    {
+      "path": "Python/test_analyze_additional_candidates.py",
+      "bytes": 18820,
+      "sha256": "cb55009a822daee9963a2d74193222a08b4623b84e49b4d1eee5209f4f8e8ec1"
+    },
+    {
+      "path": "Python/render_additional_candidates.py",
+      "bytes": 14801,
+      "sha256": "bb395acdfa0827d85785b525aa28648338b0d588b96277250d777976a883cfb5"
+    }
+  ],
+  "updated_utc": "2026-11-06T18:58:30.820845+00:00"
+}
