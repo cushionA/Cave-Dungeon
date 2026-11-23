@@ -5296,5 +5296,162 @@
         "Assets/Tests/PlayMode/CharacterGameLoopTests.cs": "6ac4549d61b5c414271f4fa58390f5e6789d47065511044d91979a0ff25f46f2"
       }
     }
+  },
+  {
+    "feature": "AICore_TerrainDecisionDataFlow",
+    "path": {
+      "key": "profile-and-share-observation",
+      "title": "AI観測の取得境界と同期・Burstの計測",
+      "implementation_status": "planned",
+      "connection_status": "unconnected",
+      "verification": "unverified",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/GameManager.cs",
+          "symbol": "GameManager.CaptureSimulationObservation",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs",
+          "symbol": "AIObservationCoordinator.Capture",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs",
+          "symbol": "AIDecisionSystem.CaptureWorld",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs",
+          "symbol": "AIQueryKernel.Decide",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs",
+          "symbol": "JudgmentLoop.ApplyDecision",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/Performance_BaselineBenchmarks.cs",
+        "Assets/Tests/EditMode/AIDecisionSystemTests.cs",
+        "Assets/Tests/PlayMode/AIObservationFlowTests.cs"
+      ],
+      "notes": "観測収集、Nativeへの詰め替え、同期/Burst判定、結果反映、地形照会を別々に計測する。既存の100体×100候補は距離順の標的選択のベースラインとし、地形照会を含む条件は個別に測る。同じ更新時点の観測を同期/Burstで使い、詰め替えの負荷が大きい場合は観測を一度作って共有する。共有バッファはジョブが完了するまで固定する。判断・移動が位置などの予備値を先に取り直す箇所を、観測から必要な値を渡す形へ整理する。",
+      "verification_hashes": {}
+    }
+  },
+  {
+    "feature": "AICore_TerrainDecisionDataFlow",
+    "path": {
+      "key": "combat-approach-route",
+      "title": "戦闘接近の候補評価と選んだ経路の受け渡し",
+      "implementation_status": "planned",
+      "connection_status": "unconnected",
+      "verification": "unverified",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs",
+          "symbol": "AIQueryKernel.Decide",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/SpatialTargetRegistry.cs",
+          "symbol": "SpatialTargetRegistry.QueryNeighbors",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs",
+          "symbol": "JudgmentLoop.ApplyDecision",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs",
+          "symbol": "ActionExecutorController.RefreshAIMovement",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/AIDecisionSystemTests.cs",
+        "Assets/Tests/PlayMode/AIObservationFlowTests.cs"
+      ],
+      "notes": "戦闘接近を最初の対象とする。確定した標的の周囲で攻撃できる地点を絞り、ナビと物理の照会から候補ID・到達可否と所要時間・着地点の空き・射線・経路IDを用意する。判断結果に観測tick・判定revision・実行者と標的のActorRef・行動・候補ID・経路ハンドルを持たせ、選ばれた経路を移動側が使う。標的の世代違い・経路の閉塞・進捗停止を検出して再探索する。標的が同tickに切り替わるケースと遮蔽物の迂回を確認する。合流ワープはシスターの通常追従で扱う。",
+      "verification_hashes": {}
+    }
+  },
+  {
+    "feature": "AICore_TerrainDecisionDataFlow",
+    "path": {
+      "key": "special-terrain-traversal",
+      "title": "能力に応じた特殊移動リンクと着地後の経路再開",
+      "implementation_status": "planned",
+      "connection_status": "unconnected",
+      "verification": "unverified",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Editor/TestSceneBuilder.cs",
+          "symbol": "TestSceneBuilder.BuildTestScene",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs",
+          "symbol": "ActionExecutorController.RefreshAIMovement",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs",
+          "symbol": "GameActionRuntime.BeginJump / EndJump",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Character/BaseCharacter.cs",
+          "symbol": "BaseCharacter.ApplySimulationPhysics",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/PlayMode/AIObservationFlowTests.cs"
+      ],
+      "notes": "シーン側はリンクの固定ID・踏切/着地アンカー・動作・通れる向きを持つ。ナビ側はNavMeshのリンクと実行時IDの対応を管理する。標準の自動生成は同程度の高さの溝や降下の候補に使い、登りや特殊動作は配置したリンクで表す。歩行の通過点と特殊区間の順序を保持し、キャラの能力を使って候補を絞る。既存の行動管理とRigidbodyでジャンプし、意図した足場への着地後に歩行を再開する。着地点の閉塞や着地失敗時は再探索する。跳べるキャラは溝、歩行のみのキャラは橋を選ぶケースを検証する。",
+      "verification_hashes": {}
+    }
+  },
+  {
+    "feature": "AICore_TerrainDecisionDataFlow",
+    "path": {
+      "key": "terrain-aware-action-selection",
+      "title": "地形の観測値をキャラAIの行動ルールへ接続",
+      "implementation_status": "planned",
+      "connection_status": "unconnected",
+      "verification": "unverified",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs",
+          "symbol": "AIObservationCoordinator.Capture",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs",
+          "symbol": "JudgmentLoop.EvaluateObserved",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs",
+          "symbol": "AIQueryKernel.Decide / MatchesRule",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs",
+          "symbol": "JudgmentLoop.ApplyDecision",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/AIDecisionSystemTests.cs",
+        "Assets/Tests/PlayMode/AIObservationFlowTests.cs"
+      ],
+      "notes": "シーンが持つ特殊アクションと戦術地点・範囲を利用する。地形によって行動自体を切り替えるモードは、同じ観測の中で標的選択、必要な候補の照会、行動判定の順に処理する。所要時間、到達先の射線や危険、合流までの猶予などを型付きの値で渡し、追撃・護衛・退避の各ルールが個別の条件を組み合わせる。未取得と到達不可を区別する。NavMeshや物理照会は候補準備側で行い、判定中は受け取った値を読む。総合リスク点の導入は前提にしない。",
+      "verification_hashes": {}
+    }
   }
 ]

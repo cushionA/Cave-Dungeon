@@ -162,6 +162,25 @@ PRレビューや実装中に発生した「今すぐではないが後で対応
   - **仕様**: キャラ数・候補数・ルール数を変え、同じ観測と候補での結果一致と、観測生成、Nativeコピー、Job実行、待機、結果反映、GCを計測する。実測に応じて候補共有や近傍検索、同期実行との使い分けを検討する。64バイト固定paddingは追加しない。
   - **対象ファイル**: `Assets/Tests/EditMode/Performance_BaselineBenchmarks.cs` / `Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs`
 
+- [ ] 🟡✓ **キャラAIの判断データフローと地形行動を統合** — `AICore_TerrainDecisionDataFlow`
+  - **背景**: DF-10の共通観測を使いながら、行動側には座標の再取得が残り、戦闘接近の判断から実行へ目的地点や経路が渡っていない。
+  - **仕様**: ① 観測収集・Nativeコピー・判定・地形照会の内訳を計測する。② 戦闘接近を先に接続し、確定した標的に対する地点・到達時間・射線・経路を渡して、遮蔽物を迂回する。③ 特殊移動リンクを追加し、能力に応じた溝越えと橋への迂回、着地の再確認を行う。④ 地形に応じて行動を変えるモードでは、標的選択・候補照会・行動判定を同じ観測でつなぐ。行動ルールには型付きの観測値を渡し、実行には選んだ行動・標的・候補・経路を渡す。
+  - **対象ファイル**: `Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs` / `Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs` / `Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs` / `Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs` / `Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs`
+  - **計画経路**: `designs/call-paths.json` の `AICore_TerrainDecisionDataFlow`。既存の規模別性能計測とDF-10の地形入力に接続する。
+
+初期化済みの別環境で、この機能が未登録なら以下を実行する。
+
+```powershell
+python tools/feature-db.py add AICore_TerrainDecisionDataFlow --category system --section section-2
+$terrainPaths = Get-Content -LiteralPath 'designs/call-paths.json' -Raw -Encoding UTF8 |
+    ConvertFrom-Json | Where-Object feature -eq 'AICore_TerrainDecisionDataFlow'
+$terrainImport = Join-Path ([System.IO.Path]::GetTempPath()) ([System.Guid]::NewGuid().ToString() + '.json')
+$terrainJson = ConvertTo-Json -InputObject @($terrainPaths) -Depth 12
+[System.IO.File]::WriteAllText($terrainImport, $terrainJson, [System.Text.UTF8Encoding]::new($false))
+python tools/feature-db.py import-call-paths --file $terrainImport
+Remove-Item -LiteralPath $terrainImport
+```
+
 実行証拠は`%TEMP%/sistergame-job-validation/regression-prep-20261106/`配下の`20261105-173922Z-FullEdit/`・`20261105-174840Z-FullPlay/`の`TestResults.xml`と`baseline-*.json`、FullEdit側の`native-ai-benchmark-summary.json`・`PerformanceTestResults.json`、run間の`edit-to-final-play-provenance.json`。
 
 個体別知覚・地形/環境物/弾接近・AIイベント履歴、解放キー移行、charge設定、表示資源解放/再読込、重量/持ち方、HP/MPバリアは既存のDFタスクと監査残件を継続し、重複登録しない。
