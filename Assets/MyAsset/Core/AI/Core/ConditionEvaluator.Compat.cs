@@ -18,7 +18,7 @@ namespace Game.Core
             List<int> allHashes = null, List<int> allyHashes = null)
         {
             float value = GetConditionValue(condition, ownerHash, targetHash, data, currentTime, scoreTracker, allHashes, allyHashes);
-            return Compare(value, condition.compareOp, condition.operandA, condition.operandB);
+            return !float.IsNaN(value) && Compare(value, condition.compareOp, condition.operandA, condition.operandB);
         }
 
         /// <summary>
@@ -54,6 +54,8 @@ namespace Game.Core
             SoACharaDataDic data, float currentTime, DamageScoreTracker scoreTracker = null,
             List<int> allHashes = null, List<int> allyHashes = null)
         {
+            if ((condition.conditionType == AIConditionType.Count || condition.conditionType == AIConditionType.NearbyFaction)
+                && condition.filter.RequiresObservedTargetFacts) { return float.NaN; }
             switch (condition.conditionType)
             {
                 case AIConditionType.HpRatio:

@@ -1536,7 +1536,7 @@
   "highest_priority_open_items": [
     "AI-04: UI現在戦術の保存から実行companionへのpublish経路が未接続。",
     "AI-08: 必要MP/SPの絶対量を割合条件へ変換する単位の混在。",
-    "AI-09: 未対応triggerの変換で条件が捨てられる/不成立になる。",
+    "AI-09: 行動のCoolTimeReady・TargetStatusEffectとモードのTimerExpiredは未接続。未対応条件を持つ行動は候補と既定から除外する。",
     "AI-05/06: probabilityや弱点関連設定が実評価へ届かない。",
     "STATS-04: OnUnequipからの再入操作のtransaction契約。標準callbackはno-opだが公開拡張では不整合が起こり得る。",
     "ROOT-INPUT-UNCONNECTED: interaction/cooperation/weapon/grip/menu/mapの共有入力consumerが未接続。"
@@ -2857,23 +2857,35 @@
         {
           "key": "AI-09",
           "severity": "P2",
-          "status": "unsupported_authoring_silently_ignored",
-          "title": "未対応トリガーの意味が失われる",
+          "status": "unconnected",
+          "title": "未対応の行動トリガーとTimerExpiredの観測・遷移",
           "evidence": [
             {
               "file": "Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs",
-              "line": 281,
-              "fact": "CoolTimeReady/TargetStatusEffectはdefault AICondition.Noneへ。BuildActConditionsはNoneを追加せず条件が消える。"
+              "line": 106,
+              "fact": "行動スロットを保持し、変換できないトリガーを持つ行動はルール作成時に除外する。"
             },
             {
               "file": "Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs",
-              "line": 332,
-              "fact": "TimerExpired遷移はNone条件のまま配列へ入り、観測では常にunknown→不成立。"
+              "line": 410,
+              "fact": "既定行動を実行可能なルールから選ぶ。全行動が対象外なら既定は-1。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/ScriptableObjects/AIInfo.cs",
+              "line": 158,
+              "fact": "CoolTimeReady・TargetStatusEffectを指定した行動の扱いをInspectorに表示する。"
+            },
+            {
+              "file": "Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs",
+              "line": 392,
+              "fact": "TimerExpired遷移は引き続きNoneへ変換され、観測による遷移判定は不成立。"
             }
           ],
-          "flow": "未対応trigger→一方は無条件化、もう一方は永久不成立",
-          "recommendation": "未対応をvalidationで拒否/明示unknownに揃え、情報源がある条件だけ有効設定として受理する候補。",
-          "tests": []
+          "flow": "未対応の行動トリガー→元のスロットを保持し、実行ルール・既定行動から除外。TimerExpired遷移→未取得。",
+          "recommendation": "行動別クールダウン、対象の状態異常、モードタイマーをトリガーとして使う場合は、各観測源と有効な時点を定義して接続する。",
+          "tests": [
+            "Assets/Tests/EditMode/AIInfoConverterTests.cs"
+          ]
         },
         {
           "key": "AI-10",

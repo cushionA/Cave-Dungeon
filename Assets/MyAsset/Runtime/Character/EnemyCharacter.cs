@@ -109,15 +109,13 @@ namespace Game.Runtime
             }
 
             int targetHash = _enemyController.JudgmentLoop.CurrentTargetHash;
-            if (targetHash == 0 || !GameManager.IsCharacterValid(targetHash))
+            if (targetHash == 0 || !GameManager.IsCharacterValid(targetHash)
+                || !GameManager.TryGetTargetOffset(ObjectHash, targetHash, out Vector2 targetOffset))
             {
                 return;
             }
 
-            ref CharacterVitals targetVitals = ref GameManager.Data.GetVitals(targetHash);
-            ref CharacterVitals myVitals = ref GameManager.Data.GetVitals(ObjectHash);
-            float diff = GameManager.ObservedPosition(targetHash, targetVitals.position).x
-                - GameManager.ObservedPosition(ObjectHash, myVitals.position).x;
+            float diff = targetOffset.x;
 
             if (diff > 0.1f)
             {
@@ -145,18 +143,16 @@ namespace Game.Runtime
             }
 
             int targetHash = _enemyController.JudgmentLoop?.CurrentTargetHash ?? 0;
-            if (targetHash == 0 || !GameManager.IsCharacterValid(targetHash))
+            if (targetHash == 0 || !GameManager.IsCharacterValid(targetHash)
+                || !GameManager.TryGetTargetOffset(ObjectHash, targetHash, out Vector2 targetOffset))
             {
                 SetPhysicsVelocity(new Vector2(0f, PhysicsVelocity.y));
                 return;
             }
 
-            ref CharacterVitals targetVitals = ref GameManager.Data.GetVitals(targetHash);
-            ref CharacterVitals myVitals = ref GameManager.Data.GetVitals(ObjectHash);
             MoveParams moveParams = GetEffectiveMoveParams(GameConstants.k_FallbackMoveSpeed);
 
-            float diff = GameManager.ObservedPosition(targetHash, targetVitals.position).x
-                - GameManager.ObservedPosition(ObjectHash, myVitals.position).x;
+            float diff = targetOffset.x;
             float absDist = Mathf.Abs(diff);
 
             // 攻撃範囲の外ならターゲットへ移動

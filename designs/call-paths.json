@@ -5303,13 +5303,18 @@
       "key": "profile-and-share-observation",
       "title": "AI観測の取得境界と同期・Burstの計測",
       "implementation_status": "planned",
-      "connection_status": "unconnected",
+      "connection_status": "partial",
       "verification": "unverified",
       "steps": [
         {
+          "file": "Assets/MyAsset/Core/GameManager/SimulationTickRunner.cs",
+          "symbol": "SimulationTickRunner.Run",
+          "kind": "entry"
+        },
+        {
           "file": "Assets/MyAsset/Runtime/GameManager.cs",
           "symbol": "GameManager.CaptureSimulationObservation",
-          "kind": "entry"
+          "kind": "call"
         },
         {
           "file": "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs",
@@ -5318,12 +5323,22 @@
         },
         {
           "file": "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs",
+          "symbol": "AIDecisionSystem.Schedule",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs",
           "symbol": "AIDecisionSystem.CaptureWorld",
-          "kind": "read"
+          "kind": "write"
         },
         {
           "file": "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs",
           "symbol": "AIQueryKernel.Decide",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs",
+          "symbol": "AIDecisionSystem.CompleteAndApply",
           "kind": "call"
         },
         {
@@ -5335,9 +5350,10 @@
       "tests": [
         "Assets/Tests/EditMode/Performance_BaselineBenchmarks.cs",
         "Assets/Tests/EditMode/AIDecisionSystemTests.cs",
-        "Assets/Tests/PlayMode/AIObservationFlowTests.cs"
+        "Assets/Tests/PlayMode/AIObservationFlowTests.cs",
+        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs"
       ],
-      "notes": "観測収集、Nativeへの詰め替え、同期/Burst判定、結果反映、地形照会を別々に計測する。既存の100体×100候補は距離順の標的選択のベースラインとし、地形照会を含む条件は個別に測る。同じ更新時点の観測を同期/Burstで使い、詰め替えの負荷が大きい場合は観測を一度作って共有する。共有バッファはジョブが完了するまで固定する。判断・移動が位置などの予備値を先に取り直す箇所を、観測から必要な値を渡す形へ整理する。",
+      "notes": "既存の100体×100候補のベンチマークは、距離順の標的選択について観測生成から反映までの時間とGCを測り、先頭1体の標的を照合する。同期側はJudgmentLoop.EvaluateObserved、Burst側はNativeコピー後のDecisionJob.Executeから共通のDecideを呼ぶ。キャラ数・候補数・ルール数を変え、同じtickの観測と同じ候補順で全員の標的・行動の一致を確かめる。観測生成、Nativeコピー、判定、Jobの完了待ち、反映の各時間とGC割当を記録し、地形照会を加えた条件では照会時間も測る。戦闘移動と向きはGameManager.TryGetTargetOffset、通常追従はCompanionCharacter.TryGetFollowPositionsからGameManager.TryGetObservedPairを使う。同じtick・現世代の自己と相手をまとめて読み、片方の観測が欠けたときだけ双方の予備座標を取得する。実測したコピー負荷を基に共有を選ぶ場合はJob完了までバッファを固定する。",
       "verification_hashes": {}
     }
   },
@@ -5356,13 +5372,28 @@
           "kind": "entry"
         },
         {
-          "file": "Assets/MyAsset/Core/AI/Core/SpatialTargetRegistry.cs",
-          "symbol": "SpatialTargetRegistry.QueryNeighbors",
-          "kind": "read"
+          "file": "Assets/MyAsset/Core/AI/Core/AICompiledMode.cs",
+          "symbol": "AIDecisionResult",
+          "kind": "write"
         },
         {
           "file": "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs",
           "symbol": "JudgmentLoop.ApplyDecision",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/ActionExecutor.cs",
+          "symbol": "ActionExecutor.Execute",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs",
+          "symbol": "ActionExecutorController.ExecuteCommand",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs",
+          "symbol": "ActionExecutorController.Dispatch",
           "kind": "call"
         },
         {
@@ -5373,9 +5404,9 @@
       ],
       "tests": [
         "Assets/Tests/EditMode/AIDecisionSystemTests.cs",
-        "Assets/Tests/PlayMode/AIObservationFlowTests.cs"
+        "Assets/Tests/PlayMode/AIExecutionBridgeTests.cs"
       ],
-      "notes": "戦闘接近を最初の対象とする。確定した標的の周囲で攻撃できる地点を絞り、ナビと物理の照会から候補ID・到達可否と所要時間・着地点の空き・射線・経路IDを用意する。判断結果に観測tick・判定revision・実行者と標的のActorRef・行動・候補ID・経路ハンドルを持たせ、選ばれた経路を移動側が使う。標的の世代違い・経路の閉塞・進捗停止を検出して再探索する。標的が同tickに切り替わるケースと遮蔽物の迂回を確認する。合流ワープはシスターの通常追従で扱う。",
+      "notes": "現在のMoveToTargetは開始時と継続中に観測座標から標的への方向を求める。AIDecisionResultには観測tick、判定revision、実行者と標的のActorRef、actionIndexがある。戦闘接近では実行者の攻撃が標的に届く地点を候補とし、ナビと物理照会で到達可否・所要時間・着地点の空き・射線を求める。選んだ候補IDと経路ハンドルを移動に渡す。同じtickで標的がAからBに変わったらB向けの候補を使い、遮蔽物を迂回して選んだ攻撃地点へ着くことを確かめる。標的の世代交代、経路の閉塞、進捗停止では古い経路を破棄して再探索する。シスターの合流ワープは通常追従で扱う。 スタン中の候補へ接近する試験では、候補のスタン解除までの残り時間と、現在の行動が終わってから接近し初撃が当たるまでの所要時間を比べる。距離の上限ちょうど、初撃と解除が同時、現在の行動に硬直が残る場合を別々に確認する。",
       "verification_hashes": {}
     }
   },
@@ -5389,30 +5420,46 @@
       "verification": "unverified",
       "steps": [
         {
-          "file": "Assets/MyAsset/Editor/TestSceneBuilder.cs",
-          "symbol": "TestSceneBuilder.BuildTestScene",
+          "file": "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs",
+          "symbol": "ActionExecutorController.RefreshAIMovement",
           "kind": "entry"
         },
         {
-          "file": "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs",
-          "symbol": "ActionExecutorController.RefreshAIMovement",
+          "file": "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs",
+          "symbol": "GameActionRuntime.BeginJump",
           "kind": "call"
         },
         {
-          "file": "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs",
-          "symbol": "GameActionRuntime.BeginJump / EndJump",
+          "file": "Assets/MyAsset/Core/Movement/GroundMovementLogic.cs",
+          "symbol": "GroundMovementLogic.TryStartJump",
           "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Character/BaseCharacter.Physics.cs",
+          "symbol": "BaseCharacter.SetPhysicsVelocity",
+          "kind": "write"
         },
         {
           "file": "Assets/MyAsset/Runtime/Character/BaseCharacter.cs",
-          "symbol": "BaseCharacter.ApplySimulationPhysics",
+          "symbol": "BaseCharacter.CaptureSimulationPhysics",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Physics/RigidbodyCharacterPhysics2D.cs",
+          "symbol": "RigidbodyCharacterPhysics2D.QueryGround",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs",
+          "symbol": "GameActionRuntime.EndJump",
           "kind": "output"
         }
       ],
       "tests": [
-        "Assets/Tests/PlayMode/AIObservationFlowTests.cs"
+        "Assets/Tests/PlayMode/PlayerActionCancellationTests.cs",
+        "Assets/Tests/PlayMode/CharacterPhysicsBoundaryTests.cs"
       ],
-      "notes": "シーン側はリンクの固定ID・踏切/着地アンカー・動作・通れる向きを持つ。ナビ側はNavMeshのリンクと実行時IDの対応を管理する。標準の自動生成は同程度の高さの溝や降下の候補に使い、登りや特殊動作は配置したリンクで表す。歩行の通過点と特殊区間の順序を保持し、キャラの能力を使って候補を絞る。既存の行動管理とRigidbodyでジャンプし、意図した足場への着地後に歩行を再開する。着地点の閉塞や着地失敗時は再探索する。跳べるキャラは溝、歩行のみのキャラは橋を選ぶケースを検証する。",
+      "notes": "既存のプレイヤーはBeginJumpで行動を受理し、移動処理で鉛直速度を設定する。AIの選択経路からこの踏切と着地判定につなぐ。シーンの固定リンクIDに踏切・着地アンカー、動作、方向を持たせ、NavMeshリンクの実行時IDと対応させる。同程度の高さの溝・降下は自動生成の候補とし、登り・特殊動作は手配置する。能力で使えるリンクを絞り、歩行区間と特殊区間の順序を保つ。TestSceneBuilder.CreateGapの下には床が続くため、検証には床を分けた溝と迂回橋を使う。同じ目的地へ、跳べるキャラは溝を越え、歩行のみのキャラは橋を渡る。現行のQueryGroundが返す接地と法線に加え、予定した足場への着地を確認して歩行を再開する。別の足場への着地、着地失敗、着地点の閉塞では再探索する。",
       "verification_hashes": {}
     }
   },
@@ -5422,22 +5469,32 @@
       "key": "terrain-aware-action-selection",
       "title": "地形の観測値をキャラAIの行動ルールへ接続",
       "implementation_status": "planned",
-      "connection_status": "unconnected",
+      "connection_status": "partial",
       "verification": "unverified",
       "steps": [
         {
-          "file": "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs",
-          "symbol": "AIObservationCoordinator.Capture",
+          "file": "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs",
+          "symbol": "JudgmentLoop.EvaluateObserved",
           "kind": "entry"
         },
         {
-          "file": "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs",
-          "symbol": "JudgmentLoop.EvaluateObserved",
+          "file": "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs",
+          "symbol": "AIQueryKernel.Decide",
           "kind": "call"
         },
         {
           "file": "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs",
-          "symbol": "AIQueryKernel.Decide / MatchesRule",
+          "symbol": "AIQueryKernel.SelectTarget",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs",
+          "symbol": "AIQueryKernel.MatchesRule",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs",
+          "symbol": "AIQueryKernel.TryConditionValue",
           "kind": "read"
         },
         {
@@ -5447,11 +5504,279 @@
         }
       ],
       "tests": [
+        "Assets/Tests/EditMode/AIObservationContextTests.cs",
         "Assets/Tests/EditMode/AIDecisionSystemTests.cs",
         "Assets/Tests/PlayMode/AIObservationFlowTests.cs"
       ],
-      "notes": "シーンが持つ特殊アクションと戦術地点・範囲を利用する。地形によって行動自体を切り替えるモードは、同じ観測の中で標的選択、必要な候補の照会、行動判定の順に処理する。所要時間、到達先の射線や危険、合流までの猶予などを型付きの値で渡し、追撃・護衛・退避の各ルールが個別の条件を組み合わせる。未取得と到達不可を区別する。NavMeshや物理照会は候補準備側で行い、判定中は受け取った値を読む。総合リスク点の導入は前提にしない。",
+      "notes": "同期・Burstは共通のDecideで標的と行動を評価する。装置の種類、操作点の遮蔽、標的の予測位置と味方の動線を使った行動分岐はactivate-observed-gimmickで確認した。追撃・護衛・退避のモードには、同じtickで確定した標的について、戦術地点までの所要時間、到達先の射線・危険、合流までの猶予を渡す。NavMeshと物理照会は候補を準備するときに行う。未取得の値は数値比較を不成立とし、到達不可は到達可否で判定する。観測済みの0秒は有効な値とする。追撃ルールの試験では射線だけを塞いで既定行動に切り替わること、標的の切替時も同期・Burstで標的・行動・候補IDが一致することを確かめる。 複数tickの判断では、護衛対象・脅威・移動先・照準点を区別し、現在の意図と進行段階、最終目撃や足音の情報源と観測tick、中断可能な段階・待機期限を追う。踏切前と空中での護衛復帰、盾持ちが味方を向く間だけの側面移動、罠に敵が入り味方が出るまでの待機・断念、探索期限での護衛復帰は計画側の確認条件。 2体の敵が2人の味方への狙いを交換しても各人を狙う人数は同じになる。誰が誰を狙うかを同じ観測tickで参照し、妨害を任せた味方の受理・着手・結果をその行動IDと期限に結び付ける。空振りの確認、技終了後の着弾待ち、期限を過ぎた結果不明を区別する。旧行動の遅着通知で新しい担当を解除せず、味方が間に合わないときは妨害の引き取りと護衛を選び分ける。 護衛プレイヤーに向く標的関係と候補別のスタン残り時間はselect-observed-threat-and-stunで接続した。",
       "verification_hashes": {}
+    }
+  },
+  {
+    "feature": "AICore_TerrainDecisionDataFlow",
+    "path": {
+      "key": "use-scene-gimmick",
+      "title": "トラップ・爆発物・落下物を選び、誘導や起動に使う",
+      "implementation_status": "planned",
+      "connection_status": "partial",
+      "verification": "unverified",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs",
+          "symbol": "AISceneGimmickController.Capture",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs",
+          "symbol": "AIQueryKernel.TryChooseGimmick",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs",
+          "symbol": "JudgmentLoop.ApplyDecision",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs",
+          "symbol": "ActionExecutorController.Dispatch",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs",
+          "symbol": "AISceneGimmickController.TryActivate",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/SceneGimmickDecisionTests.cs",
+        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs"
+      ],
+      "notes": "操作圏の使い切りスイッチはactivate-observed-gimmickで検証した。シスターは各tickで安全を再評価し、プレイヤーが退避して敵だけが残ったときに起動する。次は離れた操作地点への移動、接触板への敵の誘導、攻撃で起動する爆発物、連動先の地形変化を扱う。戦闘標的と操作対象の識別を保ち、行動の硬直・移動・予備動作・効果遅延を受付可能な時間と照合する。接触板は敵が踏んだ場合に1回発動し、隣の経路では発動しないこと、並んだ爆発物では敵だけに届く方を攻撃することを確かめる。連動スイッチは分岐・合流・循環、撤去・再配置、別AIの先行使用を含めて確認する。実験条件と再現手順はdocs/reports/experiments/2026-11-24_ai-terrain-gimmicks.md。",
+      "verification_hashes": {}
+    }
+  },
+  {
+    "feature": "AICore_TerrainDecisionDataFlow",
+    "path": {
+      "key": "activate-observed-gimmick",
+      "title": "戦闘標的に効くスイッチを選び、起動直前に安全を再確認する",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "runtime_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/GameManager.cs",
+          "symbol": "GameManager.CaptureSimulationObservation",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs",
+          "symbol": "AIObservationCoordinator.Capture",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs",
+          "symbol": "AISceneGimmickController.Capture",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs",
+          "symbol": "AIObservationContext.AddGimmick",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs",
+          "symbol": "AIDecisionSystem.CaptureWorld",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs",
+          "symbol": "AIQueryKernel.Decide",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs",
+          "symbol": "AIQueryKernel.TryChooseGimmick",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AISceneGimmick.cs",
+          "symbol": "AISceneGimmick.WillAffectTarget",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AISceneGimmick.cs",
+          "symbol": "AISceneGimmick.ThreatensFriendly",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs",
+          "symbol": "JudgmentLoop.ApplyDecision",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/ActionExecutor.cs",
+          "symbol": "ActionExecutor.ExecuteInteraction",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs",
+          "symbol": "ActionExecutorController.Dispatch",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs",
+          "symbol": "AISceneGimmickController.TryActivate",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs",
+          "symbol": "AISceneGimmickController.onActivated",
+          "kind": "event"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/ActionAuthoringCommandTests.cs",
+        "Assets/Tests/EditMode/SceneGimmickDecisionTests.cs",
+        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs"
+      ],
+      "notes": "Unity 6000.6.8f1の最終回帰でSceneGimmickDecisionTests（EditMode 18件）、SceneGimmickCombatTests（PlayMode 19件）がすべて成功。敵のAIInfoから中央tickで選択した敵に届く装置を操作し、OnActivatedで扉のColliderを無効にした。同期とBurstは同じ観測tick・ActorRef・装置IDと世代を使い、同距離では登録順を逆にしても同じ装置を選ぶ。ObjectNearbyは物理ワールド、操作圏、操作者ごとの遮蔽を反映し、未観測と既知の0件を区別する。遅延があるときは等速で着弾時の敵位置と味方の移動区間を判定する。実行直前に世代・使用可否・遮蔽・巻き込み・行動制限を再検査し、競合する二者は1回だけ起動する。シスターがプレイヤーの退出までガードし、敵だけが残ってから1回発動する4tickをPlayModeで確認した。型付き要求と拒否時の通常行動はEditModeで確認した。再現手順はdocs/reports/experiments/2026-11-24_ai-terrain-gimmicks.md。",
+      "verification_hashes": {
+        "Assets/MyAsset/Runtime/GameManager.cs": "00f4ee365b5a1a9b71557de0743c9ac45be5d37e889e05ed9ddeab10adacc124",
+        "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs": "79326bca1d4d6a6e9c2738cbce88ae44dbab3b9737a0a7d907546d711f53473c",
+        "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs": "973c28c55f9fc4da9291ee1b73ca7bbcd1bbe64529a9736e124d97b662234f16",
+        "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": "58d4dbf248a9504971b754f818faf2ce70cb47c4d741f9be64491abf76cb0da4",
+        "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "d30db729c00eb53d196f4eaec5c8e20bc742a7e8c6c083b21b3ef9bf7103dcb6",
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "695dfc0fbed3c6177b55eaff6c30137bb0657bc0d6788cd42d216b96d6e75415",
+        "Assets/MyAsset/Core/AI/Core/AISceneGimmick.cs": "a8f61d0031be38b70ace41d1c6e5f7748f737038f3dd1aaecb31d71891fb6109",
+        "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "cef5eca89cd45931198933fc7c516f239d5faad76b32cb05a99fd92d29649ce1",
+        "Assets/MyAsset/Core/AI/Core/ActionExecutor.cs": "bb5910c6a6b52127cf27f47e1e2025e17f671e1f3c52838de3ad1229119215e7",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "f160e44a70a7c5904cd0c7c2b64c0ac22d50e997e0ff0c78ba9bac77430688ab",
+        "Assets/Tests/EditMode/ActionAuthoringCommandTests.cs": "04218e0c063ce76af7de510ac50cad5943db6693088dbeb7a1b16a5115f94a7f",
+        "Assets/Tests/EditMode/SceneGimmickDecisionTests.cs": "0230659b50b96453dc19d0298891b64cb0d3eb8a0c296b2619f241741322389a",
+        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs": "c55b10186a0d213b5230cf040b5a0d134e18d77d495751bcb8c56b80b1ff9367",
+        "Assets/MyAsset/Core/AI/Core/AICompiledMode.cs": "151b9de0f5778749cc632ac387e4a17f4246890461875218ed7bf514bc7f6207",
+        "Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs": "4414caaf6475a6f15b4c52fb96a1aa4ba8bbb2e76bb0a705a1b47ae7804e2959",
+        "Assets/MyAsset/Core/ScriptableObjects/AIInfo.cs": "740ac3bf8180c310de9635f1d5bf146461224c6b1693bd5ca2a156a550444d16",
+        "Assets/MyAsset/Core/Actions/ActionCommand.cs": "c0f900acb94d94aa148ed3cd0c055b14ee078a4a53f5f9acdad5609ecd6b1003",
+        "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "46b21b0772af68046727c8d6bb2da47db82dcb35f2aa0ddd86e2325b1bfa8867",
+        "Assets/Tests/PlayMode/TestSceneHelper.cs": "97fdfe13f5f83a5f18c7f2f5cf8b628c04673c80635713712cf509e83c69903c"
+      }
+    }
+  },
+  {
+    "feature": "AICore_TerrainDecisionDataFlow",
+    "path": {
+      "key": "select-observed-threat-and-stun",
+      "title": "プレイヤーを狙う敵とスタン残り時間を観測して標的を選ぶ",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "runtime_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/GameManager.cs",
+          "symbol": "GameManager.CaptureSimulationObservation",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs",
+          "symbol": "AIObservationCoordinator.Capture",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AITargetRelations.cs",
+          "symbol": "AITargetRelations.CopyTo",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs",
+          "symbol": "AIObservationContext.RecordTarget",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs",
+          "symbol": "AIObservationCoordinator.CaptureStunRemaining",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/StatusEffectStore.cs",
+          "symbol": "StatusEffectStore.CopyActiveEffects",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs",
+          "symbol": "AIObservationContext.SetStunRemaining",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs",
+          "symbol": "AIObservationContext.SetProtectedPlayer",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs",
+          "symbol": "AIDecisionSystem.CaptureWorld",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs",
+          "symbol": "AIQueryKernel.SelectTarget",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs",
+          "symbol": "AIQueryKernel.MatchesFilter",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AICompiledMode.cs",
+          "symbol": "AIDecisionResult",
+          "kind": "output"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs",
+          "symbol": "JudgmentLoop.ApplyDecision",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AITargetRelations.cs",
+          "symbol": "AITargetRelations.SetTarget",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/AIObservationContextTests.cs",
+        "Assets/Tests/EditMode/AIDecisionSystemTests.cs",
+        "Assets/Tests/EditMode/AIInfoConverterTests.cs",
+        "Assets/Tests/EditMode/Integration_CompanionAISettingsFlowTests.cs",
+        "Assets/Tests/PlayMode/AIObservationFlowTests.cs"
+      ],
+      "notes": "AIInfoのモードや仲間AI設定の標的フィルターで、候補が登録プレイヤーを狙うこと、スタン残り秒数が固定値を超えることを個別に指定できる。0秒の設定はスタン条件を無効にする。両方指定した場合は同一候補で照合する。中央tickでActorRef世代ごとの標的関係と有効なStunの残り時間を捕捉し、同期とBurstは同じ観測を読む。未観測の攻撃先と確認済みの標的なし、未知の残り時間と確認済み0秒を区別する。護衛対象は選択条件の入力で、判断結果の戦闘標的には選ばれた敵を渡す。行動側のCoolTimeReady／TargetStatusEffectトリガーは変換対象外のため、それを要求する行動は通常ルールや既定行動に採用しない。護衛対象への攻撃人数が変わらず攻撃先だけが入れ替わる場合と、スタン解除の次tickで通常の距離順に戻る場合をUnity 6000.6.8f1で確認した。PlayModeのシスターは残り1.9秒（設定1秒）の攻撃者を選び、効果を解除した次の観測で残り0秒となって近い敵へ切り替わった。距離上限は境界を含み、残り時間は指定秒と等しければ不成立。接近・硬直・予備動作から初撃時刻を求める比較はcombat-approach-route、味方に任せた攻撃の命中・空振り・期限はterrain-aware-action-selectionで追う。",
+      "verification_hashes": {
+        "Assets/MyAsset/Runtime/GameManager.cs": "00f4ee365b5a1a9b71557de0743c9ac45be5d37e889e05ed9ddeab10adacc124",
+        "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs": "79326bca1d4d6a6e9c2738cbce88ae44dbab3b9737a0a7d907546d711f53473c",
+        "Assets/MyAsset/Core/AI/Core/AITargetRelations.cs": "4ce51288ec1aed9c56768ce5504bce875875e9eba5a0dddaa73c745cdac46a4a",
+        "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": "58d4dbf248a9504971b754f818faf2ce70cb47c4d741f9be64491abf76cb0da4",
+        "Assets/MyAsset/Core/Damage/StatusEffectStore.cs": "aee886ffbd568c92f48d92961e91e145a68e81b50950bf0177ca2f46f3a005a9",
+        "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "d30db729c00eb53d196f4eaec5c8e20bc742a7e8c6c083b21b3ef9bf7103dcb6",
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "695dfc0fbed3c6177b55eaff6c30137bb0657bc0d6788cd42d216b96d6e75415",
+        "Assets/MyAsset/Core/AI/Core/AICompiledMode.cs": "151b9de0f5778749cc632ac387e4a17f4246890461875218ed7bf514bc7f6207",
+        "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "cef5eca89cd45931198933fc7c516f239d5faad76b32cb05a99fd92d29649ce1",
+        "Assets/Tests/EditMode/AIObservationContextTests.cs": "24c4c7f4cdd4c50b843b21b2b94b820bc3840ce57279a9e67835c3845f3d0bfa",
+        "Assets/Tests/EditMode/AIDecisionSystemTests.cs": "a535937d61e6f1b8346273bda155ae9a35c5cb42042c3154abce748cb1a5b1b4",
+        "Assets/Tests/EditMode/AIInfoConverterTests.cs": "9cef387dc4438c0b70c8ed050ec31f21b8ba2daab311501cb22f8e3fbbc40199",
+        "Assets/Tests/EditMode/Integration_CompanionAISettingsFlowTests.cs": "ae194fa779a0096d67b7f9fc1d2eb6bd62907715f10ac86118107c1ba818d8da",
+        "Assets/Tests/PlayMode/AIObservationFlowTests.cs": "a997eaae90fc4d027f070f3ff68304143e1198da6146c2ac4981b421d6138f24",
+        "Assets/MyAsset/Core/AI/Core/AITargetSelect.cs": "3a8f5160baf319a8b56743f21dbf36eeede58005e95478e1ae545c7bcf5fcf79",
+        "Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs": "4414caaf6475a6f15b4c52fb96a1aa4ba8bbb2e76bb0a705a1b47ae7804e2959",
+        "Assets/MyAsset/Core/AI/Core/TargetFilter.cs": "43e0412fe114476e0b420855af0574dbf9ca215248a845fc29f32361f2e37a89",
+        "Assets/MyAsset/Core/AI/Core/ConditionEvaluator.Compat.cs": "3c13aca04dfeec5f6ff4ce6d806f3f65bb847a2bcf6ef7950a9425e5d5b3d112",
+        "Assets/MyAsset/Core/AI/Core/TargetSelector.Compat.cs": "402767e0d7562dff967a25c98f4b8c07ca677c86ba47405f7a5549835c1d00c9",
+        "Assets/MyAsset/Core/AI/Core/TargetSelector.cs": "d512ff5611428b31649c8ffb8821987bcac01524e19b72ed58de69f91716bf96",
+        "Assets/MyAsset/Core/ScriptableObjects/AIInfo.cs": "740ac3bf8180c310de9635f1d5bf146461224c6b1693bd5ca2a156a550444d16",
+        "Assets/MyAsset/Runtime/UI/CompanionAISettingsController.Dialogs.TargetFilter.cs": "56989e15d5998bf34fe75407aa0eb851325b66c0be6c0eea018eff9e4a5e0f63",
+        "Assets/MyAsset/Runtime/UI/CompanionAISettingsController.Dialogs.Conditions.cs": "7de439f9e3560eb960649abfb0bd8a5411f73146ff33160fd8d725406a6b39d2"
+      }
     }
   }
 ]

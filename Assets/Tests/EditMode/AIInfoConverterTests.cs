@@ -194,6 +194,42 @@ namespace Game.Tests.EditMode
             Object.DestroyImmediate(info);
         }
 
+        [TestCase(ActType.Wait)]
+        [TestCase(ActType.Attack)]
+        [TestCase(ActType.InteractObject)]
+        public void ConvertModes_UnsupportedTriggersKeepSlotsButCannotBecomeRulesOrDefaults(ActType allowedType)
+        {
+            AIInfo info = ScriptableObject.CreateInstance<AIInfo>();
+            try
+            {
+                info.actDataList = new[] {
+                    new ActData { actName = "Cooldown guard", actType = ActType.Guard, weight = 100,
+                        triggerJudge = new TriggerJudgeData { condition = TriggerConditionType.CoolTimeReady } },
+                    new ActData { actName = "Status attack", actType = ActType.Attack, weight = 90,
+                        triggerJudge = new TriggerJudgeData { condition = TriggerConditionType.TargetStatusEffect },
+                        actJudge = new ActJudgeData { requiredMp = 1f } },
+                    new ActData { actName = "Allowed", actType = allowedType, weight = 1 }
+                };
+                info.modes = new[] {
+                    new CharacterModeData { availableActIndices = new[] { 1, 2, 0 } },
+                    new CharacterModeData { availableActIndices = new[] { 0, 1 } }
+                };
+
+                AIMode[] modes = AIInfoConverter.ConvertModes(info);
+                CollectionAssert.AreEqual(new[] { "Status attack", "Allowed", "Cooldown guard" },
+                    System.Array.ConvertAll(modes[0].actions, action => action.displayName));
+                Assert.AreEqual(1, modes[0].actionRules.Length);
+                Assert.AreEqual(1, modes[0].actionRules[0].actionIndex);
+                Assert.AreEqual(1, modes[0].defaultActionIndex);
+                Assert.AreEqual(2, modes[1].actions.Length);
+                Assert.IsEmpty(modes[1].actionRules);
+                Assert.AreEqual(-1, modes[1].defaultActionIndex);
+                Assert.AreEqual(TriggerConditionType.CoolTimeReady, info.actDataList[0].triggerJudge.condition);
+                Assert.AreEqual(TriggerConditionType.TargetStatusEffect, info.actDataList[1].triggerJudge.condition);
+            }
+            finally { Object.DestroyImmediate(info); }
+        }
+
         [Test]
         public void ConvertModes_ActJudge_MapsStaminaAndHpConditions()
         {

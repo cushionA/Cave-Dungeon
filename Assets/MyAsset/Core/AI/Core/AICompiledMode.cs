@@ -8,6 +8,7 @@ namespace Game.Core
         public int conditionStart;
         public int conditionCount;
         public int actionIndex;
+        public bool interactsWithGimmick;
     }
 
     internal struct AIProgramRanges
@@ -20,6 +21,7 @@ namespace Game.Core
         public int selectCount;
         public int actionCount;
         public int defaultActionIndex;
+        public bool defaultInteractsWithGimmick;
         public bool hasTargetRules;
         public bool hasActionRules;
     }
@@ -28,6 +30,7 @@ namespace Game.Core
     {
         public int targetHash;
         public int actionIndex;
+        public AISceneGimmick gimmick;
         public ActorRef owner;
         public ActorRef target;
         public long observationTick;
@@ -46,9 +49,9 @@ namespace Game.Core
         {
             List<AIRuleRange> flatRules = new List<AIRuleRange>();
             List<AICondition> flatConditions = new List<AICondition>();
-            AppendRules(mode.targetRules, flatRules, flatConditions);
+            AppendRules(mode.targetRules, null, flatRules, flatConditions);
             int targetCount = flatRules.Count;
-            AppendRules(mode.actionRules, flatRules, flatConditions);
+            AppendRules(mode.actionRules, mode.actions, flatRules, flatConditions);
             rules = flatRules.ToArray();
             conditions = flatConditions.ToArray();
             selects = mode.targetSelects == null ? Array.Empty<AITargetSelect>() : (AITargetSelect[])mode.targetSelects.Clone();
@@ -62,12 +65,20 @@ namespace Game.Core
                 selectCount = selects.Length,
                 actionCount = actions.Length,
                 defaultActionIndex = mode.defaultActionIndex,
+                defaultInteractsWithGimmick = IsInteraction(mode.actions, mode.defaultActionIndex),
                 hasTargetRules = mode.targetRules != null && mode.targetSelects != null,
                 hasActionRules = mode.actionRules != null && mode.actions != null
             };
         }
 
-        private static void AppendRules(AIRule[] source, List<AIRuleRange> rules, List<AICondition> conditions)
+        private static bool IsInteraction(ActionSlot[] actions, int index)
+        {
+            return actions != null && index >= 0 && index < actions.Length
+                && actions[index].execType == ActionExecType.Instant && actions[index].paramId == (int)InstantAction.InteractObject;
+        }
+
+        private static void AppendRules(AIRule[] source, ActionSlot[] actions,
+            List<AIRuleRange> rules, List<AICondition> conditions)
         {
             if (source == null)
             {
@@ -80,6 +91,7 @@ namespace Game.Core
                 {
                     conditionStart = conditions.Count,
                     conditionCount = rule.conditions == null ? 0 : rule.conditions.Length,
+                    interactsWithGimmick = IsInteraction(actions, rule.actionIndex),
                     actionIndex = rule.actionIndex
                 });
                 if (rule.conditions != null)

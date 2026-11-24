@@ -254,6 +254,29 @@ namespace Game.Runtime
             distSection.Add(distRow);
             foldout.Add(distSection);
 
+            Toggle targetsPlayer = new Toggle("プレイヤーを狙っている相手");
+            targetsPlayer.value = current.targetsProtectedPlayer;
+            targetsPlayer.RegisterValueChangedCallback(evt =>
+            {
+                current.targetsProtectedPlayer = evt.newValue;
+                onChanged?.Invoke(current);
+                updateSummary();
+            });
+            foldout.Add(targetsPlayer);
+
+            FloatField stunSeconds = new FloatField("スタン残り時間（秒）");
+            stunSeconds.tooltip = "残り時間が設定値を超える相手を選びます。0秒で条件を解除します。";
+            stunSeconds.value = current.stunMustLastBeyondSeconds;
+            stunSeconds.RegisterValueChangedCallback(evt =>
+            {
+                float seconds = float.IsFinite(evt.newValue) ? Mathf.Max(0f, evt.newValue) : 0f;
+                stunSeconds.SetValueWithoutNotify(seconds);
+                current.stunMustLastBeyondSeconds = seconds;
+                onChanged?.Invoke(current);
+                updateSummary();
+            });
+            foldout.Add(stunSeconds);
+
             return foldout;
         }
 
@@ -286,6 +309,16 @@ namespace Game.Runtime
                   .Append(f.distanceRange.y.ToString("0.#"))
                   .Append("m");
             }
+            if (f.targetsProtectedPlayer)
+            {
+                if (sb.Length > 0) sb.Append(", ");
+                sb.Append("プレイヤーを狙っている");
+            }
+            if (f.stunMustLastBeyondSeconds > 0f)
+            {
+                if (sb.Length > 0) sb.Append(", ");
+                sb.Append("スタン残り > ").Append(f.stunMustLastBeyondSeconds).Append("秒");
+            }
             // includeSelf は UI 編集廃止（Companion 特徴で代替）したため、サマリでも表示しない。
             if (sb.Length == 0)
             {
@@ -316,17 +349,6 @@ namespace Game.Runtime
         // Target Select / Target Rule 編集UI (JudgmentLoop 第1層: ターゲット選択)
         // =========================================================================
 
-        private static AITargetSelect CloneTargetSelect(AITargetSelect source)
-        {
-            return new AITargetSelect
-            {
-                sortKey = source.sortKey,
-                elementFilter = source.elementFilter,
-                isDescending = source.isDescending,
-                filter = source.filter,
-            };
-        }
-
         private static string GetSortKeyLabel(TargetSortKey k)
         {
             switch (k)
@@ -354,11 +376,8 @@ namespace Game.Runtime
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
             sb.Append(GetSortKeyLabel(ts.sortKey));
             sb.Append(ts.isDescending ? "↓" : "↑");
-            if (ts.elementFilter != 0)
-            {
-                sb.Append(" 弱点=").Append(ts.elementFilter.ToString());
-            }
-            string filterSummary = FormatFilterSummary(ts.filter);
+            if (ts.continueIfEmpty) { sb.Append("・候補なしで次へ"); }
+            string filterSummary = FormatFilterSummary(ts.EffectiveFilter);
             if (filterSummary != "条件なし（全員が対象）")
             {
                 sb.Append(" / ").Append(filterSummary);
@@ -604,11 +623,11 @@ namespace Game.Runtime
         }
 
         /// <summary>
-        /// AITargetSelect 1件の編集ダイアログ。sortKey / isDescending / elementFilter / TargetFilter を編集。
+        /// AITargetSelect 1件の編集ダイアログ。並び順・対象フィルター・候補が空の場合の扱いを編集。
         /// </summary>
         private void ShowTargetSelectEditDialog(AITargetSelect initial, Action<AITargetSelect> onConfirm)
         {
-            AITargetSelect working = CloneTargetSelect(initial);
+            AITargetSelect working = initial;
 
             VisualElement dialog = BuildModalDialog("ターゲット選定編集", "並び順 + 属性/陣営フィルタで候補を絞り込みます。");
             dialog.AddToClassList("target-select-edit-dialog");
@@ -648,47 +667,18 @@ namespace Game.Runtime
             descToggle.RegisterValueChangedCallback(evt => working.isDescending = evt.newValue);
             sortSection.Add(descToggle);
 
-            // === 弱点属性フィルタ ===
-            VisualElement elemSection = BuildDetailSection("弱点属性フィルタ (候補絞り込み)");
-            scroll.Add(elemSection);
-
-            VisualElement elemFlags = new VisualElement();
-            elemFlags.AddToClassList("condition-row__flags");
-            Element[] elementValuesForSort = s_CachedElementValues;
-            for (int ei = 0; ei < elementValuesForSort.Length; ei++)
-            {
-                Element elem = elementValuesForSort[ei];
-                if ((int)elem == 0)
-                {
-                    continue;
-                }
-                Element captured = elem;
-                Toggle t = new Toggle(GetElementLabel(elem));
-                t.tooltip = "指定属性に弱い候補のみ対象。未指定=属性フィルタなし。";
-                t.value = (working.elementFilter & captured) != 0;
-                t.AddToClassList("condition-row__flag-toggle");
-                t.RegisterValueChangedCallback(evt =>
-                {
-                    if (evt.newValue)
-                    {
-                        working.elementFilter |= captured;
-                    }
-                    else
-                    {
-                        working.elementFilter &= ~captured;
-                    }
-                });
-                elemFlags.Add(t);
-            }
-            elemSection.Add(elemFlags);
+            Toggle continueIfEmpty = new Toggle("候補がいないときは次の選定ルールへ");
+            continueIfEmpty.value = working.continueIfEmpty;
+            continueIfEmpty.RegisterValueChangedCallback(evt => working.continueIfEmpty = evt.newValue);
+            sortSection.Add(continueIfEmpty);
 
             // === 対象キャラクターフィルタ (既存 BuildTargetFilterSection 再利用) ===
             VisualElement filterSection = BuildDetailSection("対象キャラクターフィルタ");
             scroll.Add(filterSection);
 
-            VisualElement filterUi = BuildTargetFilterSection(working.filter, updated =>
+            VisualElement filterUi = BuildTargetFilterSection(working.EffectiveFilter, updated =>
             {
-                working.filter = updated;
+                working.EffectiveFilter = updated;
             });
             filterSection.Add(filterUi);
 

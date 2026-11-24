@@ -58,7 +58,7 @@
 
 ### experiments/
 
-- *エントリなし*
+- [2026-11-24 戦闘中に装置を使うAIの実験](experiments/2026-11-24_ai-terrain-gimmicks.md)
 
 ### migrations/
 

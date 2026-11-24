@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Game.Core;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Game.Runtime
 {
@@ -22,6 +23,7 @@ namespace Game.Runtime
         private ActionCommandKind _aiMovementKind;
         private ActionExecutionSystem _subscribedExecution;
         private readonly List<ActionExecution> _aiExecutions = new List<ActionExecution>();
+        private readonly List<int> _gimmickActors = new List<int>();
 
         public bool IsExecuting => GameManager.Actions != null
             && (GameManager.Actions.Execution.IsGroupActive(_actionGroupId) || GameManager.Actions.IsPrimaryExecuting(_ownerHash));
@@ -141,11 +143,32 @@ namespace Game.Runtime
             }
             if (!Supports(command.kind)) { return Result(ActionDispatchStatus.Unsupported); }
             ActorRef targetRef = default;
-            if (targetHash != 0 && (GameManager.Actors == null || !GameManager.Actors.TryGet(targetHash, out targetRef)))
+            if (targetHash != 0 && (GameManager.Actors == null || !GameManager.Actors.TryGet(targetHash, out targetRef)
+                || !GameManager.IsCharacterValid(targetHash)))
             {
                 return Result(ActionDispatchStatus.InvalidTarget);
             }
             if (targetHash != 0 && GameManager.Data.GetFlags(targetHash).IsVanished) { return Result(ActionDispatchStatus.InvalidTarget); }
+            if (command.kind == ActionCommandKind.InteractObject)
+            {
+                if (command.gimmickOwner.Hash != _ownerHash || !GameManager.Actors.IsCurrent(command.gimmickOwner))
+                {
+                    return Result(ActionDispatchStatus.InvalidOwner);
+                }
+                if (!targetRef.IsValid || targetRef != command.gimmickTarget) { return Result(ActionDispatchStatus.InvalidTarget); }
+                if (!isActiveAndEnabled || GameManager.Data.GetStatusEffects(_ownerHash).BlocksActions
+                    || ActionExecutionSystem.IsActionBlockingReaction(GameManager.Data.GetFlags(_ownerHash).ActState))
+                {
+                    return Result(ActionDispatchStatus.Rejected);
+                }
+                GameManager.Actions.Execution.CopyActive(_ownerHash, _aiExecutions);
+                for (int i = 0; i < _aiExecutions.Count; i++)
+                {
+                    if (_aiExecutions[i].forced || !_aiExecutions[i].canCancel) { return Result(ActionDispatchStatus.Rejected); }
+                }
+                return Result(AISceneGimmickController.TryActivate(command, gameObject.scene.GetPhysicsScene2D(), _gimmickActors)
+                    ? ActionDispatchStatus.Accepted : ActionDispatchStatus.Rejected, targetRef: targetRef);
+            }
             Vector2 direction = FacingDirection();
             long instanceId = 0;
             bool accepted;
@@ -178,8 +201,10 @@ namespace Game.Runtime
             }
             else
             {
-                if (!GameManager.IsCharacterValid(targetHash)) { return Result(ActionDispatchStatus.InvalidTarget); }
-                Vector2 delta = ObservedPosition(targetHash) - ObservedPosition(_ownerHash);
+                if (!GameManager.TryGetTargetOffset(_ownerHash, targetHash, out Vector2 delta))
+                {
+                    return Result(ActionDispatchStatus.InvalidTarget);
+                }
                 if (command.kind == ActionCommandKind.Retreat || command.kind == ActionCommandKind.Flee) { delta = -delta; }
                 accepted = GameManager.Actions.TrySetLocomotion(_ownerHash, delta.normalized,
                     EffectiveMoveSpeed(), out instanceId, command.sustained.duration, targetRef, replaceGroupId);
@@ -195,7 +220,8 @@ namespace Game.Runtime
             return new ActionDispatchResult(status, instanceId, groupId, targetRef);
         }
 
-        public bool Supports(ActionCommandKind kind) => kind >= ActionCommandKind.Attack && kind <= ActionCommandKind.Flee;
+        public bool Supports(ActionCommandKind kind) => kind >= ActionCommandKind.Attack && kind <= ActionCommandKind.Flee
+            || kind == ActionCommandKind.InteractObject;
 
         bool IActionExecutionBackend.Execute(int ownerHash, int targetHash, ActionSlot slot)
         {
@@ -212,6 +238,12 @@ namespace Game.Runtime
                 long replaceGroupId = IsAIExecuting() ? _aiGroupId : 0;
                 ActionDispatchResult result = Dispatch(command, targetHash, replaceGroupId);
                 if (!result.Accepted) { return result; }
+                if (command.kind == ActionCommandKind.InteractObject)
+                {
+                    // The instant event owns no group. Its callbacks may have started another action.
+                    _aiAwaitingCompletion = true;
+                    return result;
+                }
                 _aiAwaitingCompletion = false;
                 _aiGroupId = result.GroupId;
                 TrackAcceptedGroup(result.GroupId);
@@ -252,20 +284,17 @@ namespace Game.Runtime
             return effects.BlocksMovement ? 0f : GameManager.Data.GetMoveParams(_ownerHash).moveSpeed * effects.MoveSpeedMultiplier;
         }
 
-        private static Vector2 ObservedPosition(int actorHash) =>
-            GameManager.ObservedPosition(actorHash, GameManager.Data.GetVitals(actorHash).position);
-
         private void RefreshAIMovement()
         {
             if (_aiMovementInstanceId == 0 || GameManager.Actions == null
                 || !GameManager.Actions.Execution.TryGetInstance(_aiMovementInstanceId, out ActionExecution execution)
                 || !execution.definition.movementUsesInput) { return; }
-            if (!_aiMovementTarget.IsValid || GameManager.Actors == null || !GameManager.Actors.IsCurrent(_aiMovementTarget))
+            if (!_aiMovementTarget.IsValid || GameManager.Actors == null || !GameManager.Actors.IsCurrent(_aiMovementTarget)
+                || !GameManager.TryGetTargetOffset(_ownerHash, _aiMovementTarget.Hash, out Vector2 delta))
             {
                 GameManager.Actions.Execution.CancelGroup(_aiGroupId);
                 return;
             }
-            Vector2 delta = ObservedPosition(_aiMovementTarget.Hash) - ObservedPosition(_ownerHash);
             if (_aiMovementKind == ActionCommandKind.Retreat || _aiMovementKind == ActionCommandKind.Flee) { delta = -delta; }
             GameManager.Actions.Execution.UpdateInput(_aiMovementInstanceId, delta.normalized, EffectiveMoveSpeed());
         }

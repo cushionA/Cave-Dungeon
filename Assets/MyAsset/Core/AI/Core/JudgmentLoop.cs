@@ -39,9 +39,9 @@ namespace Game.Core
         internal int CompiledModeIndex => _compiledModeIndex;
         internal AIObservationContext Observation => _observation;
 
-        public int CurrentTargetHash => _targets != null
-            ? (_targets.TryGetTarget(_owner, out ActorRef target) ? target.Hash : 0)
-            : _currentTargetHash;
+        internal ActorRef CurrentTargetRef => _targets != null && _targets.TryGetTarget(_owner, out ActorRef target)
+            ? target : default;
+        public int CurrentTargetHash => _targets != null ? CurrentTargetRef.Hash : _currentTargetHash;
         public long ObservationTick => _observation != null ? _observation.Tick : 0;
 
         public void ResetActorLifetime()
@@ -158,6 +158,7 @@ namespace Game.Core
                 return;
             }
 
+            int selectedTarget = CurrentTargetHash;
             for (int i = 0; i < _currentMode.targetRules.Length; i++)
             {
                 AIRule rule = _currentMode.targetRules[i];
@@ -166,14 +167,14 @@ namespace Game.Core
                     int selectIndex = rule.actionIndex;
                     if (selectIndex >= 0 && selectIndex < _currentMode.targetSelects.Length)
                     {
-                        int target = _observation != null
-                            ? TargetSelector.SelectTarget(_currentMode.targetSelects[selectIndex], _ownerHash, _observation, candidates)
-                            : TargetSelector.SelectTarget(_currentMode.targetSelects[selectIndex], _ownerHash, candidates, _data, currentTime);
-                        SetTarget(target);
+                        AITargetSelect select = _currentMode.targetSelects[selectIndex];
+                        selectedTarget = TargetSelector.SelectTarget(select, _ownerHash, candidates, _data, currentTime);
+                        if (selectedTarget == 0 && select.continueIfEmpty) { continue; }
                     }
-                    return;
+                    break;
                 }
             }
+            SetTarget(selectedTarget);
         }
 
         /// <summary>
@@ -196,7 +197,7 @@ namespace Game.Core
                     int actionIdx = rule.actionIndex;
                     if (actionIdx >= 0 && actionIdx < _currentMode.actions.Length)
                     {
-                        _executor.Execute(_ownerHash, CurrentTargetHash, _currentMode.actions[actionIdx]);
+                        ExecuteSelectedAction(actionIdx, default);
                     }
                     return;
                 }
@@ -204,7 +205,7 @@ namespace Game.Core
 
             if (_currentMode.defaultActionIndex >= 0 && _currentMode.defaultActionIndex < _currentMode.actions.Length)
             {
-                _executor.Execute(_ownerHash, CurrentTargetHash, _currentMode.actions[_currentMode.defaultActionIndex]);
+                ExecuteSelectedAction(_currentMode.defaultActionIndex, default);
             }
         }
         public void PrepareTick(float deltaTime, List<int> candidates, float currentTime, AIDecisionSystem decisions)
@@ -254,9 +255,7 @@ namespace Game.Core
 
         internal void ApplyDecision(AIDecisionResult result, int revision)
         {
-            if (_disposed || revision != _revision || result.revision != _revision || _observation == null
-                || result.observationTick != _observation.Tick || result.owner != _owner
-                || _targets == null || !_targets.IsCurrent(_owner)) { return; }
+            if (revision != _revision || !IsCurrentDecision(result)) { return; }
             if (result.target.IsValid && (!_targets.IsCurrent(result.target) || !_observation.Contains(result.target)))
             {
                 InvalidateTarget();
@@ -265,8 +264,33 @@ namespace Game.Core
             SetTarget(result.targetHash);
             if (result.actionIndex >= 0)
             {
-                _executor.Execute(_ownerHash, CurrentTargetHash, _compiledMode.actions[result.actionIndex]);
+                ExecuteSelectedAction(result.actionIndex, result);
             }
+        }
+
+        private bool IsCurrentDecision(in AIDecisionResult result) =>
+            !_disposed && result.revision == _revision && _observation != null
+            && result.observationTick == _observation.Tick && result.owner == _owner
+            && _targets != null && _targets.IsCurrent(_owner);
+
+        private void ExecuteSelectedAction(int index, in AIDecisionResult decision)
+        {
+            ActionSlot action = _compiledMode.actions[index];
+            if (ActionCommand.IsGimmickInteraction(action))
+            {
+                if (_executor.ExecuteInteraction(decision) || _executor.IsExecuting) { return; }
+                // The backend may have synchronously changed the actor, target, mode, or tick.
+                if (decision.owner.IsValid && (!IsCurrentDecision(decision) || CurrentTargetHash != decision.targetHash
+                    || (decision.target.IsValid && !_targets.IsCurrent(decision.target))))
+                {
+                    return;
+                }
+                int fallback = _compiledMode.ranges.defaultActionIndex;
+                if (fallback < 0 || fallback >= _compiledMode.actions.Length) { return; }
+                action = _compiledMode.actions[fallback];
+                if (ActionCommand.IsGimmickInteraction(action)) { return; }
+            }
+            _executor.Execute(_ownerHash, CurrentTargetHash, action);
         }
 
         internal void InvalidateDecision() => _revision++;

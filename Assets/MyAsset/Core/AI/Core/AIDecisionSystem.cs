@@ -25,7 +25,8 @@ namespace Game.Core
             public ProgramEntry entry;
             public int revision;
             public int modeIndex;
-            public int targetHash;
+            public ActorRef startingTarget;
+            public readonly int targetHash => startingTarget.Hash;
             public int candidateStart;
             public int candidateCount;
             public bool selectTarget;
@@ -48,6 +49,20 @@ namespace Game.Core
             public int revision;
         }
 
+        private struct GimmickMotion
+        {
+            public bool known;
+            public Vector2 velocity;
+        }
+
+        private struct CandidateTargetFacts
+        {
+            public ActorRef target;
+            public float stunRemaining;
+            public bool targetKnown;
+            public bool stunKnown;
+        }
+
         private struct Ratios
         {
             public float hpPercent;
@@ -63,6 +78,7 @@ namespace Game.Core
         private int _snapshotCount;
         private readonly List<KeyValuePair<(ActorRef owner, ActorRef source), float>> _scoreSamples
             = new List<KeyValuePair<(ActorRef owner, ActorRef source), float>>();
+        private readonly List<(int observerHash, int gimmickId)> _visibleGimmickSamples = new List<(int, int)>();
         private readonly Dictionary<JudgmentLoop, ProgramEntry> _programs = new Dictionary<JudgmentLoop, ProgramEntry>();
         private readonly List<ProgramEntry> _entries = new List<ProgramEntry>();
         private readonly List<PendingDecision> _pending = new List<PendingDecision>();
@@ -72,6 +88,8 @@ namespace Game.Core
         private NativeArray<int> _snapshotHashes;
         private NativeArray<ActorRef> _actorRefs;
         private NativeArray<ActorRef> _lastAttackers;
+        private NativeArray<CandidateTargetFacts> _candidateFacts;
+        private bool _usesCandidateFacts;
         private NativeArray<int> _targetCounts;
         private NativeParallelHashMap<ulong, float> _scores;
         private NativeArray<Vector2> _positions;
@@ -79,6 +97,9 @@ namespace Game.Core
         private NativeArray<int> _hp;
         private NativeArray<CharacterFlags> _flags;
         private NativeArray<AICombatValues> _combat;
+        private NativeParallelHashSet<ulong> _visibleGimmicks;
+        private NativeArray<AISceneGimmick> _gimmicks;
+        private NativeArray<GimmickMotion> _gimmickMotion;
         private NativeArray<AIProgramRanges> _programRanges;
         private NativeArray<AIRuleRange> _rules;
         private NativeArray<AICondition> _conditions;
@@ -98,6 +119,7 @@ namespace Game.Core
             _actors = actors;
             _indices = new NativeParallelHashMap<int, int>(16, Allocator.Persistent);
             _scores = new NativeParallelHashMap<ulong, float>(16, Allocator.Persistent);
+            _visibleGimmicks = new NativeParallelHashSet<ulong>(16, Allocator.Persistent);
         }
 
         public void BeginTick(AIObservationContext observation)
@@ -131,7 +153,7 @@ namespace Game.Core
                 entry = entry,
                 revision = loop.Revision,
                 modeIndex = loop.CompiledModeIndex,
-                targetHash = loop.CurrentTargetHash,
+                startingTarget = loop.CurrentTargetRef,
                 candidateStart = _candidateHashes.Count,
                 candidateCount = candidates == null ? 0 : candidates.Count,
                 selectTarget = selectTarget,
@@ -208,11 +230,18 @@ namespace Game.Core
                 hashes = _snapshotHashes,
                 actors = _actorRefs,
                 lastAttackers = _lastAttackers,
+                candidateFacts = _candidateFacts,
+                protectedPlayer = _observation.ProtectedPlayer,
                 targetCounts = _targetCounts,
                 scores = _scores,
                 scoresAvailable = _observation.DamageScoresAvailable,
                 targetsAvailable = _observation.TargetRelationsAvailable,
                 actorCount = _snapshotCount,
+                gimmicks = _gimmicks,
+                visibleGimmicks = _visibleGimmicks.AsReadOnly(),
+                gimmickMotion = _gimmickMotion,
+                gimmicksAvailable = _observation.GimmicksAvailable,
+                gimmickCount = _observation.GimmickCount,
                 positions = _positions,
                 ratios = _ratios,
                 hp = _hp,
@@ -260,6 +289,8 @@ namespace Game.Core
                     {
                         continue;
                     }
+                    // A callback may have issued a newer target command while the old target is still alive.
+                    if (pending.entry.loop.CurrentTargetRef != pending.startingTarget) { continue; }
                     if (result.target.IsValid && (!_actors.IsCurrent(result.target)
                         || _invalidatedHashes.Contains(result.target.Hash)))
                     {
@@ -309,12 +340,29 @@ namespace Game.Core
             EnsureCapacity(ref _snapshotHashes, count);
             EnsureCapacity(ref _actorRefs, count);
             EnsureCapacity(ref _lastAttackers, count);
+            EnsureCapacity(ref _candidateFacts, _usesCandidateFacts ? count : 0);
             EnsureCapacity(ref _targetCounts, count);
             EnsureCapacity(ref _positions, count);
             EnsureCapacity(ref _ratios, count);
             EnsureCapacity(ref _hp, count);
             EnsureCapacity(ref _flags, count);
             EnsureCapacity(ref _combat, count);
+            EnsureCapacity(ref _gimmicks, _observation.GimmickCount);
+            bool needsMotion = false;
+            for (int i = 0; i < _observation.GimmickCount; i++)
+            {
+                AISceneGimmick gimmick = _observation.GimmickAt(i);
+                _gimmicks[i] = gimmick;
+                needsMotion |= gimmick.effectDelay > 0f;
+            }
+            _observation.CopyVisibleGimmicks(_visibleGimmickSamples);
+            _visibleGimmicks.Clear();
+            if (_visibleGimmicks.Capacity < _visibleGimmickSamples.Count) { _visibleGimmicks.Capacity = _visibleGimmickSamples.Count; }
+            foreach (var pair in _visibleGimmickSamples)
+            {
+                _visibleGimmicks.Add(PairKey(pair.observerHash, pair.gimmickId));
+            }
+            EnsureCapacity(ref _gimmickMotion, needsMotion ? count : 0);
             _indices.Clear();
             if (_indices.Capacity < count) { _indices.Capacity = count; }
             for (int i = 0; i < count; i++)
@@ -324,6 +372,18 @@ namespace Game.Core
                 _indices.Add(hash, i);
                 _snapshotHashes[i] = hash;
                 _actorRefs[i] = actor.actor;
+                if (_usesCandidateFacts)
+                {
+                    CandidateTargetFacts facts = default;
+                    facts.targetKnown = _observation.TryGetTargetOf(actor.actor, out facts.target);
+                    facts.stunKnown = _observation.TryGetStunRemaining(actor.actor, out facts.stunRemaining);
+                    _candidateFacts[i] = facts;
+                }
+                if (needsMotion)
+                {
+                    bool known = _observation.TryGetGimmickVelocity(actor.actor, out Vector2 velocity);
+                    _gimmickMotion[i] = new GimmickMotion { known = known, velocity = velocity };
+                }
                 _observation.TryGetLastAttacker(hash, out ActorRef attacker);
                 _lastAttackers[i] = attacker;
                 _observation.TryGetTargetingCount(hash, out int targetingCount);
@@ -338,7 +398,8 @@ namespace Game.Core
                 _flags[i] = actor.flags;
                 _combat[i] = new AICombatValues
                 {
-                    attack = actor.attackPower, defense = actor.defensePower, weaknesses = actor.weakPoints
+                    attack = actor.attackPower, defense = actor.defensePower, weaknesses = actor.weakPoints,
+                    physicsScene = actor.physicsScene
                 };
             }
             _scores.Clear();
@@ -351,15 +412,16 @@ namespace Game.Core
                     && _indices.TryGetValue(score.Key.source.Hash, out int source)
                     && _actorRefs[owner] == score.Key.owner && _actorRefs[source] == score.Key.source)
                 {
-                    _scores.Add(ScoreKey(owner, source), score.Value);
+                    _scores.Add(PairKey(owner, source), score.Value);
                 }
             }
         }
 
-        private static ulong ScoreKey(int owner, int source) => ((ulong)(uint)owner << 32) | (uint)source;
+        private static ulong PairKey(int first, int second) => ((ulong)(uint)first << 32) | (uint)second;
 
         private void RebuildPrograms()
         {
+            _usesCandidateFacts = false;
             int ruleCount = 0;
             int conditionCount = 0;
             int selectCount = 0;
@@ -404,10 +466,12 @@ namespace Game.Core
                     for (int c = 0; c < mode.conditions.Length; c++)
                     {
                         _conditions[conditionStart + c] = mode.conditions[c];
+                        _usesCandidateFacts |= mode.conditions[c].filter.RequiresObservedTargetFacts;
                     }
                     for (int s = 0; s < mode.selects.Length; s++)
                     {
                         _selects[selectStart + s] = mode.selects[s];
+                        _usesCandidateFacts |= mode.selects[s].filter.RequiresObservedTargetFacts;
                     }
                     ruleStart += mode.rules.Length;
                     conditionStart += mode.conditions.Length;
@@ -474,8 +538,10 @@ namespace Game.Core
                 _disposed = true;
                 _indices.Dispose();
                 _scores.Dispose();
+                _visibleGimmicks.Dispose();
                 DisposeArray(ref _actorRefs);
                 DisposeArray(ref _lastAttackers);
+                DisposeArray(ref _candidateFacts);
                 DisposeArray(ref _targetCounts);
                 DisposeArray(ref _snapshotHashes);
                 DisposeArray(ref _positions);
@@ -483,6 +549,8 @@ namespace Game.Core
                 DisposeArray(ref _hp);
                 DisposeArray(ref _flags);
                 DisposeArray(ref _combat);
+                DisposeArray(ref _gimmicks);
+                DisposeArray(ref _gimmickMotion);
                 DisposeArray(ref _programRanges);
                 DisposeArray(ref _rules);
                 DisposeArray(ref _conditions);
@@ -499,6 +567,7 @@ namespace Game.Core
                 _pending.Clear();
                 _candidateHashes.Clear();
                 _scoreSamples.Clear();
+                _visibleGimmickSamples.Clear();
                 _invalidatedHashes.Clear();
             }
         }
@@ -509,6 +578,8 @@ namespace Game.Core
             public NativeParallelHashMap<ulong, float> scores;
             public NativeArray<ActorRef> actors;
             public NativeArray<ActorRef> lastAttackers;
+            public NativeArray<CandidateTargetFacts> candidateFacts;
+            public ActorRef protectedPlayer;
             public NativeArray<int> targetCounts;
             public NativeArray<int> hashes;
             public NativeArray<Vector2> positions;
@@ -516,6 +587,11 @@ namespace Game.Core
             public NativeArray<int> hp;
             public NativeArray<CharacterFlags> flags;
             public NativeArray<AICombatValues> combat;
+            public NativeArray<AISceneGimmick> gimmicks;
+            public NativeParallelHashSet<ulong>.ReadOnly visibleGimmicks;
+            public NativeArray<GimmickMotion> gimmickMotion;
+            public bool gimmicksAvailable;
+            public int gimmickCount;
             public bool scoresAvailable;
             public bool targetsAvailable;
             public int actorCount;
@@ -537,6 +613,38 @@ namespace Game.Core
                 return found;
             }
 
+            public bool GimmicksAvailable => gimmicksAvailable;
+            public ActorRef ProtectedPlayer => protectedPlayer;
+
+            public bool TryGetTargetOf(ActorRef actor, out ActorRef target)
+            {
+                target = default;
+                if (!TryGetIndex(actor.Hash, out int index) || actors[index] != actor) { return false; }
+                CandidateTargetFacts facts = candidateFacts[index];
+                target = facts.target;
+                return facts.targetKnown;
+            }
+
+            public bool TryGetStunRemaining(ActorRef actor, out float seconds)
+            {
+                seconds = 0f;
+                if (!TryGetIndex(actor.Hash, out int index) || actors[index] != actor) { return false; }
+                CandidateTargetFacts facts = candidateFacts[index];
+                seconds = facts.stunRemaining;
+                return facts.stunKnown;
+            }
+            public int GimmickCount => gimmickCount;
+            public AISceneGimmick GimmickAt(int index) => gimmicks[index];
+            public bool IsGimmickOperationVisible(ActorRef observer, in AISceneGimmick gimmick) =>
+                !gimmick.requiresClearOperation || visibleGimmicks.Contains(PairKey(observer.Hash, gimmick.id));
+            public bool TryGetGimmickVelocity(ActorRef actor, out Vector2 velocity)
+            {
+                velocity = default;
+                if (!TryGetIndex(actor.Hash, out int index) || actors[index] != actor) { return false; }
+                GimmickMotion sample = gimmickMotion[index];
+                velocity = sample.velocity;
+                return sample.known;
+            }
             public int ActorCount => actorCount;
             public int HashAt(int index) => hashes[index];
 
@@ -548,7 +656,7 @@ namespace Game.Core
                 AICombatValues stats = combat[index];
                 actor = new AIActorObservation(actors[index], positions[index], flags[index], hp[index],
                     ratio.hpPercent, ratio.hpFraction, ratio.mpPercent, ratio.staminaPercent, ratio.armorPercent,
-                    stats.attack, stats.defense, stats.weaknesses);
+                    stats.attack, stats.defense, stats.weaknesses, stats.physicsScene);
                 return true;
             }
 
@@ -557,7 +665,7 @@ namespace Game.Core
                 value = 0f;
                 if (!scoresAvailable || !TryGetIndex(owner, out int ownerIndex)
                     || !TryGetIndex(source, out int sourceIndex)) { return false; }
-                scores.TryGetValue(ScoreKey(ownerIndex, sourceIndex), out value);
+                scores.TryGetValue(PairKey(ownerIndex, sourceIndex), out value);
                 return true;
             }
 
@@ -612,8 +720,12 @@ namespace Game.Core
             [ReadOnly] public NativeArray<int> hashes;
             [ReadOnly] public NativeArray<ActorRef> actors;
             [ReadOnly] public NativeArray<ActorRef> lastAttackers;
+            [ReadOnly] public NativeArray<CandidateTargetFacts> candidateFacts;
+            public ActorRef protectedPlayer;
             [ReadOnly] public NativeArray<int> targetCounts;
             [ReadOnly] public NativeParallelHashMap<ulong, float> scores;
+            public bool gimmicksAvailable;
+            public int gimmickCount;
             public bool scoresAvailable;
             public bool targetsAvailable;
             public int actorCount;
@@ -622,6 +734,9 @@ namespace Game.Core
             [ReadOnly] public NativeArray<int> hp;
             [ReadOnly] public NativeArray<CharacterFlags> flags;
             [ReadOnly] public NativeArray<AICombatValues> combat;
+            [ReadOnly] public NativeArray<AISceneGimmick> gimmicks;
+            [ReadOnly] public NativeParallelHashSet<ulong>.ReadOnly visibleGimmicks;
+            [ReadOnly] public NativeArray<GimmickMotion> gimmickMotion;
             [ReadOnly] public NativeArray<AIProgramRanges> programs;
             [ReadOnly] public NativeArray<AIRuleRange> rules;
             [ReadOnly] public NativeArray<AICondition> conditions;
@@ -637,8 +752,11 @@ namespace Game.Core
                 {
                     indices = indices, positions = positions, ratios = ratios, hp = hp,
                     scores = scores, actors = actors, lastAttackers = lastAttackers, hashes = hashes,
+                    candidateFacts = candidateFacts, protectedPlayer = protectedPlayer,
                     targetCounts = targetCounts, scoresAvailable = scoresAvailable,
                     targetsAvailable = targetsAvailable, actorCount = actorCount,
+                    gimmicks = gimmicks, gimmickMotion = gimmickMotion, visibleGimmicks = visibleGimmicks,
+                    gimmickCount = gimmickCount, gimmicksAvailable = gimmicksAvailable,
                     flags = flags, combat = combat, ownerHash = request.ownerHash,
                     ownerIndex = request.ownerIndex, targetHash = request.targetHash, targetIndex = request.targetIndex
                 };

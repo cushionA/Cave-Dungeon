@@ -103,16 +103,18 @@ namespace Game.Core
             for (int i = 0; i < validOriginalIndices.Count; i++)
             {
                 ActData act = actDataList[validOriginalIndices[i]];
-                List<AICondition> conditions = BuildActConditions(act);
+                if (!TryBuildActConditions(act, out AICondition[] conditions)) { continue; }
                 AIRule rule = new AIRule
                 {
-                    conditions = conditions.Count > 0 ? conditions.ToArray() : new AICondition[0],
+                    conditions = conditions,
                     actionIndex = i,
                     probability = (byte)Mathf.Clamp(Mathf.RoundToInt(act.weight), 0, 255),
                 };
                 actionRules.Add(rule);
             }
 
+            // Choose the default from executable slots in authoring order.
+            int defaultIdx = FindDefaultActionIndex(actions, actionRules);
             // Sort by weight descending (higher priority first)
             actionRules.Sort((a, b) => b.probability.CompareTo(a.probability));
 
@@ -135,19 +137,25 @@ namespace Game.Core
                         includeSelf = false,
                     },
                 };
-                targetSelects.Add(nearestEnemy);
-
                 AIRule targetRule = new AIRule
                 {
                     conditions = new AICondition[0], // Always evaluate
                     actionIndex = 0,
                     probability = 100,
                 };
+                if (modeData.targetsProtectedPlayer || modeData.stunMustLastBeyondSeconds > 0f)
+                {
+                    AITargetSelect priority = nearestEnemy;
+                    priority.filter.targetsProtectedPlayer = modeData.targetsProtectedPlayer;
+                    priority.filter.stunMustLastBeyondSeconds = modeData.stunMustLastBeyondSeconds;
+                    priority.continueIfEmpty = true;
+                    targetSelects.Add(priority);
+                    targetRules.Add(targetRule);
+                }
+                targetRule.actionIndex = targetSelects.Count;
+                targetSelects.Add(nearestEnemy);
                 targetRules.Add(targetRule);
             }
-
-            // Default action: find Wait type or lowest weight action
-            int defaultIdx = FindDefaultActionIndex(actions);
 
             return new AIMode
             {
@@ -198,6 +206,7 @@ namespace Game.Core
                 case ActType.Flee:        return ActionExecType.Sustained;
                 case ActType.Move:        return ActionExecType.Sustained;
                 case ActType.FeintCancel: return ActionExecType.Instant;
+                case ActType.InteractObject: return ActionExecType.Instant;
                 default:                  return ActionExecType.Broadcast;
             }
         }
@@ -213,23 +222,22 @@ namespace Game.Core
                 case ActType.Move: return (int)SustainedAction.MoveToTarget;
                 case ActType.Flee: return (int)SustainedAction.Flee;
                 case ActType.Dodge: return (int)InstantAction.Dodge;
+                case ActType.InteractObject: return (int)InstantAction.InteractObject;
                 default: return -1;
             }
         }
 
-        private static List<AICondition> BuildActConditions(ActData act)
+        private static bool TryBuildActConditions(ActData act, out AICondition[] result)
         {
-            List<AICondition> conditions = new List<AICondition>();
-
-            // Convert TriggerJudge
-            if (act.triggerJudge.condition != TriggerConditionType.Always)
+            AICondition trigger = ConvertTriggerJudge(act.triggerJudge);
+            if (act.triggerJudge.condition != TriggerConditionType.Always && trigger.conditionType == AIConditionType.None)
             {
-                AICondition triggerCond = ConvertTriggerJudge(act.triggerJudge);
-                if (triggerCond.conditionType != AIConditionType.None)
-                {
-                    conditions.Add(triggerCond);
-                }
+                result = null;
+                return false;
             }
+
+            List<AICondition> conditions = new List<AICondition>();
+            if (trigger.conditionType != AIConditionType.None) { conditions.Add(trigger); }
 
             // Convert ActJudge: stamina requirement
             if (act.actJudge.requiredStamina > 0f)
@@ -275,7 +283,8 @@ namespace Game.Core
                 });
             }
 
-            return conditions;
+            result = conditions.ToArray();
+            return true;
         }
 
         private static AICondition ConvertTriggerJudge(TriggerJudgeData trigger)
@@ -398,22 +407,24 @@ namespace Game.Core
             }
         }
 
-        private static int FindDefaultActionIndex(List<ActionSlot> actions)
+        private static int FindDefaultActionIndex(List<ActionSlot> actions, List<AIRule> executableRules)
         {
-            // Prefer Wait-type (Sustained with no paramId) as default
-            int lowestWeightIdx = -1;
-            for (int i = 0; i < actions.Count; i++)
+            int firstOrdinaryAction = -1;
+            foreach (AIRule rule in executableRules)
             {
-                if (actions[i].execType == ActionExecType.Sustained)
+                int index = rule.actionIndex;
+                if (actions[index].execType == ActionExecType.Sustained)
                 {
-                    return i;
+                    return index;
                 }
-                if (lowestWeightIdx < 0)
+                if (firstOrdinaryAction < 0 && !ActionCommand.IsGimmickInteraction(actions[index]))
                 {
-                    lowestWeightIdx = i;
+                    firstOrdinaryAction = index;
                 }
             }
-            return lowestWeightIdx >= 0 ? lowestWeightIdx : (actions.Count > 0 ? 0 : -1);
+            if (firstOrdinaryAction >= 0) { return firstOrdinaryAction; }
+            // A mode containing only interactions can still select one when a usable prop is observed.
+            return executableRules.Count > 0 ? executableRules[0].actionIndex : -1;
         }
     }
 }

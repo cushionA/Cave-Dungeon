@@ -162,26 +162,35 @@ PRレビューや実装中に発生した「今すぐではないが後で対応
   - **仕様**: キャラ数・候補数・ルール数を変え、同じ観測と候補での結果一致と、観測生成、Nativeコピー、Job実行、待機、結果反映、GCを計測する。実測に応じて候補共有や近傍検索、同期実行との使い分けを検討する。64バイト固定paddingは追加しない。
   - **対象ファイル**: `Assets/Tests/EditMode/Performance_BaselineBenchmarks.cs` / `Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs`
 
-- [ ] 🟡✓ **キャラAIの判断データフローと地形行動を統合** — `AICore_TerrainDecisionDataFlow`
-  - **背景**: DF-10の共通観測を使いながら、行動側には座標の再取得が残り、戦闘接近の判断から実行へ目的地点や経路が渡っていない。
-  - **仕様**: ① 観測収集・Nativeコピー・判定・地形照会の内訳を計測する。② 戦闘接近を先に接続し、確定した標的に対する地点・到達時間・射線・経路を渡して、遮蔽物を迂回する。③ 特殊移動リンクを追加し、能力に応じた溝越えと橋への迂回、着地の再確認を行う。④ 地形に応じて行動を変えるモードでは、標的選択・候補照会・行動判定を同じ観測でつなぐ。行動ルールには型付きの観測値を渡し、実行には選んだ行動・標的・候補・経路を渡す。
-  - **対象ファイル**: `Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs` / `Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs` / `Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs` / `Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs` / `Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs`
-  - **計画経路**: `designs/call-paths.json` の `AICore_TerrainDecisionDataFlow`。既存の規模別性能計測とDF-10の地形入力に接続する。
+上記の中央ループ回帰と100体ベンチマークの実行記録は`%TEMP%/sistergame-job-validation/regression-prep-20261106/`配下の`20261105-173922Z-FullEdit/`・`20261105-174840Z-FullPlay/`の`TestResults.xml`と`baseline-*.json`、FullEdit側の`native-ai-benchmark-summary.json`・`PerformanceTestResults.json`、run間の`edit-to-final-play-provenance.json`。
 
-初期化済みの別環境で、この機能が未登録なら以下を実行する。
+- [ ] 🟡✓ **キャラAIの判断データフローと地形行動を統合** — `AICore_TerrainDecisionDataFlow`
+  - **背景**: 戦闘移動と通常追従は、自己と相手の座標を同じ観測から取得する。戦闘接近では目的地点と経路を判断から実行へ渡す必要がある。
+  - **仕様**: ① 観測収集・Nativeコピー・判定・地形照会の内訳を計測する。② 戦闘接近を先に接続し、確定した標的に対する地点・到達時間・射線・経路を渡して、遮蔽物を迂回する。③ 特殊移動リンクを追加し、能力に応じた溝越えと橋への迂回、着地の再確認を行う。④ 地形に応じて行動を変えるモードでは、標的選択・候補照会・行動判定を同じ観測でつなぐ。行動ルールには型付きの観測値を渡し、実行には選んだ行動・標的・候補・経路を渡す。
+  - **検証済みのギミック利用**: 敵の `AIInfo` から、そのtickで選んだ標的に届く使い切りスイッチを起動できる。操作点の遮蔽、落下までの敵と味方の移動、競合や再配置を確認した。装置を選んだ後に味方が入れば発動を見送る。シスターはプレイヤーが罠を出るまでガードし、敵だけが残ったtickに1回起動する。[Unityの実験結果と再現手順](reports/experiments/2026-11-24_ai-terrain-gimmicks.md)
+  - **残るギミック利用**: 離れた操作地点までの経路、接触板への誘導、爆発物への攻撃、複数のスイッチが変える地形を扱う。効果地点と操作地点を区別し、現在の行動硬直と移動を含めて間に合うか判断する。
+  - **複数tickの判断**: 護衛への切替時点（踏切前・空中）、盾持ちの注意が味方へ向く間の側面移動、罠での待機・断念、目撃・足音による探索と護衛復帰を追う。継続中の意図・中断条件・期限、情報源と観測tick、護衛対象・脅威・移動先・照準点を `terrain-aware-action-selection` の確認条件に含める。
+  - **標的の選択**: 同じtickで、登録プレイヤーを狙う敵と、スタン残り時間がモードの指定秒を超える敵を判定できる。両条件を指定したときは同じ候補に適用する。プレイヤーを守る判断でも、戦闘標的には選んだ敵を渡す。
+  - **初撃の見込みと味方への委任**: 接近・硬直・予備動作を含めた初撃時刻を候補ごとに計算し、スタン解除に間に合うかを比べる。護衛への妨害依頼では、担当した味方の行動ID・期限・命中や空振りの結果をもとに、自分が引き取る時点を決める。
+  - **機能DB**: `designs/call-paths.json` の同機能に7経路を登録。スイッチ操作は `activate-observed-gimmick`、護衛とスタンによる標的選択は `select-observed-threat-and-stun` で追跡する。`use-scene-gimmick` と `terrain-aware-action-selection` では接続済みの範囲と次の確認条件を記録する。`profile-and-share-observation` は座標の共通化を反映し、規模別計測を継続する。戦闘接近と特殊移動の2経路は計画段階。計測の基準は `AICore_BurstDecisionPipeline/snapshot-job-apply`。
+
+初期化済みの機能DBに親機能がない場合は、一度だけ登録する。
 
 ```powershell
 python tools/feature-db.py add AICore_TerrainDecisionDataFlow --category system --section section-2
-$terrainPaths = Get-Content -LiteralPath 'designs/call-paths.json' -Raw -Encoding UTF8 |
-    ConvertFrom-Json | Where-Object feature -eq 'AICore_TerrainDecisionDataFlow'
+```
+
+初回登録時と更新時は、以下でこの機能の経路を取り込む。旧版を登録済みのDBでも、同じキーを更新して追加分を取り込める。
+
+```powershell
+$manifest = Get-Content -LiteralPath 'designs/call-paths.json' -Raw -Encoding UTF8 | ConvertFrom-Json
+$terrainPaths = @($manifest | Where-Object feature -eq 'AICore_TerrainDecisionDataFlow')
 $terrainImport = Join-Path ([System.IO.Path]::GetTempPath()) ([System.Guid]::NewGuid().ToString() + '.json')
 $terrainJson = ConvertTo-Json -InputObject @($terrainPaths) -Depth 12
 [System.IO.File]::WriteAllText($terrainImport, $terrainJson, [System.Text.UTF8Encoding]::new($false))
 python tools/feature-db.py import-call-paths --file $terrainImport
 Remove-Item -LiteralPath $terrainImport
 ```
-
-実行証拠は`%TEMP%/sistergame-job-validation/regression-prep-20261106/`配下の`20261105-173922Z-FullEdit/`・`20261105-174840Z-FullPlay/`の`TestResults.xml`と`baseline-*.json`、FullEdit側の`native-ai-benchmark-summary.json`・`PerformanceTestResults.json`、run間の`edit-to-final-play-provenance.json`。
 
 個体別知覚・地形/環境物/弾接近・AIイベント履歴、解放キー移行、charge設定、表示資源解放/再読込、重量/持ち方、HP/MPバリアは既存のDFタスクと監査残件を継続し、重複登録しない。
 

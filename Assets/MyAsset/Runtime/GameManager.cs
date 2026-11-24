@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Game.Core;
 using Unity.Profiling;
 using CharacterInfo = Game.Core.CharacterInfo;
@@ -122,7 +123,7 @@ namespace Game.Runtime
             _core = new GameManagerCore();
             _core.Initialize(k_InitialContainerCapacity);
             _actions = new GameActionRuntime(_core.Data, _core.Events, _core.Actions);
-            _observations = new AIObservationCoordinator(_core.Data, _core.Actors, _core.Events);
+            _observations = new AIObservationCoordinator(_core.Data, _core.Actors, _core.Events, ActorPhysicsScene, _core.StatusEffects.Store);
             _statusEffectPresentation = new StatusEffectPresentationController(_core.Data, _core.StatusEffects.Store, _statusEffectCatalog);
             _canApplyAIDecision = CanApplyAIDecision;
             _loop = new GameLoop(this, _actions, _statusEffectPresentation);
@@ -184,7 +185,27 @@ namespace Game.Runtime
             }
         }
 
-        void ISimulationTickWorld.CaptureSimulationObservation(long tick, float currentTime) => _observations.Capture(tick, currentTime);
+        private PhysicsScene2D ActorPhysicsScene(int hash) => PhysicsSceneOf(_core.Data.GetManaged(hash));
+
+        internal static PhysicsScene2D PhysicsSceneOf(ManagedCharacter character) =>
+            character != null ? character.gameObject.scene.GetPhysicsScene2D() : Physics2D.defaultPhysicsScene;
+
+        void ISimulationTickWorld.CaptureSimulationObservation(long tick, float currentTime)
+        {
+            _observations.Capture(tick, currentTime);
+            AIObservationContext observation = _observations.Observation;
+            if (_core.Actors.TryGet(CharacterRegistry.PlayerHash, out ActorRef player)) { observation.SetProtectedPlayer(player); }
+            if (!AISceneGimmickController.Capture(observation)) { return; }
+            for (int i = 0; i < observation.ActorHashes.Count; i++)
+            {
+                int hash = observation.ActorHashes[i];
+                if (_core.Data.GetManaged(hash) is BaseCharacter character && character.PhysicsBackend != null
+                    && _core.Actors.TryGet(hash, out ActorRef actor))
+                {
+                    observation.SetGimmickVelocity(actor, character.PhysicsVelocity);
+                }
+            }
+        }
 
         void ISimulationTickWorld.SimulateCharacters(float deltaTime, float currentTime)
         {
@@ -248,11 +269,40 @@ namespace Game.Runtime
                 && observation.Contains(actor);
         }
 
-        public static Vector2 ObservedPosition(int hash, Vector2 fallback)
+        private static bool TryGetCurrentObservedActor(AIObservationContext observation, int hash, out AIActorObservation actor)
+        {
+            actor = default;
+            return observation != null && observation.TryGetActor(hash, out actor) && Actors.IsCurrent(actor.actor);
+        }
+
+        public static Vector2 ObservedPosition(int hash, Vector2 fallback) =>
+            TryGetCurrentObservedActor(Observation, hash, out AIActorObservation actor) ? actor.position : fallback;
+
+        internal static bool TryGetObservedPair(int ownerHash, int targetHash,
+            out AIActorObservation owner, out AIActorObservation target)
         {
             AIObservationContext observation = Observation;
-            return observation != null && observation.TryGetActor(hash, out AIActorObservation actor)
-                ? actor.position : fallback;
+            target = default;
+            return TryGetCurrentObservedActor(observation, ownerHash, out owner)
+                && TryGetCurrentObservedActor(observation, targetHash, out target);
+        }
+
+        internal static bool TryGetTargetOffset(int ownerHash, int targetHash, out Vector2 offset)
+        {
+            offset = default;
+            if (TryGetObservedPair(ownerHash, targetHash, out AIActorObservation owner, out AIActorObservation target))
+            {
+                if (owner.physicsScene != target.physicsScene) { return false; }
+                offset = target.position - owner.position;
+                return true;
+            }
+            // A partial snapshot cannot supply a relative position. Use both current positions together.
+            SoACharaDataDic data = Data;
+            if (data == null || !data.TryGetVitals(ownerHash, out CharacterVitals ownerVitals)
+                || !data.TryGetVitals(targetHash, out CharacterVitals targetVitals)
+                || Instance.ActorPhysicsScene(ownerHash) != Instance.ActorPhysicsScene(targetHash)) { return false; }
+            offset = targetVitals.position - ownerVitals.position;
+            return true;
         }
 
         /// <summary>

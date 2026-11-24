@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using Game.Core;
 using Game.Runtime;
@@ -10,6 +11,8 @@ namespace Game.Tests.PlayMode
     /// </summary>
     public static class TestSceneHelper
     {
+        private static readonly List<GameObject> s_Grounds = new List<GameObject>();
+
         /// <summary>
         /// テスト用GameManagerを生成する。
         /// </summary>
@@ -36,6 +39,7 @@ namespace Game.Tests.PlayMode
             BoxCollider2D col = go.AddComponent<BoxCollider2D>();
             col.size = new Vector2(width, 2f);
             go.transform.position = new Vector3(0, -1f, 0);
+            s_Grounds.Add(go);
             return go;
         }
 
@@ -145,6 +149,11 @@ namespace Game.Tests.PlayMode
         public static void Cleanup()
         {
             CharacterRegistry.Clear();
+            foreach (GameObject ground in s_Grounds)
+            {
+                if (ground != null) { Object.Destroy(ground); }
+            }
+            s_Grounds.Clear();
 
             if (GameManager.Instance != null)
             {

@@ -113,6 +113,58 @@ namespace Game.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator AuthoredCompanion_PrefersStunnedAttackerOfPlayerUntilNextObservationLosesStun()
+        {
+            var decoy = CreateActor(CharacterBelong.Enemy, CharacterFeature.Minion);
+            var info = TestSceneHelper.CreateTestCharacterInfo(CharacterBelong.Ally, CharacterFeature.Companion);
+            _created.Add(info);
+            var ai = ScriptableObject.CreateInstance<AIInfo>();
+            _created.Add(ai);
+            ai.actDataList = new[] { new ActData { actType = ActType.Wait, weight = 10f } };
+            ai.modes = new[]
+            {
+                new CharacterModeData { mode = CharacterMode.Combat, detectionRange = 20f,
+                    availableActIndices = new[] { 0 }, targetsProtectedPlayer = true, stunMustLastBeyondSeconds = 1f }
+            };
+            var go = new GameObject("GuardingCompanion");
+            _created.Add(go);
+            go.AddComponent<Rigidbody2D>().gravityScale = 0f;
+            go.AddComponent<BoxCollider2D>();
+            go.AddComponent<ActionExecutorController>();
+            var sister = go.AddComponent<CompanionCharacter>();
+            sister.SetCharacterInfoForTest(info);
+            sister.SetAIInfo(ai);
+            yield return null;
+            sister.Rigidbody.simulated = false;
+            decoy.Rigidbody.simulated = false;
+            _owner.SetPhysicsPosition(Vector2.zero);
+            sister.SetPhysicsPosition(Vector2.left);
+            decoy.SetPhysicsPosition(Vector2.right);
+            _target.SetPhysicsPosition(new Vector2(7f, 0f));
+            CharacterRegistry.RegisterEnemy(decoy.ObjectHash);
+            CharacterRegistry.RegisterEnemy(_target.ObjectHash);
+            Assert.IsTrue(GameManager.Actors.TryGet(_owner.ObjectHash, out ActorRef player));
+            Assert.IsTrue(GameManager.Actors.TryGet(_target.ObjectHash, out ActorRef attacker));
+            Assert.IsTrue(GameManager.TargetRelations.SetTarget(attacker, player));
+            Assert.IsTrue(GameManager.StatusEffects.Apply(attacker.Hash,
+                new StatusEffectInfo { effect = StatusEffectId.Stun, duration = 2.5f }));
+            GameManager.Instance.SimulationTick(0.6f, 1f);
+
+            Assert.AreEqual(player, GameManager.Observation.ProtectedPlayer);
+            Assert.AreEqual(attacker.Hash, sister.AIController.JudgmentLoop.CurrentTargetHash);
+            Assert.IsTrue(GameManager.StatusEffects.Remove(attacker.Hash, StatusEffectId.Stun));
+            Assert.IsTrue(GameManager.Observation.TryGetStunRemaining(attacker, out float frozen));
+            Assert.AreEqual(1.9f, frozen, 0.001f);
+
+            GameManager.Instance.SimulationTick(0.6f, 1.6f);
+            Assert.IsTrue(GameManager.Observation.TryGetTargetOf(attacker, out ActorRef stillTargeted));
+            Assert.AreEqual(player, stillTargeted);
+            Assert.IsTrue(GameManager.Observation.TryGetStunRemaining(attacker, out float expired));
+            Assert.AreEqual(0f, expired);
+            Assert.AreEqual(decoy.ObjectHash, sister.AIController.JudgmentLoop.CurrentTargetHash);
+        }
+
+        [UnityTest]
         public IEnumerator Observation_ReusedActorCannotBindAnOldBrainUntilItsLifetimeIsReset()
         {
             using EnemyController controller = new EnemyController(_owner.ObjectHash, GameManager.Data, GameManager.Events);
