@@ -16,6 +16,7 @@ namespace Game.Runtime
 
         private GroundMovementLogic _movementLogic;
         private PlayerInputHandler _inputHandler;
+        public PlayerInputHandler InputHandler => _inputHandler;
         private ActionExecutorController _actionExecutor;
         private CharacterCollisionController _collisionController;
         private SpriteRenderer _spriteRenderer;
@@ -220,6 +221,7 @@ namespace Game.Runtime
 
         private void OnDisable()
         {
+            ForgetFieldOrders();
             ResetPlayerState();
             StopObservingExecution();
         }

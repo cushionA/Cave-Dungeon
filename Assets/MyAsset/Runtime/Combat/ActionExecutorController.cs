@@ -142,6 +142,12 @@ namespace Game.Runtime
                 return Result(ActionDispatchStatus.InvalidOwner);
             }
             if (!Supports(command.kind)) { return Result(ActionDispatchStatus.Unsupported); }
+            if ((command.kind == ActionCommandKind.MoveToTarget || command.kind == ActionCommandKind.Follow
+                || command.kind == ActionCommandKind.Retreat || command.kind == ActionCommandKind.Flee)
+                && GameManager.Data.GetManaged(_ownerHash) is BaseCharacter owner && owner.HoldsFieldPosition)
+            {
+                return Result(ActionDispatchStatus.Rejected);
+            }
             ActorRef targetRef = default;
             if (targetHash != 0 && (GameManager.Actors == null || !GameManager.Actors.TryGet(targetHash, out targetRef)
                 || !GameManager.IsCharacterValid(targetHash)))

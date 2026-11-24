@@ -5642,22 +5642,22 @@
       ],
       "notes": "Unity 6000.6.8f1の最終回帰でSceneGimmickDecisionTests（EditMode 18件）、SceneGimmickCombatTests（PlayMode 19件）がすべて成功。敵のAIInfoから中央tickで選択した敵に届く装置を操作し、OnActivatedで扉のColliderを無効にした。同期とBurstは同じ観測tick・ActorRef・装置IDと世代を使い、同距離では登録順を逆にしても同じ装置を選ぶ。ObjectNearbyは物理ワールド、操作圏、操作者ごとの遮蔽を反映し、未観測と既知の0件を区別する。遅延があるときは等速で着弾時の敵位置と味方の移動区間を判定する。実行直前に世代・使用可否・遮蔽・巻き込み・行動制限を再検査し、競合する二者は1回だけ起動する。シスターがプレイヤーの退出までガードし、敵だけが残ってから1回発動する4tickをPlayModeで確認した。型付き要求と拒否時の通常行動はEditModeで確認した。再現手順はdocs/reports/experiments/2026-11-24_ai-terrain-gimmicks.md。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/GameManager.cs": "00f4ee365b5a1a9b71557de0743c9ac45be5d37e889e05ed9ddeab10adacc124",
+        "Assets/MyAsset/Runtime/GameManager.cs": "f9cd586ad7adb02f937db5f577fc7a6494e074eafa309c6cf939c85253f1800e",
         "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs": "79326bca1d4d6a6e9c2738cbce88ae44dbab3b9737a0a7d907546d711f53473c",
         "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs": "973c28c55f9fc4da9291ee1b73ca7bbcd1bbe64529a9736e124d97b662234f16",
         "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": "58d4dbf248a9504971b754f818faf2ce70cb47c4d741f9be64491abf76cb0da4",
         "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "d30db729c00eb53d196f4eaec5c8e20bc742a7e8c6c083b21b3ef9bf7103dcb6",
         "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "695dfc0fbed3c6177b55eaff6c30137bb0657bc0d6788cd42d216b96d6e75415",
         "Assets/MyAsset/Core/AI/Core/AISceneGimmick.cs": "a8f61d0031be38b70ace41d1c6e5f7748f737038f3dd1aaecb31d71891fb6109",
-        "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "cef5eca89cd45931198933fc7c516f239d5faad76b32cb05a99fd92d29649ce1",
-        "Assets/MyAsset/Core/AI/Core/ActionExecutor.cs": "bb5910c6a6b52127cf27f47e1e2025e17f671e1f3c52838de3ad1229119215e7",
-        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "f160e44a70a7c5904cd0c7c2b64c0ac22d50e997e0ff0c78ba9bac77430688ab",
+        "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "b9f67f092f18e056a7c8cef64d7503a2b3b9099a6813cb26aa78d760dc523f59",
+        "Assets/MyAsset/Core/AI/Core/ActionExecutor.cs": "8a1b19a6c4f8588f693b4ef9a4cc2e7bb01203304e2a6a2f376355bf99540e06",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "7dad32330d9ad497f3428c18d8d9931e75200ca689f557fd5fba2cf1a8ff10ff",
         "Assets/Tests/EditMode/ActionAuthoringCommandTests.cs": "04218e0c063ce76af7de510ac50cad5943db6693088dbeb7a1b16a5115f94a7f",
         "Assets/Tests/EditMode/SceneGimmickDecisionTests.cs": "0230659b50b96453dc19d0298891b64cb0d3eb8a0c296b2619f241741322389a",
         "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs": "c55b10186a0d213b5230cf040b5a0d134e18d77d495751bcb8c56b80b1ff9367",
         "Assets/MyAsset/Core/AI/Core/AICompiledMode.cs": "151b9de0f5778749cc632ac387e4a17f4246890461875218ed7bf514bc7f6207",
-        "Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs": "4414caaf6475a6f15b4c52fb96a1aa4ba8bbb2e76bb0a705a1b47ae7804e2959",
-        "Assets/MyAsset/Core/ScriptableObjects/AIInfo.cs": "740ac3bf8180c310de9635f1d5bf146461224c6b1693bd5ca2a156a550444d16",
+        "Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs": "95b611a5bf7e329d2db290700863fcd5385e067a2e7e967ece046ec1faf6c1bb",
+        "Assets/MyAsset/Core/ScriptableObjects/AIInfo.cs": "d71ec91bd583f69425085ad1d5d0f875bb55a633e816b2488804576db4933bdc",
         "Assets/MyAsset/Core/Actions/ActionCommand.cs": "c0f900acb94d94aa148ed3cd0c055b14ee078a4a53f5f9acdad5609ecd6b1003",
         "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "46b21b0772af68046727c8d6bb2da47db82dcb35f2aa0ddd86e2325b1bfa8867",
         "Assets/Tests/PlayMode/TestSceneHelper.cs": "97fdfe13f5f83a5f18c7f2f5cf8b628c04673c80635713712cf509e83c69903c"
@@ -5753,7 +5753,7 @@
       ],
       "notes": "AIInfoのモードや仲間AI設定の標的フィルターで、候補が登録プレイヤーを狙うこと、スタン残り秒数が固定値を超えることを個別に指定できる。0秒の設定はスタン条件を無効にする。両方指定した場合は同一候補で照合する。中央tickでActorRef世代ごとの標的関係と有効なStunの残り時間を捕捉し、同期とBurstは同じ観測を読む。未観測の攻撃先と確認済みの標的なし、未知の残り時間と確認済み0秒を区別する。護衛対象は選択条件の入力で、判断結果の戦闘標的には選ばれた敵を渡す。行動側のCoolTimeReady／TargetStatusEffectトリガーは変換対象外のため、それを要求する行動は通常ルールや既定行動に採用しない。護衛対象への攻撃人数が変わらず攻撃先だけが入れ替わる場合と、スタン解除の次tickで通常の距離順に戻る場合をUnity 6000.6.8f1で確認した。PlayModeのシスターは残り1.9秒（設定1秒）の攻撃者を選び、効果を解除した次の観測で残り0秒となって近い敵へ切り替わった。距離上限は境界を含み、残り時間は指定秒と等しければ不成立。接近・硬直・予備動作から初撃時刻を求める比較はcombat-approach-route、味方に任せた攻撃の命中・空振り・期限はterrain-aware-action-selectionで追う。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/GameManager.cs": "00f4ee365b5a1a9b71557de0743c9ac45be5d37e889e05ed9ddeab10adacc124",
+        "Assets/MyAsset/Runtime/GameManager.cs": "f9cd586ad7adb02f937db5f577fc7a6494e074eafa309c6cf939c85253f1800e",
         "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs": "79326bca1d4d6a6e9c2738cbce88ae44dbab3b9737a0a7d907546d711f53473c",
         "Assets/MyAsset/Core/AI/Core/AITargetRelations.cs": "4ce51288ec1aed9c56768ce5504bce875875e9eba5a0dddaa73c745cdac46a4a",
         "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": "58d4dbf248a9504971b754f818faf2ce70cb47c4d741f9be64491abf76cb0da4",
@@ -5761,22 +5761,487 @@
         "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "d30db729c00eb53d196f4eaec5c8e20bc742a7e8c6c083b21b3ef9bf7103dcb6",
         "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "695dfc0fbed3c6177b55eaff6c30137bb0657bc0d6788cd42d216b96d6e75415",
         "Assets/MyAsset/Core/AI/Core/AICompiledMode.cs": "151b9de0f5778749cc632ac387e4a17f4246890461875218ed7bf514bc7f6207",
-        "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "cef5eca89cd45931198933fc7c516f239d5faad76b32cb05a99fd92d29649ce1",
+        "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "b9f67f092f18e056a7c8cef64d7503a2b3b9099a6813cb26aa78d760dc523f59",
         "Assets/Tests/EditMode/AIObservationContextTests.cs": "24c4c7f4cdd4c50b843b21b2b94b820bc3840ce57279a9e67835c3845f3d0bfa",
         "Assets/Tests/EditMode/AIDecisionSystemTests.cs": "a535937d61e6f1b8346273bda155ae9a35c5cb42042c3154abce748cb1a5b1b4",
         "Assets/Tests/EditMode/AIInfoConverterTests.cs": "9cef387dc4438c0b70c8ed050ec31f21b8ba2daab311501cb22f8e3fbbc40199",
         "Assets/Tests/EditMode/Integration_CompanionAISettingsFlowTests.cs": "ae194fa779a0096d67b7f9fc1d2eb6bd62907715f10ac86118107c1ba818d8da",
         "Assets/Tests/PlayMode/AIObservationFlowTests.cs": "a997eaae90fc4d027f070f3ff68304143e1198da6146c2ac4981b421d6138f24",
         "Assets/MyAsset/Core/AI/Core/AITargetSelect.cs": "3a8f5160baf319a8b56743f21dbf36eeede58005e95478e1ae545c7bcf5fcf79",
-        "Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs": "4414caaf6475a6f15b4c52fb96a1aa4ba8bbb2e76bb0a705a1b47ae7804e2959",
+        "Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs": "95b611a5bf7e329d2db290700863fcd5385e067a2e7e967ece046ec1faf6c1bb",
         "Assets/MyAsset/Core/AI/Core/TargetFilter.cs": "43e0412fe114476e0b420855af0574dbf9ca215248a845fc29f32361f2e37a89",
         "Assets/MyAsset/Core/AI/Core/ConditionEvaluator.Compat.cs": "3c13aca04dfeec5f6ff4ce6d806f3f65bb847a2bcf6ef7950a9425e5d5b3d112",
         "Assets/MyAsset/Core/AI/Core/TargetSelector.Compat.cs": "402767e0d7562dff967a25c98f4b8c07ca677c86ba47405f7a5549835c1d00c9",
         "Assets/MyAsset/Core/AI/Core/TargetSelector.cs": "d512ff5611428b31649c8ffb8821987bcac01524e19b72ed58de69f91716bf96",
-        "Assets/MyAsset/Core/ScriptableObjects/AIInfo.cs": "740ac3bf8180c310de9635f1d5bf146461224c6b1693bd5ca2a156a550444d16",
+        "Assets/MyAsset/Core/ScriptableObjects/AIInfo.cs": "d71ec91bd583f69425085ad1d5d0f875bb55a633e816b2488804576db4933bdc",
         "Assets/MyAsset/Runtime/UI/CompanionAISettingsController.Dialogs.TargetFilter.cs": "56989e15d5998bf34fe75407aa0eb851325b66c0be6c0eea018eff9e4a5e0f63",
         "Assets/MyAsset/Runtime/UI/CompanionAISettingsController.Dialogs.Conditions.cs": "7de439f9e3560eb960649abfb0bd8a5411f73146ff33160fd8d725406a6b39d2"
       }
+    }
+  },
+  {
+    "feature": "DungeonExpedition_AllyRoster",
+    "path": {
+      "key": "unlock-npc-aid",
+      "title": "NPCの依頼・物語イベントを経て協力種を解放",
+      "implementation_status": "planned",
+      "connection_status": "unconnected",
+      "verification": "unverified",
+      "steps": [
+        {
+          "file": "Assets/Integration/QuestMachineBridge.cs",
+          "symbol": "QuestMachineBridge.NotifyCustomEvent",
+          "kind": "event"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Save/FlagManager.cs",
+          "symbol": "FlagManager.SetGlobalFlag",
+          "kind": "write"
+        }
+      ],
+      "tests": [],
+      "notes": "固有の魔物NPCの依頼・イベントを完了すると、対応する魔物種の協力が以後の編成で選べる。同種のマップ敵を倒しても解放されない。物語で指定した戦闘は脚本の結末から加入を認める。確認例は、通常戦闘の前後で候補が同じこと、依頼達成後に候補が増え、再訪や達成通知の再送でも増え直さないこと。現行コードにはクエストへの通知口と永続フラグがあり、達成結果と協力種を対応させる処理は計画段階。",
+      "verification_hashes": {}
+    }
+  },
+  {
+    "feature": "DungeonExpedition_AllyRoster",
+    "path": {
+      "key": "compose-costed-squad",
+      "title": "解放した種と体数を選び、通常の編成コストを計算",
+      "implementation_status": "planned",
+      "connection_status": "unconnected",
+      "verification": "unverified",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Core/Common/Section3Utilities.cs",
+          "symbol": "PartyManager.k_MaxSummonSlots",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Summon/SummonManager.cs",
+          "symbol": "SummonManager.HasEmptySlot",
+          "kind": "read"
+        }
+      ],
+      "tests": [],
+      "notes": "編成では、解放済みの各魔物種の1体分のコストに選んだ体数を掛けて合計し、使える召喚コストの範囲で確定する。同種を複数選べる。確認例は、同種2体と異種1体の合計が枠内なら編成でき、追加で枠を超えた場合は直前の編成を保持すること。既存のパーティ定数と空き枠判定は頭数だけを見る。種ごとの値・通常枠の大きさは未決定。",
+      "verification_hashes": {}
+    }
+  },
+  {
+    "feature": "DungeonExpedition_AllyRoster",
+    "path": {
+      "key": "deploy-sister-summons",
+      "title": "シスターが編成した魔物を通常探索の現場へ転送",
+      "implementation_status": "planned",
+      "connection_status": "unconnected",
+      "verification": "unverified",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Core/AI/Summon/SummonMagicBridge.cs",
+          "symbol": "SummonMagicBridge.TrySummon",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Summon/SummonManager.cs",
+          "symbol": "SummonManager.AddSummon",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Character/CharacterRegistry.cs",
+          "symbol": "CharacterRegistry.RegisterAlly",
+          "kind": "write"
+        }
+      ],
+      "tests": [],
+      "notes": "通常の3D探索では、プレイヤーが骸骨騎士を操作し、シスターが編成から少数の味方を現場へ呼ぶ。確認例は、同種を複数出して各個体を別々に追跡でき、1体の退場後も他方の所属とその種の解放記録が保たれること。既存の召喚管理は個体と残り時間を記録し、味方登録は別の処理。シスターの転送、出現地点、編成との接続は未実装。出撃時の追加費用や再召喚の条件は未決定。",
+      "verification_hashes": {}
+    }
+  },
+  {
+    "feature": "DungeonExpedition_AllyRoster",
+    "path": {
+      "key": "expand-designated-encounter",
+      "title": "魔物溜まり・指定ボス戦で味方の増援枠を一時拡張",
+      "implementation_status": "planned",
+      "connection_status": "unconnected",
+      "verification": "unverified",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Core/World/Challenge/ChallengeRunner.cs",
+          "symbol": "ChallengeRunner.Start",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/World/Challenge/ChallengeRunner.cs",
+          "symbol": "ChallengeRunner.OnWaveCleared",
+          "kind": "event"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Boss/BossControllerLogic.cs",
+          "symbol": "BossControllerLogic.OnBossDefeated",
+          "kind": "event"
+        },
+        {
+          "file": "Assets/MyAsset/Core/World/Challenge/ChallengeRunner.cs",
+          "symbol": "ChallengeRunner.Complete",
+          "kind": "output"
+        }
+      ],
+      "tests": [],
+      "notes": "通常編成を保持して指定遭遇へ入り、シスターがより大きな味方側の召喚枠で増援を展開できる。確認例は、通常区画・魔物溜まり・対象外ボスを順に訪れ、増援枠が魔物溜まりだけで使え、終了・離脱後の通常探索へ持ち越されないこと。指定したボス戦にも同じ拡張を適用する。既存のウェーブ進行とボス撃破通知は遭遇イベントの参照先。味方の増援枠の開閉と通常編成への復帰は未接続。",
+      "verification_hashes": {}
+    }
+  },
+  {
+    "feature": "DungeonExpedition_AllyRoster",
+    "path": {
+      "key": "unlock-ng-plus-boss-aid",
+      "title": "周回条件を満たした一部のボスを召喚候補へ追加",
+      "implementation_status": "planned",
+      "connection_status": "unconnected",
+      "verification": "unverified",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Core/AI/Boss/BossControllerLogic.cs",
+          "symbol": "BossControllerLogic.OnBossDefeated",
+          "kind": "event"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Boss/BossRewardLogic.cs",
+          "symbol": "BossRewardLogic.CalculateReward",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Save/FlagManager.cs",
+          "symbol": "FlagManager.GetGlobalFlag",
+          "kind": "read"
+        }
+      ],
+      "tests": [],
+      "notes": "周回プレイで定めた条件を満たすと、対象として指定されたボスをシスターの召喚候補に加えられる。確認例は、対象外ボスや条件未達の周回では候補を増やさず、成立後の同じ通知で重複解放しないこと。既存のボス撃破イベントはボスIDを渡し、報酬計算は経験値と通貨を扱う。周回の識別、召喚対象との対応、個別の解放条件・コスト・味方時の挙動は未決定。",
+      "verification_hashes": {}
+    }
+  },
+  {
+    "feature": "DungeonExpedition_AllyRoster",
+    "path": {
+      "key": "restore-expedition-progress",
+      "title": "解放種・通常編成・周回状態をセーブから復元",
+      "implementation_status": "planned",
+      "connection_status": "unconnected",
+      "verification": "unverified",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Core/Save/SaveManager.cs",
+          "symbol": "SaveManager.Register",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Save/SaveDataStore.cs",
+          "symbol": "SaveDataStore.WriteToDisk",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Save/SaveDataStore.cs",
+          "symbol": "SaveDataStore.ReadFromDisk",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Save/SaveManager.cs",
+          "symbol": "SaveManager.Load",
+          "kind": "output"
+        }
+      ],
+      "tests": [],
+      "notes": "解放種の安定ID、通常編成の種別と体数、周回状態をセーブ単位で復元する。現在の部屋と一時増援枠は別に扱い、通常区画で再開したときに大規模戦の枠を使えないようにする。確認例は、同種複数を含む編成を保存し、ゲームを起動し直して同じ内容を読むこと、新項目のない旧データでも定義した初期値から開始できること。既存のSaveManagerとディスク往復テストは保存の仕組みまでを扱う。新項目の登録、移行時の初期値と遭遇中の再開方針は未定。",
+      "verification_hashes": {}
+    }
+  },
+  {
+    "feature": "DungeonExpedition_AllyRoster",
+    "path": {
+      "key": "coordinate-3d-group-battle",
+      "title": "3D集団戦で味方が分散し、騎士が遭遇目標を達成",
+      "implementation_status": "planned",
+      "connection_status": "unconnected",
+      "verification": "unverified",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Character/PlayerCharacter.cs",
+          "symbol": "PlayerCharacter.SimulateCharacterTick",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/GameManager/ActorRegistry.cs",
+          "symbol": "ActorRegistry.Register",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AITargetRelations.cs",
+          "symbol": "AITargetRelations.CopyTo",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs",
+          "symbol": "AISceneGimmickController.CaptureVisibility",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/ActionBase.cs",
+          "symbol": "BroadcastActionHandler.OnExecute",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs",
+          "symbol": "AIQueryKernel.SelectTarget",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs",
+          "symbol": "JudgmentLoop.ApplyDecision",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.TryStart",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs",
+          "symbol": "ActionExecutionSystem.Cancel",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/World/Challenge/ChallengeRunner.cs",
+          "symbol": "ChallengeRunner.Complete",
+          "kind": "output"
+        }
+      ],
+      "tests": [],
+      "notes": "3D集団戦の計画。敵味方の指揮役は各自の陣営の目撃・報告から任務の優先度と必要人数を決め、役割を提案・再配分する。プレイヤーは味方の指揮役に短い指示を出し、召喚した魔物を含む部隊に任務を伝えられる。詳細な行動ルールを編集できるのはシスターだけ。召喚魔物は作者が種ごとに定めた役割で動き、編成枠ごとのルール編集・プリセット選択は設けない。個体AIは自分の世代付きActorRefに届いた役割を受諾し、知り得た敵情報と通路・視線・味方の危険範囲から位置と行動を選び、成否を報告する。指示先の標的が無効になれば、その指示を終えて自律判断に戻る。戦闘管理は共有地点や標的ごとに同じtickの要求を一度だけ裁定する。行動開始で枠を確定し、拒否時は仮押さえを解き、完了・中断時は使用枠を一度だけ返す。敵の未観測の体力・標的は陣営間で共有しない。確認例は、同種の敵味方が入口で競合しても仲間が分散し、骸骨騎士自身が奥の指定目標を達成すると遭遇が終わること。現行の参照先は個体登録・標的関係、2Dの視線・個体判断、行動実行とチャレンジ終了。プレイヤー・敵指揮官・仲間AIの発令から2Dの受信個体が動く区間は dispatch-faction-field-order を参照。任務の優先度・必要人数による分担、共有地点や標的の同時要求の裁定、3D遭遇の目標達成は計画段階。",
+      "verification_hashes": {}
+    }
+  },
+  {
+    "feature": "DungeonExpedition_AllyRoster",
+    "path": {
+      "key": "dispatch-faction-field-order",
+      "title": "プレイヤー・敵指揮官・仲間AIの号令を同じ入口で受け、2D戦場の個体へ届ける",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "runtime_tested",
+      "steps": [
+        {
+          "file": "Assets/InputSystem_Actions.inputactions",
+          "symbol": "Player/FieldOrder",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Input/PlayerInputHandler.FieldOrders.cs",
+          "symbol": "PlayerInputHandler.TryAssignFieldOrder",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Input/PlayerInputHandler.FieldOrders.cs",
+          "symbol": "PlayerInputHandler.ReleaseFieldOrder",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs",
+          "symbol": "AIInfoConverter.ConvertAction",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs",
+          "symbol": "JudgmentLoop.ExecuteSelectedAction",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/ActionExecutor.cs",
+          "symbol": "ActionExecutor.ExecuteFieldOrder",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/ActionBase.cs",
+          "symbol": "BroadcastActionHandler.TryIssue",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/GameManager/GameEvents.cs",
+          "symbol": "GameEvents.TryIssueFieldOrder",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/FieldOrder.cs",
+          "symbol": "FieldOrderCatalog.Allows",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/AI/RuntimeFieldOrders.cs",
+          "symbol": "RuntimeFieldOrders.ResolveIssuer",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/AI/RuntimeFieldOrders.cs",
+          "symbol": "RuntimeFieldOrders.Deliver",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/AI/RuntimeFieldOrders.cs",
+          "symbol": "RuntimeFieldOrders.TryRead",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Character/BaseCharacter.FieldOrders.cs",
+          "symbol": "BaseCharacter.PrepareFieldOrder",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Character/BaseCharacter.FieldOrders.cs",
+          "symbol": "BaseCharacter.ApplyFieldOrderMovement",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/FieldOrderDispatchTests.cs",
+        "Assets/Tests/PlayMode/FieldOrderDeliveryTests.cs",
+        "Assets/Tests/PlayMode/PlayerFieldOrderInputTests.cs"
+      ],
+      "notes": "F／十字キー下を短押しして離すと選択中の号令を発し、長押しして離すと4枠の次へ移る。初期配置は集合・集中攻撃・地点防衛・指示解除。プレイヤー向けの号令は枠へ任意に割り当てられる。実行中の割り当て変更はメモリ上に保持する。AIInfoの号令も同じ受付へ届く。許可する発行元は号令別のビットで表し、1回の発令ではPlayer=1・EnemyCommander=2・CompanionAI=4のいずれか一つと登録個体の世代・実際の役割を照合する。同じ2D物理世界の範囲内にいる味方AIへ配る。目標指定は交戦中の受け手を除き、集中攻撃は交戦中でも対象を切り替える。どちらも発行者から見通せる敵を要求する。敵指揮官の挑発は発行者を見通せる敵対AIへ届く。集合は発行者へ寄って到着で終了し、地点防衛は指定位置へ横移動し、到着した場所で通常の戦闘判断を行う。AIが出す防衛指示には発令者自身の観測座標を渡す。指示解除は受け手を自律判断へ戻す。散開・離脱・モード同期は実行先で拒否する。Unity 6000.6.8f1の専用試験はEditMode 4件・PlayMode 10件が成功。実キーボードの集合からシスターが騎士との距離を詰めること、守備担当が確定済みの攻撃を終えて次の地点へ向かうことを確認。3Dでの役割配分・陣営別の作戦・遭遇目標は coordinate-3d-group-battle で扱う。",
+      "verification_hashes": {
+        "Assets/InputSystem_Actions.inputactions": "35a1c07bd6811ea1705c66cdd70fd2bc035b5c8c5c99865dc7be45c8e0c2064b",
+        "Assets/MyAsset/Runtime/Input/PlayerInputHandler.FieldOrders.cs": "461932882bea6bfca4d6f40340cf74afedd54498b1ae1d7774f8ce3b0527c0ab",
+        "Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs": "95b611a5bf7e329d2db290700863fcd5385e067a2e7e967ece046ec1faf6c1bb",
+        "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "b9f67f092f18e056a7c8cef64d7503a2b3b9099a6813cb26aa78d760dc523f59",
+        "Assets/MyAsset/Core/AI/Core/ActionExecutor.cs": "8a1b19a6c4f8588f693b4ef9a4cc2e7bb01203304e2a6a2f376355bf99540e06",
+        "Assets/MyAsset/Core/AI/Core/ActionBase.cs": "7aa2ed348689835c610cfa6f81665e71f607b8b48664d7f7617d13b3d3bad62d",
+        "Assets/MyAsset/Core/GameManager/GameEvents.cs": "970d7710584e29e67cc3aea84dd9cbd75df2e20c9302cf482137d5b947f768a5",
+        "Assets/MyAsset/Core/AI/Core/FieldOrder.cs": "fca55ef61bcae84b2228b4f7440dfb2ffb159588430f4463fe347e331726b697",
+        "Assets/MyAsset/Runtime/AI/RuntimeFieldOrders.cs": "675007721d3beefaf15899f052886225e9984adcfe15511f9ffc916278c419d2",
+        "Assets/MyAsset/Runtime/Character/BaseCharacter.FieldOrders.cs": "9351591653f87fcc232accbdf6936fd95011fa31d0c9b161cfb32c391120f662",
+        "Assets/Tests/EditMode/FieldOrderDispatchTests.cs": "6120500af7bb37ebfa273172b5e3a0d16b873a11dba84d899bdfcac30f595f10",
+        "Assets/Tests/PlayMode/FieldOrderDeliveryTests.cs": "be6bb74a9c086ea0c4313ea9eec90e825b51140ab12971b56c0d04faa3102ec3",
+        "Assets/Tests/PlayMode/PlayerFieldOrderInputTests.cs": "b5c69a596307a0e6add888ad75e6e97b73ee05a6368bf0120a190c75f588f0f4",
+        "Assets/MyAsset/Core/Common/Enums.cs": "34ff0f697c2c4f997bdcda6d5342edb6b822e3527bffde7042ac50d5643c302a",
+        "Assets/MyAsset/Core/ScriptableObjects/AIInfo.cs": "d71ec91bd583f69425085ad1d5d0f875bb55a633e816b2488804576db4933bdc",
+        "Assets/MyAsset/Core/AI/Companion/CompanionController.cs": "492fcdf3e8119c998a4663d9df951ecfcb60eb26742a327473c6eebd7033b41d",
+        "Assets/MyAsset/Core/AI/Enemy/EnemyController.cs": "ebe36a132061fa1b62ea7573c058f626f939a76ab55633a1918ab6469bda2399",
+        "Assets/MyAsset/Runtime/GameManager.cs": "f9cd586ad7adb02f937db5f577fc7a6494e074eafa309c6cf939c85253f1800e",
+        "Assets/MyAsset/Runtime/Character/EnemyCharacter.cs": "3bc0e4d933a555293620f3bf361e7f2dc8a273f502936753582658b09fe8ec23",
+        "Assets/MyAsset/Runtime/Character/CompanionCharacter.cs": "a42ed3a83faf1204047fb24fd5fdda883d1e8f0a4b6f903c11f048fcf3aca365",
+        "Assets/MyAsset/Runtime/Character/BaseCharacter.cs": "f915dfe9611ce01f9b5709d0dbbdce58127d7fcba1171d30a6d868e4332cf573",
+        "Assets/MyAsset/Runtime/Character/PlayerCharacter.cs": "03ccc923e4e01cd487a96f906cb3de46138b25fb7159703e34afe449180ba160",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "7dad32330d9ad497f3428c18d8d9931e75200ca689f557fd5fba2cf1a8ff10ff",
+        "Assets/MyAsset/Runtime/Input/PlayerInputHandler.cs": "d863a38b1e4266ae380f6cd73781133b21fdac42b68a51b919fd6ebcfbbd1918",
+        "Assets/MyAsset/Core/Damage/AttackTargetPolicy.cs": "f624220d9eec1c8ce9abf3ee373be75ba538ce36976f55a4478b0bfe9093216b"
+      }
+    }
+  },
+  {
+    "feature": "DungeonExpedition_AllyRoster",
+    "path": {
+      "key": "select-player-eight-way-multilock",
+      "title": "騎士が対応魔術の長押し中に画面の8方向から標的を追加",
+      "implementation_status": "planned",
+      "connection_status": "unconnected",
+      "verification": "unverified",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Input/PlayerInputHandler.cs",
+          "symbol": "PlayerInputHandler.OnSkill",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/InputSystem_Actions.inputactions",
+          "symbol": "Player/Look",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Input/PlayerInputHandler.FieldOrders.cs",
+          "symbol": "PlayerInputHandler.TryAimFieldOrder",
+          "kind": "read"
+        }
+      ],
+      "tests": [],
+      "notes": "対応する魔術を長押しすると、画面内で射程・射線を満たす敵のうち騎士に最も近い一体に印を付ける。以降は直前の印を起点に、右スティックが示す画面上の8方向から、その方向で画面上最も近い未選択の敵を一体追加する。中央へ戻すまで次の入力は受けず、該当する敵がいなければ印は動かない。上限は試作で三体。ボタンを離すと残った有効対象へ一発ずつ発射する。カメラのロックと味方への集中攻撃指示は独立して保つ。現行のSkill入力は押下を蓄え、Lookを使う号令照準は2D単体用。魔術の長押し・画面方向による追加・発射対象の引き渡しは未接続。",
+      "verification_hashes": {}
+    }
+  },
+  {
+    "feature": "DungeonExpedition_AllyRoster",
+    "path": {
+      "key": "assign-ai-cast-projectile-targets",
+      "title": "敵・味方AIの一回の詠唱で対象を集め、発射時に一体一弾を割り当てる",
+      "implementation_status": "planned",
+      "connection_status": "unconnected",
+      "verification": "unverified",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AITargetRelations.cs",
+          "symbol": "AITargetRelations.TryGetTarget",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs",
+          "symbol": "GameActionRuntime.HandleExecution",
+          "kind": "event"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs",
+          "symbol": "ProjectileManager.SpawnSpreadFromExecution",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Combat/Projectile/Projectile.cs",
+          "symbol": "Projectile.TrySetTarget",
+          "kind": "write"
+        }
+      ],
+      "tests": [],
+      "notes": "追跡・向きに使うAIの主標的は一体のまま、対応魔術の詠唱ごとに対象を持つ。主標的を最初の候補とし、敵味方を問わず術者から見えて射程・射線が通る敵を重複なく加える。発射時に生存・陣営・ActorRefの世代と射線を再確認し、有効な一体につき一弾を割り当てる。遮蔽・死亡・個体の再利用で無効になった相手の弾は省き、全員無効なら発射しない。詠唱中断で選択を解き、地面指定の範囲に偶然入った個体はロックに含めない。現行の散弾は共通のtarget引数を各弾に渡し、各弾は世代付き標的一体を保持できる。詠唱単位の一覧と弾別の割り当ては未接続。",
+      "verification_hashes": {}
+    }
+  },
+  {
+    "feature": "DungeonExpedition_AllyRoster",
+    "path": {
+      "key": "show-lock-and-area-warnings",
+      "title": "騎士を明示ロックした弾の飛来方向と、範囲攻撃の床予告を表示",
+      "implementation_status": "planned",
+      "connection_status": "unconnected",
+      "verification": "unverified",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs",
+          "symbol": "GameActionRuntime.HandleExecution",
+          "kind": "event"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Combat/Projectile/Projectile.cs",
+          "symbol": "Projectile.TargetRef",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs",
+          "symbol": "ProjectileManager.ProcessExplosion",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Guard/GuardJudgmentLogic.cs",
+          "symbol": "GuardJudgmentLogic.Evaluate",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/UI/HudController.cs",
+          "symbol": "HudController.Update",
+          "kind": "output"
+        }
+      ],
+      "tests": [],
+      "notes": "騎士への明示ロックがある弾だけ、カメラの向きと飛来方向に合わせて画面端に赤い弧を出す。術者の主標的がシスターでも、騎士に割り当てた一発だけが対象。近くを通る流れ弾では表示せず、ロック解除・消滅・通過で消す。範囲攻撃は誰を狙ったかによらず、発生前に実際に当たる床を赤く示す。橋上の爆発は橋上だけに表示し、中断時は消す。騎士を狙う爆発弾では両方を表示する。近接は構えと振り、危険指定の技は既存設計の警告音を使う。現行の弾の標的参照と着弾時の爆発処理、ガード判定とHUD更新は参照先。明示ロックの通知、方向の表示、3Dの着弾床予告は未接続。",
+      "verification_hashes": {}
     }
   }
 ]

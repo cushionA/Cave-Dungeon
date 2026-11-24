@@ -198,3 +198,14 @@
     -unity-font-style: bold;
     text-shadow: 1px 1px 1px black;
 }
+
+.field-order {
+    position: absolute;
+    left: 20px;
+    bottom: 20px;
+    padding: 6px 12px;
+    display: none;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 4px;
+}

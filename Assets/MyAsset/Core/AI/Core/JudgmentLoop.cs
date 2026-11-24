@@ -290,6 +290,17 @@ namespace Game.Core
                 action = _compiledMode.actions[fallback];
                 if (ActionCommand.IsGimmickInteraction(action)) { return; }
             }
+            if (action.execType == ActionExecType.Broadcast && decision.owner.IsValid)
+            {
+                Vector2? point = null;
+                if (action.paramId == (int)BroadcastAction.DefendPoint
+                    && _observation.TryGetActor(_ownerHash, out AIActorObservation owner) && owner.actor == decision.owner)
+                {
+                    point = owner.position;
+                }
+                _executor.ExecuteFieldOrder(decision, action.paramId, point);
+                return;
+            }
             _executor.Execute(_ownerHash, CurrentTargetHash, action);
         }
 

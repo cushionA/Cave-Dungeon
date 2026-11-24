@@ -17,7 +17,7 @@ namespace Game.Runtime
     /// スプリント: 長押しで継続スプリント、単押しで回避。
     /// </summary>
     [RequireComponent(typeof(PlayerInput))]
-    public class PlayerInputHandler : MonoBehaviour
+    public partial class PlayerInputHandler : MonoBehaviour
     {
         private const string k_AttackActionName = "Attack";
         private const string k_HeavyAttackActionName = "HeavyAttack";
@@ -89,6 +89,7 @@ namespace Game.Runtime
         /// </summary>
         public void SetOverrideInput(MovementInfo input)
         {
+            _fieldOrderPressed = false;
             _overrideActive = true;
             _overrideInput = input;
         }
@@ -135,6 +136,8 @@ namespace Game.Runtime
         {
             _playerInput = GetComponent<PlayerInput>();
             _character = GetComponent<BaseCharacter>();
+            _orderBody = GetComponent<Collider2D>();
+            ValidateFieldOrderSlots();
             _chargeLogic = new ChargeAttackLogic();
             _chargeHandler = new ChargeInputHandler(_chargeLogic);
             _samplingClock.Reset(Time.time);
@@ -156,11 +159,13 @@ namespace Game.Runtime
                 _heavyAttackAction = _playerInput.actions[k_HeavyAttackActionName];
                 _sprintAction = _playerInput.actions[k_SprintActionName];
             }
+            BindFieldOrder();
             InputSystem.onAfterUpdate += OnAfterInputUpdate;
         }
 
         private void OnDisable()
         {
+            UnbindFieldOrder();
             InputSystem.onAfterUpdate -= OnAfterInputUpdate;
             _chargeHandler?.CancelCharge();
             _attackAction = _heavyAttackAction = _sprintAction = null;

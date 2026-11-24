@@ -145,6 +145,7 @@ namespace Game.Runtime
         /// </summary>
         public virtual void OnPoolReturn()
         {
+            ForgetFieldOrders();
             GameManager.Actions?.StopActor(_objectHash);
             ResetPhysicsTransientState();
             if (_isRegistered && GameManager.Instance != null)

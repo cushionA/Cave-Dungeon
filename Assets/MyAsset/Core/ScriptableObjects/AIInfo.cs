@@ -52,6 +52,7 @@ namespace Game.Core
         Flee,
         FeintCancel,
         InteractObject,
+        FieldOrder,
     }
 
     [Serializable]
@@ -117,6 +118,10 @@ namespace Game.Core
         [FoldoutGroup("基本")]
         [EnumToggleButtons]
         public ActType actType;
+
+        [FoldoutGroup("基本"), ShowIf("@actType == ActType.FieldOrder")]
+        [Tooltip("ここを守れは発令者の観測位置を指定します")]
+        public BroadcastAction fieldOrder;
 
         [FoldoutGroup("基本")]
         [Tooltip("攻撃/魔法の永続定義ID。空の場合だけ旧attackInfoIndexを使用")]

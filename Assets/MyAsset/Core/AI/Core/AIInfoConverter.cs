@@ -187,7 +187,7 @@ namespace Game.Core
             {
                 execType = execType,
                 actionDefinitionId = execType == ActionExecType.Attack || execType == ActionExecType.Cast ? act.actionDefinitionId : null,
-                paramId = MapActionParameter(act.actType, act.attackInfoIndex),
+                paramId = act.actType == ActType.FieldOrder ? (int)act.fieldOrder : MapActionParameter(act.actType, act.attackInfoIndex),
                 paramValue = paramValue,
                 displayName = act.actName,
             };
@@ -201,7 +201,8 @@ namespace Game.Core
                 case ActType.Guard:       return ActionExecType.Sustained;
                 case ActType.Dodge:       return ActionExecType.Instant;
                 case ActType.Heal:        return ActionExecType.Cast;
-                case ActType.Buff:        return ActionExecType.Broadcast;
+                case ActType.Buff:
+                case ActType.FieldOrder:  return ActionExecType.Broadcast;
                 case ActType.Wait:        return ActionExecType.Sustained;
                 case ActType.Flee:        return ActionExecType.Sustained;
                 case ActType.Move:        return ActionExecType.Sustained;

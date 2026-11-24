@@ -2,7 +2,19 @@
 Section: 3 — 世界の広がり
 
 ## 責務
-一時的な仲間の召喚・管理。召喚獣の寿命制御、パーティ枠管理（最大4人）、召喚魔法との統合を担う。
+召喚した魔物を個体ごとに管理し、編成、召喚後の寿命、解除を扱う。
+
+## 召喚と編成の設計方針
+
+- 骸骨騎士とシスターが3Dダンジョンで出会ったNPC魔物の依頼や物語を進めると、シスターがその本人や仲間を召喚できる。解放する種類はイベントが指定する。マップの野生の魔物は通常の戦闘相手。
+- 召喚魔物の行動は作者が定義する。プレイヤーは指揮官を通じて簡単な指示を出す。プレイヤーによる詳細なAI設定はシスター専用とする。
+- 編成コストは呼び出した1体ごとに数える。同じ種類の魔物を2体呼ぶと、その魔物2体分のコストを使う。
+- 通常探索は少人数で進める。魔物溜まりや指定ボス戦では一時的に人数とコストの上限を増やし、戦闘終了・撤退・退出時に探索編成へ戻す。二周目以降は、条件を満たした一部のボスも召喚候補に加わる。
+- 個体ごとのコスト、通常時と増援時の上限、戦闘中に呼び直せるタイミングや補充方法は試作で決める。
+
+## 現行の実装とセクション3の設計
+
+現行の `SummonManager` は同時召喚2体、`PartyManager` はパーティ上限4人を定義する。満員時は `TrySummon` が失敗し、`TrySummonWithReplace` では残り時間が最も短い1体を解除して入れ替える。以下はこの固定枠を前提にしたセクション3の設計。NPCイベントによる解禁、個体ごとのコスト、戦闘・周回に応じた召喚条件は今後の実装範囲。[SummonManager](../../Assets/MyAsset/Core/AI/Summon/SummonManager.cs) · [PartyManager](../../Assets/MyAsset/Core/Common/Section3Utilities.cs) · [SummonMagicBridge](../../Assets/MyAsset/Core/AI/Summon/SummonMagicBridge.cs)
 
 ## 依存
 - 入力: MagicSystem（MagicCaster, MagicDefinition）、CompanionAI_Basic（FollowBehavior再利用）、AICore（AIBrain）、PartyManager
@@ -179,6 +191,6 @@ MagicCasterでMagicType.Summon分岐を追加:
 ## 設計メモ
 - 召喚獣のAIは既存AIBrainをそのまま使用。SummonDefinitionのAIInfoにAIMode配列が定義されている
 - 召喚獣はSoAコンテナに通常キャラクターと同じ方法で登録される。ハッシュアクセスでO(1)データ取得
-- 召喚枠は固定2枠。GDDのパーティ構成（プレイヤー1 + 常駐仲間1 + 一時仲間0〜2 = 最大4）に準拠
+- セクション3の初期構成はプレイヤー1人、常駐仲間1人、一時召喚0〜2体。
 - Decoyタイプの召喚獣はDamageScoreTrackerのスコアを高く設定して敵ヘイトを集める
 - Utilityタイプは足場や照明として機能（ISummonableのDismiss()で消滅時に足場も消える）

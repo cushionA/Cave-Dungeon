@@ -37,6 +37,7 @@ namespace Game.Runtime
         private readonly List<int> _candidates = new List<int>(8);
 
         public CompanionController AIController => _aiController;
+        internal override JudgmentLoop FieldOrderJudgment => _aiController?.JudgmentLoop;
         public override bool CanApplyAIDecision => base.CanApplyAIDecision && !_vanishApplied
             && _playerTransform != null && _aiController != null && !_aiController.MpManager.IsVanished;
 
@@ -157,6 +158,7 @@ namespace Game.Runtime
 
                 BridgeAIActionForJudgmentLoop(_aiController.JudgmentLoop, _actionExecutorController);
                 if (!GameManager.TryGetObservation(ObjectHash, out AIObservationContext observation)) { return; }
+                if (PrepareFieldOrder(_candidates)) { return; }
                 _aiController.PrepareTick(deltaTime, _candidates, observation.Time, decisions,
                     observation, GameManager.TargetRelations);
             }
@@ -169,7 +171,7 @@ namespace Game.Runtime
             if (_vanishApplied || (GameManager.Actions != null && GameManager.Actions.IsPhysicsControlled(ObjectHash))) { return; }
             if (_aiController != null)
             {
-                ApplyFollowMovement();
+                if (!ApplyFieldOrderMovement()) { ApplyFollowMovement(); }
             }
             else
             {
@@ -356,6 +358,7 @@ namespace Game.Runtime
         private void OnEnable() => SyncAvailability();
         private void OnDisable()
         {
+            ForgetFieldOrders();
             // AIだけを停止しても、存在状態は共有データの正本に従う。
             // GameObjectの終了・プール返却では保存した物理設定を戻す。
             if (gameObject.activeInHierarchy) { SyncAvailability(); }

@@ -21,6 +21,7 @@ namespace Game.Core
         private Dictionary<ActionExecType, ActionBase> _handlers;
         private ActionBase _currentAction;
         private IActionExecutionBackend _backend;
+        private BroadcastActionHandler _fieldOrders;
 
         public ActionBase CurrentAction => _currentAction;
         public bool IsExecuting => _backend != null ? _backend.IsExecuting : _currentAction != null && _currentAction.IsExecuting;
@@ -49,6 +50,7 @@ namespace Game.Core
         public void Register(ActionBase handler)
         {
             _handlers[handler.ExecType] = handler;
+            if (handler.ExecType == ActionExecType.Broadcast) { _fieldOrders = handler as BroadcastActionHandler; }
         }
 
         /// <summary>
@@ -58,6 +60,11 @@ namespace Game.Core
         /// </summary>
         public bool Execute(int ownerHash, int targetHash, ActionSlot slot)
         {
+            if (slot.execType == ActionExecType.Broadcast && _fieldOrders != null)
+            {
+                bool wasExecuting = IsExecuting;
+                return FinishFieldOrder(_fieldOrders.TryIssue(ownerHash, targetHash, slot.paramId), wasExecuting);
+            }
             if (ActionCommand.IsGimmickInteraction(slot))
             {
                 // The bare slot has no sampled object identity, even if a legacy Instant handler exists.
@@ -92,6 +99,19 @@ namespace Game.Core
             handler.Execute(ownerHash, targetHash, slot);
             LastDispatchStatus = ActionDispatchStatus.Accepted;
             return true;
+        }
+
+        internal bool ExecuteFieldOrder(in AIDecisionResult decision, int id, UnityEngine.Vector2? point)
+        {
+            bool wasExecuting = IsExecuting;
+            return FinishFieldOrder(_fieldOrders != null && _fieldOrders.TryIssue(decision.owner, decision.target, id, point), wasExecuting);
+        }
+
+        private bool FinishFieldOrder(bool accepted, bool wasExecuting)
+        {
+            LastDispatchStatus = accepted ? ActionDispatchStatus.Accepted : ActionDispatchStatus.Rejected;
+            if (accepted && !wasExecuting && !IsExecuting) { OnActionCompleted?.Invoke(); }
+            return accepted;
         }
 
         internal bool ExecuteInteraction(in AIDecisionResult decision)
@@ -160,6 +180,7 @@ namespace Game.Core
             {
                 switch (type)
                 {
+                    case ActionExecType.Broadcast: return _fieldOrders != null;
                     case ActionExecType.Attack: return backend.Supports(ActionCommandKind.Attack);
                     case ActionExecType.Cast: return backend.Supports(ActionCommandKind.Cast);
                     case ActionExecType.Instant: return backend.Supports(ActionCommandKind.Dodge)
@@ -175,6 +196,7 @@ namespace Game.Core
         /// <summary>本番backendがある時は旧Handler登録ではなく、同じ要求変換から対応可否を照会する。</summary>
         public bool CanExecute(in ActionSlot slot)
         {
+            if (slot.execType == ActionExecType.Broadcast && _fieldOrders != null) { return _fieldOrders.Supports(slot.paramId); }
             return _backend is IActionCommandBackend backend
                 ? backend.Supports(ActionCommand.FromLegacySlot(slot).kind)
                 : !ActionCommand.IsGimmickInteraction(slot) && HasHandler(slot.execType);

@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>坑道の石橋｜戦場指揮</title>
+<style>
+:root{color-scheme:dark;--bg:#101612;--panel:#1c241e;--edge:#475447;--text:#f0f1dd;--muted:#b6c1b2;--gold:#f8dc8d;--ally:#a6d6b9;--enemy:#ffac8f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 "Hiragino Sans","Yu Gothic",Meiryo,sans-serif}
+main{width:min(100% - 32px,900px);margin:clamp(16px,6vh,58px) auto}
+header,.toolbar,.aim,.legend,.result{display:flex;align-items:center;gap:12px}
+header,.toolbar{justify-content:space-between}header{margin-bottom:16px}h1{font-size:clamp(1.5rem,4vw,2.2rem);letter-spacing:.06em;margin:0}
+.subtle,.legend,.hint{color:var(--muted);font-size:.83rem}.legend{gap:14px}.friend{color:var(--ally)}.enemy{color:var(--enemy)}
+.arena{border:1px solid var(--edge);border-radius:10px;overflow:hidden;background:var(--panel)}
+.map{height:clamp(290px,45vw,405px);position:relative;isolation:isolate;cursor:crosshair;background:#2b332b}
+canvas{position:absolute;inset:0;width:100%;height:100%}
+button{color:inherit;font:inherit;cursor:pointer}.pin{position:absolute;left:var(--x);top:var(--y);padding:0;border:0;background:none;transform:translate(-50%,-50%);color:var(--text)}
+.reticle{display:grid;place-items:center;width:44px;height:44px;position:relative}
+.pin[aria-pressed=true] .reticle{outline:2px solid var(--gold);outline-offset:2px;background:#ffe89c18}
+.pin[aria-pressed=true] .reticle:before,.pin[aria-pressed=true] .reticle:after{content:"";position:absolute;background:var(--gold)}
+.pin[aria-pressed=true] .reticle:before{left:-9px;right:-9px;height:2px;clip-path:polygon(0 0,14% 0,14% 100%,0 100%,0 0,86% 0,100% 0,100% 100%,86% 100%,86% 0)}
+.pin[aria-pressed=true] .reticle:after{top:-9px;bottom:-9px;width:2px;clip-path:polygon(0 0,100% 0,100% 14%,0 14%,0 0,0 86%,100% 86%,100% 100%,0 100%,0 86%)}
+.pin .name,.unit-name{position:absolute;white-space:nowrap;font-size:.78rem;line-height:1.35;padding:2px 6px;background:#152018ed;border-radius:3px}
+.unit-name.assigned{color:#ceffde;box-shadow:0 0 0 1px #91cda1}.assigned::before{content:"✓ ";font-weight:bold}
+.destination{position:absolute;left:var(--x);top:var(--y);transform:translate(-50%,calc(-100% - 31px));padding:2px 7px;border:1px solid #b5ddc0;border-radius:3px;background:#1e3227;color:#dcffe1;font-size:.73rem;white-space:nowrap;pointer-events:none}.destination::after{content:"";position:absolute;top:100%;left:50%;height:10px;border-left:1px solid #b5ddc0}
+.pin .name{left:50%;top:calc(100% + 6px);transform:translateX(-50%)}.pin[aria-pressed=true] .name{color:var(--gold)}
+.unit-name{left:var(--x);top:var(--y);transform:translate(-50%,16px);color:var(--ally);pointer-events:none}
+.pin:hover .reticle,.pin:focus-visible .reticle{box-shadow:0 0 0 3px #fff8}.pin:focus-visible{outline:none}
+button:focus-visible,select:focus-visible{outline:3px solid white;outline-offset:3px}
+.ground{width:12px;height:12px;border:2px solid #fff1b1;transform:rotate(45deg);background:#2c3329}
+.toolbar{min-height:70px;padding:12px 20px;border-top:1px solid var(--edge);flex-wrap:wrap}.aim{gap:9px;flex-wrap:wrap}
+output,strong{font-weight:700}kbd{display:inline-block;font:600 .9em/1.3 ui-monospace,monospace;border:1px solid currentColor;border-radius:3px;padding:1px 5px}
+.open,.clear,.cancel{border:1px solid var(--edge);border-radius:5px;padding:7px 12px;background:#28332a}.open{background:var(--gold);color:#222718;border-color:var(--gold);font-weight:bold;min-width:96px}
+.clear{font-size:.78rem;color:var(--muted);padding:5px 9px}.clear:hover,.cancel:hover{background:#39473b}.open:hover{background:#ffeab4}
+.result{border-left:3px solid var(--ally);padding:2px 12px;margin:18px 0 8px;align-items:baseline;flex-wrap:wrap;gap:3px 12px}.result strong{color:var(--ally)}
+.hint{margin:0 0 0 15px}
+dialog{border:1px solid #66745e;border-radius:10px;padding:16px;max-width:calc(100% - 16px);width:460px;background:#1a241eee;color:var(--text);box-shadow:0 10px 60px #080e09ab}
+dialog{position:fixed;inset:auto max(12px,calc((100vw - 900px)/2)) 12px auto;margin:0;width:clamp(316px,44vw,460px)}
+dialog::backdrop{background:#0c120e36}
+@media(max-width:530px){dialog{inset:auto 8px 8px;width:calc(100% - 16px)}}
+.commands{display:flex;gap:8px;align-items:center}.loadout{inset:0;margin:auto;height:fit-content}
+.loadout h2{margin:0;font-size:1.2rem}.loadout p{margin:4px 0 12px;color:var(--muted);font-size:.83rem}
+.loadout-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}.loadout-grid label{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:7px}
+.loadout-grid select{width:100%;border:1px solid #64705f;border-radius:4px;background:#28332a;color:var(--text);font:inherit;padding:6px}
+.loadout footer{display:flex;justify-content:end;gap:8px;margin-top:16px}.loadout::backdrop{background:#101911bc}
+.menu-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.menu-head h2{margin:0;font-size:1.05rem}.cancel{font-size:.78rem}
+.wheel{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-areas:". up ." "left aim right" ". down .";align-items:stretch;gap:6px;text-align:center}
+.choice{min-height:60px;color:var(--text);border:1px solid #637160;border-radius:6px;background:#2b392e;font-weight:bold;line-height:1.45}.choice span{display:block;font-weight:normal;color:var(--muted);font-size:.73rem}
+.choice[aria-disabled=true]{color:#a0a89e;border-color:#485046;background:#222923}.choice[aria-disabled=true] span{color:#a0a89e}
+.choice:hover,.choice:focus-visible{background:#394b38;outline:2px solid var(--gold);outline-offset:0}.choice[aria-disabled=true]:hover{background:#30352f;outline-color:#9da49b}
+.lock{grid-area:aim;align-self:center;font-size:.75rem;color:var(--gold);overflow-wrap:anywhere}
+@media(max-width:530px){main{width:calc(100% - 16px);margin:16px auto}header{align-items:flex-end}.legend{font-size:.74rem;gap:6px}.toolbar{padding:10px;gap:8px}.aim{gap:6px}.pin .name,.unit-name{font-size:.68rem}.result{font-size:.9rem}.hint{font-size:.76rem}dialog{padding:10px}.wheel{gap:3px}.choice{font-size:.84rem}.choice span{font-size:.67rem}}
+</style>
+</head>
+<body>
+<main>
+<header><div><div class="subtle">戦場指揮 / ブラウザ操作モック</div><h1>坑道の石橋</h1></div>
+<div class="legend"><span class="friend">◆ 味方</span><span class="enemy">▲ 敵</span></div></header>
+<section class="arena" aria-label="戦場と照準">
+<div class="map" id="map">
+<canvas aria-hidden="true"></canvas>
+<span class="unit-name" style="--x:25%;--y:50%">骸骨騎士</span>
+<span class="unit-name" id="sister" style="--x:12%;--y:64%">シスター</span>
+<span class="unit-name" id="guard-a" style="--x:28%;--y:29%">盾持ち甲</span>
+<span class="unit-name" id="guard-b" style="--x:20%;--y:78%">盾持ち乙</span>
+<button class="pin" id="bridge" aria-pressed="false" style="--x:50%;--y:50%"><span class="reticle"><span class="ground"></span></span><span class="name">橋の中央</span></button>
+<button class="pin" id="caster" aria-pressed="true" style="--x:79%;--y:43%"><span class="reticle"></span><span class="name">敵の術師</span></button>
+<span id="destination" class="destination" hidden></span>
+</div>
+<div class="toolbar"><div class="aim"><span class="subtle">照準</span><output id="aim"></output><button class="clear" id="clear">照準を外す</button></div>
+<div class="commands"><button class="clear" id="prepare" aria-haspopup="dialog" aria-controls="loadout">戦闘準備へ</button>
+<button class="open" id="open" aria-haspopup="dialog" aria-controls="orders"><kbd>F</kbd> 指揮</button></div></div>
+</section>
+<div class="result" role="status"><strong id="result-title">おまかせ</strong><span id="result-detail">盾持ち甲は前衛、乙は護衛。シスターは自分の設定に沿って支援。</span></div>
+<p class="hint">このブラウザでは敵か橋をクリックして照準を合わせ、<kbd>F</kbd> で指揮を開く。命令は矢印キーかクリックで確定。</p>
+</main>
+<dialog id="loadout" class="loadout" aria-labelledby="loadout-title" aria-describedby="loadout-note">
+<div class="subtle">戦闘準備</div><h2 id="loadout-title">号令の配置</h2>
+<p id="loadout-note">方向ごとに号令を選びます。別の方向にある号令を選ぶと、位置を交換します。</p>
+<div class="loadout-grid" id="loadout-grid"></div>
+<footer><button class="cancel" id="undo-loadout">取消</button><button class="open" id="start-fight">この配置で戦闘へ</button></footer>
+</dialog>
+<dialog id="orders" aria-labelledby="order-title" aria-describedby="locked">
+<div class="menu-head"><h2 id="order-title" tabindex="-1">戦場指揮</h2><button class="cancel" id="cancel">Esc 取消</button></div>
+<div class="wheel">
+<button class="choice" data-order="up" style="grid-area:up"><b></b><span></span></button>
+<button class="choice" data-order="left" style="grid-area:left"><b></b><span></span></button>
+<div class="lock" id="locked"></div>
+<button class="choice" data-order="right" style="grid-area:right"><b></b><span></span></button>
+<button class="choice" data-order="down" style="grid-area:down"><b></b><span></span></button>
+</div>
+</dialog>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const scene = $('map'), dialog = $('orders');
+const aims = {
+  caster: { label: '敵の術師 / 橋の奥岸', enemy: '敵の術師', ground: '橋の奥岸' },
+  bridge: { label: '橋の中央', ground: '橋の中央' },
+  none: { label: '対象なし' }
+};
+let selected = 'caster', locked;
+function select(key) {
+  selected = key;
+  $('aim').textContent = aims[key].label;
+  for (const pin of scene.querySelectorAll('.pin')) pin.setAttribute('aria-pressed', String(pin.id === key));
+}
+scene.addEventListener('click', e => select(e.target.closest('.pin')?.id || 'none'));
+$('clear').onclick = () => select('none');
+// Command definitions are independent of the four input slots in this browser prototype.
+const command = {DesignateTarget:0, Rally:1, Taunt:3, FocusFire:4, DefendPoint:7, ReleaseOrder:8};
+const orders = {
+  [command.DesignateTarget]: {name:'ターゲット指示', player:true, target:'enemy', missing:'敵の指定なし',
+    result:'盾持ち甲 1体が受諾', detail:a=>'交戦していない甲が' + a.enemy + 'を標的にする。乙はシスターの護衛を継続。',
+    actors:['guard-a'], marker:'指定標的'},
+  [command.FocusFire]: {name:'集中攻撃', player:true, target:'enemy', missing:'敵の指定なし',
+    result:'盾持ち甲 1体が受諾', detail:a=>'甲が' + a.enemy + 'を攻撃。乙はシスターの護衛を継続。',
+    actors:['guard-a'], marker:'攻撃目標'},
+  [command.DefendPoint]: {name:'ここを守れ', player:true, target:'ground', missing:'地点の指定なし',
+    result:'盾持ち甲 1体が受諾', detail:a=>'甲が' + a.ground + 'を防衛。乙はシスターの護衛を継続。',
+    actors:['guard-a'], marker:'防衛地点'},
+  [command.Rally]: {name:'集合', player:true, hint:'騎士のもとへ',
+    result:'味方 3体が受諾', detail:()=>'シスターと盾持ち甲・乙が騎士のもとへ集まる。',
+    actors:['sister','guard-a','guard-b'], marker:'集合地点'},
+  [command.ReleaseOrder]: {name:'おまかせ', player:true, hint:'自律行動へ',
+    result:'3体への手動指示を解除', detail:()=>'盾持ち甲は前衛、乙は護衛。シスターは自分の設定に沿って支援。', actors:[]},
+  [command.Taunt]: {name:'挑発', player:false}
+};
+const slots = {up:command.FocusFire, right:command.DefendPoint, down:command.Rally, left:command.ReleaseOrder};
+let activeOrder = orders[command.ReleaseOrder];
+const arrows = {up:'↑',right:'→',down:'↓',left:'←'};
+const slotNames = {up:'上',right:'右',down:'下',left:'左'};
+const choices = [...dialog.querySelectorAll('.choice')];
+const loadout = $('loadout');
+let draft;
+for (const slot of Object.keys(slots)) {
+  const label = document.createElement('label');
+  label.textContent = arrows[slot];
+  const picker = document.createElement('select');
+  picker.setAttribute('aria-label', slotNames[slot] + 'の号令');
+  picker.dataset.slot = slot;
+  for (const [id,order] of Object.entries(orders)) {
+    if (order.player) picker.add(new Option(order.name,id));
+  }
+  picker.onchange = () => {
+    const selectedId = Number(picker.value);
+    const other = Object.keys(draft).find(s => draft[s] === selectedId);
+    if (other) draft[other] = draft[slot];
+    draft[slot] = selectedId;
+    showDraft();
+  };
+  label.append(picker);
+  $('loadout-grid').append(label);
+}
+function showDraft() {
+  for (const picker of loadout.querySelectorAll('select')) picker.value = draft[picker.dataset.slot];
+}
+$('prepare').onclick = () => {
+  draft = {...slots};
+  showDraft();
+  loadout.showModal();
+};
+$('undo-loadout').onclick = () => loadout.close();
+$('start-fight').onclick = () => {
+  Object.assign(slots, draft);
+  markOrder(orders[command.ReleaseOrder]);
+  $('result-title').textContent = 'おまかせ';
+  $('result-detail').textContent = orders[command.ReleaseOrder].detail();
+  loadout.close('start');
+};
+loadout.addEventListener('close', () => {
+  (loadout.returnValue === 'start' ? $('open') : $('prepare')).focus();
+  loadout.returnValue = '';
+});
+function openOrders() {
+  if (dialog.open || loadout.open) return;
+  locked = aims[selected];
+  $('locked').textContent = '照準：' + locked.label;
+  for (const button of choices) {
+    const dir = button.dataset.order, order = orders[slots[dir]];
+    button.querySelector('b').textContent = arrows[dir] + ' ' + order.name;
+    button.setAttribute('aria-disabled', String(!!order.target && !locked[order.target]));
+    button.querySelector('span').textContent = order.target ? locked[order.target] || order.missing : order.hint;
+  }
+  dialog.showModal();
+  $('order-title').focus();
+}
+function markOrder(order) {
+  activeOrder = order;
+  for (const id of ['guard-a','guard-b','sister']) {
+    $(id).classList.toggle('assigned', order.actors.includes(id));
+  }
+  const mark = $('destination');
+  mark.hidden = !order.marker;
+  if (mark.hidden) return;
+  const [x,y] = order.target ? (locked === aims.caster ? [79,43] : [50,50]) : [25,50];
+  mark.style.setProperty('--x', x + '%'); mark.style.setProperty('--y', y + '%');
+  mark.textContent = order.marker;
+}
+function issue(dir) {
+  const button = choices.find(b => b.dataset.order === dir);
+  if (!dialog.open || !button || button.getAttribute('aria-disabled') === 'true') return;
+  const order = orders[slots[dir]];
+  if (slots[dir] === command.DesignateTarget && activeOrder.actors.includes('guard-a')) {
+    $('result-title').textContent = 'ターゲット指示｜受諾 0体';
+    $('result-detail').textContent = '手の空いた味方がいないため、各自の担当を継続。現在の号令は「' + activeOrder.name + '」。';
+    dialog.close();
+    return;
+  }
+  $('result-title').textContent = order.name + '｜' + order.result;
+  $('result-detail').textContent = order.detail(locked);
+  markOrder(order);
+  dialog.close();
+}
+$('open').onclick = openOrders;
+$('cancel').onclick = () => dialog.close();
+for (const button of choices) button.onclick = () => issue(button.dataset.order);
+dialog.addEventListener('click', e => {
+  if (e.target !== dialog) return;
+  const r = dialog.getBoundingClientRect();
+  if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dialog.close();
+});
+dialog.addEventListener('close', () => $('open').focus());
+const directions = {ArrowUp:'up', ArrowRight:'right', ArrowDown:'down', ArrowLeft:'left'};
+document.addEventListener('keydown', e => {
+  if (loadout.open || e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
+  const openKey = e.key.toLowerCase() === 'f';
+  if (!openKey && !(dialog.open && directions[e.key])) return;
+  e.preventDefault();
+  if (e.repeat) return;
+  if (openKey) openOrders(); else issue(directions[e.key]);
+});
+select(selected);
+
+// A top-down map keeps the bridge, its two banks and the party visible at any screen width.
+function draw() {
+  const canvas = scene.querySelector('canvas'), w = scene.clientWidth, h = scene.clientHeight;
+  const scale = Math.min(devicePixelRatio || 1, 2);
+  canvas.width = Math.round(w * scale); canvas.height = Math.round(h * scale);
+  const c = canvas.getContext('2d');
+  c.scale(scale, scale);
+  const rand = n => { const k = Math.sin(n * 78.233 + 2.152) * 43858.5453; return k - Math.floor(k); };
+  const bank = (y, side) => w * ((side ? .64 : .36) + .023*Math.sin(y/h*8+side) + .017*Math.sin(y/h*17+side));
+  c.fillStyle = '#1c3536'; c.fillRect(0,0,w,h);
+  for (let i=0;i<100;i++) {
+    const x=rand(i)*w, y=rand(i+120)*h;
+    c.fillStyle = i%2 ? '#365150' : '#2b4444'; c.fillRect(x,y,1+rand(i+5)*11,1);
+  }
+  for (const side of [0,1]) {
+    for (let layer=0;layer<6;layer++) {
+      c.fillStyle = ['#536558','#313c31','#495346','#39483c','#414e40','#384439'][layer];
+      c.beginPath(); c.moveTo(side*w,0);
+      for (let y=0;y<h+5;y+=4) c.lineTo(bank(y,side)+(side?1:-1)*layer*w*.012,y);
+      c.lineTo(side*w,h+5); c.closePath(); c.fill();
+    }
+  }
+  for (let i=0;i<140;i++) {
+    const x=rand(i+340)*w, y=rand(i+560)*h;
+    if (x>bank(y,0)-8 && x<bank(y,1)+8) continue;
+    c.fillStyle = i%3 ? '#475344':'#59604e'; c.fillRect(x,y,2+rand(i+4)*8,2+rand(i+21)*2);
+  }
+  const bx=w*.33, by=h*.43, bw=w*.34, bh=h*.14, stones=11;
+  c.fillStyle='#1a2724'; c.fillRect(bx,by+5,bw,bh);
+  c.fillStyle='#585649'; c.fillRect(bx,by,bw,bh);
+  for(let row=0;row<3;row++) for(let i=0;i<stones;i++) {
+    const sw=bw/stones;
+    c.fillStyle=['#817c69','#918773','#757565','#8a816e'][(i*3+row)%4];
+    c.fillRect(bx+i*sw+1,by+row*bh/3+1,sw-2,bh/3-2);
+  }
+  for(const ry of [by-2,by+bh-3]){c.fillStyle='#ae9d7f'; c.fillRect(bx-3,ry,bw+6,4)}
+  const sprites = {
+    knight:['..XX...','..XX.X.','.XXXX.X','.XXXX.X','..XX.X.','.X..X..'],
+    shield:['..XX...','..XX...','.XXXXXX','.XXXXXX','..XXXX.','.XX.X..'],
+    sister:['..XX...','.XXXX..','..XX.X.','..XX.X.','.XXXX..','XXXXXX.'],
+    caster:['...X...','..XX..X','.XXXX.X','..XX.X.','.XXXX.X','XXXXXXX']
+  };
+  const unit=(kind,x,y,color) => {
+    const pixels=sprites[kind], s=w<500?2.5:3.5;
+    c.fillStyle='#162019'; c.beginPath(); c.ellipse(x*w,y*h+8,4*s,s*1.7,0,0,Math.PI*2); c.fill();
+    pixels.forEach((row,r)=>[...row].forEach((p,z)=>{
+      if(p==='X'){c.fillStyle=r<2?'#f4e2b9':color;c.fillRect(x*w+(z-3.5)*s,y*h+(r-3)*s,s+.3,s+.3)}
+    }));
+  };
+  unit('knight',.25,.5,'#e8c87c');unit('shield',.28,.29,'#9bc2a1');unit('shield',.2,.78,'#9bc2a1');
+  unit('sister',.12,.64,'#c6d9c1');unit('caster',.79,.43,'#ee876a');
+}
+new ResizeObserver(draw).observe(scene);
+</script>
+</body>
+</html>

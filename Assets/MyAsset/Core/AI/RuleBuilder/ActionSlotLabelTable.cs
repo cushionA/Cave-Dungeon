@@ -64,6 +64,8 @@ namespace Game.Core
                 case BroadcastAction.Taunt:           return "挑発";
                 case BroadcastAction.FocusFire:       return "集中攻撃指示";
                 case BroadcastAction.Disengage:       return "戦闘離脱指示";
+                case BroadcastAction.DefendPoint:     return "ここを守れ";
+                case BroadcastAction.ReleaseOrder:    return "おまかせ";
                 case BroadcastAction.ModeSync:        return "モード同期";
                 default:                              return "不明(Broadcast)";
             }

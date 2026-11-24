@@ -32,6 +32,8 @@ namespace Game.Runtime
         private GameLoop _loop;
         private GameActionRuntime _actions;
         private AIObservationCoordinator _observations;
+        [SerializeField, Min(0f)] private float _fieldOrderRange = 20f;
+        private RuntimeFieldOrders _fieldOrders;
         private readonly List<int> _simulationHashes = new List<int>();
         private readonly List<ActorRef> _simulationActors = new List<ActorRef>();
         private readonly Dictionary<int, ActorRef> _decisionActors = new Dictionary<int, ActorRef>();
@@ -53,6 +55,7 @@ namespace Game.Runtime
         public static GameManager Instance { get; private set; }
         public GameLoop Loop => _loop;
         public static SoACharaDataDic Data => Instance != null ? Instance._core.Data : null;
+        internal static RuntimeFieldOrders FieldOrders => Instance != null ? Instance._fieldOrders : null;
         public static GameEvents Events => Instance != null ? Instance._core.Events : null;
         public static StatusEffectSystem StatusEffects => Instance != null ? Instance._core.StatusEffects : null;
         public static EquipmentStore Equipment => Instance != null ? Instance._core.Equipment : null;
@@ -125,6 +128,7 @@ namespace Game.Runtime
             _actions = new GameActionRuntime(_core.Data, _core.Events, _core.Actions);
             _observations = new AIObservationCoordinator(_core.Data, _core.Actors, _core.Events, ActorPhysicsScene, _core.StatusEffects.Store);
             _statusEffectPresentation = new StatusEffectPresentationController(_core.Data, _core.StatusEffects.Store, _statusEffectCatalog);
+            _fieldOrders = new RuntimeFieldOrders(_core.Events, _fieldOrderRange);
             _canApplyAIDecision = CanApplyAIDecision;
             _loop = new GameLoop(this, _actions, _statusEffectPresentation);
             _loop.Install();
@@ -383,6 +387,7 @@ namespace Game.Runtime
         {
             if (_core != null && _core.IsInitialized)
             {
+                if (_core.Actors.TryGet(hash, out ActorRef actor)) { _fieldOrders.Forget(actor); }
                 _core.UnregisterCharacter(hash);
                 // 下回ったら再警告できるようフラグ復帰
                 if (_capacityWarningFired && _core.Data != null
@@ -422,6 +427,7 @@ namespace Game.Runtime
             if (Instance == this)
             {
                 _loop?.Dispose();
+                _fieldOrders?.Dispose();
                 _observations?.Dispose();
                 _statusEffectPresentation?.Dispose();
                 _actions?.Dispose();

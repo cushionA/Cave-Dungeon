@@ -162,22 +162,53 @@ namespace Game.Core
         }
     }
 
-    /// <summary>
-    /// 自分は何もしない。他キャラのAI状態を操作。
-    /// ターゲット指示、集合、散開、挑発等。
-    /// paramIdでBroadcastAction enum値を引く。
-    /// </summary>
+    /// <summary>AIの号令を、通常の攻撃・移動の実行グループとは独立して指揮官へ届ける。</summary>
     public class BroadcastActionHandler : ActionBase
     {
-        public override ActionExecType ExecType => ActionExecType.Broadcast;
+        private readonly GameEvents _events;
+        private readonly FieldOrderIssuer _issuer;
+        private readonly int _ownerHash;
+        private ActorRef _owner;
 
+        public override ActionExecType ExecType => ActionExecType.Broadcast;
         public int LastOwnerHash { get; private set; }
         public int LastParamId { get; private set; }
 
+        public BroadcastActionHandler(int ownerHash = 0, FieldOrderIssuer issuer = FieldOrderIssuer.None, GameEvents events = null)
+        {
+            _events = events;
+            _issuer = issuer;
+            _ownerHash = ownerHash;
+            BindCurrentOwner();
+        }
+
+        internal void BindCurrentOwner() => _owner = _events?.GetCurrentFieldOrderActor(_ownerHash) ?? default;
+        internal void ClearOwner() => _owner = default;
+
+        internal bool Supports(int id) =>
+            _owner.IsValid && id >= 0 && id <= byte.MaxValue && FieldOrderCatalog.Allows((BroadcastAction)id, _issuer);
+
+        internal bool TryIssue(int ownerHash, int targetHash, int id)
+        {
+            ActorRef target = _events?.GetCurrentFieldOrderActor(targetHash) ?? default;
+            return ownerHash == _ownerHash && TryIssue(_owner, target, id);
+        }
+
+        internal bool TryIssue(ActorRef owner, ActorRef target, int id, UnityEngine.Vector2? point = null)
+        {
+            if (owner != _owner || !Supports(id)) { return false; }
+            BroadcastAction action = (BroadcastAction)id;
+            ActorRef requiredTarget = FieldOrderCatalog.RequiresTarget(action) ? target : default;
+            FieldOrder order = new FieldOrder(action, _issuer, owner, requiredTarget, point);
+            if (!_events.TryIssueFieldOrder(order)) { return false; }
+            LastOwnerHash = owner.Hash;
+            LastParamId = id;
+            return true;
+        }
+
         protected override void OnExecute(int ownerHash, int targetHash, ActionSlot slot)
         {
-            LastOwnerHash = ownerHash;
-            LastParamId = slot.paramId;
+            TryIssue(ownerHash, targetHash, slot.paramId);
             Complete();
         }
     }

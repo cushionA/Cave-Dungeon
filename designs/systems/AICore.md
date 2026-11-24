@@ -160,6 +160,8 @@ public enum BroadcastAction : byte
     FocusFire,          // 集中攻撃指示
     Disengage,          // 戦闘離脱指示
     ModeSync,           // モード同期（味方全員を同じモードに）
+    DefendPoint,        // 地点を守る
+    ReleaseOrder,       // 号令を解いて自律行動に戻す
 }
 ```
 
@@ -428,13 +430,17 @@ paramIdでBroadcastAction enum値を引く。
 
 | BroadcastAction | 説明 |
 |-----------------|------|
-| DesignateTarget | ターゲット指示（味方全員のターゲットを上書き） |
+| DesignateTarget | 担当や交戦相手がまだいない味方に標的を知らせる |
 | Rally | 集合（味方に集合点を指定） |
 | Scatter | 散開（味方を散らす） |
 | Taunt | 挑発（周囲の敵のターゲットを自分に向ける） |
-| FocusFire | 集中攻撃指示（味方全員で1体を攻撃） |
+| FocusFire | 交戦中の味方にも、指示した一体を優先するよう求める |
 | Disengage | 戦闘離脱指示 |
 | ModeSync | モード同期（味方全員を同じモードに切替） |
+| DefendPoint | 指定地点を守る |
+| ReleaseOrder | 現在の任務を終了し、元の個体設定を再開する |
+
+号令のIDはデータに保存される。既存の0～6を維持し、地点防衛と指示解除を末尾に追加した。各定義の使用者マスクをプレイヤー用の装備候補と実行時の検査で共用する。一回の発令には、実際の発令者に対応する一つのビットと、世代付きの個体参照を渡す。使用者の区分と受け手の陣営は別々に検査する。敵専用の挑発なら敵指揮官が発行し、効果を受けるのは対立陣営のAIである。AIの作者は `ActType.FieldOrder` の行動をモードに載せ、`ActData.fieldOrder` に号令を指定する。AIが地点防衛を出したときは、判断時に観測した発令者の位置が持ち場になる。2D試作では集合・標的指定・集中攻撃・地点防衛・解除・挑発を受信できる。散開・戦闘離脱・モード同期には将来用のIDと発令権限を割り当てている。[号令と権限](../../Assets/MyAsset/Core/AI/Core/FieldOrder.cs)・[2D戦場での配送](../../Assets/MyAsset/Runtime/AI/RuntimeFieldOrders.cs)
 
 ---
 
@@ -475,7 +481,7 @@ AIMode[1] "フェーズ2":
   default: ActionSlot(Sustained, paramId=Retreat, paramValue=8.0)
 ```
 
-### 仲間AI（カスタム）
+### シスターの仲間AI（プレイヤーカスタム）
 
 ```
 AIMode[0] "攻撃特化":
@@ -622,5 +628,5 @@ Hard:   2フレーム + 0-2ランダム → 0.03-0.13秒
 - 攻撃も魔法もワープも移動もガードも同じActionSlot構造体で表現 → AIエディタが一つで済む
 - Sustained行動のreactionTriggerでカウンター系を統一的に表現（カウンター攻撃、カウンターワープ、カウンター回避）
 - 環境物利用はAIConditionType.ObjectNearbyで条件判定し、Instant(InteractObject)で実行
-- 仲間AIのカスタムは「プレイヤーがActionSlotを自分で組む」こと
+- プレイヤーがActionSlotのルールを組める仲間はシスター。召喚魔物は作者が設定した種の行動で戦い、指揮官を経由して騎士の簡易指揮を受ける。
 - 07_AI判定システム再設計のActionDataをActionSlotに更新する必要あり

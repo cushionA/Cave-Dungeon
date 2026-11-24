@@ -41,6 +41,7 @@ namespace Game.Runtime
 
         // 通貨
         private Label _currencyText;
+        private Label _fieldOrderLabel;
         private StatusEffectIconStrip _playerEffects;
         private StatusEffectIconStrip _companionEffects;
         private StatusEffectIconStrip _bossEffects;
@@ -112,6 +113,7 @@ namespace Game.Runtime
 
             // 通貨
             _currencyText = root.Q<Label>("currency-text");
+            _fieldOrderLabel = root.Q<Label>("field-order");
             _playerEffects = new StatusEffectIconStrip(root.Q<VisualElement>("player-effects"));
             _companionEffects = new StatusEffectIconStrip(root.Q<VisualElement>("companion-effects"));
             _bossEffects = new StatusEffectIconStrip(root.Q<VisualElement>("boss-effects"));
@@ -131,6 +133,16 @@ namespace Game.Runtime
 
         private void Update()
         {
+            if (_fieldOrderLabel != null)
+            {
+                PlayerCharacter player = GameManager.Data?.GetManaged(CharacterRegistry.PlayerHash) as PlayerCharacter;
+                string hint = player != null && player.InputHandler != null ? player.InputHandler.FieldOrderHint : null;
+                if (_fieldOrderLabel.text != (hint ?? string.Empty))
+                {
+                    _fieldOrderLabel.text = hint ?? string.Empty;
+                    _fieldOrderLabel.style.display = hint == null ? DisplayStyle.None : DisplayStyle.Flex;
+                }
+            }
             if (GameManager.Data == null)
             {
                 ClearStatusEffects();

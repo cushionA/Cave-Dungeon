@@ -41,6 +41,8 @@
             <ui:VisualElement name="boss-effects" class="status-effects" />
         </ui:VisualElement>
 
+        <ui:Label name="field-order" class="field-order" picking-mode="Ignore" />
+
         <!-- 右下: 通貨表示 -->
         <ui:VisualElement name="currency-display" class="currency-panel">
             <ui:Label name="currency-text" text="0 G" class="currency-text" />
