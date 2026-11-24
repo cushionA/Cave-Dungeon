@@ -126,7 +126,7 @@
 
 ## 機能DBに登録する経路
 
-機能名は `DungeonExpedition_AllyRoster`。遠征・召喚編成・3D集団戦の7経路に加え、プレイヤーのマルチロック、AIの詠唱、攻撃予告の3経路を計画として追跡する。敵味方で号令を共用する2D試作は実行検証済み。登録内容は `python tools/feature-db.py call-paths DungeonExpedition_AllyRoster` で確認できる。[登録マニフェスト](call-paths.json)
+機能名は `DungeonExpedition_AllyRoster`。遠征・召喚編成・3D集団戦の7経路に加え、プレイヤーのマルチロック、AIの詠唱、攻撃予告の3経路を計画として追跡する。敵味方で号令を共用する2D試作は実行検証済み。登録内容は `python tools/feature-db.py call-paths DungeonExpedition_AllyRoster` で確認できる。[登録マニフェスト](call-paths.json)・[ローカルDBの復元と、次に実装する3経路のハンズオン](../docs/reports/handoffs/2026-11-24_multilock-and-attack-warnings.md)
 
 | 優先 | 経路 | 実装時に通す対照ケース | DBキー |
 |---|---|---|---|
