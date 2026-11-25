@@ -14,7 +14,7 @@ Section: 3 — 世界の広がり
 
 ## 3D遠征での同行
 
-`ExpeditionSummonDeployment3D` の `Exploration Leader` に騎士を設定すると、通常編成で出撃した魔物が同じ物理空間で騎士に歩いて追従する。停止距離は `Follow Distance` で設定する。集団戦が個体の移動を担当している間は戦闘側に従い、担当が外れると通常編成の追従に戻る。戦闘専用の増援は遭遇側で管理する。[遠征の出撃と同行](../../Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs)
+`ExpeditionSummonDeployment3D` の `Exploration Leader` に騎士を設定すると、通常編成で出撃した魔物が同じ物理空間で騎士に歩いて追従する。停止距離は `Follow Distance` で設定する。集団戦の固定更新で移動した個体は、そのステップの追従を省く。遭遇が固定ステップの途中で始まるか終わる場合も、移動と重力はモーターで一度だけ適用する。戦闘専用の増援は遭遇側で管理する。[遠征の出撃と同行](../../Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs)・[3D移動](../../Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs)
 
 ## 召喚魔法の固定枠
 

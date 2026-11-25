@@ -35,6 +35,7 @@ namespace Game.Runtime
         private GroundContact _groundFromMove;
         private float _verticalSpeed;
         private float _minimumGroundNormalY;
+        private double _lastSimulatedFixedTime = double.NegativeInfinity;
 
         /// <summary>直近の移動で接地したコライダーと、ワールド座標の接触点・法線。</summary>
         public GroundContact Ground { get; private set; }
@@ -76,11 +77,25 @@ namespace Game.Runtime
 
         /// <summary>一回の固定ステップを進める。入力はワールドXZ、ジャンプはそのステップでの押下。</summary>
         public void Simulate(Vector3 moveDirection, bool jumpPressed, float deltaTime)
+            => Simulate(moveDirection, jumpPressed, deltaTime, oncePerFixedStep: false);
+
+        // 遭遇と通常探索の制御を、同じ固定ステップで重ねて適用しない。
+        internal void SimulateFixedStep(Vector3 moveDirection, bool jumpPressed, float deltaTime)
+            => Simulate(moveDirection, jumpPressed, deltaTime, oncePerFixedStep: true);
+
+        private void Simulate(Vector3 moveDirection, bool jumpPressed, float deltaTime, bool oncePerFixedStep)
         {
             if (!isActiveAndEnabled || !_controller.enabled || deltaTime <= 0f
                 || float.IsNaN(deltaTime) || float.IsInfinity(deltaTime))
             {
                 return;
+            }
+
+            if (oncePerFixedStep)
+            {
+                double fixedTime = Time.fixedTimeAsDouble;
+                if (_lastSimulatedFixedTime == fixedTime) { return; }
+                _lastSimulatedFixedTime = fixedTime;
             }
 
             Vector3 move = Vector3.ClampMagnitude(new Vector3(moveDirection.x, 0f, moveDirection.z), 1f);

@@ -203,8 +203,10 @@ namespace Game.Tests.EditMode
             Assert.IsTrue(_flagManager.GetLocalFlag("reward_claimed"));
         }
 
-        [Test]
-        public void FlagManager_Load_WithMalformedJson_RejectsBeforeEarlierSaveablesApply()
+        [TestCase(@"{""mapLocalFlags"":{""mine"":null}}", "マップのフラグデータ")]
+        [TestCase(@"{""globalFlags"":[]}", "globalFlags")]
+        [TestCase("42", "フラグの保存データの形式が不正です")]
+        public void FlagManager_Load_WithMalformedJson_RejectsBeforeEarlierSaveablesApply(string json, string diagnostic)
         {
             var saves = new SaveManager();
             var earlier = new TrackingSaveable { Value = 12 };
@@ -221,13 +223,13 @@ namespace Game.Tests.EditMode
 
             var rejected = new SaveSlotData(1);
             rejected.entries[earlier.SaveId] = 34;
-            rejected.entries[_flagManager.SaveId] = JObject.Parse(@"{""mapLocalFlags"":{""mine"":null}}");
+            rejected.entries[_flagManager.SaveId] = JToken.Parse(json);
             saves.SetSlotData(1, rejected);
             int notifications = 0;
             saves.Loaded += _ => notifications++;
 
             LogAssert.Expect(LogType.Error,
-                new Regex(@"\[SaveManager\].*スロットの事前検証に失敗しました.*マップのフラグデータ"));
+                new Regex(@"(?s)\[SaveManager\].*スロットの事前検証に失敗しました.*" + Regex.Escape(diagnostic)));
             Assert.IsFalse(saves.Load(1));
 
             Assert.AreEqual(applied, earlier.ApplyCount);
@@ -237,6 +239,8 @@ namespace Game.Tests.EditMode
             Assert.IsTrue(_flagManager.GetLocalFlag("reward_claimed"));
             Assert.AreEqual(0, saves.ActiveSlotIndex);
             Assert.AreSame(current, saves.LastLoadedSlot);
+            Assert.AreSame(current, saves.GetSlotData(0));
+            Assert.AreSame(rejected, saves.GetSlotData(1));
             Assert.AreEqual(revision, saves.LoadRevision);
             Assert.AreEqual(0, notifications);
         }

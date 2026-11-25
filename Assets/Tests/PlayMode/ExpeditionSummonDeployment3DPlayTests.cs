@@ -294,6 +294,75 @@ namespace Game.Tests.PlayMode
             Assert.That(scout.Actor, Is.EqualTo(_summons[0].Actor));
         }
 
+        [UnityTest]
+        public IEnumerator NormalDeployment_WhenEncounterStartsBetweenDrivers_ConsumesExactlyOneFixedStep()
+            => CheckEncounterTransitionSteps(start: true);
+
+        [UnityTest]
+        public IEnumerator NormalDeployment_WhenEncounterStopsBetweenDrivers_ConsumesExactlyOneFixedStep()
+            => CheckEncounterTransitionSteps(start: false);
+
+        private IEnumerator CheckEncounterTransitionSteps(bool start)
+        {
+            const float moveSpeed = 3f;
+            Vector3 spawn = _positions[0].position;
+            Assert.That(_squad.TryConfirm(new[] { new ExpeditionSquad.Selection("scout", 1) }), Is.True);
+            CharacterActor3D knight = CreateCharacter("Knight", spawn + Vector3.forward * 4f, CharacterFeature.Player);
+            knight.gameObject.SetActive(true);
+            EncounterSession3D session = NewObject("Group objective", Vector3.zero).AddComponent<EncounterSession3D>();
+            ChallengeDefinition challenge = ScriptableObject.CreateInstance<ChallengeDefinition>();
+            _assets.Add(challenge);
+            challenge.SetForTest("handoff", "Group objective", ChallengeType.TimeAttack);
+            session.ConfigureForTest(knight, challenge, EncounterTraits.GroupBattle);
+
+            EncounterCombat3D encounter = NewObject("Group combat", Vector3.zero).AddComponent<EncounterCombat3D>();
+            SetSerializedField(encounter, "knight", knight);
+            SetSerializedField(encounter, "objective", session);
+            EncounterCombatant3D combatant = _scoutPrefab.gameObject.AddComponent<EncounterCombatant3D>();
+            SetSerializedField(combatant, "home", NewObject("Combat destination", spawn + Vector3.right * 4f).transform);
+            SetSerializedField(_scoutPrefab.GetComponent<CharacterMotor3D>(), "moveSpeed", moveSpeed);
+            Configure(encounter, knight);
+
+            for (int ordering = 0; ordering < 2; ordering++)
+            {
+                // この固定更新の通常コールバックを終えてから、まだ未駆動の個体を同じ時刻に登録する。
+                yield return new WaitForFixedUpdate();
+                if (!start) { Assert.That(session.TryStartEncounter(), Is.True); }
+                Assert.That(_deployment.TryDeployConfirmed(), Is.True);
+                _deployment.CopyActiveSummons(_summons);
+                CharacterActor3D scout = GetUnit(_summons[0].Actor);
+                Vector3 before = scout.transform.position;
+                bool encounterFirst = ordering == 0;
+                MonoBehaviour first = encounterFirst ? encounter : _deployment;
+                MonoBehaviour second = encounterFirst ? _deployment : encounter;
+
+                // 探索は+Z、集団戦は+Xへ進む。実際の移動量で0回・1回・2回を区別する。
+                InvokeFixedStep(first);
+                if (start) { Assert.That(session.TryStartEncounter(), Is.True); }
+                else { session.AbortEncounter(); }
+                Assert.That(session.IsRunning, Is.EqualTo(start));
+                InvokeFixedStep(second);
+
+                Vector3 actual = scout.transform.position - before;
+                Vector3 direction = encounterFirst && !start ? Vector3.right : Vector3.forward;
+                float expectedDistance = moveSpeed * Time.fixedDeltaTime;
+                Assert.That(actual.x, Is.EqualTo(direction.x * expectedDistance).Within(0.005f),
+                    $"start={start}, encounterFirst={encounterFirst} (X)");
+                Assert.That(actual.z, Is.EqualTo(direction.z * expectedDistance).Within(0.005f),
+                    $"start={start}, encounterFirst={encounterFirst} (Z)");
+
+                session.AbortEncounter();
+                _deployment.DismissAll();
+            }
+        }
+
+        private static void InvokeFixedStep(MonoBehaviour controller)
+        {
+            MethodInfo fixedUpdate = controller.GetType().GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(fixedUpdate, Is.Not.Null);
+            fixedUpdate.Invoke(controller, null);
+        }
+
         private CharacterActor3D CreateCharacter(string name, Vector3 position, CharacterFeature feature)
         {
             GameObject gameObject = NewObject(name, position);

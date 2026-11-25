@@ -189,7 +189,7 @@ namespace Game.Runtime
                 {
                     AssignStation(member, owner, faction);
                 }
-                actor.Motor.Simulate(Vector3.zero, false, Time.fixedDeltaTime);
+                actor.Motor.SimulateFixedStep(Vector3.zero, false, Time.fixedDeltaTime);
                 return;
             }
 
@@ -259,7 +259,7 @@ namespace Game.Runtime
                     Vector3 facing = Horizontal(offset);
                     if (facing.sqrMagnitude > 0.001f) { actor.transform.rotation = Quaternion.LookRotation(facing); }
                     _attackSlots.TryExecute(actor, sighting.Target, member.Attack, out _);
-                    actor.Motor.Simulate(Vector3.zero, false, Time.fixedDeltaTime);
+                    actor.Motor.SimulateFixedStep(Vector3.zero, false, Time.fixedDeltaTime);
                     return;
                 }
             }
@@ -268,7 +268,7 @@ namespace Game.Runtime
             {
                 move = Horizontal(destination.Value - actor.Motor.FeetPosition).normalized;
             }
-            actor.Motor.Simulate(move, false, Time.fixedDeltaTime);
+            actor.Motor.SimulateFixedStep(move, false, Time.fixedDeltaTime);
         }
 
         private Transform AssignStation(EncounterCombatant3D member, ActorRef owner, CharacterBelong faction)

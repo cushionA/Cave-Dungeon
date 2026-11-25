@@ -7,6 +7,8 @@ using UnityEngine.SceneManagement;
 namespace Game.Runtime
 {
     /// <summary>シスターが編成した召喚種を、この3D区画の出現地点へ転送する。</summary>
+    // 遭遇がそのステップの移動を確定してから、通常探索の追従を試す。
+    [DefaultExecutionOrder(50)]
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CharacterActor3D))]
     public sealed class ExpeditionSummonDeployment3D : MonoBehaviour
@@ -89,7 +91,7 @@ namespace Game.Runtime
             for (int i = 0; ReferenceEquals(group, _normal) && i < group.units.Count; i++)
             {
                 CharacterActor3D actor = group.units[i].actor;
-                if (!IsLive(actor) || !actor.Body.enabled || (encounter != null && encounter.Drives(actor))) { continue; }
+                if (!IsLive(actor) || !actor.Body.enabled) { continue; }
 
                 int hash = actor.Actor.Hash;
                 ref readonly CharacterFlags flags = ref GameManager.Data.GetFlags(hash);
@@ -97,7 +99,7 @@ namespace Game.Runtime
 
                 bool blocked = actions.IsMovementBlocked(hash) || GameManager.Data.GetStatusEffects(hash).BlocksMovement;
                 Vector3 direction = blocked ? Vector3.zero : CompanionTactics3D.FollowDirection(actor, leader, followDistance);
-                actor.Motor.Simulate(direction, false, Time.fixedDeltaTime);
+                actor.Motor.SimulateFixedStep(direction, false, Time.fixedDeltaTime);
             }
         }
 
