@@ -66,9 +66,12 @@ jobs:
             In this Unity project, pay particular attention to save compatibility, scene transitions,
             and ownership of input and game state. Include an affected file and line for every finding.
             Describe the affected scenario, expected impact, and a concrete correction in Japanese.
-            Keep up to ten actionable findings, most severe first. State what was inspected and report
-            explicitly if no actionable issues were found. Set reviewed_changes to true only when
-            you inspected the actual changes and completed the review. Return the Markdown as review.
+            For a large PR, prioritize the changed source and tests with the most significant impact.
+            Keep up to ten actionable findings, most severe first. State what was inspected and note
+            any significant gaps in coverage. Say explicitly if the inspected changes yielded no findings.
+            Set reviewed_changes to true if you analyzed actual diff hunks and can report a substantive
+            review. A focused review qualifies. Set it to false if you could not analyze the diff.
+            Return the Markdown as review.
           claude_args: >-
             --permission-mode default --setting-sources user --tools Read,Glob,Grep
             --add-dir "${{ runner.temp }}/claude-review" --max-turns 35
