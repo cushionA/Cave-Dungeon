@@ -453,6 +453,7 @@ namespace Game.Core
         DamageScore,
         EventFired,
         SelfActState,
+        TargetLineOfSight,
     }
 
     public enum TargetSortKey : byte

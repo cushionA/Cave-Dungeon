@@ -211,6 +211,7 @@ namespace Game.Runtime
             _observations.Capture(tick, currentTime);
             AIObservationContext observation = _observations.Observation;
             if (_core.Actors.TryGet(CharacterRegistry.PlayerHash, out ActorRef player)) { observation.SetProtectedPlayer(player); }
+            CaptureTargetLineOfSight(observation);
             if (!AISceneGimmickController.Capture(observation)) { return; }
             for (int i = 0; i < observation.ActorHashes.Count; i++)
             {
@@ -219,6 +220,39 @@ namespace Game.Runtime
                     && _core.Actors.TryGet(hash, out ActorRef actor))
                 {
                     observation.SetGimmickVelocity(actor, character.PhysicsVelocity);
+                }
+            }
+        }
+
+        private void CaptureTargetLineOfSight(AIObservationContext observation)
+        {
+            bool transformsSynced = false;
+            for (int i = 0; i < _simulationActors.Count; i++)
+            {
+                ActorRef owner = _simulationActors[i];
+                if (!TryGetSimulationCharacter(i, true, out BaseCharacter observer) || observer.PhysicsBackend == null
+                    || observer.FieldOrderJudgment?.RequiresTargetLineOfSight != true || !observation.Contains(owner)) { continue; }
+
+                PhysicsScene2D world = PhysicsSceneOf(observer);
+                if (!world.IsValid()) { continue; }
+                if (!transformsSynced)
+                {
+                    Physics2D.SyncTransforms();
+                    transformsSynced = true;
+                }
+                ContactFilter2D filter = new ContactFilter2D { useTriggers = false };
+                filter.SetLayerMask(observer.GroundLayers);
+                Vector2 origin = observer.TargetingCenter;
+                for (int j = 0; j < _simulationActors.Count; j++)
+                {
+                    ActorRef target = _simulationActors[j];
+                    if (!observation.Contains(target) || !TryGetSimulationCharacter(j, false, out BaseCharacter candidate)
+                        || candidate.PhysicsBackend == null || PhysicsSceneOf(candidate) != world) { continue; }
+                    Vector2 line = candidate.TargetingCenter - origin;
+                    float distance = line.magnitude;
+                    if (!float.IsFinite(distance)) { continue; }
+                    bool visible = distance <= Mathf.Epsilon || !world.Raycast(origin, line / distance, distance, filter);
+                    observation.SetTargetLineOfSight(owner, target, visible);
                 }
             }
         }

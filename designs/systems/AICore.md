@@ -581,6 +581,14 @@ CompareOp(9種): Less, LessEqual, Equal, GreaterEqual, Greater, NotEqual, InRang
 
 `AIInfo` の行動トリガー `CoolTimeReady` と `TargetStatusEffect` は変換に未対応。これらを指定した行動はスロットに残り、自動選択と既定行動の候補から外れる。ほかに使える行動がないモードでは、行動を開始しない。
 
+### 2Dの攻撃に射線条件を付ける
+
+2Dの `AIInfo` で行動の `Require Line Of Sight` を有効にすると、選んだ標的までの射線が通る場合にだけ、その行動を候補にできる。観測を確定するときに同じ物理シーンの相手を照会し、観測者が使用する Ground レイヤーで遮蔽を判定する。同期とBurstは同じ世代付き観測を読み、遮蔽されている場合や観測が取得できない場合は、待機など次に使える行動を選ぶ。[AI設定の変換](../../Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs)・[射線の観測](../../Assets/MyAsset/Runtime/GameManager.cs)
+
+### 3D集団戦で障害を迂回する
+
+`EncounterCombat3D` の `Approach Waypoints` に、同じ部屋の床をつなぐ中継点を最大12個設定する。`Approach Ground Layers` には通行を支える床を、`Obstruction Layers` には通行や射線を遮る壁を指定する。通常の接近や集中攻撃では、同じ陣営が目撃した標的へ向けて、歩いて到達できる射程内の地点を選ぶ。中継点と終点の間は個体の幅と床を照会し、通行可能な候補のうち短い経路を使う。攻撃は個体自身の射線が通ってから始める。標的の変化や通路の閉塞があれば次の経路を選び直す。橋の上り下りやジャンプを含む特殊移動は別の経路が必要になる。[遭遇の移動](../../Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs)・[接近経路](../../Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs)
+
 ## DamageScoreTracker
 - DamageScoreEntry[4-8] per character（SoAコンテナ管理）
 - ダメージ受領時: score += actualDamage × 倍率（ヘイト上昇状態なら1.2倍等）

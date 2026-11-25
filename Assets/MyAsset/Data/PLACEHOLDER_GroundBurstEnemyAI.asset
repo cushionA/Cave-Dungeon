@@ -133,7 +133,7 @@ MonoBehaviour:
       requiredStamina: 0
       minHpRatio: 0
       maxHpRatio: 0
-      requireLineOfSight: 0
+      requireLineOfSight: 1
       requireGrounded: 0
   coolTimeData:
     globalCoolTime: 0.5

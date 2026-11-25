@@ -58,6 +58,9 @@ namespace Game.Core
                 && condition.filter.RequiresObservedTargetFacts) { return float.NaN; }
             switch (condition.conditionType)
             {
+                case AIConditionType.TargetLineOfSight:
+                    return float.NaN;
+
                 case AIConditionType.HpRatio:
                 {
                     int hash = ResolveTargetHash(condition.filter, ownerHash, targetHash);

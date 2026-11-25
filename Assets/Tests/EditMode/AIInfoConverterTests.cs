@@ -291,6 +291,29 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
+        public void ConvertModes_RequireLineOfSight_KeepsAnAuthoredAttackAsAConditionalRuleOnly()
+        {
+            AIInfo info = ScriptableObject.CreateInstance<AIInfo>();
+            try
+            {
+                info.actDataList = new[] { new ActData
+                {
+                    actType = ActType.Attack,
+                    actJudge = new ActJudgeData { requireLineOfSight = true },
+                } };
+                info.modes = new[] { new CharacterModeData { availableActIndices = new[] { 0 } } };
+
+                AIMode mode = AIInfoConverter.ConvertModes(info)[0];
+                AICondition sight = mode.actionRules[0].conditions[0];
+                Assert.AreEqual(AIConditionType.TargetLineOfSight, sight.conditionType);
+                Assert.AreEqual(CompareOp.Equal, sight.compareOp);
+                Assert.AreEqual(1, sight.operandA);
+                Assert.AreEqual(-1, mode.defaultActionIndex);
+            }
+            finally { Object.DestroyImmediate(info); }
+        }
+
+        [Test]
         public void ConvertTransitions_MapsCorrectly()
         {
             AIInfo info = ScriptableObject.CreateInstance<AIInfo>();

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -240,6 +241,16 @@ namespace Game.Core
             List<AICondition> conditions = new List<AICondition>();
             if (trigger.conditionType != AIConditionType.None) { conditions.Add(trigger); }
 
+            if (act.actJudge.requireLineOfSight)
+            {
+                conditions.Add(new AICondition
+                {
+                    conditionType = AIConditionType.TargetLineOfSight,
+                    compareOp = CompareOp.Equal,
+                    operandA = 1,
+                });
+            }
+
             // Convert ActJudge: stamina requirement
             if (act.actJudge.requiredStamina > 0f)
             {
@@ -411,21 +422,24 @@ namespace Game.Core
         private static int FindDefaultActionIndex(List<ActionSlot> actions, List<AIRule> executableRules)
         {
             int firstOrdinaryAction = -1;
+            int firstInteraction = -1;
             foreach (AIRule rule in executableRules)
             {
+                if (Array.Exists(rule.conditions, AICompiledMode.IsLineOfSightCondition)) { continue; }
                 int index = rule.actionIndex;
                 if (actions[index].execType == ActionExecType.Sustained)
                 {
                     return index;
                 }
-                if (firstOrdinaryAction < 0 && !ActionCommand.IsGimmickInteraction(actions[index]))
+                if (ActionCommand.IsGimmickInteraction(actions[index]))
                 {
-                    firstOrdinaryAction = index;
+                    if (firstInteraction < 0) { firstInteraction = index; }
                 }
+                else if (firstOrdinaryAction < 0) { firstOrdinaryAction = index; }
             }
             if (firstOrdinaryAction >= 0) { return firstOrdinaryAction; }
             // A mode containing only interactions can still select one when a usable prop is observed.
-            return executableRules.Count > 0 ? executableRules[0].actionIndex : -1;
+            return firstInteraction;
         }
     }
 }
