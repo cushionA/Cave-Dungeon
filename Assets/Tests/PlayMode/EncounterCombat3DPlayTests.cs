@@ -133,6 +133,97 @@ namespace Game.Tests.PlayMode
         public IEnumerator EncounterApproach_WhenShortRouteCloses_ReplansAroundOtherSide()
             => TraverseWall(closeShortRoute: true);
 
+        [UnityTest]
+        public IEnumerator EncounterTraversal_WithDirectedJump_CrossesGapAndHitsAfterLanding()
+            => TraverseGap(canJump: true, blockLanding: false);
+
+        [UnityTest]
+        public IEnumerator EncounterTraversal_WithoutJumpCapability_WalksTheBridge()
+            => TraverseGap(canJump: false, blockLanding: false);
+
+        [UnityTest]
+        public IEnumerator EncounterTraversal_WithBlockedLanding_WalksTheBridge()
+            => TraverseGap(canJump: true, blockLanding: true);
+
+        [UnityTest]
+        public IEnumerator EncounterTraversal_WhenSessionEndsInFlight_LandsWithoutAttack()
+            => TraverseGap(canJump: true, blockLanding: false, endInFlight: true);
+
+        private IEnumerator TraverseGap(bool canJump, bool blockLanding, bool endInFlight = false)
+        {
+            Surface("Near bank", new Vector3(-2.75f, -0.25f, 0f), new Vector3(4f, 0.5f, 8f), Quaternion.identity);
+            BoxCollider farBank = Surface("Far bank", new Vector3(2.75f, -0.25f, 0f), new Vector3(4f, 0.5f, 8f), Quaternion.identity);
+            BoxCollider bridge = Surface("Walking bridge", new Vector3(0f, -0.25f, 2.25f), new Vector3(2.5f, 0.5f, 1.25f), Quaternion.identity);
+            BoxCollider landingObstruction = Surface("Landing obstruction", new Vector3(1.25f, 2f, 0f),
+                new Vector3(0.55f, 0.95f, 0.9f), Quaternion.identity);
+            landingObstruction.enabled = blockLanding;
+            Transform takeoff = At("Takeoff", new Vector3(-1.25f, 0f, 0f));
+            Transform landing = At("Landing", new Vector3(1.25f, 0f, 0f));
+            Transform nearBridge = At("Bridge entry", new Vector3(-1.25f, 0f, 2.25f));
+            Transform farBridge = At("Bridge exit", new Vector3(1.25f, 0f, 2.25f));
+            CharacterActor3D knight = Actor("Knight", new Vector3(3.45f, 0.04f, 0f), CharacterBelong.Ally, CharacterFeature.Player);
+            CharacterActor3D fighter = Actor("Fighter", new Vector3(-3.45f, 0.04f, 0f), CharacterBelong.Enemy, CharacterFeature.Minion);
+            knight.gameObject.layer = LayerMask.NameToLayer("Player");
+            fighter.gameObject.layer = LayerMask.NameToLayer("Enemy");
+            LayerMask ground = LayerMask.GetMask("Ground");
+            EncounterCombat3D encounter = new GameObject("Gap encounter").AddComponent<EncounterCombat3D>();
+            Set(encounter, "knight", knight);
+            Set(encounter, "obstructionLayers", ground);
+            Set(encounter, "approachGroundLayers", ground);
+            Set(encounter, "approachWaypoints", new[] { takeoff, landing, nearBridge, farBridge });
+            Set(encounter, "approachJumpLinks", new[] { new EncounterJumpLink3D(takeoff, landing, farBank) });
+            EncounterSession3D session = null;
+            if (endInFlight)
+            {
+                ChallengeDefinition challenge = ScriptableObject.CreateInstance<ChallengeDefinition>();
+                _assets.Add(challenge);
+                session = encounter.gameObject.AddComponent<EncounterSession3D>();
+                session.ConfigureForTest(knight, challenge, EncounterTraits.GroupBattle);
+                Set(encounter, "objective", session);
+                Assert.IsTrue(session.TryStartEncounter());
+            }
+            EncounterCombatant3D member = fighter.gameObject.AddComponent<EncounterCombatant3D>();
+            Set(member, "attack", CreateMeleeAttack());
+            Set(member, "attackRange", 1.6f);
+            Set(member, "canUseJumpLinks", canJump);
+            Assert.IsTrue(encounter.Register(member));
+            Physics.SyncTransforms();
+            PhysicsScene world = _room.GetPhysicsScene();
+            world.Simulate(Time.fixedDeltaTime);
+            Assert.IsFalse(world.Raycast(Vector3.up, Vector3.down, out _, 3f, ground, QueryTriggerInteraction.Ignore));
+
+            int knightHash = knight.Actor.Hash;
+            int fullHp = GameManager.Data.GetVitals(knightHash).currentHp;
+            bool sawJump = false;
+            bool sawBridge = false;
+            bool sawFarBank = false;
+            for (int step = 0; step < 240 && GameManager.Data.GetVitals(knightHash).currentHp == fullHp; step++)
+            {
+                yield return new WaitForFixedUpdate();
+                Vector3 feet = fighter.Motor.FeetPosition;
+                sawJump |= Mathf.Abs(feet.x) < 0.5f && Mathf.Abs(feet.z) < 0.4f && feet.y > 0.35f && !fighter.Motor.IsGrounded;
+                if (sawJump && session != null && session.IsRunning) { session.CompleteEncounter(); }
+                sawBridge |= Mathf.Abs(feet.x) < 0.5f && fighter.Motor.Ground.Surface == bridge;
+                sawFarBank |= fighter.Motor.Ground.Surface == farBank;
+                if (!sawFarBank) { Assert.AreEqual(fullHp, GameManager.Data.GetVitals(knightHash).currentHp); }
+                if (endInFlight && sawFarBank) { break; }
+            }
+
+            bool expectsJump = canJump && !blockLanding;
+            Assert.AreEqual(expectsJump, sawJump, $"Fighter feet {fighter.Motor.FeetPosition}.");
+            Assert.AreEqual(!expectsJump, sawBridge, $"Fighter feet {fighter.Motor.FeetPosition}.");
+            Assert.IsTrue(sawFarBank, $"Fighter feet {fighter.Motor.FeetPosition}.");
+            if (endInFlight)
+            {
+                Assert.AreEqual(ChallengeState.Completed, session.Result.state);
+                Vector3 landed = fighter.Motor.FeetPosition;
+                for (int step = 0; step < 25; step++) { yield return new WaitForFixedUpdate(); }
+                Assert.AreEqual(fullHp, GameManager.Data.GetVitals(knightHash).currentHp);
+                Assert.That(Vector3.Distance(fighter.Motor.FeetPosition, landed), Is.LessThan(0.06f));
+            }
+            else { Assert.That(GameManager.Data.GetVitals(knightHash).currentHp, Is.LessThan(fullHp)); }
+        }
+
         private IEnumerator TraverseWall(bool closeShortRoute)
         {
             Surface("Floor", new Vector3(0f, -0.25f, 0f), new Vector3(12f, 0.5f, 12f), Quaternion.identity);
