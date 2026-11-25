@@ -468,6 +468,58 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(55, action); // One match.
         }
 
+        [Test]
+        public void TargetLineOfSight_UsesTheSameSelectedPairAndFallbackInManagedAndBurstDecisions()
+        {
+            AIMode mode = CreateMode();
+            mode.actionRules[0].conditions = new[] { new AICondition
+            {
+                conditionType = AIConditionType.TargetLineOfSight,
+                compareOp = CompareOp.Equal,
+                operandA = 1,
+            } };
+            mode.actions = new[] { mode.actions[0], new ActionSlot { execType = ActionExecType.Attack, paramId = 55 } };
+            mode.defaultActionIndex = 1;
+
+            _observations.Capture(++_tick, 0f);
+            AIObservationContext observation = _observations.Observation;
+            Assert.IsTrue(_core.Actors.TryGet(1, out ActorRef owner));
+            Assert.IsTrue(_core.Actors.TryGet(10, out ActorRef near));
+            Assert.IsTrue(_core.Actors.TryGet(20, out ActorRef far));
+            observation.SetTargetLineOfSight(owner, far, true);
+
+            AICondition blockedRule = mode.actionRules[0].conditions[0];
+            blockedRule.operandA = 0;
+            Assert.IsFalse(ConditionEvaluator.Evaluate(blockedRule, owner.Hash, near.Hash, _data, 0f));
+            Assert.IsFalse(ConditionEvaluator.Evaluate(blockedRule, owner.Hash, near.Hash, observation));
+            CheckDecision(near.Hash, 55);
+            observation.SetTargetLineOfSight(owner, near, false);
+            Assert.IsTrue(observation.TryGetTargetLineOfSight(owner, near, out bool blocked));
+            Assert.IsFalse(blocked);
+            Assert.IsTrue(ConditionEvaluator.Evaluate(blockedRule, owner.Hash, near.Hash, observation));
+            CheckDecision(near.Hash, 55);
+            mode.defaultActionIndex = 0;
+            CheckDecision(near.Hash, 0); // A condition cannot be bypassed through the configured default.
+            mode.defaultActionIndex = 1;
+            observation.SetTargetLineOfSight(owner, near, true);
+            CheckDecision(near.Hash, 7);
+
+            _data.GetVitals(near.Hash).position = new Vector2(12f, 0f);
+            _observations.Capture(++_tick, 0.02f);
+            Assert.IsFalse(observation.TryGetTargetLineOfSight(owner, far, out _));
+            CheckDecision(far.Hash, 55);
+            observation.SetTargetLineOfSight(owner, far, true);
+            CheckDecision(far.Hash, 7);
+
+            void CheckDecision(int target, int action)
+            {
+                Assert.AreEqual(target, DecideFromCurrentObservation(mode, false, out int managed));
+                Assert.AreEqual(target, DecideFromCurrentObservation(mode, true, out int burst));
+                Assert.AreEqual(action, managed);
+                Assert.AreEqual(managed, burst);
+            }
+        }
+
         private int SelectFromCurrentObservation(TargetFilter filter, bool scheduled)
         {
             AIMode mode = CreateMode();

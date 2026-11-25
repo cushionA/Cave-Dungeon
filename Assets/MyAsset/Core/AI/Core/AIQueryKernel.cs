@@ -9,6 +9,7 @@ namespace Game.Core
         ActorRef ProtectedPlayer { get; }
         bool TryGetTargetOf(ActorRef actor, out ActorRef target);
         bool TryGetStunRemaining(ActorRef actor, out float seconds);
+        bool TryGetTargetLineOfSight(ActorRef owner, ActorRef target, out bool visible);
         int ActorCount { get; }
         int HashAt(int index);
         bool GimmicksAvailable { get; }
@@ -49,6 +50,8 @@ namespace Game.Core
         public ActorRef ProtectedPlayer => observation.ProtectedPlayer;
         public bool TryGetTargetOf(ActorRef actor, out ActorRef target) => observation.TryGetTargetOf(actor, out target);
         public bool TryGetStunRemaining(ActorRef actor, out float seconds) => observation.TryGetStunRemaining(actor, out seconds);
+        public bool TryGetTargetLineOfSight(ActorRef owner, ActorRef target, out bool visible) =>
+            observation.TryGetTargetLineOfSight(owner, target, out visible);
         public int ActorCount => observation.ActorHashes.Count;
         public int HashAt(int index) => observation.ActorHashes[index];
         public bool GimmicksAvailable => observation.GimmicksAvailable;
@@ -97,6 +100,16 @@ namespace Game.Core
                     if (!world.TryGetActor(ownerHash, out AIActorObservation owner)
                         || !world.TryGetActor(targetHash, out AIActorObservation target) || target.physicsScene != owner.physicsScene) { return false; }
                     value = Vector2.Distance(owner.position, target.position);
+                    return true;
+                case AIConditionType.TargetLineOfSight:
+                    if (!world.TryGetActor(ownerHash, out AIActorObservation observerOfTarget)
+                        || !world.TryGetActor(targetHash, out AIActorObservation observedTarget)
+                        || observerOfTarget.physicsScene != observedTarget.physicsScene
+                        || !world.TryGetTargetLineOfSight(observerOfTarget.actor, observedTarget.actor, out bool visible))
+                    {
+                        return false;
+                    }
+                    value = visible ? 1f : 0f;
                     return true;
                 case AIConditionType.DamageScore:
                     return world.TryGetDamageScore(ownerHash, hash, out value);

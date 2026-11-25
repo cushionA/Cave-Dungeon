@@ -43,6 +43,7 @@ namespace Game.Core
             ? target : default;
         public int CurrentTargetHash => _targets != null ? CurrentTargetRef.Hash : _currentTargetHash;
         public long ObservationTick => _observation != null ? _observation.Tick : 0;
+        public bool RequiresTargetLineOfSight { get; private set; }
 
         public void ResetActorLifetime()
         {
@@ -108,6 +109,10 @@ namespace Game.Core
 
         internal void SetCapturedMode(AIMode mode, AICompiledMode[] compiledModes, int modeIndex)
         {
+            if (!ReferenceEquals(_compiledModes, compiledModes))
+            {
+                RequiresTargetLineOfSight = Array.Exists(compiledModes, compiled => compiled.requiresTargetLineOfSight);
+            }
             _compiledModes = compiledModes;
             _compiledModeIndex = modeIndex;
             _compiledMode = compiledModes[modeIndex];
@@ -203,9 +208,10 @@ namespace Game.Core
                 }
             }
 
-            if (_currentMode.defaultActionIndex >= 0 && _currentMode.defaultActionIndex < _currentMode.actions.Length)
+            int fallback = _compiledMode.ranges.defaultActionIndex;
+            if (fallback >= 0 && fallback < _currentMode.actions.Length)
             {
-                ExecuteSelectedAction(_currentMode.defaultActionIndex, default);
+                ExecuteSelectedAction(fallback, default);
             }
         }
         public void PrepareTick(float deltaTime, List<int> candidates, float currentTime, AIDecisionSystem decisions)

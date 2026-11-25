@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Game.Core;
 using Game.Runtime;
 using NUnit.Framework;
+using R3;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
@@ -30,7 +31,13 @@ namespace Game.Tests.PlayMode
             _testScene = SceneManager.CreateScene("SceneGimmickCombat",
                 new CreateSceneParameters(LocalPhysicsMode.Physics2D));
             Assert.IsTrue(SceneManager.SetActiveScene(_testScene));
-            TestSceneHelper.CreateGameManager();
+            var manager = new GameObject("SceneGimmickCombatManager");
+            manager.SetActive(false);
+            var projectiles = new GameObject("Projectiles");
+            projectiles.transform.SetParent(manager.transform, false);
+            projectiles.AddComponent<ProjectileManager>();
+            manager.AddComponent<GameManager>();
+            manager.SetActive(true);
             GameManager.Instance.enabled = false;
             _operator = CreateOperator(0f);
             _target = CreatePassiveActor(CharacterBelong.Ally, 3f);
@@ -56,7 +63,7 @@ namespace Game.Tests.PlayMode
             return ai;
         }
 
-        private EnemyCharacter CreateOperator(float x)
+        private EnemyCharacter CreateOperator(float x, AIInfo ai = null)
         {
             GameObject actor = CreateObject("Operator", new Vector2(x, 0f));
             actor.AddComponent<Rigidbody2D>().gravityScale = 0f;
@@ -64,7 +71,7 @@ namespace Game.Tests.PlayMode
             actor.AddComponent<ActionExecutorController>();
             var character = actor.AddComponent<EnemyCharacter>();
             character.SetCharacterInfoForTest(CreateInfo(CharacterBelong.Enemy));
-            character.SetAIInfo(CreateInteractionAI());
+            character.SetAIInfo(ai != null ? ai : CreateInteractionAI());
             return character;
         }
 
@@ -153,6 +160,75 @@ namespace Game.Tests.PlayMode
             Assert.AreEqual(1, activations);
             Assert.IsTrue(GameManager.Data.GetDefenseState(owner.Hash).isGuarding);
         }
+
+#if UNITY_EDITOR
+        [UnityTest]
+        public IEnumerator AuthoredGroundBurst_CoverSelectsWaitAndOpeningSightCastsAtTheSameTarget()
+        {
+            const string dataPath = "Assets/MyAsset/Data/";
+            var ai = UnityEditor.AssetDatabase.LoadAssetAtPath<AIInfo>(dataPath + "PLACEHOLDER_GroundBurstEnemyAI.asset");
+            var melee = UnityEditor.AssetDatabase.LoadAssetAtPath<AttackInfo>(dataPath + "PLACEHOLDER_EnemyAttack.asset");
+            var burst = UnityEditor.AssetDatabase.LoadAssetAtPath<AttackInfo>(dataPath + "PLACEHOLDER_GroundBurst.asset");
+            Assert.IsNotNull(ai);
+            Assert.IsNotNull(melee);
+            Assert.IsNotNull(burst);
+
+            _operator.gameObject.SetActive(false);
+            EnemyCharacter caster = CreateOperator(0f, ai);
+            caster.GetComponent<ActionExecutorController>().SetAttackInfosForTest(new[] { melee, burst });
+            GameObject barrier = CreateObject("Ground burst cover", new Vector2(1.5f, 0f));
+            barrier.layer = LayerMask.NameToLayer("Ground");
+            BoxCollider2D wall = barrier.AddComponent<BoxCollider2D>();
+            wall.size = new Vector2(0.2f, 2f);
+            yield return null;
+
+            Assert.IsTrue(GameManager.Actors.TryGet(caster.ObjectHash, out ActorRef owner));
+            Assert.IsTrue(GameManager.Actors.TryGet(_target.ObjectHash, out ActorRef target));
+            Assert.IsTrue(GameManager.TargetRelations.SetTarget(owner, target));
+            int burstId = GameManager.Actions.RegisterDefinition(burst);
+            Vector2 targetPosition = _target.PhysicsPosition;
+            Vector2 ownerPosition = caster.PhysicsPosition;
+            int waits = 0;
+            int casts = 0;
+            ActionExecution cast = default;
+            using var listener = GameManager.Events.OnActionExecution.Subscribe(change =>
+            {
+                if (change.kind != ActionSignalKind.Started || change.execution.ownerRef != owner) { return; }
+                if (change.execution.definitionId == burstId)
+                {
+                    casts++;
+                    cast = change.execution;
+                }
+                else if (change.execution.definition.actState == ActState.Neutral) { waits++; }
+            });
+            GameManager.Instance.SimulationTick(DecisionInterval, 1f);
+            Assert.That(waits, Is.GreaterThan(0));
+            Assert.AreEqual(0, casts);
+            Assert.IsTrue(GameManager.Observation.TryGetTargetLineOfSight(owner, target, out bool visible));
+            Assert.IsFalse(visible);
+            Assert.IsTrue(GameManager.TargetRelations.TryGetTarget(owner, out ActorRef blockedTarget));
+            Assert.AreEqual(target, blockedTarget);
+
+            wall.isTrigger = true;
+            for (int step = 1; step <= 4 && casts == 0; step++)
+            {
+                GameManager.Instance.SimulationTick(DecisionInterval, 1f + step * DecisionInterval);
+            }
+            Assert.IsTrue(GameManager.Observation.TryGetTargetLineOfSight(owner, target, out visible));
+            Assert.IsTrue(visible);
+            Assert.AreEqual(1, casts);
+            Assert.AreEqual(target, cast.targetRef);
+            Assert.AreEqual(targetPosition, _target.PhysicsPosition);
+            Assert.AreEqual(ownerPosition, caster.PhysicsPosition);
+
+            Assert.IsTrue(GameManager.Actions.Execution.Cancel(cast.instanceId, force: true));
+            wall.isTrigger = false;
+            GameManager.Instance.SimulationTick(DecisionInterval, 4f);
+            Assert.IsTrue(GameManager.Observation.TryGetTargetLineOfSight(owner, target, out visible));
+            Assert.IsFalse(visible);
+            Assert.AreEqual(1, casts);
+        }
+#endif
 
         [UnityTest]
         public IEnumerator TwoOperatorsInOneTick_ActivateOnceAndOnlyTheOtherFallsBackToGuard()
