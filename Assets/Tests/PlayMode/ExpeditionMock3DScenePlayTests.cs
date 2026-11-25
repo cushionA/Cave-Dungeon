@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using Game.Core;
 using Game.Runtime;
@@ -183,6 +184,110 @@ namespace Game.Tests.PlayMode
             Assert.AreEqual(strength + 1, GameManager.Data.GetAttributes(hash).str);
             Submit(root, "loadout-close");
             Assert.AreEqual("Player", input.currentActionMap.name);
+        }
+
+        [UnityTest]
+        public IEnumerator AuthoredReinforcementDrill_UsesPreparedDeckAndRetiresOnlyTemporarySummons()
+        {
+            const string species = "goblin-engineer";
+            const string questCompletion = "test.mine-survey.report";
+            TestSceneHelper.Cleanup();
+            yield return null;
+            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(k_Mock, new LoadSceneParameters(LoadSceneMode.Additive));
+            _mock = SceneManager.GetSceneByPath(k_Mock);
+            Assert.IsTrue(SceneManager.SetActiveScene(_mock));
+            yield return new WaitForFixedUpdate();
+
+            CharacterActor3D knight = Find<CharacterActor3D>("[PLACEHOLDER] Knight");
+            PlayerCharacterInput3D controls = knight.GetComponent<PlayerCharacterInput3D>();
+            controls.enabled = false;
+            EncounterGoal3D drill = Find<EncounterGoal3D>("Reinforcement drill");
+            BossEncounter3D boss = Find<BossEncounter3D>("Cave Sentinel encounter");
+            NpcInteraction3D muster = Find<NpcInteraction3D>("Drill muster post");
+            NpcInteraction3D retreat = Find<NpcInteraction3D>("Drill retreat post");
+            SerializedProperty targets = new SerializedObject(controls).FindProperty("interactionTargets");
+            UnityEngine.Object[] authoredTargets = Enumerable.Range(0, targets.arraySize)
+                .Select(index => targets.GetArrayElementAtIndex(index).objectReferenceValue).ToArray();
+            CollectionAssert.Contains(authoredTargets, muster);
+            CollectionAssert.Contains(authoredTargets, retreat);
+            ExpeditionSummonDeployment3D deployment = Find<ExpeditionSummonDeployment3D>("[PLACEHOLDER] Expedition sister");
+            ExpeditionSquadPanel panel = Find<ExpeditionSquadPanel>("Expedition squad panel");
+            ExpeditionSquad squad = GameManager.GetSubManager<ExpeditionSquadManager>().Squad;
+            Assert.That(drill.Traits, Is.EqualTo(EncounterTraits.GroupBattle));
+            Assert.That(boss.Traits, Is.EqualTo(EncounterTraits.Boss));
+
+            yield return WalkNear(knight, muster.transform.position);
+            Assert.IsTrue(muster.CanInteract(knight.Actor.Hash));
+            muster.Interact(knight.Actor.Hash);
+            Assert.IsFalse(drill.IsRunning);
+            Assert.IsFalse(panel.isActiveAndEnabled);
+
+            // The authored quest fixture covers earning this same completion through dialogue.
+            Assert.IsTrue(GameManager.ExpeditionAid.TryComplete(questCompletion,
+                new[] { new ExpeditionAidUnlocks.Completion(questCompletion, species) }));
+            Assert.IsTrue(squad.TryConfirm(new[] { new ExpeditionSquad.Selection(species, 2) }));
+            muster.Interact(knight.Actor.Hash);
+            Assert.IsTrue(drill.IsRunning);
+            Assert.IsTrue(panel.isActiveAndEnabled);
+            VisualElement root = panel.GetComponent<UIDocument>().rootVisualElement;
+            Submit(root, "expedition-reinforcements");
+            Submit(root, "expedition-increase");
+            Assert.IsFalse(root.Q<Button>("expedition-increase").enabledInHierarchy);
+            Submit(root, "expedition-preset-save");
+            Submit(root, "expedition-decrease");
+            Submit(root, "expedition-preset-load");
+            Assert.That(root.Q<Label>("expedition-count").text, Is.EqualTo("体数 1 / 1"));
+
+            // Deploy the normal group and reinforcement in one tick so both original points are occupied.
+            Assert.IsTrue(deployment.TryDeployConfirmed());
+            var summons = new List<ExpeditionSummonDeployment3D.DeployedSummon>();
+            deployment.CopyActiveSummons(summons);
+            ActorRef[] normal = summons.Select(unit => unit.Actor).ToArray();
+            Assert.That(normal, Has.Length.EqualTo(2));
+            Submit(root, "expedition-confirm");
+            deployment.CopyActiveSummons(summons);
+            ActorRef reinforcement = summons.Single(unit => unit.IsReinforcement).Actor;
+            Assert.That(summons.Count, Is.EqualTo(3));
+            Assert.IsFalse(normal.Contains(reinforcement));
+            CharacterActor3D extra = (CharacterActor3D)GameManager.Data.GetManaged(reinforcement.Hash);
+            Assert.IsTrue(Find<EncounterCombat3D>("Reinforcement drill").Drives(extra));
+            Vector3 reservedPoint = Find<Transform>("Drill reserve deployment").position;
+            Assert.That(Vector3.Distance(extra.Motor.FeetPosition, reservedPoint), Is.LessThan(0.1f));
+            Assert.IsFalse(root.Q<Button>("expedition-confirm").enabledInHierarchy);
+            Submit(root, "expedition-close");
+
+            yield return WalkNear(knight, Find<Transform>("Drill goal").position);
+            yield return new WaitForFixedUpdate();
+            Assert.That(drill.Result.state, Is.EqualTo(ChallengeState.Completed));
+            VerifyNormalGroup();
+            Assert.IsFalse(GameManager.Actors.IsCurrent(reinforcement));
+
+            yield return WalkNear(knight, muster.transform.position);
+            muster.Interact(knight.Actor.Hash);
+            Assert.IsTrue(drill.IsRunning);
+            root = panel.GetComponent<UIDocument>().rootVisualElement;
+            Submit(root, "expedition-reinforcements");
+            Submit(root, "expedition-preset-load");
+            Submit(root, "expedition-confirm");
+            deployment.CopyActiveSummons(summons);
+            ActorRef retry = summons.Single(unit => unit.IsReinforcement).Actor;
+            Assert.That(retry, Is.Not.EqualTo(reinforcement));
+            Submit(root, "expedition-close");
+
+            yield return WalkNear(knight, retreat.transform.position);
+            Assert.IsTrue(retreat.CanInteract(knight.Actor.Hash));
+            retreat.Interact(knight.Actor.Hash);
+            Assert.That(drill.Result.state, Is.EqualTo(ChallengeState.Failed));
+            VerifyNormalGroup();
+            Assert.IsFalse(GameManager.Actors.IsCurrent(retry));
+            Assert.IsTrue(boss.IsRunning);
+
+            void VerifyNormalGroup()
+            {
+                deployment.CopyActiveSummons(summons);
+                Assert.That(summons.Select(unit => unit.Actor), Is.EquivalentTo(normal));
+                Assert.That(squad.ConfirmedCount, Is.EqualTo(2));
+            }
         }
 
         private T Find<T>(string name) where T : Component => _mock.GetRootGameObjects()

@@ -15,6 +15,8 @@ Tab／LT または `GEAR & GROWTH` 台で「戦闘準備」を開く。武器は
 
 工兵は確定編成から所定の地点に出現し、通常探索では騎士について歩く。凍結や移動を占有する行動が終わると追従を再開する。騎士と工兵の間に迂回が必要な障害がある場合の経路探索は残る。[召喚の出撃と同行](../../../Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs)
 
+工兵を解放したら、坑道入口脇の `REINFORCEMENT DRILL` で E／パッド上ボタンを長押しし、増援訓練を始められる。編成画面の「増援」に切り替え、プリセットを読み込んで確定すると、訓練用の追加枠に工兵1体が出撃する。`DRILL FINISH` に到達すると成功し、`WITHDRAW` を操作すると撤退する。どちらでも増援を解除し、通常編成は探索に同行し続ける。[訓練の操作](../../../Assets/MyAsset/Runtime/World/ExpeditionReinforcementDrill3D.cs)・[増援の試験](../../../Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs)
+
 ## 操作と機能の境界
 
 | 項目 | 現在の接続・検証 | プレイヤー向けに残る作業 |
