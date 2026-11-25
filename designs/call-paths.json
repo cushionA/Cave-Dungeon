@@ -9576,5 +9576,117 @@
         "Assets/Tests/PlayMode/ProjectileLockWarning3DPlayTests.cs": "00d95a0e961c5e1c298cc64b168ea44d383123f88f7058fc6ac4d9814d4fa74e"
       }
     }
+  },
+  {
+    "feature": "ExpeditionCheckpoint_SaveAndResume",
+    "path": {
+      "key": "save-native-3d-expedition-at-checkpoint",
+      "title": "遠征の保存地点を操作して現スロットに書き込み休息する",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "runtime_tested",
+      "steps": [
+        {
+          "file": "Assets/Scenes/ExpeditionMock3DScene.unity",
+          "symbol": "[PLACEHOLDER] Expedition save point",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.Interaction.cs",
+          "symbol": "PlayerCharacterInput3D.ConsumeInteraction",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/World/ExpeditionSavePoint3D.cs",
+          "symbol": "ExpeditionSavePoint3D.SaveCurrentSlot",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Save/ExpeditionCheckpoint.cs",
+          "symbol": "ExpeditionCheckpoint.TrySaveCurrentSlot",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Save/SaveManager.cs",
+          "symbol": "SaveManager.TryWriteSlot",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Save/SaveDataStore.cs",
+          "symbol": "SaveDataStore.TryWriteToDisk",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/World/ExpeditionSavePoint3D.cs",
+          "symbol": "ExpeditionSavePoint3D.TrySaveCurrentSlot",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/ExpeditionCheckpointTests.cs",
+        "Assets/Tests/PlayMode/ExpeditionSavePointMockPlayTests.cs"
+      ],
+      "notes": "試作シーンの操作で現在スロットへ保存し、ディスク確定後にHP・MP・スタミナを回復する。ディスク書き込みに失敗した場合は以前のスロットを保持する。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Save/ExpeditionCheckpoint.cs": "76f40fbf8a11bb08ec46eedc0b78ada7515d822edfbc5c3f28ddb79b64105645",
+        "Assets/MyAsset/Core/Save/SaveDataStore.cs": "a8b3e4283f543fc0dc5330b4a918f76c4eabe21466467f6047194914fad7dd5c",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "c3acfc77661181bbf3234979d4b86d1853d8a0c2649f8230339c7d2df4149dfc",
+        "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.Interaction.cs": "f9d4b350b6cbfa3c2ff4a75177912a7a73efdb11a64f12fb3691f8c7311cb25a",
+        "Assets/MyAsset/Runtime/World/ExpeditionSavePoint3D.cs": "6b5bc9c3f7f324e56b7419fc43ae13b2d675f70c25948c556eb32d84391502ad",
+        "Assets/Scenes/ExpeditionMock3DScene.unity": "82fc9509bd0cc7baec6c655ed87124800adbb85971c183c9b313b8d91bf3de8d",
+        "Assets/Tests/EditMode/ExpeditionCheckpointTests.cs": "2135a2149adaf0a167e2db57d7d6d6e023cf97ec69e239e4ce60e322355ed76b",
+        "Assets/Tests/PlayMode/ExpeditionSavePointMockPlayTests.cs": "2ac8de6dc56c26d393e27f906cd1f8b1ef7be8ae55e656935b187b1895ae2009"
+      }
+    }
+  },
+  {
+    "feature": "ExpeditionCheckpoint_SaveAndResume",
+    "path": {
+      "key": "resume-native-3d-expedition-checkpoint",
+      "title": "保存した遠征スロットを指定地点から再開する",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "runtime_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/World/ExpeditionSavePoint3D.cs",
+          "symbol": "ExpeditionSavePoint3D.Start",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Save/ExpeditionCheckpoint.cs",
+          "symbol": "ExpeditionCheckpoint.TryRestoreCurrentSlot",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Save/SaveDataStore.cs",
+          "symbol": "SaveDataStore.ReadFromDisk",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Save/SaveManager.cs",
+          "symbol": "SaveManager.TryLoadSlot",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/World/ExpeditionSavePoint3D.cs",
+          "symbol": "ExpeditionSavePoint3D.PlaceKnight",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/ExpeditionCheckpointTests.cs",
+        "Assets/Tests/PlayMode/ExpeditionSavePointMockPlayTests.cs"
+      ],
+      "notes": "シーンと保存地点IDが一致すると、保存した物語・編成・周回を復元して騎士を指定位置へ配置する。別地点の保存と次周開始の記録を区別する。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Save/ExpeditionCheckpoint.cs": "76f40fbf8a11bb08ec46eedc0b78ada7515d822edfbc5c3f28ddb79b64105645",
+        "Assets/MyAsset/Core/Save/SaveDataStore.cs": "a8b3e4283f543fc0dc5330b4a918f76c4eabe21466467f6047194914fad7dd5c",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "c3acfc77661181bbf3234979d4b86d1853d8a0c2649f8230339c7d2df4149dfc",
+        "Assets/MyAsset/Runtime/World/ExpeditionSavePoint3D.cs": "6b5bc9c3f7f324e56b7419fc43ae13b2d675f70c25948c556eb32d84391502ad",
+        "Assets/Tests/EditMode/ExpeditionCheckpointTests.cs": "2135a2149adaf0a167e2db57d7d6d6e023cf97ec69e239e4ce60e322355ed76b",
+        "Assets/Tests/PlayMode/ExpeditionSavePointMockPlayTests.cs": "2ac8de6dc56c26d393e27f906cd1f8b1ef7be8ae55e656935b187b1895ae2009"
+      }
+    }
   }
 ]

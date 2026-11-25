@@ -32,6 +32,9 @@ Section: 1 — MVP
 「坑道の番人」の試作シーンは、撃破後に同じ部屋を次の周回の開始地点として開き直す。本編ではエンディングのクリア通知と開始シーンを指定する。[試作シーン](../../Assets/Scenes/BossArena3DTestScene.unity)
 
 ## セーブポイント機能
+
+遠征の試作シーンでは入口の `SAVE` に近づき、操作ボタン（キーボードの E、ゲームパッドの Y）を長押しして保存する。現在のスロットへの書き込みが成功すると、騎士のHP・MP・スタミナが全回復し、目印が `SAVED` に変わる。保存には通常の遠征編成、物語の進捗、現在の周回と再開地点が含まれる。再開時は同じシーンの同じ `Save Point Id` に対応する `Resume Anchor` に騎士を配置する。[3Dセーブポイント](../../Assets/MyAsset/Runtime/World/ExpeditionSavePoint3D.cs) [試作シーン](../../Assets/Scenes/ExpeditionMock3DScene.unity)
+
 ```
 セーブポイント使用時:
 1. HP/MP/スタミナ全回復
