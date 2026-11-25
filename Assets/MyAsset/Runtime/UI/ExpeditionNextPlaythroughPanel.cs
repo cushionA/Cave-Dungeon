@@ -60,7 +60,8 @@ namespace Game.Runtime
         private SaveDataStore Store => _store ??= new SaveDataStore(string.IsNullOrWhiteSpace(saveFolder)
             ? Application.persistentDataPath : Path.Combine(Application.persistentDataPath, saveFolder));
 
-        internal void SetStoreForTest(SaveDataStore store) => _store = store;
+        internal void UseSaveStore(SaveDataStore store) => _store = store;
+        internal void SetStoreForTest(SaveDataStore store) => UseSaveStore(store);
 
         private void Awake() => _document = GetComponent<UIDocument>();
 

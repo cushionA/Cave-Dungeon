@@ -108,10 +108,9 @@ namespace Game.Core
             try
             {
                 SaveSlotData saved = store.ReadFromDisk(slot);
-                if (saved == null || saved.slotIndex != slot || saved.entries.ContainsKey(ExpeditionCheckpoint.k_SaveId)
-                    || !saved.entries.TryGetValue(SaveId, out object data)
-                    || !string.Equals(ReadProgress(data)?.startScenePath, expectedStartScenePath, StringComparison.Ordinal)
-                    || !saved.entries.TryGetValue(_playthrough.SaveId, out object cycle))
+                if (saved?.slotIndex != slot || !TryReadStartScene(saved, out string scenePath)
+                    || !string.Equals(scenePath, expectedStartScenePath, StringComparison.Ordinal)
+                    || !saved.entries.TryGetValue(ExpeditionPlaythrough.k_SaveId, out object cycle))
                 {
                     return false;
                 }
@@ -124,6 +123,15 @@ namespace Game.Core
                 return cycleNumber >= 2 && !_disposed && _saves.TryLoadSlot(slot, saved);
             }
             finally { _committing = false; }
+        }
+
+        internal static bool TryReadStartScene(SaveSlotData saved, out string scenePath)
+        {
+            scenePath = null;
+            if (saved?.entries == null || saved.entries.ContainsKey(ExpeditionCheckpoint.k_SaveId)
+                || !saved.entries.TryGetValue(k_SaveId, out object data)) { return false; }
+            scenePath = ReadProgress(data)?.startScenePath;
+            return !string.IsNullOrWhiteSpace(scenePath);
         }
 
         private bool MatchesConfirmation(int slot, ulong loadRevision, int cycle) => slot == _saves.ActiveSlotIndex

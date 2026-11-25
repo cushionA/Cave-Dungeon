@@ -60,6 +60,43 @@ namespace Game.Core
                 return false;
             }
 
+            var snapshot = new Snapshot
+            {
+                scenePath = scenePath,
+                savePointId = savePointId,
+                hp = vitals.maxHp,
+                mp = vitals.maxMp,
+                stamina = vitals.maxStamina,
+                armor = vitals.currentArmor,
+            };
+            if (!TryWriteCheckpoint(saves, store, snapshot)) { return false; }
+            recovered = ToResources(snapshot);
+            return true;
+        }
+
+        public static bool TryAutosaveCurrentSlot(SaveManager saves, SaveDataStore store, string scenePath,
+            string savePointId, in CharacterVitals vitals)
+        {
+            if (!CanUse(saves, store, scenePath, savePointId) || vitals.currentHp <= 0
+                || !ValidResource(vitals.currentMp) || !ValidResource(vitals.currentStamina) || !ValidResource(vitals.currentArmor))
+            {
+                return false;
+            }
+
+            var snapshot = new Snapshot
+            {
+                scenePath = scenePath,
+                savePointId = savePointId,
+                hp = vitals.currentHp,
+                mp = vitals.currentMp,
+                stamina = vitals.currentStamina,
+                armor = vitals.currentArmor,
+            };
+            return TryWriteCheckpoint(saves, store, snapshot);
+        }
+
+        private static bool TryWriteCheckpoint(SaveManager saves, SaveDataStore store, Snapshot snapshot)
+        {
             int slot = saves.ActiveSlotIndex;
             ulong revision = saves.LoadRevision;
             SaveSlotData candidate;
@@ -71,23 +108,12 @@ namespace Game.Core
             }
             if (candidate == null || !IsCurrent(saves, slot, revision)) { return false; }
 
-            var snapshot = new Snapshot
-            {
-                scenePath = scenePath,
-                savePointId = savePointId,
-                hp = vitals.maxHp,
-                mp = vitals.maxMp,
-                stamina = vitals.maxStamina,
-                armor = vitals.currentArmor,
-            };
             candidate.entries[k_SaveId] = snapshot;
-            if (!saves.TryWriteSlot(slot, candidate, store)) { return false; }
-            recovered = ToResources(snapshot);
-            return true;
+            return saves.TryWriteSlot(slot, candidate, store);
         }
 
         public static bool TryRestoreCurrentSlot(SaveManager saves, SaveDataStore store, string scenePath, string savePointId,
-            out Resources restored)
+            out Resources restored, Func<Resources, bool> placeKnight = null)
         {
             restored = default;
             if (!CanUse(saves, store, scenePath, savePointId)) { return false; }
@@ -95,15 +121,31 @@ namespace Game.Core
             int slot = saves.ActiveSlotIndex;
             ulong revision = saves.LoadRevision;
             SaveSlotData saved = store.ReadFromDisk(slot);
-            if (saved == null || saved.slotIndex != slot || !saved.entries.TryGetValue(k_SaveId, out object entry)) { return false; }
-            Snapshot snapshot = ReadSnapshot(entry);
-            if (snapshot == null || !string.Equals(snapshot.scenePath, scenePath, StringComparison.Ordinal)
-                || !string.Equals(snapshot.savePointId, savePointId, StringComparison.Ordinal)
-                || snapshot.hp <= 0 || !ValidResource(snapshot.mp) || !ValidResource(snapshot.stamina) || !ValidResource(snapshot.armor)
-                || !IsCurrent(saves, slot, revision) || !saves.TryLoadSlot(slot, saved)) { return false; }
+            return IsCurrent(saves, slot, revision)
+                && TryRestoreSlot(saves, slot, saved, scenePath, savePointId, out restored, placeKnight);
+        }
 
-            restored = ToResources(snapshot);
+        internal static bool TryRestoreSlot(SaveManager saves, int slot, SaveSlotData saved, string scenePath, string savePointId,
+            out Resources restored, Func<Resources, bool> placeKnight)
+        {
+            restored = default;
+            Snapshot snapshot = ReadCheckpoint(saved);
+            if (saves == null || saved?.slotIndex != slot || snapshot == null
+                || !string.Equals(snapshot.scenePath, scenePath, StringComparison.Ordinal)
+                || !string.Equals(snapshot.savePointId, savePointId, StringComparison.Ordinal)) { return false; }
+
+            Resources resources = ToResources(snapshot);
+            if (!saves.TryLoadSlot(slot, saved, placeKnight == null ? null : () => placeKnight(resources))) { return false; }
+            restored = resources;
             return true;
+        }
+
+        internal static bool TryReadDestination(SaveSlotData saved, out string scenePath, out string savePointId)
+        {
+            Snapshot snapshot = ReadCheckpoint(saved);
+            scenePath = snapshot?.scenePath;
+            savePointId = snapshot?.savePointId;
+            return snapshot != null;
         }
 
         private static bool CanUse(SaveManager saves, SaveDataStore store, string scenePath, string savePointId) =>
@@ -115,6 +157,15 @@ namespace Game.Core
         private static bool ValidResource(float value) => float.IsFinite(value) && value >= 0f;
 
         private static Resources ToResources(Snapshot snapshot) => new Resources(snapshot.hp, snapshot.mp, snapshot.stamina, snapshot.armor);
+
+        private static Snapshot ReadCheckpoint(SaveSlotData saved)
+        {
+            if (saved?.entries == null || !saved.entries.TryGetValue(k_SaveId, out object entry)) { return null; }
+            Snapshot snapshot = ReadSnapshot(entry);
+            return snapshot != null && !string.IsNullOrWhiteSpace(snapshot.scenePath) && !string.IsNullOrWhiteSpace(snapshot.savePointId)
+                && snapshot.hp > 0 && ValidResource(snapshot.mp) && ValidResource(snapshot.stamina) && ValidResource(snapshot.armor)
+                ? snapshot : null;
+        }
 
         private static Snapshot ReadSnapshot(object entry)
         {

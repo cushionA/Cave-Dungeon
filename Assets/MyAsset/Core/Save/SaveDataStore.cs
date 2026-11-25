@@ -167,7 +167,9 @@ namespace Game.Core
         /// <summary>ディスクからJSONファイルを読み込みSaveSlotDataに復元する。
         /// メインファイルのパース/検証に失敗したら .bak からフォールバック読み込みする。
         /// 両方とも失敗した場合は null を返す。</summary>
-        public SaveSlotData ReadFromDisk(int slotIndex)
+        public SaveSlotData ReadFromDisk(int slotIndex) => ReadFromDisk(slotIndex, logFailures: true);
+
+        internal SaveSlotData ReadFromDisk(int slotIndex, bool logFailures)
         {
             string filePath = GetSlotFilePath(slotIndex);
             string backupPath = GetBackupFilePath(slotIndex);
@@ -181,7 +183,7 @@ namespace Game.Core
                     return mainData;
                 }
 
-                Debug.LogError($"[SaveDataStore] セーブデータの読み込みに失敗しました (slot={slotIndex}, path='{filePath}'): {mainError}");
+                if (logFailures) { Debug.LogError($"[SaveDataStore] セーブデータの読み込みに失敗しました (slot={slotIndex}, path='{filePath}'): {mainError}"); }
             }
             else if (!File.Exists(backupPath))
             {
@@ -195,11 +197,11 @@ namespace Game.Core
                 SaveSlotData backupData = TryReadSlotFile(backupPath, out string backupError);
                 if (backupData != null)
                 {
-                    Debug.LogError($"[SaveDataStore] .bak からフォールバック復元しました (slot={slotIndex}, path='{backupPath}')");
+                    if (logFailures) { Debug.LogError($"[SaveDataStore] .bak からフォールバック復元しました (slot={slotIndex}, path='{backupPath}')"); }
                     return backupData;
                 }
 
-                Debug.LogError($"[SaveDataStore] .bak も読み込みに失敗しました (slot={slotIndex}, path='{backupPath}'): {backupError}");
+                if (logFailures) { Debug.LogError($"[SaveDataStore] .bak も読み込みに失敗しました (slot={slotIndex}, path='{backupPath}'): {backupError}"); }
             }
 
             return null;
@@ -226,6 +228,8 @@ namespace Game.Core
         {
             return File.Exists(GetSlotFilePath(slotIndex));
         }
+
+        internal bool HasSlotFiles(int slotIndex) => HasSlotFile(slotIndex) || File.Exists(GetBackupFilePath(slotIndex));
 
         /// <summary>
         /// 指定パスのJSONファイルを読み込んで SaveSlotData に復元する。

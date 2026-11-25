@@ -26,6 +26,7 @@ namespace Game.Runtime
 
         public UnityEvent Saved => onSaved;
         public UnityEvent SaveFailed => onSaveFailed;
+        internal string SavePointId => savePointId;
 
         private SaveDataStore Store => _store ??= new SaveDataStore(string.IsNullOrWhiteSpace(saveFolder)
             ? Application.persistentDataPath : System.IO.Path.Combine(Application.persistentDataPath, saveFolder));
@@ -66,7 +67,8 @@ namespace Game.Runtime
             _startupSaves = null;
         }
 
-        internal void SetStoreForTest(SaveDataStore store) => _store = store;
+        internal void UseSaveStore(SaveDataStore store) => _store = store;
+        internal void SetStoreForTest(SaveDataStore store) => UseSaveStore(store);
 
         public void SaveCurrentSlot()
         {
@@ -90,24 +92,54 @@ namespace Game.Runtime
             return true;
         }
 
+        internal bool TryAutosaveCurrentSlot(ActorRef expectedActor)
+        {
+            if (!TryGetKnight(out ActorRef actor) || actor != expectedActor) { return false; }
+            CharacterVitals vitals = GameManager.Data.GetVitals(actor.Hash);
+            return ExpeditionCheckpoint.TryAutosaveCurrentSlot(GameManager.Saves, Store,
+                gameObject.scene.path, savePointId, vitals);
+        }
+
         public bool TryRestoreCurrentSlot()
         {
             SaveManager saves = GameManager.Saves;
             if (saves == null || saves.LastLoadedSlot != null || saves.HasSaveData(saves.ActiveSlotIndex)
-                || gameObject.scene != SceneManager.GetActiveScene() || !TryGetKnight(out ActorRef actor)) { return false; }
-
-            Vector3 position = respawnAnchor.position;
-            Quaternion rotation = respawnAnchor.rotation;
-            if (!ExpeditionCheckpoint.TryRestoreCurrentSlot(saves, Store, gameObject.scene.path, savePointId,
-                out ExpeditionCheckpoint.Resources restored)) { return false; }
-            if (!ReferenceEquals(GameManager.Saves, saves) || !TryGetKnight(out ActorRef resumed) || resumed != actor) { return false; }
-
-            PlaceKnight(position, rotation);
-            restored.Restore(ref GameManager.Data.GetVitals(actor.Hash));
-            return true;
+                || gameObject.scene != SceneManager.GetActiveScene()) { return false; }
+            return RestoreKnight(saves, null);
         }
 
-        private bool TryGetKnight(out ActorRef actor)
+        internal bool TryRestoreFromTitle(SaveManager saves, ExpeditionSlot launch) => RestoreKnight(saves, launch);
+
+        private bool RestoreKnight(SaveManager saves, ExpeditionSlot? launch)
+        {
+            if (!TryGetKnight(out ActorRef actor)) { return false; }
+
+            CharacterActor3D owner = knight;
+            Vector3 position = respawnAnchor.position;
+            Quaternion rotation = respawnAnchor.rotation;
+            bool Place(ExpeditionCheckpoint.Resources resources)
+            {
+                if (!ReferenceEquals(GameManager.Saves, saves) || knight != owner
+                    || !TryGetKnight(out ActorRef resumed) || resumed != actor) { return false; }
+                PlaceKnight(position, rotation);
+                resources.Restore(ref GameManager.Data.GetVitals(actor.Hash));
+                return true;
+            }
+
+            string scenePath = gameObject.scene.path;
+            ExpeditionCheckpoint.Resources restored;
+            bool loaded = launch.HasValue
+                ? ExpeditionLaunch.TryRestoreCheckpoint(saves, launch.Value, scenePath, savePointId, out restored, Place)
+                : ExpeditionCheckpoint.TryRestoreCurrentSlot(saves, Store, scenePath, savePointId, out restored, Place);
+            // Loaded observers apply growth and equipment caps after the checkpoint has been placed.
+            if (loaded && ReferenceEquals(GameManager.Saves, saves) && knight == owner && TryGetKnight(out ActorRef current))
+            {
+                restored.Restore(ref GameManager.Data.GetVitals(current.Hash));
+            }
+            return loaded;
+        }
+
+        internal bool TryGetKnight(out ActorRef actor)
         {
             actor = default;
             if (!isActiveAndEnabled || _interaction == null || _interaction.InteractionType != InteractionType.SavePoint

@@ -9000,6 +9000,7 @@ GameObject:
   - component: {fileID: 751845504}
   - component: {fileID: 751845503}
   - component: {fileID: 751845502}
+  - component: {fileID: 751845505}
   m_Layer: 0
   m_Name: '[PLACEHOLDER] Expedition save point'
   m_TagString: Untagged
@@ -9007,6 +9008,24 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &751845505
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 751845501}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4183edbb498c4785b9de10edc9a4269f, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: GameCode::Game.Runtime.ExpeditionAutosave3D
+  savePoint: {fileID: 751845502}
+  areaPaths:
+  - Assets/Scenes/StreamingAreaA3DTestScene.unity
+  - Assets/Scenes/StreamingAreaB3DTestScene.unity
+  encounters:
+  - {fileID: 206502269}
 --- !u!114 &751845502
 MonoBehaviour:
   m_ObjectHideFlags: 0

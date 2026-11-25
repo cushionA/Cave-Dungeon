@@ -10,9 +10,10 @@ namespace Game.Core
     public sealed class ExpeditionPlaythrough : ISaveableWithMissingEntry, ISaveableWithLoadRollback, ISaveableLoadPreflight
     {
         private const int k_FirstCycle = 1;
+        internal const string k_SaveId = "ExpeditionPlaythrough";
         private CycleState _cycle = new CycleState(k_FirstCycle);
 
-        public string SaveId => "ExpeditionPlaythrough";
+        public string SaveId => k_SaveId;
         public int CycleNumber => CurrentCycle.Number;
         internal CycleState CurrentCycle => Volatile.Read(ref _cycle);
 
