@@ -93,6 +93,40 @@ namespace Game.Tests.EditMode
 
         [TestCase(false)]
         [TestCase(true)]
+        public void LurePlate_OnlySelectsTheHostilePursuingThisOperator(bool scheduled)
+        {
+            SetMode(new ActionSlot { execType = ActionExecType.Instant, paramId = (int)InstantAction.InteractObject },
+                CompareOp.HasAny, Hazard);
+            Vector2 enemyPosition = new Vector2(-2f, 0f);
+            _core.Data.GetVitals(NearestEnemy).position = enemyPosition;
+            AISceneGimmick plate = Gimmick(77, 0f, new Vector2(2f, 0f));
+            plate.requiresLure = true;
+            plate.lurePlateX = 2f;
+            plate.lureExit = new Vector2(4f, 0f);
+            Assert.IsFalse(plate.WillAffectTarget(enemyPosition, Vector2.zero));
+
+            ActorRef enemy = Actor(NearestEnemy);
+            Assert.IsTrue(_observations.Targets.SetTarget(enemy, Actor(Ally)));
+            Capture(new[] { plate });
+            Decide(scheduled, NearestEnemy);
+            Assert.AreEqual(ActionCommandKind.Idle, _backend.Commands[0].kind);
+            Assert.AreEqual(NearestEnemy, _loop.CurrentTargetHash);
+
+            ActorRef owner = Actor(Owner);
+            Assert.IsTrue(_observations.Targets.SetTarget(enemy, owner));
+            Capture(new[] { plate });
+            Decide(scheduled, NearestEnemy);
+            Assert.AreEqual(1, _backend.Commands.Count);
+            ActionCommand bait = _backend.Commands[0];
+            Assert.AreEqual(ActionCommandKind.InteractObject, bait.kind);
+            Assert.AreEqual(owner, bait.gimmickOwner);
+            Assert.AreEqual(enemy, bait.gimmickTarget);
+            Assert.AreEqual(plate.id, bait.gimmick.id);
+            Assert.AreEqual(plate.lureExit, bait.gimmick.lureExit);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
         public void ObjectNearby_EqualZeroRequiresACompletedObservationForThisTick(bool scheduled)
         {
             SetMode(new ActionSlot { execType = ActionExecType.Attack }, CompareOp.Equal, 0);

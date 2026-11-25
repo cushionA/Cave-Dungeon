@@ -27,6 +27,8 @@ namespace Game.Runtime
         [Tooltip("このオブジェクト上の接触板。Collider2Dを有効にし、Is Triggerを設定する。")]
         [SerializeField] private Collider2D contactTrigger;
         [Min(0.02f)] [SerializeField] private float contactTimeout = 3f;
+        [Tooltip("接触板専用。誘い役が板を通って退避する同じ高さの地点。空なら通常の接触板として使う。")]
+        [SerializeField] private Transform lureExitAnchor;
         [SerializeField] private UnityEvent onActivated = new UnityEvent();
 
         private struct ContactArm
@@ -36,6 +38,38 @@ namespace Game.Runtime
             public PhysicsScene2D world;
             public int generation;
             public double expiresAt;
+            public ulong token;
+            public bool luring;
+            public Vector2 lureExit;
+        }
+
+        internal readonly struct LureReservation
+        {
+            private readonly AISceneGimmickController _source;
+            private readonly ulong _token;
+            internal readonly float Duration;
+
+            internal LureReservation(AISceneGimmickController source, ulong token)
+            {
+                _source = source;
+                _token = token;
+                Duration = source.contactTimeout;
+            }
+
+            internal bool IsAssigned => _token != 0;
+
+            internal bool TryGetExit(out Vector2 exit)
+            {
+                exit = default;
+                if (_source == null || _source._contactArm.token != _token || !_source.TryGetArmedContact(out _, out _)) { return false; }
+                exit = _source._contactArm.lureExit;
+                return true;
+            }
+
+            internal void Release()
+            {
+                if (_source != null && _source._contactArm.token == _token) { _source._contactArm = default; }
+            }
         }
 
         private static readonly Dictionary<int, AISceneGimmickController> registry =
@@ -45,7 +79,9 @@ namespace Game.Runtime
         private int generation;
         private bool consumed;
         private ContactArm _contactArm;
+        private ulong _nextContactToken;
         private readonly List<int> _contactActors = new();
+        private readonly RaycastHit2D[] _lureCast = new RaycastHit2D[1];
 
         public bool IsAvailable => isActiveAndEnabled && !consumed
             && (!requireTargetContact || (HasUsableContactTrigger && !IsContactArmed));
@@ -58,6 +94,9 @@ namespace Game.Runtime
             operationRadius = operationRadius, requiresClearOperation = operationBlockers.value != 0,
             effectPosition = effectAnchor != null ? effectAnchor.position : transform.position,
             effectRadius = effectRadius, effectDelay = effectDelay,
+            requiresLure = HasLureExit,
+            lureExit = HasLureExit && lureExitAnchor != null ? (Vector2)lureExitAnchor.position : default,
+            lurePlateX = HasLureExit && contactTrigger != null ? contactTrigger.bounds.center.x : 0f,
         };
 
         public void Configure(int mask, Transform operation, float useRadius, Transform effect, float hitRadius,
@@ -83,11 +122,22 @@ namespace Game.Runtime
             generation = checked(generation + 1);
             _contactArm = default;
         }
+
+        internal void SetLureExitForTest(Transform exit)
+        {
+            lureExitAnchor = exit;
+            generation = checked(generation + 1);
+            _contactArm = default;
+        }
 #endif
+
+        private bool HasLureExit => requireTargetContact && !ReferenceEquals(lureExitAnchor, null);
 
         private bool HasUsableContactTrigger => requireTargetContact && effectDelay == 0f
             && float.IsFinite(contactTimeout) && contactTimeout > 0f && contactTrigger != null
-            && contactTrigger.gameObject == gameObject && contactTrigger.isActiveAndEnabled && contactTrigger.isTrigger;
+            && contactTrigger.gameObject == gameObject && contactTrigger.isActiveAndEnabled && contactTrigger.isTrigger
+            && (!HasLureExit || lureExitAnchor != null && lureExitAnchor.gameObject.activeInHierarchy
+                && lureExitAnchor.gameObject.scene == gameObject.scene);
 
         private void OnEnable()
         {
@@ -112,6 +162,11 @@ namespace Game.Runtime
             {
                 if (source.IsContactArmed) { source.TryGetArmedContact(out _, out _); }
                 if (!source.IsAvailable) { continue; }
+                if (source.HasLureExit && !transformsSynced)
+                {
+                    Physics2D.SyncTransforms();
+                    transformsSynced = true;
+                }
                 AISceneGimmick value = source.Snapshot;
                 if (!value.IsValid || !value.physicsScene.IsValid()) { continue; }
                 observation.AddGimmick(value);
@@ -155,8 +210,9 @@ namespace Game.Runtime
             return !world.Raycast(start, segment / distance, distance, filter);
         }
 
-        internal static bool TryActivate(in ActionCommand command, PhysicsScene2D world, List<int> liveActors)
+        internal static bool TryActivate(in ActionCommand command, PhysicsScene2D world, List<int> liveActors, out LureReservation lure)
         {
+            lure = default;
             AIObservationContext observation = GameManager.Observation;
             if (observation == null || observation.Tick != command.observationTick
                 || !observation.Contains(command.gimmickOwner) || !observation.Contains(command.gimmickTarget)
@@ -165,30 +221,43 @@ namespace Game.Runtime
                 || !source.IsAvailable || source.generation != command.gimmick.generation
                 || source.gameObject.scene.GetPhysicsScene2D() != world) { return false; }
 
+            if (source.HasLureExit) { Physics2D.SyncTransforms(); }
             AISceneGimmick current = source.Snapshot;
             if (!current.IsValid || current.objectMask != command.gimmick.objectMask
+                || current.requiresLure != command.gimmick.requiresLure
                 || !observation.TryGetGimmick(current.id, current.generation, out AISceneGimmick captured)
-                || captured.physicsScene != world || !observation.IsGimmickOperationVisible(command.gimmickOwner, captured)
+                || captured.physicsScene != world || captured.requiresLure != current.requiresLure
+                || !observation.IsGimmickOperationVisible(command.gimmickOwner, captured)
                 || !TryActor(command.gimmickOwner.Hash, world, out BaseCharacter owner)
                 || !TryActor(command.gimmickTarget.Hash, world, out BaseCharacter target)) { return false; }
 
             // An earlier activation callback in this tick may have moved a blocker.
-            if (current.requiresClearOperation) { Physics2D.SyncTransforms(); }
+            if (current.requiresClearOperation && !current.requiresLure) { Physics2D.SyncTransforms(); }
             if (!IsHostile(command.gimmickOwner, command.gimmickTarget, out CharacterBelong ownerBelong)
                 || !TryGetPosition(command.gimmickOwner.Hash, owner, out Vector2 ownerPosition)
                 || !current.CanOperateFrom(ownerPosition)
                 || !source.HasClearOperation(world, ownerPosition, current.operationPosition)
                 || !TryGetPosition(command.gimmickTarget.Hash, target, out Vector2 targetPosition)
-                || !TryGetVelocity(current.effectDelay, target, out Vector2 targetVelocity)
-                || !current.WillAffectTarget(targetPosition, targetVelocity)
                 || !HasSafeEffect(current, command.gimmickOwner, ownerBelong, liveActors))
             {
                 return false;
             }
 
+            if (current.requiresLure)
+            {
+                if (owner == null || target == null
+                    || !observation.TryGetTargetOf(command.gimmickTarget, out ActorRef pursued) || pursued != command.gimmickOwner
+                    || !IsPursuing(command.gimmickTarget, command.gimmickOwner)
+                    || !current.CanLureFrom(ownerPosition, targetPosition)
+                    || !source.HasClearLureLane(world, owner, target, current.lureExit)) { return false; }
+            }
+            else if (!TryGetVelocity(current.effectDelay, target, out Vector2 targetVelocity)
+                || !current.WillAffectTarget(targetPosition, targetVelocity)) { return false; }
+
             if (source.requireTargetContact)
             {
                 if (target == null || owner == null) { return false; }
+                ulong token = checked(++source._nextContactToken);
                 source._contactArm = new ContactArm
                 {
                     owner = command.gimmickOwner,
@@ -196,10 +265,48 @@ namespace Game.Runtime
                     world = world,
                     generation = current.generation,
                     expiresAt = Time.fixedTimeAsDouble + source.contactTimeout,
+                    token = token,
+                    luring = current.requiresLure,
+                    lureExit = current.lureExit,
                 };
+                if (current.requiresLure) { lure = new LureReservation(source, token); }
             }
             else { source.Activate(); }
             return true;
+        }
+
+        private bool HasClearLureLane(PhysicsScene2D world, BaseCharacter owner, BaseCharacter target, Vector2 exit)
+        {
+            if (!owner.TryGetComponent(out BoxCollider2D ownerBody) || !target.TryGetComponent(out BoxCollider2D targetBody)
+                || !ownerBody.enabled || !targetBody.enabled) { return false; }
+            const float floorProbeSpacing = 0.25f;
+            const float floorMargin = 0.08f;
+            ContactFilter2D floor = new ContactFilter2D { useTriggers = false };
+            floor.SetLayerMask(owner.GroundLayers.value & target.GroundLayers.value);
+            Bounds ownerBounds = ownerBody.bounds;
+            Bounds targetBounds = targetBody.bounds;
+            float floorY = ownerBounds.min.y;
+            if (Mathf.Abs(targetBounds.min.y - floorY) > AISceneGimmick.k_LureHeightTolerance) { return false; }
+
+            Vector2 origin = new Vector2(targetBounds.center.x, floorY + floorMargin);
+            float dx = exit.x - origin.x;
+            int samples = Mathf.CeilToInt(Mathf.Abs(dx) / floorProbeSpacing);
+            if (samples < 1 || samples > 50) { return false; }
+            for (int i = 0; i <= samples; i++)
+            {
+                Vector2 probe = origin + Vector2.right * (dx * i / samples);
+                RaycastHit2D hit = world.Raycast(probe, Vector2.down, floorMargin * 2f, floor);
+                if (hit.collider == null || hit.normal.y < 0.95f) { return false; }
+            }
+
+            // 箱の下を少し持ち上げ、床を遮蔽物として数えず両方の身体幅を確認する。
+            Vector2 size = Vector2.Max(ownerBounds.size, targetBounds.size);
+            Vector2 center = origin + Vector2.up * (size.y * 0.5f);
+            ContactFilter2D blockers = new ContactFilter2D { useTriggers = false };
+            blockers.SetLayerMask(owner.GroundLayers.value | target.GroundLayers.value | operationBlockers.value);
+            bool isClear = world.BoxCast(center, size, 0f, Vector2.right * Mathf.Sign(dx), Mathf.Abs(dx), blockers, _lureCast) == 0;
+            _lureCast[0] = default;
+            return isClear;
         }
 
         private void OnTriggerEnter2D(Collider2D other) => TryTargetContact(other);
@@ -240,7 +347,10 @@ namespace Game.Runtime
                 && actors.IsCurrent(_contactArm.target)
                 && TryActor(_contactArm.owner.Hash, _contactArm.world, out BaseCharacter owner) && owner != null
                 && TryActor(_contactArm.target.Hash, _contactArm.world, out target) && target != null
-                && IsHostile(_contactArm.owner, _contactArm.target, out ownerBelong))
+                && IsHostile(_contactArm.owner, _contactArm.target, out ownerBelong)
+                && (!_contactArm.luring || lureExitAnchor != null && IsPursuing(_contactArm.target, _contactArm.owner)
+                    && (Vector2)lureExitAnchor.position == _contactArm.lureExit
+                    && Mathf.Abs(owner.PhysicsPosition.y - _contactArm.lureExit.y) <= AISceneGimmick.k_LureHeightTolerance))
             {
                 return true;
             }
@@ -248,6 +358,9 @@ namespace Game.Runtime
             _contactArm = default;
             return false;
         }
+
+        private static bool IsPursuing(ActorRef target, ActorRef owner) => GameManager.TargetRelations != null
+            && GameManager.TargetRelations.TryGetTarget(target, out ActorRef pursued) && pursued == owner;
 
         private void Activate()
         {

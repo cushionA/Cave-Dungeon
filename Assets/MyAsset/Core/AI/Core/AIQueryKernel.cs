@@ -354,9 +354,17 @@ namespace Game.Core
             {
                 AISceneGimmick candidate = world.GimmickAt(i);
                 if (!CanObserveOperation(candidate, owner, ref world)) { continue; }
-                Vector2 targetVelocity = default;
-                if (candidate.effectDelay > 0f && !world.TryGetGimmickVelocity(target.actor, out targetVelocity)) { continue; }
-                if (!candidate.WillAffectTarget(target.position, targetVelocity)) { continue; }
+                if (candidate.requiresLure)
+                {
+                    if (!world.TryGetTargetOf(target.actor, out ActorRef pursued) || pursued != owner.actor
+                        || !candidate.CanLureFrom(owner.position, target.position)) { continue; }
+                }
+                else
+                {
+                    Vector2 targetVelocity = default;
+                    if (candidate.effectDelay > 0f && !world.TryGetGimmickVelocity(target.actor, out targetVelocity)) { continue; }
+                    if (!candidate.WillAffectTarget(target.position, targetVelocity)) { continue; }
+                }
                 float distance = (owner.position - candidate.operationPosition).sqrMagnitude;
                 if (best.id != 0 && (distance > bestDistance || distance == bestDistance && candidate.id >= best.id)) { continue; }
                 if (!MatchesObjectType(rule, candidate.objectMask, ref program) || HasFriendlyInEffect(candidate, owner, ref world))
