@@ -345,7 +345,6 @@ namespace Game.Core
             EnsureCapacity(ref _snapshotHashes, count);
             EnsureCapacity(ref _actorRefs, count);
             EnsureCapacity(ref _lastAttackers, count);
-            EnsureCapacity(ref _candidateFacts, _usesCandidateFacts ? count : 0);
             EnsureCapacity(ref _targetCounts, count);
             EnsureCapacity(ref _positions, count);
             EnsureCapacity(ref _ratios, count);
@@ -354,12 +353,15 @@ namespace Game.Core
             EnsureCapacity(ref _combat, count);
             EnsureCapacity(ref _gimmicks, _observation.GimmickCount);
             bool needsMotion = false;
+            bool needsCandidateFacts = _usesCandidateFacts;
             for (int i = 0; i < _observation.GimmickCount; i++)
             {
                 AISceneGimmick gimmick = _observation.GimmickAt(i);
                 _gimmicks[i] = gimmick;
                 needsMotion |= gimmick.effectDelay > 0f;
+                needsCandidateFacts |= gimmick.requiresLure;
             }
+            EnsureCapacity(ref _candidateFacts, needsCandidateFacts ? count : 0);
             _observation.CopyVisibleGimmicks(_visibleGimmickSamples);
             _visibleGimmicks.Clear();
             if (_visibleGimmicks.Capacity < _visibleGimmickSamples.Count) { _visibleGimmicks.Capacity = _visibleGimmickSamples.Count; }
@@ -387,7 +389,7 @@ namespace Game.Core
                 _indices.Add(hash, i);
                 _snapshotHashes[i] = hash;
                 _actorRefs[i] = actor.actor;
-                if (_usesCandidateFacts)
+                if (needsCandidateFacts)
                 {
                     CandidateTargetFacts facts = default;
                     facts.targetKnown = _observation.TryGetTargetOf(actor.actor, out facts.target);

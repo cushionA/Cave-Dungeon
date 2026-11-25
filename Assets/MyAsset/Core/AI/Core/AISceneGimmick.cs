@@ -5,6 +5,9 @@ namespace Game.Core
     /// <summary>同じtickで確定した装置の登録世代と、操作・効果それぞれの範囲。</summary>
     public struct AISceneGimmick
     {
+        public const float k_LureHeightTolerance = 0.25f;
+        private const float k_MaxLureRun = 12f;
+
         public int id;
         public int generation;
         public int objectMask;
@@ -15,6 +18,9 @@ namespace Game.Core
         public float effectRadius;
         public float effectDelay;
         public bool requiresClearOperation;
+        public bool requiresLure;
+        public Vector2 lureExit;
+        public float lurePlateX;
 
         public readonly bool IsValid => id != 0 && generation > 0
             && objectMask > 0 && objectMask <= 0xfff
@@ -22,7 +28,8 @@ namespace Game.Core
             && IsFinite(effectPosition.x) && IsFinite(effectPosition.y)
             && IsFinite(operationRadius) && operationRadius >= 0f
             && IsFinite(effectRadius) && effectRadius >= 0f
-            && IsFinite(effectDelay) && effectDelay >= 0f;
+            && IsFinite(effectDelay) && effectDelay >= 0f
+            && (!requiresLure || effectDelay == 0f && IsFinite(lureExit.x) && IsFinite(lureExit.y) && IsFinite(lurePlateX));
 
         public readonly bool CanOperateFrom(Vector2 position) =>
             (position - operationPosition).sqrMagnitude <= operationRadius * operationRadius;
@@ -32,6 +39,20 @@ namespace Game.Core
 
         public readonly bool WillAffectTarget(Vector2 position, Vector2 velocity) =>
             ContainsEffect(effectDelay == 0f ? position : position + velocity * effectDelay);
+
+        /// <summary>追跡者、誘い役、板、退避点の順に並ぶ平坦な経路だけを使う。</summary>
+        public readonly bool CanLureFrom(Vector2 owner, Vector2 target)
+        {
+            if (!requiresLure || !IsFinite(owner.x) || !IsFinite(owner.y) || !IsFinite(target.x) || !IsFinite(target.y)
+                || Mathf.Abs(owner.y - lureExit.y) > k_LureHeightTolerance
+                || Mathf.Abs(target.y - owner.y) > k_LureHeightTolerance
+                || ContainsEffect(owner) || ContainsEffect(target) || ContainsEffect(lureExit)) { return false; }
+
+            float direction = lureExit.x > lurePlateX ? 1f : -1f;
+            return (owner.x - target.x) * direction > 0f && (lurePlateX - owner.x) * direction > 0f
+                && (lureExit.x - lurePlateX) * direction >= GameConstants.k_DefaultAttackRange + 0.25f
+                && (lureExit.x - target.x) * direction <= k_MaxLureRun;
+        }
 
         /// <summary>味方は着弾時の一点に加えて、そこまでに効果範囲を横切る場合も保護する。</summary>
         public readonly bool ThreatensFriendly(Vector2 position, Vector2 velocity)

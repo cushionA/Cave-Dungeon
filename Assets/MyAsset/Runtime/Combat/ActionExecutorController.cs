@@ -21,6 +21,7 @@ namespace Game.Runtime
         private long _aiMovementInstanceId;
         private ActorRef _aiMovementTarget;
         private ActionCommandKind _aiMovementKind;
+        private AISceneGimmickController.LureReservation _lure;
         private ActionExecutionSystem _subscribedExecution;
         private readonly List<ActionExecution> _aiExecutions = new List<ActionExecution>();
         private readonly List<int> _gimmickActors = new List<int>();
@@ -185,8 +186,7 @@ namespace Game.Runtime
                 {
                     if (_aiExecutions[i].forced || !_aiExecutions[i].canCancel) { return Result(ActionDispatchStatus.Rejected); }
                 }
-                return Result(AISceneGimmickController.TryActivate(command, gameObject.scene.GetPhysicsScene2D(), _gimmickActors)
-                    ? ActionDispatchStatus.Accepted : ActionDispatchStatus.Rejected, targetRef: targetRef);
+                return DispatchGimmick(command, targetRef, replaceGroupId);
             }
             Vector2 direction = FacingDirection();
             long instanceId = 0;
@@ -239,6 +239,33 @@ namespace Game.Runtime
             return new ActionDispatchResult(status, instanceId, groupId, targetRef);
         }
 
+        private ActionDispatchResult DispatchGimmick(in ActionCommand command, ActorRef target, long replaceGroupId)
+        {
+            if (command.gimmick.requiresLure && (GameManager.Data.GetManaged(_ownerHash) is not BaseCharacter bait
+                || bait.HoldsFieldPosition || !(EffectiveMoveSpeed() > 0f))) { return Result(ActionDispatchStatus.Rejected); }
+            if (!AISceneGimmickController.TryActivate(command, gameObject.scene.GetPhysicsScene2D(), _gimmickActors,
+                out AISceneGimmickController.LureReservation lure)) { return Result(ActionDispatchStatus.Rejected); }
+            if (!lure.IsAssigned) { return Result(ActionDispatchStatus.Accepted, targetRef: target); }
+
+            GameActionRuntime actions = GameManager.Actions;
+            if (!lure.TryGetExit(out Vector2 exit) || GameManager.Data.GetManaged(_ownerHash) is not BaseCharacter owner
+                || !actions.TrySetLocomotion(_ownerHash, Vector2.right * Mathf.Sign(exit.x - owner.PhysicsPosition.x),
+                    EffectiveMoveSpeed(), out long instance, lure.Duration, target, replaceGroupId)
+                || !actions.Execution.TryGetGroupId(instance, out long group))
+            {
+                lure.Release();
+                return Result(ActionDispatchStatus.Rejected);
+            }
+            if (!lure.TryGetExit(out _))
+            {
+                // Locomotion ingress can invoke callbacks that invalidate the just-created reservation.
+                actions.Execution.CancelGroup(group);
+                return Result(ActionDispatchStatus.Rejected);
+            }
+            _lure = lure;
+            return Result(ActionDispatchStatus.Accepted, instance, group, target);
+        }
+
         public bool Supports(ActionCommandKind kind) => kind >= ActionCommandKind.Attack && kind <= ActionCommandKind.Flee
             || kind == ActionCommandKind.InteractObject;
 
@@ -251,13 +278,14 @@ namespace Game.Runtime
         public ActionDispatchResult ExecuteCommand(int ownerHash, int targetHash, in ActionCommand command)
         {
             if (ownerHash != _ownerHash) { return Result(ActionDispatchStatus.InvalidOwner); }
+            if (_lure.IsAssigned && IsAIExecuting()) { return Result(ActionDispatchStatus.Rejected); }
             _dispatchDepth++;
             try
             {
                 long replaceGroupId = IsAIExecuting() ? _aiGroupId : 0;
                 ActionDispatchResult result = Dispatch(command, targetHash, replaceGroupId);
                 if (!result.Accepted) { return result; }
-                if (command.kind == ActionCommandKind.InteractObject)
+                if (command.kind == ActionCommandKind.InteractObject && result.GroupId == 0)
                 {
                     // The instant event owns no group. Its callbacks may have started another action.
                     _aiAwaitingCompletion = true;
@@ -267,7 +295,7 @@ namespace Game.Runtime
                 _aiGroupId = result.GroupId;
                 TrackAcceptedGroup(result.GroupId);
                 _aiAwaitingCompletion = true;
-                _aiMovementInstanceId = IsMovement(command.kind) ? result.InstanceId : 0;
+                _aiMovementInstanceId = IsMovement(command.kind) || _lure.IsAssigned ? result.InstanceId : 0;
                 _aiMovementTarget = result.TargetRef;
                 _aiMovementKind = command.kind;
                 return result;
@@ -288,12 +316,13 @@ namespace Game.Runtime
             _aiGroupId = 0;
             _aiAwaitingCompletion = false;
             _aiMovementInstanceId = 0;
+            ReleaseLure();
             if (groupId != 0) { GameManager.Actions?.Execution.CancelGroup(groupId); }
         }
 
         void IActionExecutionBackend.Tick(float deltaTime)
         {
-            RefreshAIMovement();
+            RefreshAIMovement(deltaTime);
             CompleteAIIfSettled();
         }
 
@@ -303,11 +332,16 @@ namespace Game.Runtime
             return effects.BlocksMovement ? 0f : GameManager.Data.GetMoveParams(_ownerHash).moveSpeed * effects.MoveSpeedMultiplier;
         }
 
-        private void RefreshAIMovement()
+        private void RefreshAIMovement(float deltaTime)
         {
             if (_aiMovementInstanceId == 0 || GameManager.Actions == null
                 || !GameManager.Actions.Execution.TryGetInstance(_aiMovementInstanceId, out ActionExecution execution)
                 || !execution.definition.movementUsesInput) { return; }
+            if (_lure.IsAssigned)
+            {
+                RefreshLureMovement(execution, deltaTime);
+                return;
+            }
             if (!_aiMovementTarget.IsValid || GameManager.Actors == null || !GameManager.Actors.IsCurrent(_aiMovementTarget)
                 || !GameManager.TryGetTargetOffset(_ownerHash, _aiMovementTarget.Hash, out Vector2 delta))
             {
@@ -318,6 +352,30 @@ namespace Game.Runtime
             GameManager.Actions.Execution.UpdateInput(_aiMovementInstanceId, delta.normalized, EffectiveMoveSpeed());
         }
 
+        private void RefreshLureMovement(in ActionExecution current, float deltaTime)
+        {
+            ActionExecutionSystem execution = GameManager.Actions.Execution;
+            float speed = EffectiveMoveSpeed();
+            if (!_lure.TryGetExit(out Vector2 exit) || !(speed > 0f) || !float.IsFinite(speed)
+                || GameManager.Data.GetStatusEffects(_ownerHash).BlocksActions
+                || GameManager.Data.GetManaged(_ownerHash) is not BaseCharacter owner || owner.HoldsFieldPosition)
+            {
+                ReleaseLure();
+                execution.UpdateInput(current.instanceId, Vector2.zero, 0f);
+                execution.CancelGroup(current.groupId);
+                return;
+            }
+            float dx = exit.x - owner.PhysicsPosition.x;
+            float travel = deltaTime > 0f ? Mathf.Min(speed, Mathf.Abs(dx) / deltaTime) : 0f;
+            execution.UpdateInput(current.instanceId, Vector2.right * Mathf.Sign(dx), travel);
+        }
+
+        private void ReleaseLure()
+        {
+            _lure.Release();
+            _lure = default;
+        }
+
         private bool IsAIExecuting() => GameManager.Actions != null && GameManager.Actions.Execution.IsGroupActive(_aiGroupId);
 
         private void CompleteAIIfSettled()
@@ -326,6 +384,7 @@ namespace Game.Runtime
             _aiAwaitingCompletion = false;
             _aiMovementInstanceId = 0;
             _aiGroupId = 0;
+            ReleaseLure();
             OnActionCompleted?.Invoke();
         }
 
