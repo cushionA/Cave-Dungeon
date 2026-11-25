@@ -566,6 +566,10 @@ CompareOp(9種): Less, LessEqual, Equal, GreaterEqual, Greater, NotEqual, InRang
 
 2Dの接触罠では `Require Target Contact` を有効にし、同じオブジェクトに置いたトリガーの `Collider2D` を `Contact Trigger` に設定する。操作点と効果範囲を設定し、効果遅延は0秒にする。AIの装置操作は `Contact Timeout` の間だけ罠を作動準備状態にする。選んだ敵が板に触れた時点で効果範囲の味方を再確認し、安全に作動できるときだけ `On Activated` が一度発火する。たとえばこのイベントに通路を開く処理を割り当てられる。[シーン装置](../../Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs)
 
+敵を罠に誘導する場合は、接触板の先にある同じ高さの床へ `Lure Exit Anchor` を置く。誘導役が、後ろから自分を追っている敵を戦闘標的として選んでいる場合に使える。誘導役は既存の歩行アクションで板の先まで進み、敵自身の歩行が安全な接触を成立させる。退避地点は効果範囲の外に置く。敵の追跡が途切れた場合や時間切れでは予約を解除する。[罠の予約と発動](../../Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs)・[誘導中の移動](../../Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs)
+
+2Dの爆発物には `ExplosiveProp2D` を付け、同じオブジェクトの `Hit Collider` を指定する。コライダーは使う近接攻撃と接触するレイヤーへ置く。攻撃の有効区間に接触すると `Blast Origin` から `Blast Radius` 内にいる攻撃者の敵へ火属性ダメージを適用し、`On Detonated` を一度だけ実行する。爆発の中心を省略した場合は着弾用コライダーの中心を使う。[爆発物](../../Assets/MyAsset/Runtime/Combat/ExplosiveProp2D.cs)
+
 ## ターゲット選択（TargetSelector）
 1. TargetFilter で候補を絞り込み（CharacterFlags のビット演算で高速フィルタ）
 2. TargetSortKey で最適な1体を選択（Distance, HpRatio, DamageScore等11種）

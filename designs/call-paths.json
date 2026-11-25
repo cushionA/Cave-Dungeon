@@ -370,9 +370,9 @@
         "Assets/MyAsset/Core/Common/CombatDataHelper.cs": "f57d064ad921c35f9356b75647e21f4caac987323c6b6b2af4a463978f8e0bd4",
         "Assets/MyAsset/Core/Damage/StatusEffectApplication.cs": "f6eefe768bab54306da9ef9689fc6dbdbe3c23933f26cde9f7760e1603d04551",
         "Assets/MyAsset/Core/Equipment/EquipmentStore.cs": "e38df40ceadc869d58e760614cd0d06ecf3fc817dde196acbf42f2779cd8a5ec",
-        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "1bed9c74311c571cbcbf42d72ffabccd8fe952f990189ab947e329b9cb728c55",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "b729f0228859cf288d59b7fe18a54536de6a3b2496dd86cd0d5f3f165672ea9b",
         "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "774487ac9224e08ec7817ade0c7a71b10b0408bd7ca57e2ed4f37643b2a98148",
-        "Assets/MyAsset/Runtime/Combat/HitBox.cs": "458028855cdc7b54874215b8a6c7d2095f0734e65d3372813c4d4fa80ed9f1a3",
+        "Assets/MyAsset/Runtime/Combat/HitBox.cs": "21d935ac4c134a333d4f9405ac7fda35bd36ff9ebd48b10bfa4246e0ad54895b",
         "Assets/Tests/EditMode/CombatDataHelperTests.cs": "579475ab4f6e243c9114dc6b93a5a30d2250aef1223ac2b33ddd866399216685",
         "Assets/Tests/PlayMode/GuardParryStatusEffectPlayTests.cs": "64035c4ee19b24c751a55673a7659a31a73c4e0edf9fdd8ebafca72624394428"
       }
@@ -1243,7 +1243,7 @@
       "verification_hashes": {
         "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "cc01ba85c61deb97b3b4efefb147181a3452b8ecaee3b1c283fbefb7407c8782",
         "Assets/MyAsset/Runtime/Character/PlayerCharacter.cs": "76cc4257f31d61713d62e9a5b904ce1e5f43b2c6827894bc61d50ef178747b74",
-        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "1bed9c74311c571cbcbf42d72ffabccd8fe952f990189ab947e329b9cb728c55",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "b729f0228859cf288d59b7fe18a54536de6a3b2496dd86cd0d5f3f165672ea9b",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "f03341e01726701386c6700b2c4d3b646a466ef68c22d700b55816caf42b8785",
         "Assets/MyAsset/Runtime/Input/PlayerInputHandler.cs": "6304e765c9c304c4aaecc8277526888b970ae3ce8eba24bb47d05ce0574d6722",
         "Assets/Tests/PlayMode/AIExecutionBridgeTests.cs": "262c48c352ec765869c26b9841e9cc9d96dc8ab90b3234d8a65f31dbf26ec421",
@@ -1321,7 +1321,7 @@
         "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "cd2881af15ced669bbbd6a494dede00912af6429211c0ebd2f05dba32d9e58f0",
         "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "cc01ba85c61deb97b3b4efefb147181a3452b8ecaee3b1c283fbefb7407c8782",
         "Assets/MyAsset/Runtime/Character/BaseCharacter.cs": "94b279e916f3dce27cc50e2434426f3fa859b8aa04daab6042de0c8a7c128414",
-        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "1bed9c74311c571cbcbf42d72ffabccd8fe952f990189ab947e329b9cb728c55",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "b729f0228859cf288d59b7fe18a54536de6a3b2496dd86cd0d5f3f165672ea9b",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "f03341e01726701386c6700b2c4d3b646a466ef68c22d700b55816caf42b8785",
         "Assets/Tests/EditMode/AICore_ActionExecutorTests.cs": "3ad78840c5eaef03a2ddcccfab2bd62569a47411bd4de3acd72081a11f784eb0",
         "Assets/Tests/PlayMode/AIExecutionBridgeTests.cs": "262c48c352ec765869c26b9841e9cc9d96dc8ab90b3234d8a65f31dbf26ec421"
@@ -3313,9 +3313,9 @@
         "Assets/MyAsset/Core/ScriptableObjects/AttackInfo.cs": "7acd9a6551e9e3c1b25c0147be9913d33372c82eb4142c2a255bac451d5dac63",
         "Assets/MyAsset/Runtime/Combat/ActionCatalog.cs": "623b1a5ad74c7922c92c43b1c585875e6cf80874b047929683e06782912fc212",
         "Assets/MyAsset/Core/Common/CombatDataHelper.cs": "54e72d5cc9ebdc3dcf74eb12bd0dbcdd81c151f1fec9d80641ac97ba7150738f",
-        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "2cfef358af0f3885f916c91bc25ed4375af50c191f43a0514c9b698b9cac048f",
-        "Assets/MyAsset/Runtime/Combat/HitBox.cs": "188f9d1673e8b69826a5bc64355461ae9589e1400bf87ecd6d66c3a27327c06f",
-        "Assets/MyAsset/Runtime/Combat/DamageDealer.cs": "f65fe237ff62189304548ad21be73fbe14f475ba670822ea94fbe08cba87e621",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "b729f0228859cf288d59b7fe18a54536de6a3b2496dd86cd0d5f3f165672ea9b",
+        "Assets/MyAsset/Runtime/Combat/HitBox.cs": "21d935ac4c134a333d4f9405ac7fda35bd36ff9ebd48b10bfa4246e0ad54895b",
+        "Assets/MyAsset/Runtime/Combat/DamageDealer.cs": "8c655fb23d0dbd48bfe4b5b546b2b2b8b7c9591269433b146b8af7e909057f3b",
         "Assets/MyAsset/Core/Weapon/HitboxLogic.cs": "9c6b23c8b1cc41b8879067a9528329d92d4e95728ac43c46529869134cb7aea2",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "1b17466ad9bf449e5dcbf9f1fb2783529c2dab90bdb2be848a381a6f2cf7dbab",
         "Assets/MyAsset/Runtime/GameManager.cs": "921e0e01b5f9a7128b903477d546612330800c536e86eba1a72b6297941d2006",
@@ -5382,7 +5382,7 @@
       "verification_hashes": {
         "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs": "74dca1f8766c30731fcee7837ab7e7b0be4bee540ba8537f904db2d3f3e6c3b6",
         "Assets/MyAsset/Runtime/Animation/CharacterAnimationController.cs": "04324e7b4f86794cb60224cb527864138a1876439eef1a43c40a2711dd0919d7",
-        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "ba3f7a7ba776889748850c199599e3ef0a908cf47213e27f56046f686322e893",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "b729f0228859cf288d59b7fe18a54536de6a3b2496dd86cd0d5f3f165672ea9b",
         "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "4ea6b4ad856310a0cacccd7a9c2869acd04224eba737370335a09c413a78d453",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "a59aa3167c56e749715e7918be3e93e281bf26d5cced4bf5fa929aa37fff55da",
         "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileController.cs": "81a2e5e37b2a5a0dc89f08bc42dc2468ddc5d1d057182c8a38735b6289081860",
@@ -5851,7 +5851,7 @@
       "notes": "2026-11-06 Unity 6000.6.8f1の本プロジェクトでGame.Tests.EditMode 2097/2097、Game.Tests.PlayMode 223/223成功。失敗・skip・inconclusive 0。正式UPMとOdin Inspector/Validator 4.1.0.0・AnyPortrait 1.7.0を使用。実行ごとのsource/依存3791件のSHAは前後一致。実Burst有効。検証記録: %TEMP%/sistergame-job-validation/regression-prep-20261106/final-native-regression-summary.json。",
       "verification_hashes": {
         "Assets/MyAsset/Core/AI/Core/AICompiledMode.cs": "f24322ffb30e51dcf0d87cd923eecede1bb90cea7a6fbd75babd543f90e7604b",
-        "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "62db2595ec30c77cc12d094b2eab6f0baa261b9323385f23d216ae6b9ae31b70",
+        "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "9b3437b25ae3d9b8cd673754ee90cef0cab0812dc6426453d52647d883a0c403",
         "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "cd2881af15ced669bbbd6a494dede00912af6429211c0ebd2f05dba32d9e58f0",
         "Assets/MyAsset/Core/AI/Core/ModeController.cs": "80da51a328f0e3de9f4444eb11a38600d2a0b8e3da1479c1c706a0b8c793d8cd",
         "Assets/Tests/EditMode/AIDecisionSystemTests.cs": "92341bc73da658ad0670551f49a61f188f11764ff87066b56f748359f21c060f"
@@ -5934,9 +5934,9 @@
       ],
       "notes": "2026-11-06 Unity 6000.6.8f1の本プロジェクトでGame.Tests.EditMode 2097/2097、Game.Tests.PlayMode 223/223成功。失敗・skip・inconclusive 0。正式UPMとOdin Inspector/Validator 4.1.0.0・AnyPortrait 1.7.0を使用。実行ごとのsource/依存3791件のSHAは前後一致。実Burst有効。検証記録: %TEMP%/sistergame-job-validation/regression-prep-20261106/final-native-regression-summary.json。",
       "verification_hashes": {
-        "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "62db2595ec30c77cc12d094b2eab6f0baa261b9323385f23d216ae6b9ae31b70",
+        "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "9b3437b25ae3d9b8cd673754ee90cef0cab0812dc6426453d52647d883a0c403",
         "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs": "74dca1f8766c30731fcee7837ab7e7b0be4bee540ba8537f904db2d3f3e6c3b6",
-        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "d707c1b00e44326be0190060ad24f8d7cae2c2124902e2a7a92b7505493a4180",
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "e661ab4c2e6628382717570294ac155fcdd12d61d9894c28e8567683a16c6902",
         "Assets/MyAsset/Core/AI/Core/ActionExecutor.cs": "34e14eb01d059accb9476afc0c02601725ba6e67293f72ab75f33f5e3ccabc96",
         "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "cd2881af15ced669bbbd6a494dede00912af6429211c0ebd2f05dba32d9e58f0",
         "Assets/MyAsset/Core/GameManager/SimulationTickRunner.cs": "6d502978045eeb1339e60b35f0b2e56e59732c6927283d6611480784b088a857",
@@ -6126,9 +6126,9 @@
       ],
       "notes": "遮蔽物のある物理シーンで、射線を使う4体と16体を計測した。遮蔽・通過・未取得を照合し、同じ観測で全個体の標的と行動が一致した。射線の計測、Nativeコピーと判断時間、計測スレッドのGCを記録した。 Unity 6000.6.8f1でPerformance_ObservedTargetLineOfSightTests 2件が成功。",
       "verification_hashes": {
-        "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "62db2595ec30c77cc12d094b2eab6f0baa261b9323385f23d216ae6b9ae31b70",
+        "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "9b3437b25ae3d9b8cd673754ee90cef0cab0812dc6426453d52647d883a0c403",
         "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": "bcf92cc04d8a00644e5e64165036f273ed6668d6276e1f863cfcbc7af5fe6c6e",
-        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "d707c1b00e44326be0190060ad24f8d7cae2c2124902e2a7a92b7505493a4180",
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "e661ab4c2e6628382717570294ac155fcdd12d61d9894c28e8567683a16c6902",
         "Assets/MyAsset/Runtime/GameManager.cs": "921e0e01b5f9a7128b903477d546612330800c536e86eba1a72b6297941d2006",
         "Assets/Tests/PlayMode/Performance_ObservedTargetLineOfSightTests.cs": "d7a7e164aada3c7a2a82e1bbf84965c0fba1f775e3b95f7a1b78409c1b33ea58",
         "docs/reports/experiments/2026-11-24_ai-terrain-gimmicks.md": "cf2595803346f300bd75fb9bace5de253b6dda0323c046055b2d54f3512120a6"
@@ -6241,7 +6241,7 @@
         "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs": "a33c0bed705e19c9fe2ec223e43dad63347e8862644d77739446655e9410c58f",
         "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs": "81eefcaa3caec783e8379f6b11c1aed0739df302a62ce74f3caaf5841c1d02e1",
         "Assets/Tests/PlayMode/GroupBattle3DScenePlayTests.cs": "cacbaa923d1536e04591d338955628664f6bf41a6eaa3cf48db5faf6805dd095",
-        "designs/systems/AICore.md": "f0ce200fb35fe7e48172f80d6c29c7fdbb27733475b319178209a0eb5d551117"
+        "designs/systems/AICore.md": "5579218475345023a9fa6a3c815d95387eeb7b0980933893d75b3ebc54f25537"
       }
     }
   },
@@ -6351,7 +6351,7 @@
         "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs": "a33c0bed705e19c9fe2ec223e43dad63347e8862644d77739446655e9410c58f",
         "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs": "81eefcaa3caec783e8379f6b11c1aed0739df302a62ce74f3caaf5841c1d02e1",
         "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "69ab03bb51b4c47ff36365d3b504658dfabd4b4724d679b8ff3ed74682e7d5d3",
-        "designs/systems/AICore.md": "f0ce200fb35fe7e48172f80d6c29c7fdbb27733475b319178209a0eb5d551117"
+        "designs/systems/AICore.md": "5579218475345023a9fa6a3c815d95387eeb7b0980933893d75b3ebc54f25537"
       }
     }
   },
@@ -6452,10 +6452,10 @@
       "notes": "2Dの射線条件を使う判断だけで、同一物理シーンの観測者と標的の組を固定tickに照会する。同期とBurstは世代付きペアで同じ結果を使う。遮蔽と未観測は条件を成立させず、待機などへ進む。試作の既存の範囲攻撃は壁がある場合に待機し、射線が通ると同じ標的への実行を開始する。 Unity 6000.6.8f1でAIInfoConverterTests 18件、AIDecisionSystemTests 33件、SceneGimmickCombatTests 20件が成功。",
       "verification_hashes": {
         "Assets/MyAsset/Core/AI/Core/AICompiledMode.cs": "f24322ffb30e51dcf0d87cd923eecede1bb90cea7a6fbd75babd543f90e7604b",
-        "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "62db2595ec30c77cc12d094b2eab6f0baa261b9323385f23d216ae6b9ae31b70",
+        "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "9b3437b25ae3d9b8cd673754ee90cef0cab0812dc6426453d52647d883a0c403",
         "Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs": "10d55c996bbc86a080d47f53bff34b5cdc239bcda1d80a9480fc0461b7db9bc0",
         "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": "bcf92cc04d8a00644e5e64165036f273ed6668d6276e1f863cfcbc7af5fe6c6e",
-        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "d707c1b00e44326be0190060ad24f8d7cae2c2124902e2a7a92b7505493a4180",
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "e661ab4c2e6628382717570294ac155fcdd12d61d9894c28e8567683a16c6902",
         "Assets/MyAsset/Core/AI/Core/ConditionEvaluator.Compat.cs": "e5b94b7a1c4b1052b61ad8a1a96343b4df0272ebcbefa602a9c75b8a9010ce1f",
         "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "cd2881af15ced669bbbd6a494dede00912af6429211c0ebd2f05dba32d9e58f0",
         "Assets/MyAsset/Core/Common/Enums.cs": "1ed7bd22a11a88618344db17a9aa243f5f27f0ec7b7af0966e4129854a805618",
@@ -6464,8 +6464,8 @@
         "Assets/MyAsset/Runtime/GameManager.cs": "921e0e01b5f9a7128b903477d546612330800c536e86eba1a72b6297941d2006",
         "Assets/Tests/EditMode/AIDecisionSystemTests.cs": "92341bc73da658ad0670551f49a61f188f11764ff87066b56f748359f21c060f",
         "Assets/Tests/EditMode/AIInfoConverterTests.cs": "80b5a165140eaf6d9388bebe21412e4b27e1397817b593bb9af0a3eee622f9b8",
-        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs": "4582661273d22d07a4cfffb33ab1ac97833c3ef5c6865583ac2f35905e3a92f9",
-        "designs/systems/AICore.md": "f0ce200fb35fe7e48172f80d6c29c7fdbb27733475b319178209a0eb5d551117"
+        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs": "3ca6cd11b37bcc6be10059b4b8aa464497a350332064f1f99adebcc89e47f3ab",
+        "designs/systems/AICore.md": "5579218475345023a9fa6a3c815d95387eeb7b0980933893d75b3ebc54f25537"
       }
     }
   },
@@ -6508,8 +6508,122 @@
         "Assets/Tests/EditMode/SceneGimmickDecisionTests.cs",
         "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs"
       ],
-      "notes": "操作圏の使い切りスイッチはactivate-observed-gimmickで検証した。シスターは各tickで安全を再評価し、プレイヤーが退避して敵だけが残ったときに起動する。次は離れた操作地点への移動、接触板への敵の誘導、攻撃で起動する爆発物、連動先の地形変化を扱う。戦闘標的と操作対象の識別を保ち、行動の硬直・移動・予備動作・効果遅延を受付可能な時間と照合する。接触板は敵が踏んだ場合に1回発動し、隣の経路では発動しないこと、並んだ爆発物では敵だけに届く方を攻撃することを確かめる。連動スイッチは分岐・合流・循環、撤去・再配置、別AIの先行使用を含めて確認する。実験条件と再現手順はdocs/reports/experiments/2026-11-24_ai-terrain-gimmicks.md。 接触板の準備と作動はarm-observed-target-contact-plateで接続した。敵を板まで誘導する移動、爆発物への攻撃、連動装置の経路が残る。",
+      "notes": "使い切りスイッチはactivate-observed-gimmick、接触板はarm-observed-target-contact-plateで検証した。退避地点まで敵を誘導する経路はlead-observed-pursuer-to-contact-plate、実際の近接命中で爆発物を起動する経路はdetonate-2d-prop-with-meleeで確認した。離れた操作点への一般経路、飛翔体の命中、AIが爆発物を独立して評価・照準する処理、連動装置の分岐・合流・循環は残る。",
       "verification_hashes": {}
+    }
+  },
+  {
+    "feature": "AICore_TerrainDecisionDataFlow",
+    "path": {
+      "key": "lead-observed-pursuer-to-contact-plate",
+      "title": "2Dの誘導役が追跡する敵を接触板へ連れてくる",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "runtime_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs",
+          "symbol": "AISceneGimmickController.Capture",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs",
+          "symbol": "AIDecisionSystem.CaptureWorld",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs",
+          "symbol": "AIQueryKernel.TryChooseGimmick",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs",
+          "symbol": "AISceneGimmickController.TryActivate",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs",
+          "symbol": "ActionExecutorController.DispatchGimmick / RefreshLureMovement",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs",
+          "symbol": "GameActionRuntime.TrySetLocomotion",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs",
+          "symbol": "AISceneGimmickController.TryTargetContact / Activate",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/SceneGimmickDecisionTests.cs",
+        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs"
+      ],
+      "notes": "接触板の先に退避地点を置く。観測した敵が誘導役を狙い、平坦な進路を使える場合に板を予約する。誘導役は既存の歩行アクションで退避地点に進み、敵自身の歩行で板に接触して一度だけ作動する。追跡対象が変わった場合は予約を解除する。同期とBurstで同一の標的と装置を選ぶ。 Unity 6000.6.8f1でSceneGimmickDecisionTests 20件、SceneGimmickCombatTests 24件が成功。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "9b3437b25ae3d9b8cd673754ee90cef0cab0812dc6426453d52647d883a0c403",
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "e661ab4c2e6628382717570294ac155fcdd12d61d9894c28e8567683a16c6902",
+        "Assets/MyAsset/Core/AI/Core/AISceneGimmick.cs": "91fbed603d180dfd1274545364c29e2a1252ff9e939d15676e16476de99266ad",
+        "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs": "4c01d0335b827bbb7df91e41cecfbada4c60a9e9adb4eb204a33a5400ef93b29",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "b729f0228859cf288d59b7fe18a54536de6a3b2496dd86cd0d5f3f165672ea9b",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "182148afe9ca721390459a01ef0868a8acf213fc707de497bb7ce5464bcb742a",
+        "Assets/Tests/EditMode/SceneGimmickDecisionTests.cs": "84d5aed6c833c57541d20c501901d695d8389b1f9eea0492d14d4f6994b0dd1b",
+        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs": "3ca6cd11b37bcc6be10059b4b8aa464497a350332064f1f99adebcc89e47f3ab",
+        "designs/systems/AICore.md": "5579218475345023a9fa6a3c815d95387eeb7b0980933893d75b3ebc54f25537"
+      }
+    }
+  },
+  {
+    "feature": "AICore_TerrainDecisionDataFlow",
+    "path": {
+      "key": "detonate-2d-prop-with-melee",
+      "title": "2Dの近接攻撃が当たった爆発物から火属性ダメージを与える",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "runtime_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/HitBox.cs",
+          "symbol": "HitBox.TryHit",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/DamageDealer.cs",
+          "symbol": "DamageDealer.TryHit",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ExplosiveProp2D.cs",
+          "symbol": "ExplosiveProp2D.TryDetonate",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ExplosiveProp2D.cs",
+          "symbol": "ExplosiveProp2D.Detonate / TryGetVictim",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs",
+          "symbol": "DamageReceiver.ReceiveDamage",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/PlayMode/ExplosiveProp2DPlayTests.cs"
+      ],
+      "notes": "プレイヤー入力とAIの近接攻撃が、アクティブ中に指定コライダーと接触すると爆発する。爆風は同じ物理シーンの範囲内で、攻撃者から見た敵に一度だけ適用する。命中通知中に入れ替わった個体へは旧世代のダメージを引き継がない。 Unity 6000.6.8f1でExplosiveProp2DPlayTests 2件が成功。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Common/CombatDataHelper.cs": "54e72d5cc9ebdc3dcf74eb12bd0dbcdd81c151f1fec9d80641ac97ba7150738f",
+        "Assets/MyAsset/Core/Damage/AttackContext.cs": "d6e3c5293aebe85f2a4dac590a41c27b2b318ad0252a8262a7540443242b1f7f",
+        "Assets/MyAsset/Runtime/Combat/DamageDealer.cs": "8c655fb23d0dbd48bfe4b5b546b2b2b8b7c9591269433b146b8af7e909057f3b",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "5234e24e5d724eac8e5b1a13c1e174fefac4923589e84775dcef9aac0002b6d9",
+        "Assets/MyAsset/Runtime/Combat/ExplosiveProp2D.cs": "8f1e0bbe933ed6b4d9f278129f475f43ff796fe6c0ddb85e08d72054b7f8da78",
+        "Assets/MyAsset/Runtime/Combat/HitBox.cs": "21d935ac4c134a333d4f9405ac7fda35bd36ff9ebd48b10bfa4246e0ad54895b",
+        "Assets/Tests/PlayMode/ExplosiveProp2DPlayTests.cs": "6c56059e3973160b0f6c1ce373125949abc4daacc97c4747acb33074f0823770",
+        "designs/systems/AICore.md": "5579218475345023a9fa6a3c815d95387eeb7b0980933893d75b3ebc54f25537"
+      }
     }
   },
   {
@@ -6552,10 +6666,10 @@
       ],
       "notes": "固定tickの装置選択で罠を準備し、指定された敵の世代と物理ワールドの実接触を照合する。選択外の敵や別のセンサーでは発動せず、味方が効果範囲にいる間は待つ。安全な接触で扉が一度だけ動き、標的の再登録後は新しい観測が必要になる。 Unity 6000.6.8f1でSceneGimmickCombatTests 22件が成功。",
       "verification_hashes": {
-        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "d707c1b00e44326be0190060ad24f8d7cae2c2124902e2a7a92b7505493a4180",
-        "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs": "975492ab0340007af859d944c46ab0e754c8e5c2cb5b13f4a625fd02038159ba",
-        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs": "4582661273d22d07a4cfffb33ab1ac97833c3ef5c6865583ac2f35905e3a92f9",
-        "designs/systems/AICore.md": "f0ce200fb35fe7e48172f80d6c29c7fdbb27733475b319178209a0eb5d551117"
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "e661ab4c2e6628382717570294ac155fcdd12d61d9894c28e8567683a16c6902",
+        "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs": "4c01d0335b827bbb7df91e41cecfbada4c60a9e9adb4eb204a33a5400ef93b29",
+        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs": "3ca6cd11b37bcc6be10059b4b8aa464497a350332064f1f99adebcc89e47f3ab",
+        "designs/systems/AICore.md": "5579218475345023a9fa6a3c815d95387eeb7b0980933893d75b3ebc54f25537"
       }
     }
   },
@@ -6648,17 +6762,17 @@
       "verification_hashes": {
         "Assets/MyAsset/Runtime/GameManager.cs": "921e0e01b5f9a7128b903477d546612330800c536e86eba1a72b6297941d2006",
         "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs": "4038fc326cfee9fb16ae22bd6df39fff35b45c288b4db79df03d2ff9ea8be342",
-        "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs": "975492ab0340007af859d944c46ab0e754c8e5c2cb5b13f4a625fd02038159ba",
+        "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs": "4c01d0335b827bbb7df91e41cecfbada4c60a9e9adb4eb204a33a5400ef93b29",
         "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": "bcf92cc04d8a00644e5e64165036f273ed6668d6276e1f863cfcbc7af5fe6c6e",
-        "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "62db2595ec30c77cc12d094b2eab6f0baa261b9323385f23d216ae6b9ae31b70",
-        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "d707c1b00e44326be0190060ad24f8d7cae2c2124902e2a7a92b7505493a4180",
-        "Assets/MyAsset/Core/AI/Core/AISceneGimmick.cs": "a8f61d0031be38b70ace41d1c6e5f7748f737038f3dd1aaecb31d71891fb6109",
+        "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "9b3437b25ae3d9b8cd673754ee90cef0cab0812dc6426453d52647d883a0c403",
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "e661ab4c2e6628382717570294ac155fcdd12d61d9894c28e8567683a16c6902",
+        "Assets/MyAsset/Core/AI/Core/AISceneGimmick.cs": "91fbed603d180dfd1274545364c29e2a1252ff9e939d15676e16476de99266ad",
         "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "cd2881af15ced669bbbd6a494dede00912af6429211c0ebd2f05dba32d9e58f0",
         "Assets/MyAsset/Core/AI/Core/ActionExecutor.cs": "8a1b19a6c4f8588f693b4ef9a4cc2e7bb01203304e2a6a2f376355bf99540e06",
-        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "2cfef358af0f3885f916c91bc25ed4375af50c191f43a0514c9b698b9cac048f",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "b729f0228859cf288d59b7fe18a54536de6a3b2496dd86cd0d5f3f165672ea9b",
         "Assets/Tests/EditMode/ActionAuthoringCommandTests.cs": "04218e0c063ce76af7de510ac50cad5943db6693088dbeb7a1b16a5115f94a7f",
-        "Assets/Tests/EditMode/SceneGimmickDecisionTests.cs": "0230659b50b96453dc19d0298891b64cb0d3eb8a0c296b2619f241741322389a",
-        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs": "4582661273d22d07a4cfffb33ab1ac97833c3ef5c6865583ac2f35905e3a92f9",
+        "Assets/Tests/EditMode/SceneGimmickDecisionTests.cs": "84d5aed6c833c57541d20c501901d695d8389b1f9eea0492d14d4f6994b0dd1b",
+        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs": "3ca6cd11b37bcc6be10059b4b8aa464497a350332064f1f99adebcc89e47f3ab",
         "Assets/MyAsset/Core/AI/Core/AICompiledMode.cs": "f24322ffb30e51dcf0d87cd923eecede1bb90cea7a6fbd75babd543f90e7604b",
         "Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs": "10d55c996bbc86a080d47f53bff34b5cdc239bcda1d80a9480fc0461b7db9bc0",
         "Assets/MyAsset/Core/ScriptableObjects/AIInfo.cs": "d71ec91bd583f69425085ad1d5d0f875bb55a633e816b2488804576db4933bdc",
@@ -6762,8 +6876,8 @@
         "Assets/MyAsset/Core/AI/Core/AITargetRelations.cs": "4ce51288ec1aed9c56768ce5504bce875875e9eba5a0dddaa73c745cdac46a4a",
         "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": "bcf92cc04d8a00644e5e64165036f273ed6668d6276e1f863cfcbc7af5fe6c6e",
         "Assets/MyAsset/Core/Damage/StatusEffectStore.cs": "aee886ffbd568c92f48d92961e91e145a68e81b50950bf0177ca2f46f3a005a9",
-        "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "62db2595ec30c77cc12d094b2eab6f0baa261b9323385f23d216ae6b9ae31b70",
-        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "d707c1b00e44326be0190060ad24f8d7cae2c2124902e2a7a92b7505493a4180",
+        "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "9b3437b25ae3d9b8cd673754ee90cef0cab0812dc6426453d52647d883a0c403",
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "e661ab4c2e6628382717570294ac155fcdd12d61d9894c28e8567683a16c6902",
         "Assets/MyAsset/Core/AI/Core/AICompiledMode.cs": "f24322ffb30e51dcf0d87cd923eecede1bb90cea7a6fbd75babd543f90e7604b",
         "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "cd2881af15ced669bbbd6a494dede00912af6429211c0ebd2f05dba32d9e58f0",
         "Assets/Tests/EditMode/AIObservationContextTests.cs": "24c4c7f4cdd4c50b843b21b2b94b820bc3840ce57279a9e67835c3845f3d0bfa",
@@ -7573,7 +7687,7 @@
         "Assets/MyAsset/Runtime/Character/CompanionCharacter.cs": "a42ed3a83faf1204047fb24fd5fdda883d1e8f0a4b6f903c11f048fcf3aca365",
         "Assets/MyAsset/Runtime/Character/BaseCharacter.cs": "ab5714d059f4dc8477ed363e93e027273d759e82cee6376fe0d6df91a7c4f9b1",
         "Assets/MyAsset/Runtime/Character/PlayerCharacter.cs": "f8b687ca493a661cefb1d54a8d8520537c38d3ef8a57f020a1f96b059d561f6c",
-        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "2cfef358af0f3885f916c91bc25ed4375af50c191f43a0514c9b698b9cac048f",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "b729f0228859cf288d59b7fe18a54536de6a3b2496dd86cd0d5f3f165672ea9b",
         "Assets/MyAsset/Runtime/Input/PlayerInputHandler.cs": "e29e9c30b7022e9e7df144b683104016ddcb35493b3980833430a632e9806f3a",
         "Assets/MyAsset/Core/Damage/AttackTargetPolicy.cs": "f624220d9eec1c8ce9abf3ee373be75ba538ce36976f55a4478b0bfe9093216b"
       }
@@ -7649,7 +7763,7 @@
         "Assets/MyAsset/Runtime/Input/PlayerInputHandler.MultiLock.cs": "506494b57067ce62d26ff96789c72bd5838c7cce7306c45b70d31a6bf97cebad",
         "Assets/MyAsset/Runtime/UI/HudController.MultiLock.cs": "cdddbb30f7feac67b112fe9f9b4c9a7023429ee5f1dc062d235ff27c9b21b7b5",
         "Assets/MyAsset/Runtime/Character/PlayerCharacter.cs": "f8b687ca493a661cefb1d54a8d8520537c38d3ef8a57f020a1f96b059d561f6c",
-        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "2cfef358af0f3885f916c91bc25ed4375af50c191f43a0514c9b698b9cac048f",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "b729f0228859cf288d59b7fe18a54536de6a3b2496dd86cd0d5f3f165672ea9b",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "182148afe9ca721390459a01ef0868a8acf213fc707de497bb7ce5464bcb742a",
         "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs": "631d20b35bb74fd2efc406000a9926b8cf64be000429a2a8698b484b08c17531",
         "Assets/Tests/EditMode/ScreenDirectionTests.cs": "d6c3d6abfa92a59f4e70378cd5aaae2ec1d8bd68ceea99c2cc8c498e4bda6e06",
@@ -7734,14 +7848,14 @@
       ],
       "notes": "攻撃の実行ごとに世代付きの印を保持し、発射前に生存・陣営・射程と射線を再確認する。主標的を維持したまま敵味方の担当弾を分け、一体だけ失効した場合はその弾を省く。即時の直進弾、詠唱中断、世代の再利用、全員失効を検証する。対応した接触攻撃は実際に接触した対象だけに一回ずつ当たる。地点範囲は着弾時に被弾者を求める。 Unity 6000.6.8f1でEditMode ActionTargetSelectionTests 1/1件、PlayMode MultiLockCastPlayTests 6/6件、PlayMode CoreAttackPrototypePlayTests 1/1件。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "2cfef358af0f3885f916c91bc25ed4375af50c191f43a0514c9b698b9cac048f",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "b729f0228859cf288d59b7fe18a54536de6a3b2496dd86cd0d5f3f165672ea9b",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "182148afe9ca721390459a01ef0868a8acf213fc707de497bb7ce5464bcb742a",
         "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "906affd99f13b1d343389f12e8cf59e9e9f396eebcc43cb2b44d9427016616c8",
         "Assets/MyAsset/Runtime/Combat/MultiLockTargeting.cs": "0df39b6a438f2c5be55673d65b58ac50a24800608e1f579797f0fbdcb46e5d75",
         "Assets/MyAsset/Core/AI/Core/AITargetRelations.cs": "4ce51288ec1aed9c56768ce5504bce875875e9eba5a0dddaa73c745cdac46a4a",
         "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs": "631d20b35bb74fd2efc406000a9926b8cf64be000429a2a8698b484b08c17531",
         "Assets/MyAsset/Core/Combat/Projectile/Projectile.cs": "7e9680d064d8e704a44f39d532865bc7463fa3892abb2094ac137c57d0f3421f",
-        "Assets/MyAsset/Runtime/Combat/HitBox.cs": "188f9d1673e8b69826a5bc64355461ae9589e1400bf87ecd6d66c3a27327c06f",
+        "Assets/MyAsset/Runtime/Combat/HitBox.cs": "21d935ac4c134a333d4f9405ac7fda35bd36ff9ebd48b10bfa4246e0ad54895b",
         "Assets/Scenes/CoreTestScene.unity": "bc5c401c79863f882d708b24f0df9d92b43273bebf4c9bfefcd0d29fbb3cdb49",
         "Assets/MyAsset/Data/PLACEHOLDER_MultiLockShot.asset": "38cd8595e3c7e5a6477f664cc55466fe9efbff2561d5fc910acf326f8ee2ffba",
         "Assets/Tests/EditMode/ActionTargetSelectionTests.cs": "57a3565d0e2fe376ca87c4817fe501ae43bf8381d80cd5d63a6704b4c0aa5095",
