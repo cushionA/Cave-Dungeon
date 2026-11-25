@@ -44,7 +44,7 @@ namespace Game.Tests.EditMode
             AIObservationContext observation = new AIObservationContext();
             observation.BeginSnapshot(1, 0f);
             observation.AddActor(Actor(1, 1, CharacterBelong.Ally, Vector2.zero));
-            AICondition missing = new AICondition { conditionType = AIConditionType.ProjectileNear, compareOp = CompareOp.Equal, operandA = 0 };
+            AICondition missing = new AICondition { conditionType = AIConditionType.NearbyHostileProjectileCount, compareOp = CompareOp.Equal, operandA = 0 };
             Assert.IsFalse(ConditionEvaluator.Evaluate(missing, 1, 0, observation));
             missing.conditionType = AIConditionType.EventFired;
             Assert.IsFalse(ConditionEvaluator.Evaluate(missing, 1, 0, observation));

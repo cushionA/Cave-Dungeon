@@ -70,8 +70,8 @@ namespace Game.Runtime
         {
             if (_observedObjective != null) { _observedObjective.Ended -= OnEncounterEnded; }
             _observedObjective = null;
+            _approachRoutes?.HandOffCurrentJumps();
             ClearOrdersAndSlots();
-            _approachRoutes?.Clear();
         }
 
         public bool Register(EncounterCombatant3D combatant)
@@ -84,14 +84,13 @@ namespace Game.Runtime
             ActorRef actor = combatant.Actor.Actor;
             _assignedStations.Remove(actor);
             _attackSlots?.Invalidate(actor);
-            _approachRoutes?.Remove(actor);
+            _approachRoutes?.Release(actor);
         }
 
         public Transform GetAssignedStation(CharacterActor3D actor)
             => actor != null && _assignedStations.TryGetValue(actor.Actor, out Transform station) ? station : null;
 
-        internal bool Drives(CharacterActor3D actor) => isActiveAndEnabled && IsParticipant(actor)
-            && (IsRunning || _approachRoutes?.IsCrossing(actor.Actor) == true)
+        internal bool Drives(CharacterActor3D actor) => IsRunning && IsParticipant(actor)
             && actor.TryGetComponent(out EncounterCombatant3D combatant) && combatant.isActiveAndEnabled
             && _combatants.Contains(combatant);
 
@@ -143,8 +142,7 @@ namespace Game.Runtime
             if (!IsRunning || actions == null)
             {
                 ClearOrdersAndSlots();
-                if (actions == null) { _approachRoutes?.Clear(); }
-                else { CompleteAirborneMovement(actions); }
+                _approachRoutes?.HandOffCurrentJumps();
                 return;
             }
 
@@ -182,27 +180,12 @@ namespace Game.Runtime
         {
             if (ReferenceEquals(_observedObjective, objective)) { return; }
             if (_observedObjective != null) { _observedObjective.Ended -= OnEncounterEnded; }
-            _approachRoutes?.FinishCurrentJumps();
+            _approachRoutes?.HandOffCurrentJumps();
             _observedObjective = objective;
             if (_observedObjective != null) { _observedObjective.Ended += OnEncounterEnded; }
         }
 
-        private void OnEncounterEnded(ChallengeState _) => _approachRoutes?.FinishCurrentJumps();
-
-        private void CompleteAirborneMovement(GameActionRuntime actions)
-        {
-            if (_approachRoutes?.FinishCurrentJumps() != true) { return; }
-            foreach (EncounterCombatant3D member in _activeCombatants)
-            {
-                if (member == null || !member.isActiveAndEnabled || !_combatants.Contains(member)
-                    || !IsParticipant(member.Actor)) { continue; }
-                CharacterActor3D actor = member.Actor;
-                if (_approachRoutes.TryContinueJump(actor, IsMovementBlocked(actor.Actor, actions), out Vector3 move))
-                {
-                    actor.Motor.SimulateFixedStep(move, false, Time.fixedDeltaTime);
-                }
-            }
-        }
+        private void OnEncounterEnded(ChallengeState _) => _approachRoutes?.HandOffCurrentJumps();
 
         private void CaptureFrame()
         {
@@ -226,13 +209,15 @@ namespace Game.Runtime
         {
             ActorRef owner = actor.Actor;
             bool movementBlocked = IsMovementBlocked(owner, actions);
-            if (_approachRoutes != null && _approachRoutes.TryContinueJump(actor, movementBlocked, out Vector3 airborne))
+            bool detachedJump = actor.Motor.IsFinishingEncounterJump;
+            Vector3 airborne = Vector3.zero;
+            if (detachedJump || _approachRoutes != null && _approachRoutes.TryContinueJump(actor, movementBlocked, out airborne))
             {
                 if (_orders.TryGetValue(faction, out Order crossingOrder) && crossingOrder.action == BroadcastAction.Rally)
                 {
                     _unfinishedRallies.Add(faction);
                 }
-                actor.Motor.SimulateFixedStep(airborne, false, Time.fixedDeltaTime);
+                if (!detachedJump) { actor.Motor.SimulateFixedStep(airborne, false, Time.fixedDeltaTime); }
                 return;
             }
             if (movementBlocked)

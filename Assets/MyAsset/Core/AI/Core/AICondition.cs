@@ -18,6 +18,8 @@ namespace Game.Core
         /// 比較値A（閾値下限、ビットフラグ等）。
         /// conditionTypeに応じて意味が変わる:
         /// - HpRatio/MpRatio等: 数値閾値
+        /// - ProjectileNear: 旧データの距離[m]（現在は評価しない）
+        /// - NearbyHostileProjectileCount: 固定半径の敵対飛翔体の数
         /// - ObjectNearby: RecognizeObjectTypeのビットフラグ
         /// - EventFired: BrainEventFlagTypeのビットフラグ
         /// </summary>

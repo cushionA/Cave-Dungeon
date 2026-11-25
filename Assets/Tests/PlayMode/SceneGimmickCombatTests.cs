@@ -406,6 +406,141 @@ namespace Game.Tests.PlayMode
         public IEnumerator ContactPlate_WhenPursuerChoosesAnotherTarget_ReleasesTheLure()
             => RunContactLure(loseAggro: true);
 
+        [UnityTest]
+        public IEnumerator ContactLure_CompetingReservations_ExpiredTokenCannotReleaseTheNewOwner()
+        {
+            const float timeout = 0.04f;
+            AISceneGimmickController plate = PrepareLurePlate(timeout);
+            EnemyCharacter second = CreateOperator(-2.2f);
+            BaseCharacter secondPursuer = CreatePassiveActor(CharacterBelong.Ally, -7f);
+            yield return null;
+
+            ActionCommand first = MakeLureCommand(plate, _operator, _target);
+            ActionCommand next = MakeLureCommand(plate, second, secondPursuer);
+            CaptureLureObservation();
+            PhysicsScene2D physics = _testScene.GetPhysicsScene2D();
+            var liveActors = new List<int>();
+            Assert.IsTrue(AISceneGimmickController.TryActivate(next, physics, liveActors, out var uncontended),
+                "The second operator must be eligible before testing reservation contention.");
+            uncontended.Release();
+            Assert.IsTrue(AISceneGimmickController.TryActivate(first, physics, liveActors, out var older));
+            Assert.IsTrue(older.TryGetExit(out _));
+            Assert.IsFalse(AISceneGimmickController.TryActivate(next, physics, liveActors, out _));
+
+            double expires = Time.fixedTimeAsDouble + timeout;
+            while (Time.fixedTimeAsDouble <= expires) { yield return new WaitForFixedUpdate(); }
+
+            Assert.IsTrue(AISceneGimmickController.TryActivate(next, physics, liveActors, out var replacement));
+            Assert.IsFalse(older.TryGetExit(out _));
+            older.Release();
+            Assert.IsTrue(replacement.TryGetExit(out _));
+            Assert.IsTrue(plate.IsContactArmed);
+            replacement.Release();
+            Assert.IsTrue(plate.IsAvailable);
+        }
+
+        [TestCase(ActionCommandKind.Dodge)]
+        [TestCase(ActionCommandKind.Flee)]
+        public void ContactLure_EmergencyReplacesTheLureOnlyWhenAccepted(ActionCommandKind emergency)
+        {
+            AISceneGimmickController plate = PrepareLurePlate(4f);
+            ActionCommand command = MakeLureCommand(plate, _operator, _target);
+            CaptureLureObservation();
+            ActionExecutorController executor = _operator.GetComponent<ActionExecutorController>();
+            int owner = command.gimmickOwner.Hash;
+            int target = command.gimmickTarget.Hash;
+            ActionDispatchResult lure = executor.ExecuteCommand(owner, target, command);
+            Assert.IsTrue(lure.Accepted);
+            Assert.IsTrue(plate.IsContactArmed);
+            Assert.AreEqual(ActionDispatchStatus.Rejected, executor.ExecuteCommand(owner, target,
+                new ActionCommand { kind = ActionCommandKind.Guard }).Status);
+
+            var replacement = new ActionCommand
+            {
+                kind = emergency,
+                sustained = new SustainedActionParameters { duration = float.NaN },
+            };
+            if (emergency == ActionCommandKind.Dodge)
+            {
+                GameManager.Data.GetMoveParams(owner).dodgeStaminaCost = 10f;
+                GameManager.Data.GetVitals(owner).currentStamina = 0f;
+                replacement.sustained.duration = 1f;
+            }
+            Assert.IsFalse(executor.ExecuteCommand(owner, target, replacement).Accepted);
+            Assert.IsTrue(GameManager.Actions.Execution.IsGroupActive(lure.GroupId));
+            Assert.IsTrue(plate.IsContactArmed);
+
+            GameManager.Data.GetVitals(owner).currentStamina = 100f;
+            replacement.sustained.duration = 1f;
+            ActionDispatchResult accepted = executor.ExecuteCommand(owner, target, replacement);
+            Assert.IsTrue(accepted.Accepted);
+            Assert.IsTrue(GameManager.Actions.Execution.IsGroupActive(accepted.GroupId));
+            Assert.IsFalse(GameManager.Actions.Execution.IsGroupActive(lure.GroupId));
+            Assert.IsTrue(plate.IsAvailable);
+        }
+
+        [Test]
+        public void ContactLure_ForcedHitReaction_ReleasesTheReservationImmediately()
+        {
+            AISceneGimmickController plate = PrepareLurePlate(4f);
+            ActionCommand command = MakeLureCommand(plate, _operator, _target);
+            CaptureLureObservation();
+            int owner = command.gimmickOwner.Hash;
+            ActionDispatchResult lure = _operator.GetComponent<ActionExecutorController>()
+                .ExecuteCommand(owner, command.gimmickTarget.Hash, command);
+            Assert.IsTrue(lure.Accepted);
+            Assert.IsTrue(plate.IsContactArmed);
+
+            GameManager.Actions.React(owner, HitReaction.Flinch);
+
+            Assert.IsTrue(GameManager.Actions.Execution.GetPrimary(owner, out ActionExecution reaction));
+            Assert.IsTrue(reaction.forced);
+            Assert.AreEqual(ActState.Flinch, reaction.definition.actState);
+            Assert.IsFalse(GameManager.Actions.Execution.IsGroupActive(lure.GroupId));
+            Assert.IsTrue(plate.IsAvailable);
+        }
+
+        private AISceneGimmickController PrepareLurePlate(float timeout)
+        {
+            Vector2 start = new Vector2(-1.7f, 0f);
+            _operator.SetPhysicsPosition(start);
+            const float exitX = 4f;
+            _target.SetPhysicsPosition(new Vector2(exitX - AISceneGimmick.k_MaxLureRun, 0f));
+            GameObject floor = CreateObject("Lure corridor floor", new Vector2(0f, -1f));
+            floor.layer = LayerMask.NameToLayer("Ground");
+            floor.AddComponent<BoxCollider2D>().size = new Vector2(24f, 1f);
+            GameObject plateObject = CreateObject("Contended pressure plate", Vector2.zero);
+            BoxCollider2D trigger = plateObject.AddComponent<BoxCollider2D>();
+            trigger.isTrigger = true;
+            trigger.size = new Vector2(0.22f, 0.8f);
+            var plate = plateObject.AddComponent<AISceneGimmickController>();
+            Transform operation = CreateObject("Bait waiting point", start).transform;
+            plate.Configure(1 << 4, operation, 2f, plateObject.transform, 0.95f);
+            plate.SetContactTriggerForTest(trigger, timeout);
+            plate.SetLureExitForTest(CreateObject("Lure exit", new Vector2(exitX, 0f)).transform);
+            return plate;
+        }
+
+        private static ActionCommand MakeLureCommand(AISceneGimmickController plate, BaseCharacter owner, BaseCharacter target)
+        {
+            Assert.IsTrue(GameManager.Actors.TryGet(owner.ObjectHash, out ActorRef ownerRef));
+            Assert.IsTrue(GameManager.Actors.TryGet(target.ObjectHash, out ActorRef targetRef));
+            Assert.IsTrue(GameManager.TargetRelations.SetTarget(targetRef, ownerRef));
+            return new ActionCommand
+            {
+                kind = ActionCommandKind.InteractObject, gimmick = plate.Snapshot,
+                gimmickOwner = ownerRef, gimmickTarget = targetRef, observationTick = 1,
+            };
+        }
+
+        private static void CaptureLureObservation()
+        {
+            ISimulationTickWorld world = GameManager.Instance;
+            world.CaptureSimulationActors();
+            world.CaptureSimulationPhysics();
+            world.CaptureSimulationObservation(1, 1f);
+        }
+
         private IEnumerator RunContactLure(bool loseAggro)
         {
             _operator.OnPoolReturn();

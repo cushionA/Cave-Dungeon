@@ -448,12 +448,13 @@ namespace Game.Core
         ArmorRatio,
         Distance,
         NearbyFaction,
-        ProjectileNear,
+        ProjectileNear = 8, // 旧保存データの距離条件。現在の観測では評価しない。
         ObjectNearby,
         DamageScore,
         EventFired,
         SelfActState,
         TargetLineOfSight,
+        NearbyHostileProjectileCount = 14,
     }
 
     public enum TargetSortKey : byte

@@ -52,7 +52,7 @@ namespace Game.Core
             _transitionRules = AIConfigurationCopy.CloneTransitions(transitionRules);
             _judgmentLoop.TransitionsRequireNearbyHostileProjectileCount = _transitionRules != null
                 && Array.Exists(_transitionRules, rule => rule.conditions != null
-                    && Array.Exists(rule.conditions, AICompiledMode.IsProjectileNearCondition));
+                    && Array.Exists(rule.conditions, AICompiledMode.IsNearbyHostileProjectileCountCondition));
             if (_modes != null && _modes.Length > 0)
             {
                 SwitchMode(0);

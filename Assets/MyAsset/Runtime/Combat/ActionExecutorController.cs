@@ -278,13 +278,18 @@ namespace Game.Runtime
         public ActionDispatchResult ExecuteCommand(int ownerHash, int targetHash, in ActionCommand command)
         {
             if (ownerHash != _ownerHash) { return Result(ActionDispatchStatus.InvalidOwner); }
-            if (_lure.IsAssigned && IsAIExecuting()) { return Result(ActionDispatchStatus.Rejected); }
+            bool interruptsLure = _lure.IsAssigned && IsAIExecuting();
+            if (interruptsLure && command.kind != ActionCommandKind.Dodge && command.kind != ActionCommandKind.Flee)
+            {
+                return Result(ActionDispatchStatus.Rejected);
+            }
             _dispatchDepth++;
             try
             {
                 long replaceGroupId = IsAIExecuting() ? _aiGroupId : 0;
                 ActionDispatchResult result = Dispatch(command, targetHash, replaceGroupId);
                 if (!result.Accepted) { return result; }
+                if (interruptsLure) { ReleaseLure(); }
                 if (command.kind == ActionCommandKind.InteractObject && result.GroupId == 0)
                 {
                     // The instant event owns no group. Its callbacks may have started another action.

@@ -195,6 +195,7 @@ namespace Game.Core
                 }
 
                 case AIConditionType.ProjectileNear:
+                case AIConditionType.NearbyHostileProjectileCount:
                     return float.NaN;
 
                 case AIConditionType.ObjectNearby:

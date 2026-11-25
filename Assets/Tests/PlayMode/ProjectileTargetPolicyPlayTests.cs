@@ -105,7 +105,7 @@ namespace Game.Tests.PlayMode
         private static int Hp(BaseCharacter actor) => GameManager.Data.GetVitals(actor.ObjectHash).currentHp;
 
         [UnityTest]
-        public IEnumerator ProjectileNear_WhenLiveHostileFlightIsObserved_GuardsAndFreezesCountUntilNextTick()
+        public IEnumerator NearbyHostileProjectileCount_WhenLiveHostileFlightIsObserved_GuardsAndFreezesCountUntilNextTick()
         {
             CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo(CharacterBelong.Enemy, CharacterFeature.Minion);
             _infos.Add(info);
@@ -129,7 +129,7 @@ namespace Game.Tests.PlayMode
                 yield return null;
                 AICondition projectileNear = new AICondition
                 {
-                    conditionType = AIConditionType.ProjectileNear,
+                    conditionType = AIConditionType.NearbyHostileProjectileCount,
                     compareOp = CompareOp.GreaterEqual,
                     operandA = 1,
                 };

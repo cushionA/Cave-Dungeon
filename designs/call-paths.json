@@ -6232,16 +6232,16 @@
         "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs",
         "Assets/Tests/PlayMode/GroupBattle3DScenePlayTests.cs"
       ],
-      "notes": "設定した同室の中継点と射程内の候補を、身体幅・接地・遮蔽で照合して歩行経路を選ぶ。味方の目撃を受けて壁が残ったまま短い側を回り、本人の射線が通ってから攻撃する。選んだ側を途中で閉じると反対側へ選び直し、実際に命中する。 Unity 6000.6.8f1でEncounterCombat3DPlayTests 5件、GroupBattle3DScenePlayTests 1件が成功。",
+      "notes": "設定した同室の中継点と射程内の候補を、身体幅・接地・遮蔽で照合して歩行経路を選ぶ。味方の目撃を受けて壁が残ったまま短い側を回り、本人の射線が通ってから攻撃する。選んだ側を途中で閉じると反対側へ選び直し、実際に命中する。 Unity 6000.6.8f1でEncounterCombat3DPlayTests 5件、GroupBattle3DScenePlayTests 1件が成功。 遠い標的へ直接向かう場合も床と衝突形状を照合し、約15m先の相手を実際の近接攻撃まで追えることを確認した。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs": "95ebf079b25e629581076d9d36410caa42bbdf15a5f1798c6309383de6c74431",
-        "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "36f0007477156c23faf6f4c0135ca6cb799b596e43f607aea916a487e554cd71",
+        "Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs": "bb4d38938d92b83a6f05bd2f5b736b22f8d9cbe9d3e6a8206279be256257c059",
+        "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "55b13e82a10d5e29915cd12663d106118510717445e7237e90fb889231e53b21",
         "Assets/MyAsset/Runtime/AI/EncounterObservation3D.cs": "e9997cccca768f561af83cd5d32d78e5096bd09474edc9b1e04f5a6297a5e7d3",
         "Assets/MyAsset/Runtime/AI/EncounterSighting3D.cs": "b2d2f76be0a7c176294ced991cc4d9a17d56942933f41cb1e4ec68ecb1308782",
-        "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs": "a33c0bed705e19c9fe2ec223e43dad63347e8862644d77739446655e9410c58f",
-        "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs": "81eefcaa3caec783e8379f6b11c1aed0739df302a62ce74f3caaf5841c1d02e1",
+        "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs": "733f86fbe39863e7bd64bec436b70d3e65c22439153ef34fc4d30df04f4bd1ca",
+        "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs": "2f4a41e0b141f219a33be860d1dbc7f772b341a7c976e3997bdbd9075db9890f",
         "Assets/Tests/PlayMode/GroupBattle3DScenePlayTests.cs": "cacbaa923d1536e04591d338955628664f6bf41a6eaa3cf48db5faf6805dd095",
-        "designs/systems/AICore.md": "5579218475345023a9fa6a3c815d95387eeb7b0980933893d75b3ebc54f25537"
+        "designs/systems/AICore.md": "546759de1f279bc1c686bb1c184e5497645493aba66eff82644f7ae169f1f8b7"
       }
     }
   },
@@ -6342,16 +6342,16 @@
         "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs",
         "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs"
       ],
-      "notes": "同じ物理シーンの踏切、着地点と床を作者が指定する。ジャンプ能力と実モーターの距離、上空と着地先の空きを照合する。溝を越えて着地後に命中し、能力なしと着地先の閉塞では橋を渡る。遭遇が飛行中に終了した場合も着地し、古い接近行動はそこで終了する。 Unity 6000.6.8f1でEncounterCombat3DPlayTests 9件、ExpeditionSummonDeployment3DPlayTests 10件が成功。",
+      "notes": "同じ物理シーンの踏切、着地点と床を作者が指定する。ジャンプ能力と実モーターの距離、上空と着地先の空きを照合する。溝を越えて着地後に命中し、能力なしと着地先の閉塞では橋を渡る。遭遇が飛行中に終了した場合も着地し、古い接近行動はそこで終了する。 Unity 6000.6.8f1でEncounterCombat3DPlayTests 9件、ExpeditionSummonDeployment3DPlayTests 10件が成功。 遭遇の終了・無効化・破棄と参加解除で飛行中のモーターを引き継ぎ、着地後に旧経路を再開しないことを確認した。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs": "95ebf079b25e629581076d9d36410caa42bbdf15a5f1798c6309383de6c74431",
-        "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "36f0007477156c23faf6f4c0135ca6cb799b596e43f607aea916a487e554cd71",
+        "Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs": "bb4d38938d92b83a6f05bd2f5b736b22f8d9cbe9d3e6a8206279be256257c059",
+        "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "55b13e82a10d5e29915cd12663d106118510717445e7237e90fb889231e53b21",
         "Assets/MyAsset/Runtime/AI/EncounterCombatant3D.cs": "834791e50c6eb46c81b70015d9a5e25d081ebc5509aa4efc3e6d96469ff5e610",
         "Assets/MyAsset/Runtime/AI/EncounterJumpLink3D.cs": "4f8fdf5e0f024f445e594a451cf0349c70eb699942f74d046242b00bb023c793",
-        "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs": "a33c0bed705e19c9fe2ec223e43dad63347e8862644d77739446655e9410c58f",
-        "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs": "81eefcaa3caec783e8379f6b11c1aed0739df302a62ce74f3caaf5841c1d02e1",
-        "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "69ab03bb51b4c47ff36365d3b504658dfabd4b4724d679b8ff3ed74682e7d5d3",
-        "designs/systems/AICore.md": "5579218475345023a9fa6a3c815d95387eeb7b0980933893d75b3ebc54f25537"
+        "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs": "733f86fbe39863e7bd64bec436b70d3e65c22439153ef34fc4d30df04f4bd1ca",
+        "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs": "2f4a41e0b141f219a33be860d1dbc7f772b341a7c976e3997bdbd9075db9890f",
+        "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "1ce31fccf1879c296191c3676dabb60c9232c218c906bcf32342cd1c79c845c8",
+        "designs/systems/AICore.md": "546759de1f279bc1c686bb1c184e5497645493aba66eff82644f7ae169f1f8b7"
       }
     }
   },
@@ -6447,25 +6447,27 @@
       "tests": [
         "Assets/Tests/EditMode/AIInfoConverterTests.cs",
         "Assets/Tests/EditMode/AIDecisionSystemTests.cs",
-        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs"
+        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs",
+        "Assets/Tests/EditMode/AICore_JudgmentLoopTests.cs"
       ],
-      "notes": "2Dの射線条件を使う判断だけで、同一物理シーンの観測者と標的の組を固定tickに照会する。同期とBurstは世代付きペアで同じ結果を使う。遮蔽と未観測は条件を成立させず、待機などへ進む。試作の既存の範囲攻撃は壁がある場合に待機し、射線が通ると同じ標的への実行を開始する。 Unity 6000.6.8f1でAIInfoConverterTests 18件、AIDecisionSystemTests 33件、SceneGimmickCombatTests 20件が成功。",
+      "notes": "2Dの射線条件を使う判断だけで、同一物理シーンの観測者と標的の組を固定tickに照会する。同期とBurstは世代付きペアで同じ結果を使う。遮蔽と未観測は条件を成立させず、待機などへ進む。試作の既存の範囲攻撃は壁がある場合に待機し、射線が通ると同じ標的への実行を開始する。 Unity 6000.6.8f1でAIInfoConverterTests 18件、AIDecisionSystemTests 33件、SceneGimmickCombatTests 20件が成功。 同じ行動を選ぶ射線付き・射線なしのルールが混在しても、明示された既定行動を保つ。",
       "verification_hashes": {
-        "Assets/MyAsset/Core/AI/Core/AICompiledMode.cs": "f24322ffb30e51dcf0d87cd923eecede1bb90cea7a6fbd75babd543f90e7604b",
-        "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "9b3437b25ae3d9b8cd673754ee90cef0cab0812dc6426453d52647d883a0c403",
+        "Assets/MyAsset/Core/AI/Core/AICompiledMode.cs": "3bc7d56abc2848a01762ac811975950fb2f99a1c731bfe6e4806863f62da4794",
+        "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "63402fd54528711e3838088c74f7ed879f204bb0b28533af00135a103bcc8e0b",
         "Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs": "10d55c996bbc86a080d47f53bff34b5cdc239bcda1d80a9480fc0461b7db9bc0",
-        "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": "bcf92cc04d8a00644e5e64165036f273ed6668d6276e1f863cfcbc7af5fe6c6e",
-        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "e661ab4c2e6628382717570294ac155fcdd12d61d9894c28e8567683a16c6902",
-        "Assets/MyAsset/Core/AI/Core/ConditionEvaluator.Compat.cs": "e5b94b7a1c4b1052b61ad8a1a96343b4df0272ebcbefa602a9c75b8a9010ce1f",
-        "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "cd2881af15ced669bbbd6a494dede00912af6429211c0ebd2f05dba32d9e58f0",
-        "Assets/MyAsset/Core/Common/Enums.cs": "1ed7bd22a11a88618344db17a9aa243f5f27f0ec7b7af0966e4129854a805618",
+        "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": "b1a9d42549ebcf7572f72b0723c42a24e9a6647f3ca9b19689f9a9eb5910d06e",
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "7db94112a9dcf076e1b9ba09cf7b498a9f900db8699ae28e95368a285ad0991b",
+        "Assets/MyAsset/Core/AI/Core/ConditionEvaluator.Compat.cs": "a097e1a78491c055324571caf951b45efe4af2df37bac48f26bf1e6bb9d53bf5",
+        "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "3741d244d117f332dee2adfd21d684c93c762b0273cccfeb195d763beaf8d09b",
+        "Assets/MyAsset/Core/Common/Enums.cs": "840fc43144be2f92b5fde23d24cdd084bbf4892fff24e56e48c2e4f07a5faee0",
         "Assets/MyAsset/Data/PLACEHOLDER_GroundBurstEnemyAI.asset": "5951d10fc7664eb29b37f4a934ba4032eb060c1c01f01d9e89d9a961927ff3e6",
         "Assets/MyAsset/Runtime/Character/BaseCharacter.Physics.cs": "4377d65bd30083e7b776aa5a6a81c9ce35bf5d4d5a08e1659e334ecf61b44ae1",
-        "Assets/MyAsset/Runtime/GameManager.cs": "921e0e01b5f9a7128b903477d546612330800c536e86eba1a72b6297941d2006",
-        "Assets/Tests/EditMode/AIDecisionSystemTests.cs": "92341bc73da658ad0670551f49a61f188f11764ff87066b56f748359f21c060f",
+        "Assets/MyAsset/Runtime/GameManager.cs": "e1dbb46b0858d77f83ae1f6b5e108f851a3f27dc972c50d29bb70781d5334803",
+        "Assets/Tests/EditMode/AIDecisionSystemTests.cs": "3483456cdff50c7d785b874c8486844fce8f8f7acaa8fe1bcb2a67433fc6aeff",
         "Assets/Tests/EditMode/AIInfoConverterTests.cs": "80b5a165140eaf6d9388bebe21412e4b27e1397817b593bb9af0a3eee622f9b8",
-        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs": "3ca6cd11b37bcc6be10059b4b8aa464497a350332064f1f99adebcc89e47f3ab",
-        "designs/systems/AICore.md": "5579218475345023a9fa6a3c815d95387eeb7b0980933893d75b3ebc54f25537"
+        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs": "157eb4234efaeda74e584a0bcbc1ddbfa1fee24306ad46196f995d322b10a955",
+        "designs/systems/AICore.md": "546759de1f279bc1c686bb1c184e5497645493aba66eff82644f7ae169f1f8b7",
+        "Assets/Tests/EditMode/AICore_JudgmentLoopTests.cs": "7fc880d218fdd5da85376a563ca5712c69e0cde486d6b541da91d90873109e52"
       }
     }
   },
@@ -6561,17 +6563,17 @@
         "Assets/Tests/EditMode/SceneGimmickDecisionTests.cs",
         "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs"
       ],
-      "notes": "接触板の先に退避地点を置く。観測した敵が誘導役を狙い、平坦な進路を使える場合に板を予約する。誘導役は既存の歩行アクションで退避地点に進み、敵自身の歩行で板に接触して一度だけ作動する。追跡対象が変わった場合は予約を解除する。同期とBurstで同一の標的と装置を選ぶ。 Unity 6000.6.8f1でSceneGimmickDecisionTests 20件、SceneGimmickCombatTests 24件が成功。",
+      "notes": "接触板の先に退避地点を置く。観測した敵が誘導役を狙い、平坦な進路を使える場合に板を予約する。誘導役は既存の歩行アクションで退避地点に進み、敵自身の歩行で板に接触して一度だけ作動する。追跡対象が変わった場合は予約を解除する。同期とBurstで同一の標的と装置を選ぶ。 Unity 6000.6.8f1でSceneGimmickDecisionTests 20件、SceneGimmickCombatTests 24件が成功。 同じ観測で二人が競合した場合の予約、期限切れ後の再予約、回避・逃走・被弾による解除を確認した。",
       "verification_hashes": {
-        "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "9b3437b25ae3d9b8cd673754ee90cef0cab0812dc6426453d52647d883a0c403",
-        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "e661ab4c2e6628382717570294ac155fcdd12d61d9894c28e8567683a16c6902",
-        "Assets/MyAsset/Core/AI/Core/AISceneGimmick.cs": "91fbed603d180dfd1274545364c29e2a1252ff9e939d15676e16476de99266ad",
-        "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs": "4c01d0335b827bbb7df91e41cecfbada4c60a9e9adb4eb204a33a5400ef93b29",
-        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "b729f0228859cf288d59b7fe18a54536de6a3b2496dd86cd0d5f3f165672ea9b",
+        "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "63402fd54528711e3838088c74f7ed879f204bb0b28533af00135a103bcc8e0b",
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "7db94112a9dcf076e1b9ba09cf7b498a9f900db8699ae28e95368a285ad0991b",
+        "Assets/MyAsset/Core/AI/Core/AISceneGimmick.cs": "e53db6930713a7298dcc471303378c218952367c3e0f362064322d729b6ed298",
+        "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs": "bda998f2fcd4cd257c26dd1ac64a3308bf551c735711e8f08f378ed05294efd4",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "07e1f5fef564c26d51526878d1596e83bbeff75d8d3819c88276e3c242a6963e",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "182148afe9ca721390459a01ef0868a8acf213fc707de497bb7ce5464bcb742a",
         "Assets/Tests/EditMode/SceneGimmickDecisionTests.cs": "84d5aed6c833c57541d20c501901d695d8389b1f9eea0492d14d4f6994b0dd1b",
-        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs": "3ca6cd11b37bcc6be10059b4b8aa464497a350332064f1f99adebcc89e47f3ab",
-        "designs/systems/AICore.md": "5579218475345023a9fa6a3c815d95387eeb7b0980933893d75b3ebc54f25537"
+        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs": "157eb4234efaeda74e584a0bcbc1ddbfa1fee24306ad46196f995d322b10a955",
+        "designs/systems/AICore.md": "546759de1f279bc1c686bb1c184e5497645493aba66eff82644f7ae169f1f8b7"
       }
     }
   },
@@ -6613,16 +6615,16 @@
       "tests": [
         "Assets/Tests/PlayMode/ExplosiveProp2DPlayTests.cs"
       ],
-      "notes": "プレイヤー入力とAIの近接攻撃が、アクティブ中に指定コライダーと接触すると爆発する。爆風は同じ物理シーンの範囲内で、攻撃者から見た敵に一度だけ適用する。命中通知中に入れ替わった個体へは旧世代のダメージを引き継がない。 Unity 6000.6.8f1でExplosiveProp2DPlayTests 2件が成功。",
+      "notes": "プレイヤー入力とAIの近接攻撃が、アクティブ中に指定コライダーと接触すると爆発する。爆風は同じ物理シーンの範囲内で、攻撃者から見た敵に一度だけ適用する。命中通知中に入れ替わった個体へは旧世代のダメージを引き継がない。 Unity 6000.6.8f1でExplosiveProp2DPlayTests 2件が成功。 コライダーの二重登録と破棄済み所有者の置換、被害通知が例外を送出した後も残る対象に効果を与えることを確認した。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Common/CombatDataHelper.cs": "54e72d5cc9ebdc3dcf74eb12bd0dbcdd81c151f1fec9d80641ac97ba7150738f",
         "Assets/MyAsset/Core/Damage/AttackContext.cs": "d6e3c5293aebe85f2a4dac590a41c27b2b318ad0252a8262a7540443242b1f7f",
         "Assets/MyAsset/Runtime/Combat/DamageDealer.cs": "8c655fb23d0dbd48bfe4b5b546b2b2b8b7c9591269433b146b8af7e909057f3b",
         "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "5234e24e5d724eac8e5b1a13c1e174fefac4923589e84775dcef9aac0002b6d9",
-        "Assets/MyAsset/Runtime/Combat/ExplosiveProp2D.cs": "8f1e0bbe933ed6b4d9f278129f475f43ff796fe6c0ddb85e08d72054b7f8da78",
+        "Assets/MyAsset/Runtime/Combat/ExplosiveProp2D.cs": "f050d97bbf58cb22536acad90c3dd0ade617142ec15f1671ed4cc964e16f9202",
         "Assets/MyAsset/Runtime/Combat/HitBox.cs": "21d935ac4c134a333d4f9405ac7fda35bd36ff9ebd48b10bfa4246e0ad54895b",
-        "Assets/Tests/PlayMode/ExplosiveProp2DPlayTests.cs": "6c56059e3973160b0f6c1ce373125949abc4daacc97c4747acb33074f0823770",
-        "designs/systems/AICore.md": "5579218475345023a9fa6a3c815d95387eeb7b0980933893d75b3ebc54f25537"
+        "Assets/Tests/PlayMode/ExplosiveProp2DPlayTests.cs": "ec0bca9bcd5b53d92773815be57c75e7ce88349a7b083573583a52ee67889c92",
+        "designs/systems/AICore.md": "546759de1f279bc1c686bb1c184e5497645493aba66eff82644f7ae169f1f8b7"
       }
     }
   },
@@ -6664,12 +6666,12 @@
       "tests": [
         "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs"
       ],
-      "notes": "固定tickの装置選択で罠を準備し、指定された敵の世代と物理ワールドの実接触を照合する。選択外の敵や別のセンサーでは発動せず、味方が効果範囲にいる間は待つ。安全な接触で扉が一度だけ動き、標的の再登録後は新しい観測が必要になる。 Unity 6000.6.8f1でSceneGimmickCombatTests 22件が成功。",
+      "notes": "固定tickの装置選択で罠を準備し、指定された敵の世代と物理ワールドの実接触を照合する。選択外の敵や別のセンサーでは発動せず、味方が効果範囲にいる間は待つ。安全な接触で扉が一度だけ動き、標的の再登録後は新しい観測が必要になる。 Unity 6000.6.8f1でSceneGimmickCombatTests 22件が成功。 一度に一人の予約を受理し、失効済みの操作で新しい予約を解除しない。",
       "verification_hashes": {
-        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "e661ab4c2e6628382717570294ac155fcdd12d61d9894c28e8567683a16c6902",
-        "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs": "4c01d0335b827bbb7df91e41cecfbada4c60a9e9adb4eb204a33a5400ef93b29",
-        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs": "3ca6cd11b37bcc6be10059b4b8aa464497a350332064f1f99adebcc89e47f3ab",
-        "designs/systems/AICore.md": "5579218475345023a9fa6a3c815d95387eeb7b0980933893d75b3ebc54f25537"
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "7db94112a9dcf076e1b9ba09cf7b498a9f900db8699ae28e95368a285ad0991b",
+        "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs": "bda998f2fcd4cd257c26dd1ac64a3308bf551c735711e8f08f378ed05294efd4",
+        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs": "157eb4234efaeda74e584a0bcbc1ddbfa1fee24306ad46196f995d322b10a955",
+        "designs/systems/AICore.md": "546759de1f279bc1c686bb1c184e5497645493aba66eff82644f7ae169f1f8b7"
       }
     }
   },
@@ -7074,18 +7076,18 @@
         "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs",
         "Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs"
       ],
-      "notes": "作者が種ID、3Dプレハブ、出現位置と追従先を設定し、シスターから確定済み通常編成を呼ぶ。同種を別々の世代として登録し、配置不可や途中離脱では出撃全体を巻き戻す。会話から出撃した工兵が通常探索で騎士に追いつき、出撃時の登録世代を保つ。移動を妨げる状態では停止し、集団戦が移動を担当する間は戦闘側に従う。本編のシスターと出撃イベントは制作時に指定する。複雑な地形の迂回には経路探索の接続が残る。集団戦の開始・終了を両方の固定更新の間に起こし、呼び出し順を入れ替えても実際の移動量が1ステップ分になることを確認した。無効な追従距離は一度だけ警告し、設定を直すと同じ個体で追従を再開する。 Unity 6000.6.8f1でExpeditionSummonDeployment3DPlayTests 10件、ExpeditionQuest3DScenePlayTests 1件が成功。",
+      "notes": "作者が種ID、3Dプレハブ、出現位置と追従先を設定し、シスターから確定済み通常編成を呼ぶ。同種を別々の世代として登録し、配置不可や途中離脱では出撃全体を巻き戻す。会話から出撃した工兵が通常探索で騎士に追いつき、出撃時の登録世代を保つ。移動を妨げる状態では停止し、集団戦が移動を担当する間は戦闘側に従う。本編のシスターと出撃イベントは制作時に指定する。複雑な地形の迂回には経路探索の接続が残る。集団戦の開始・終了を両方の固定更新の間に起こし、呼び出し順を入れ替えても実際の移動量が1ステップ分になることを確認した。無効な追従距離は一度だけ警告し、設定を直すと同じ個体で追従を再開する。 Unity 6000.6.8f1でExpeditionSummonDeployment3DPlayTests 10件、ExpeditionQuest3DScenePlayTests 1件が成功。 通常召喚が同行先を失った場合も重力と接地を進め、同行先の再登録でも同じ召喚世代を保持した。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs": "925a180de4d2ab5b1311e3c321174c75be81b3e136d7b8a128c95f534c9eca61",
+        "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs": "efc2268e04e701fc14a0c87b9ab875f14456db720f906c1502b6e8964ee53c00",
         "Assets/MyAsset/Runtime/AI/ExpeditionSquadManager.cs": "90e5ff7eedd078988d7ef8a4e198833ca68bc752c1bd7e188440b6dd8f02fabc",
         "Assets/MyAsset/Core/AI/Summon/ExpeditionSquad.cs": "caf061ce01c920367b375a2c9f88b0b1063f0d7eddf1f72e1a81c7a3b372108b",
         "Assets/MyAsset/Runtime/Character/CharacterActor3D.cs": "1fa4a7e8ce37958ab5f012fbefd7a94697a95cb547aad5ead44487714999ee9e",
-        "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "36f0007477156c23faf6f4c0135ca6cb799b596e43f607aea916a487e554cd71",
-        "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "69ab03bb51b4c47ff36365d3b504658dfabd4b4724d679b8ff3ed74682e7d5d3",
+        "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "55b13e82a10d5e29915cd12663d106118510717445e7237e90fb889231e53b21",
+        "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "1ce31fccf1879c296191c3676dabb60c9232c218c906bcf32342cd1c79c845c8",
         "Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs": "8e81abfc246fc09b6c15a0ad48a8d790cd00fda9689b75a3577ba935a0a00fb3",
         "Assets/MyAsset/Runtime/World/EncounterSession3D.cs": "d663fd2019ed396ff198b2dda383c462f98ee9a7c5b2fe6938830c6c9b8547cc",
-        "Assets/MyAsset/Runtime/AI/CompanionTactics3D.cs": "d1475213988600ab17cf762b335713e6b383005715983ed30f5c75618e18923b",
-        "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs": "a33c0bed705e19c9fe2ec223e43dad63347e8862644d77739446655e9410c58f",
+        "Assets/MyAsset/Runtime/AI/CompanionTactics3D.cs": "20b10306db375277be736cfcd764695a6ee78f2453e9025904cb0efde06ef22d",
+        "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs": "733f86fbe39863e7bd64bec436b70d3e65c22439153ef34fc4d30df04f4bd1ca",
         "Assets/Scenes/ExpeditionMock3DScene.unity": "ebf8cdb77a918cedb836b657d5bdf27d4227672f420cd59a42d6bad0552af258",
         "Assets/Scenes/ExpeditionQuest3DTestScene.unity": "9d88de98f69f3d622bc494da8726ccc1f30fd85e28759d83978c5ee599831a52",
         "designs/systems/SummonSystem.md": "9574bb9ee452d6801f1d95ad50ab7836f615f575593e8c926ec0d7b4605cf5e4"
@@ -7149,21 +7151,21 @@
         "Assets/Tests/PlayMode/ExpeditionSquadPanelPlayTests.cs",
         "Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs"
       ],
-      "notes": "3D遭遇のボス戦と集団戦は独立した設定。集団戦の進行中に作者指定の追加人数とコストを照合して増援を出す。ボス戦単独、集団戦単独、両方を設定した遭遇を確認した。クリア、撤退、旧状態の再読込では臨時個体だけを解放する。増援用画面からプリセットを選べる。本編での遭遇とボスのフェーズへの接続は制作時に行う。遠征モックに独立した増援訓練を接続した。解放済みの工兵をプリセットから追加出撃し、目標到達と撤退で一時増援だけが解除される。 Unity 6000.6.8f1でExpeditionEncounterBudget3DPlayTests 4件、ExpeditionSummonDeployment3DPlayTests 10件、EncounterGoal3DPlayTests 3件、ExpeditionSquadPanelPlayTests 3件、ExpeditionMock3DScenePlayTests 3件が成功。",
+      "notes": "3D遭遇のボス戦と集団戦は独立した設定。集団戦の進行中に作者指定の追加人数とコストを照合して増援を出す。ボス戦単独、集団戦単独、両方を設定した遭遇を確認した。クリア、撤退、旧状態の再読込では臨時個体だけを解放する。増援用画面からプリセットを選べる。本編での遭遇とボスのフェーズへの接続は制作時に行う。遠征モックに独立した増援訓練を接続した。解放済みの工兵をプリセットから追加出撃し、目標到達と撤退で一時増援だけが解除される。 Unity 6000.6.8f1でExpeditionEncounterBudget3DPlayTests 4件、ExpeditionSummonDeployment3DPlayTests 10件、EncounterGoal3DPlayTests 3件、ExpeditionSquadPanelPlayTests 3件、ExpeditionMock3DScenePlayTests 3件が成功。 表示パネルが先に破棄された場合も増援だけを退場させ、遭遇の終了通知を一度に保つことを確認した。",
       "verification_hashes": {
         "Assets/MyAsset/Core/AI/Summon/ExpeditionSquad.cs": "caf061ce01c920367b375a2c9f88b0b1063f0d7eddf1f72e1a81c7a3b372108b",
         "Assets/MyAsset/Core/Save/SaveManager.cs": "d2cf21fd6eb0896dff176adf62833676fd7768838f83dce74a4b51d5f3bf1fb1",
-        "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs": "925a180de4d2ab5b1311e3c321174c75be81b3e136d7b8a128c95f534c9eca61",
+        "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs": "efc2268e04e701fc14a0c87b9ab875f14456db720f906c1502b6e8964ee53c00",
         "Assets/MyAsset/Runtime/World/EncounterGoal3D.cs": "3f7b3ee5b087cb1e2d920af2a59c892d318442c15558c66ad1c8cc5b1b1cb4d6",
         "Assets/MyAsset/Runtime/World/EncounterSession3D.cs": "d663fd2019ed396ff198b2dda383c462f98ee9a7c5b2fe6938830c6c9b8547cc",
         "Assets/MyAsset/Runtime/World/ExpeditionEncounterBudget3D.cs": "2ccee45db1772aa58caca3682fb637e55e376839a9b1a44562c886f6221d2caf",
         "Assets/Tests/PlayMode/EncounterGoal3DPlayTests.cs": "c317ef80bdf81aae6ced10ac3afdf1fdca0c883ba32f4ee7b6d2bc5bc0975210",
         "Assets/Tests/PlayMode/ExpeditionEncounterBudget3DPlayTests.cs": "07e34820c14f65a227d65009a7c9579db2c2584500790476227cc5803044eae6",
         "Assets/Tests/PlayMode/ExpeditionSquadPanelPlayTests.cs": "457ba552eb0c688c182d3e32bedc199e6c4e3073e353ff00040d0a8655449bf1",
-        "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "69ab03bb51b4c47ff36365d3b504658dfabd4b4724d679b8ff3ed74682e7d5d3",
+        "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "1ce31fccf1879c296191c3676dabb60c9232c218c906bcf32342cd1c79c845c8",
         "Assets/MyAsset/Runtime/World/ExpeditionReinforcementDrill3D.cs": "17cb4c4475f16894295be34f4ae4afbac309ad6962d9c9516ed5b0c790c6f769",
         "Assets/Scenes/ExpeditionMock3DScene.unity": "ebf8cdb77a918cedb836b657d5bdf27d4227672f420cd59a42d6bad0552af258",
-        "Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs": "f00d8e45b6796de5b26052a91371584f77de17ba42d79c374521c9dfad63bea0",
+        "Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs": "fec2358fd603bbfff413eeb3ef5ee66428e7754807fe163c8dd9c26b35213412",
         "docs/reports/experiments/2026-11-25_expedition-mock-3d.md": "4d63a678464e84f1a4e2449d849ac69ba96c325aeeef61080e3abe89e56f889b"
       }
     }
@@ -8690,18 +8692,18 @@
         "Assets/Tests/PlayMode/CompanionAISettings3DPlayTests.cs",
         "Assets/Tests/PlayMode/CompanionController3DPlayTests.cs"
       ],
-      "notes": "既存UIから選択した3D個体へ戦術と自動遷移を反映する。見える個体を観測し、HP条件でモードを切り替えて実際の3D攻撃を行う。未対応の行動・条件と手動切替は試作確認記録に残す。 Unity 6000.6.8f1でCompanionAISettings3DPlayTests 3件、CompanionController3DPlayTests 2件が成功。",
+      "notes": "既存UIから選択した3D個体へ戦術と自動遷移を反映する。見える個体を観測し、HP条件でモードを切り替えて実際の3D攻撃を行う。未対応の行動・条件と手動切替は試作確認記録に残す。 Unity 6000.6.8f1でCompanionAISettings3DPlayTests 3件、CompanionController3DPlayTests 2件が成功。 旧距離条件を無効表示し、周囲の敵対飛翔体数を別条件として選べることを確認した。",
       "verification_hashes": {
-        "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "cd2881af15ced669bbbd6a494dede00912af6429211c0ebd2f05dba32d9e58f0",
-        "Assets/MyAsset/Core/AI/Core/ModeController.cs": "3dc7b5d9e6befb732f41c00eecf951dab7dd2f379a6a9eade2c9188ef78ea7b1",
-        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "3121b26e03d578746b5b1a1b8ed4b2c2286b56ca4a44ddaea58440eb0f80315a",
-        "Assets/MyAsset/Runtime/AI/CompanionTactics3D.cs": "d1475213988600ab17cf762b335713e6b383005715983ed30f5c75618e18923b",
+        "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "3741d244d117f332dee2adfd21d684c93c762b0273cccfeb195d763beaf8d09b",
+        "Assets/MyAsset/Core/AI/Core/ModeController.cs": "80e57eefa69c82ce61dec1feef230dabddab6bf5fa256dd8df64410f51572bcd",
+        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "82e5bd022280b019238a2b77d33c64f5bab929c519249eed001cf4495a4e78a2",
+        "Assets/MyAsset/Runtime/AI/CompanionTactics3D.cs": "20b10306db375277be736cfcd764695a6ee78f2453e9025904cb0efde06ef22d",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "1b17466ad9bf449e5dcbf9f1fb2783529c2dab90bdb2be848a381a6f2cf7dbab",
         "Assets/MyAsset/Runtime/UI/CompanionAISettingsController.Dialogs.ActionPicker.cs": "9a5f9d4fcd141904ef8ba086e85c373c81b902be5745c8f8ad66ca42c2c4e72c",
         "Assets/MyAsset/Runtime/UI/CompanionAISettingsController.cs": "a2b10b9b17c6de99086358016fdf2a3437db51a73636721ea027ffbbd42a30c1",
         "Assets/Scenes/ExpeditionMock3DScene.unity": "ebf8cdb77a918cedb836b657d5bdf27d4227672f420cd59a42d6bad0552af258",
-        "Assets/Tests/PlayMode/CompanionAISettings3DPlayTests.cs": "7cb98c52e63a4c805a69e2670d2e7113097ab680b85ac450d17b1ea3ed21b35e",
-        "Assets/Tests/PlayMode/CompanionController3DPlayTests.cs": "0a11e2aef62bc0ad09756ad50f20a2477c37193906994b6023bbba8cc6c08f18"
+        "Assets/Tests/PlayMode/CompanionAISettings3DPlayTests.cs": "181d09fa7ea5ac1562be8d5f1ea8addd7979e8602de724c515859a482e0e86d3",
+        "Assets/Tests/PlayMode/CompanionController3DPlayTests.cs": "8e130a2ffa574d8ee4994e0366ac4bee8fe5f5e2630dec1f845eafa604dcade8"
       }
     }
   },
@@ -9423,17 +9425,18 @@
         "Assets/Tests/EditMode/AIDecisionSystemTests.cs",
         "Assets/Tests/PlayMode/ProjectileTargetPolicyPlayTests.cs"
       ],
-      "notes": "近接飛翔体条件を持つAIは、自分の周囲8ユニットの敵対弾数を固定更新で取得する。同期とBurstは同じ世代付きスナップショットを読み、未観測と0発を区別する。2DはXYの円で候補を絞る。",
+      "notes": "近接飛翔体条件を持つAIは、自分の周囲8ユニットの敵対弾数を固定更新で取得する。同期とBurstは同じ世代付きスナップショットを読み、未観測と0発を区別する。2DはXYの円で候補を絞る。 敵対弾数の条件に保存値14を割り当て、保存値8の旧距離条件は新しい弾数として評価されない。",
       "verification_hashes": {
         "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "63402fd54528711e3838088c74f7ed879f204bb0b28533af00135a103bcc8e0b",
         "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": "b1a9d42549ebcf7572f72b0723c42a24e9a6647f3ca9b19689f9a9eb5910d06e",
-        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "4de0514e55c2341cdebe0645135a2b02eb6f904a07e00a4fad40209bcd7b02fc",
-        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.LockWarnings.cs": "5fde917f636b03b42d7b1f5f9445fef046d90f2617c56a74a48d6bf7a4d26943",
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "7db94112a9dcf076e1b9ba09cf7b498a9f900db8699ae28e95368a285ad0991b",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.LockWarnings.cs": "1cc0fe1f740e7d0b5e996f61da87c8de420d7e9e2affdbebf2057145ce07797f",
         "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileSpatialIndex.cs": "54067e8bc38861b2baf4f3a1d154282cbd1175661240ce26d852ca5b5c550d97",
         "Assets/MyAsset/Runtime/GameManager.cs": "e1dbb46b0858d77f83ae1f6b5e108f851a3f27dc972c50d29bb70781d5334803",
-        "Assets/Tests/EditMode/AIDecisionSystemTests.cs": "709fced7f62de3945c8d5d62d5940f2f82791820b9abd1d5867ac269b169359d",
+        "Assets/Tests/EditMode/AIDecisionSystemTests.cs": "3483456cdff50c7d785b874c8486844fce8f8f7acaa8fe1bcb2a67433fc6aeff",
         "Assets/Tests/EditMode/ProjectileSpatialIndexTests.cs": "508e2c9d7985b56248173b4bb6e95a72b3b96aff834a80677519f2a9f118a559",
-        "Assets/Tests/PlayMode/ProjectileTargetPolicyPlayTests.cs": "ff773bd556519211f5311883469db9e074d41503afd3e50db73e53b34ec8c7ca"
+        "Assets/Tests/PlayMode/ProjectileTargetPolicyPlayTests.cs": "2f6c729f52e622bca186a39d0a07a76d0b9485a24c02832ddb80539b97a9997d",
+        "Assets/MyAsset/Core/Common/Enums.cs": "840fc43144be2f92b5fde23d24cdd084bbf4892fff24e56e48c2e4f07a5faee0"
       }
     }
   },
@@ -9476,15 +9479,16 @@
         "Assets/Tests/EditMode/ProjectileSpatialIndexTests.cs",
         "Assets/Tests/PlayMode/CompanionController3DPlayTests.cs"
       ],
-      "notes": "3DはXYZの球と同一PhysicsSceneで候補を絞る。味方の弾は数えず、敵弾が増えると設定されたガードを始め、弾の消去後は既存の持続時間に従ってガードを終える。",
+      "notes": "3DはXYZの球と同一PhysicsSceneで候補を絞る。味方の弾は数えず、敵弾が増えると設定されたガードを始め、弾の消去後は既存の持続時間に従ってガードを終える。 新しい条件を設定した場合に、従来のガード経路へ観測を渡す。",
       "verification_hashes": {
         "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": "b1a9d42549ebcf7572f72b0723c42a24e9a6647f3ca9b19689f9a9eb5910d06e",
-        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "4de0514e55c2341cdebe0645135a2b02eb6f904a07e00a4fad40209bcd7b02fc",
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "7db94112a9dcf076e1b9ba09cf7b498a9f900db8699ae28e95368a285ad0991b",
         "Assets/MyAsset/Runtime/AI/CompanionTactics3D.cs": "20b10306db375277be736cfcd764695a6ee78f2453e9025904cb0efde06ef22d",
-        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "6d94b78d84153071d827203acdc82cc5ffc374aa2f2f7ff8b0e9893189ff4220",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "58732262d3ce3f322f5ab1cbfcab51d1bf2e7710089fa9c85e1d501331775520",
         "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileSpatialIndex.cs": "54067e8bc38861b2baf4f3a1d154282cbd1175661240ce26d852ca5b5c550d97",
         "Assets/Tests/EditMode/ProjectileSpatialIndexTests.cs": "508e2c9d7985b56248173b4bb6e95a72b3b96aff834a80677519f2a9f118a559",
-        "Assets/Tests/PlayMode/CompanionController3DPlayTests.cs": "10dc92709a4c2aa2b81cfb5a77f7735d0375b4a6ef9bf8530a2d635b40a01168"
+        "Assets/Tests/PlayMode/CompanionController3DPlayTests.cs": "8e130a2ffa574d8ee4994e0366ac4bee8fe5f5e2630dec1f845eafa604dcade8",
+        "Assets/MyAsset/Core/Common/Enums.cs": "840fc43144be2f92b5fde23d24cdd084bbf4892fff24e56e48c2e4f07a5faee0"
       }
     }
   },
@@ -9521,9 +9525,9 @@
       "tests": [
         "Assets/Tests/PlayMode/ProjectileLockWarningPlayTests.cs"
       ],
-      "notes": "接近中の明示ロック弾を、プレイヤーの周囲の指定半径内で表示する。初期値は8ユニット。範囲へ進入した際に同じleaseを表示し、プール再利用時は現在のleaseと対象の世代を照合する。",
+      "notes": "接近中の明示ロック弾を、プレイヤーの周囲の指定半径内で表示する。初期値は8ユニット。範囲へ進入した際に同じleaseを表示し、プール再利用時は現在のleaseと対象の世代を照合する。 飛翔体候補の参照は照会を抜ける際に解放する。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.LockWarnings.cs": "5fde917f636b03b42d7b1f5f9445fef046d90f2617c56a74a48d6bf7a4d26943",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.LockWarnings.cs": "1cc0fe1f740e7d0b5e996f61da87c8de420d7e9e2affdbebf2057145ce07797f",
         "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileSpatialIndex.cs": "54067e8bc38861b2baf4f3a1d154282cbd1175661240ce26d852ca5b5c550d97",
         "Assets/MyAsset/Runtime/UI/HudController.ProjectileWarnings.cs": "21f86a8ac441a907167dce9e934ea1f0a86cb655e93847f85daf5930c8f98cd8",
         "Assets/Tests/PlayMode/ProjectileLockWarningPlayTests.cs": "79a4895cac5b5d61bc84f0018d46577c9b717343f807103457894fa27a725e82"
@@ -9563,9 +9567,9 @@
       "tests": [
         "Assets/Tests/PlayMode/ProjectileLockWarning3DPlayTests.cs"
       ],
-      "notes": "接近中の明示ロック弾を、騎士の周囲の指定半径内で表示する。別の物理空間、上下に離れた弾、発射待ちの弾は候補から除く。近傍検索は通常は直接比較し、大量の弾に繰り返し照会した場合にグリッドを固定更新内で再利用する。",
+      "notes": "接近中の明示ロック弾を、騎士の周囲の指定半径内で表示する。別の物理空間、上下に離れた弾、発射待ちの弾は候補から除く。近傍検索は通常は直接比較し、大量の弾に繰り返し照会した場合にグリッドを固定更新内で再利用する。 飛翔体候補の参照は照会を抜ける際に解放する。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "6d94b78d84153071d827203acdc82cc5ffc374aa2f2f7ff8b0e9893189ff4220",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "58732262d3ce3f322f5ab1cbfcab51d1bf2e7710089fa9c85e1d501331775520",
         "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileSpatialIndex.cs": "54067e8bc38861b2baf4f3a1d154282cbd1175661240ce26d852ca5b5c550d97",
         "Assets/MyAsset/Runtime/UI/HudController.ProjectileWarnings.cs": "21f86a8ac441a907167dce9e934ea1f0a86cb655e93847f85daf5930c8f98cd8",
         "Assets/MyAsset/Runtime/UI/ProjectileLockWarningHud3D.cs": "a1f5f33f3113b587d516df9b73fdadbfaca8ca4d411a45d7871b46e369a87f81",

@@ -13,6 +13,8 @@ namespace Game.Tests.PlayMode
 {
     public sealed class EncounterCombat3DPlayTests
     {
+        private enum FlightTransition { None, CompleteSession, CompleteAfterMemberDisabled, DisableController, DestroyController }
+
         private readonly List<ScriptableObject> _assets = new();
         private Scene _previous;
         private Scene _room;
@@ -134,6 +136,38 @@ namespace Game.Tests.PlayMode
             => TraverseWall(closeShortRoute: true);
 
         [UnityTest]
+        public IEnumerator EncounterApproach_WithDistantVisibleTarget_UsesClearLongDirectFloor()
+        {
+            Surface("Long floor", new Vector3(0f, -0.25f, 0f), new Vector3(20f, 0.5f, 6f), Quaternion.identity);
+            CharacterActor3D knight = Actor("Knight", new Vector3(7.5f, 0.04f, 0f), CharacterBelong.Ally, CharacterFeature.Player);
+            CharacterActor3D fighter = Actor("Fighter", new Vector3(-7.5f, 0.04f, 0f), CharacterBelong.Enemy, CharacterFeature.Minion);
+            knight.gameObject.layer = LayerMask.NameToLayer("Player");
+            fighter.gameObject.layer = LayerMask.NameToLayer("Enemy");
+            LayerMask ground = LayerMask.GetMask("Ground");
+            EncounterCombat3D encounter = new GameObject("Long direct approach").AddComponent<EncounterCombat3D>();
+            Set(encounter, "knight", knight);
+            Set(encounter, "obstructionLayers", ground);
+            Set(encounter, "approachGroundLayers", ground);
+            Set(encounter, "approachWaypoints", new[] { At("Rear waypoint", new Vector3(-8.5f, 0f, 0f)) });
+            EncounterCombatant3D member = fighter.gameObject.AddComponent<EncounterCombatant3D>();
+            Set(member, "attack", CreateMeleeAttack());
+            Set(member, "attackRange", 1.6f);
+            Assert.IsTrue(encounter.Register(member));
+
+            Physics.SyncTransforms();
+            _room.GetPhysicsScene().Simulate(Time.fixedDeltaTime);
+            int knightHash = knight.Actor.Hash;
+            int fullHp = GameManager.Data.GetVitals(knightHash).currentHp;
+            for (int step = 0; step < 220 && GameManager.Data.GetVitals(knightHash).currentHp == fullHp; step++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+
+            Assert.That(fighter.Motor.FeetPosition.x, Is.GreaterThan(5f));
+            Assert.That(GameManager.Data.GetVitals(knightHash).currentHp, Is.LessThan(fullHp));
+        }
+
+        [UnityTest]
         public IEnumerator EncounterTraversal_WithDirectedJump_CrossesGapAndHitsAfterLanding()
             => TraverseGap(canJump: true, blockLanding: false);
 
@@ -147,9 +181,21 @@ namespace Game.Tests.PlayMode
 
         [UnityTest]
         public IEnumerator EncounterTraversal_WhenSessionEndsInFlight_LandsWithoutAttack()
-            => TraverseGap(canJump: true, blockLanding: false, endInFlight: true);
+            => TraverseGap(canJump: true, blockLanding: false, transition: FlightTransition.CompleteSession);
 
-        private IEnumerator TraverseGap(bool canJump, bool blockLanding, bool endInFlight = false)
+        [UnityTest]
+        public IEnumerator EncounterTraversal_WhenSessionEndsAfterCombatantIsDisabled_ActorStillLands()
+            => TraverseGap(canJump: true, blockLanding: false, transition: FlightTransition.CompleteAfterMemberDisabled);
+
+        [UnityTest]
+        public IEnumerator EncounterTraversal_WhenControllerIsDisabledInFlight_ActorStillLands()
+            => TraverseGap(canJump: true, blockLanding: false, transition: FlightTransition.DisableController);
+
+        [UnityTest]
+        public IEnumerator EncounterTraversal_WhenControllerIsDestroyedInFlight_ActorStillLands()
+            => TraverseGap(canJump: true, blockLanding: false, transition: FlightTransition.DestroyController);
+
+        private IEnumerator TraverseGap(bool canJump, bool blockLanding, FlightTransition transition = FlightTransition.None)
         {
             Surface("Near bank", new Vector3(-2.75f, -0.25f, 0f), new Vector3(4f, 0.5f, 8f), Quaternion.identity);
             BoxCollider farBank = Surface("Far bank", new Vector3(2.75f, -0.25f, 0f), new Vector3(4f, 0.5f, 8f), Quaternion.identity);
@@ -173,7 +219,7 @@ namespace Game.Tests.PlayMode
             Set(encounter, "approachWaypoints", new[] { takeoff, landing, nearBridge, farBridge });
             Set(encounter, "approachJumpLinks", new[] { new EncounterJumpLink3D(takeoff, landing, farBank) });
             EncounterSession3D session = null;
-            if (endInFlight)
+            if (transition is FlightTransition.CompleteSession or FlightTransition.CompleteAfterMemberDisabled)
             {
                 ChallengeDefinition challenge = ScriptableObject.CreateInstance<ChallengeDefinition>();
                 _assets.Add(challenge);
@@ -197,25 +243,48 @@ namespace Game.Tests.PlayMode
             bool sawJump = false;
             bool sawBridge = false;
             bool sawFarBank = false;
+            bool transitionStarted = false;
             for (int step = 0; step < 240 && GameManager.Data.GetVitals(knightHash).currentHp == fullHp; step++)
             {
                 yield return new WaitForFixedUpdate();
                 Vector3 feet = fighter.Motor.FeetPosition;
                 sawJump |= Mathf.Abs(feet.x) < 0.5f && Mathf.Abs(feet.z) < 0.4f && feet.y > 0.35f && !fighter.Motor.IsGrounded;
-                if (sawJump && session != null && session.IsRunning) { session.CompleteEncounter(); }
+                if (sawJump && !transitionStarted && transition != FlightTransition.None)
+                {
+                    transitionStarted = true;
+                    switch (transition)
+                    {
+                        case FlightTransition.CompleteAfterMemberDisabled:
+                            member.enabled = false;
+                            session.CompleteEncounter();
+                            break;
+                        case FlightTransition.CompleteSession:
+                            session.CompleteEncounter();
+                            break;
+                        case FlightTransition.DisableController:
+                            encounter.enabled = false;
+                            break;
+                        case FlightTransition.DestroyController:
+                            Object.Destroy(encounter.gameObject);
+                            break;
+                    }
+                }
                 sawBridge |= Mathf.Abs(feet.x) < 0.5f && fighter.Motor.Ground.Surface == bridge;
                 sawFarBank |= fighter.Motor.Ground.Surface == farBank;
                 if (!sawFarBank) { Assert.AreEqual(fullHp, GameManager.Data.GetVitals(knightHash).currentHp); }
-                if (endInFlight && sawFarBank) { break; }
+                if (transitionStarted && sawFarBank) { break; }
             }
 
             bool expectsJump = canJump && !blockLanding;
             Assert.AreEqual(expectsJump, sawJump, $"Fighter feet {fighter.Motor.FeetPosition}.");
             Assert.AreEqual(!expectsJump, sawBridge, $"Fighter feet {fighter.Motor.FeetPosition}.");
             Assert.IsTrue(sawFarBank, $"Fighter feet {fighter.Motor.FeetPosition}.");
-            if (endInFlight)
+            if (transition != FlightTransition.None)
             {
-                Assert.AreEqual(ChallengeState.Completed, session.Result.state);
+                Assert.IsTrue(transitionStarted);
+                if (session != null) { Assert.AreEqual(ChallengeState.Completed, session.Result.state); }
+                if (transition == FlightTransition.DestroyController) { Assert.IsTrue(encounter == null); }
+                else { Assert.IsFalse(encounter.Drives(fighter)); }
                 Vector3 landed = fighter.Motor.FeetPosition;
                 for (int step = 0; step < 25; step++) { yield return new WaitForFixedUpdate(); }
                 Assert.AreEqual(fullHp, GameManager.Data.GetVitals(knightHash).currentHp);

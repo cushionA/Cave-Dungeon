@@ -10,6 +10,7 @@ namespace Game.Runtime
     {
         internal const int k_MaxWaypoints = 12;
         private const float k_MaxSegment = 12f;
+        private const float k_MaxDirectApproach = 16f;
         private const float k_FloorTolerance = 0.2f;
         private const float k_FloorProbeSpacing = 0.3f;
         private const float k_WaypointArrival = 0.12f;
@@ -51,7 +52,6 @@ namespace Game.Runtime
             public float flightDeadline;
             public bool airborne;
             public bool interrupted;
-            public bool discardAfterLanding;
 
             public void ResetProgress()
             {
@@ -72,25 +72,29 @@ namespace Game.Runtime
 
         internal void Remove(ActorRef owner) => _routes.Remove(owner);
 
-        internal void Clear() => _routes.Clear();
-
-        internal bool IsCrossing(ActorRef owner) => _routes.TryGetValue(owner, out Route route) && route.airborne;
-
-        internal bool FinishCurrentJumps()
+        internal void Release(ActorRef owner)
         {
-            bool pending = false;
-            foreach (KeyValuePair<ActorRef, Route> item in _routes)
+            if (_routes.TryGetValue(owner, out Route route)) { HandOffJump(owner, route); }
+            _routes.Remove(owner);
+        }
+
+        internal void HandOffCurrentJumps()
+        {
+            foreach (KeyValuePair<ActorRef, Route> item in _routes) { HandOffJump(item.Key, item.Value); }
+            _routes.Clear();
+        }
+
+        private static void HandOffJump(ActorRef owner, Route route)
+        {
+            if (route.airborne && MultiLockTargeting3D.TryGetActor(owner, out CharacterActor3D actor))
             {
-                if (item.Value.airborne && MultiLockTargeting3D.TryGetActor(item.Key, out _))
+                CharacterMotor3D motor = actor.Motor;
+                if (motor != null)
                 {
-                    item.Value.discardAfterLanding = true;
-                    pending = true;
+                    motor.FinishDetachedEncounterJump(actor, route.arc.landing, route.arc.groundSpeed,
+                        route.flightDeadline, route.interrupted);
                 }
-                else { _retired.Add(item.Key); }
             }
-            foreach (ActorRef owner in _retired) { _routes.Remove(owner); }
-            _retired.Clear();
-            return pending;
         }
 
         internal void Retain(List<ActorRef> participants)
@@ -99,7 +103,7 @@ namespace Game.Runtime
             {
                 if (!participants.Contains(owner)) { _retired.Add(owner); }
             }
-            foreach (ActorRef owner in _retired) { _routes.Remove(owner); }
+            foreach (ActorRef owner in _retired) { Release(owner); }
             _retired.Clear();
         }
 
@@ -148,7 +152,9 @@ namespace Game.Runtime
                 float distance = (route.steps[route.next] - feet).sqrMagnitude;
                 if (distance < route.bestDistance - 0.0025f) { route.ResetProgress(); route.bestDistance = distance; }
                 else { route.stalledTime += Time.fixedDeltaTime; }
-                if (route.stalledTime >= k_StallTime || !CanWalk(world, feet, route.steps[route.next], radius, height, groundLayers, blockers))
+                float segmentLimit = route.next == 0 ? k_MaxDirectApproach : k_MaxSegment;
+                if (route.stalledTime >= k_StallTime
+                    || !CanWalk(world, feet, route.steps[route.next], radius, height, groundLayers, blockers, segmentLimit))
                 {
                     route.next = -1;
                     route.retryAt = 0f;
@@ -176,7 +182,7 @@ namespace Game.Runtime
             route.interrupted = false;
             route.flightDeadline = Time.fixedTime + route.arc.duration + k_RetryDelay;
             jumpPressed = true;
-            return AirDirection(actor.Motor, route.arc);
+            return actor.Motor.EncounterJumpDirection(route.arc.landing, route.arc.groundSpeed, Time.fixedDeltaTime);
         }
 
         internal bool TryContinueJump(CharacterActor3D actor, bool movementBlocked, out Vector3 direction)
@@ -187,11 +193,6 @@ namespace Game.Runtime
             CharacterMotor3D motor = actor.Motor;
             if (motor.IsGrounded)
             {
-                if (route.discardAfterLanding)
-                {
-                    Remove(actor.Actor);
-                    return false;
-                }
                 EncounterJumpLink3D jump = route.jumpSteps[route.next];
                 route.airborne = false;
                 if (motor.Ground.Surface == jump.LandingSurface
@@ -206,15 +207,11 @@ namespace Game.Runtime
 
             route.interrupted |= movementBlocked || Time.fixedTime >= route.flightDeadline
                 || (motor.Collisions & (CollisionFlags.Above | CollisionFlags.Sides)) != 0;
-            if (!route.interrupted) { direction = AirDirection(motor, route.arc); }
+            if (!route.interrupted)
+            {
+                direction = motor.EncounterJumpDirection(route.arc.landing, route.arc.groundSpeed, Time.fixedDeltaTime);
+            }
             return true;
-        }
-
-        private static Vector3 AirDirection(CharacterMotor3D motor, in JumpArc arc)
-        {
-            float speed = motor.MoveSpeed;
-            return Vector3.ClampMagnitude(Horizontal(arc.landing - motor.FeetPosition) / (speed * Time.fixedDeltaTime),
-                arc.groundSpeed / speed);
         }
 
         private static void RejectJump(Route route, in EncounterJumpLink3D jump)
@@ -278,7 +275,8 @@ namespace Game.Runtime
                 if (TryGetGround(world, proposed, groundLayers, out Vector3 landing)
                     && (landing - sighting.Position).sqrMagnitude <= attackRange * attackRange
                     && currentCost + Vector3.Distance(start, landing) < goalCost
-                    && CanWalk(world, start, landing, radius, height, groundLayers, blockers)
+                    && CanWalk(world, start, landing, radius, height, groundLayers, blockers,
+                        current == 0 ? k_MaxDirectApproach : k_MaxSegment)
                     && IsClearAt(world, landing, radius, height, blockers, body)
                     && HasSight(world, landing + aimOffset, sighting.TargetCenter, blockers, target))
                 {
@@ -387,11 +385,11 @@ namespace Game.Runtime
         }
 
         private static bool CanWalk(PhysicsScene world, Vector3 start, Vector3 end, float radius, float height,
-            LayerMask groundLayers, LayerMask blockers)
+            LayerMask groundLayers, LayerMask blockers, float maxLength = k_MaxSegment)
         {
             Vector3 offset = end - start;
             float length = offset.magnitude;
-            if (!float.IsFinite(length) || length > k_MaxSegment || Mathf.Abs(offset.y) > k_FloorTolerance) { return false; }
+            if (!float.IsFinite(length) || length > maxLength || Mathf.Abs(offset.y) > k_FloorTolerance) { return false; }
             if (length <= 0.001f) { return true; }
 
             Capsule(start, radius, height, out Vector3 bottom, out Vector3 top);

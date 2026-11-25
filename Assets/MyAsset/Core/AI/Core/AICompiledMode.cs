@@ -57,13 +57,12 @@ namespace Game.Core
             rules = flatRules.ToArray();
             conditions = flatConditions.ToArray();
             requiresTargetLineOfSight = Array.Exists(conditions, IsLineOfSightCondition);
-            requiresNearbyHostileProjectileCount = Array.Exists(conditions, IsProjectileNearCondition);
+            requiresNearbyHostileProjectileCount = Array.Exists(conditions, IsNearbyHostileProjectileCountCondition);
             selects = mode.targetSelects == null ? Array.Empty<AITargetSelect>() : (AITargetSelect[])mode.targetSelects.Clone();
             actions = mode.actions == null ? Array.Empty<ActionSlot>() : (ActionSlot[])mode.actions.Clone();
             int fallback = mode.defaultActionIndex;
             if (requiresTargetLineOfSight && mode.actionRules != null
-                && Array.Exists(mode.actionRules, rule => rule.actionIndex == fallback && rule.conditions != null
-                    && Array.Exists(rule.conditions, IsLineOfSightCondition)))
+                && IsOnlyLineOfSightGated(mode.actionRules, fallback))
             {
                 fallback = -1;
             }
@@ -85,8 +84,26 @@ namespace Game.Core
         internal static bool IsLineOfSightCondition(AICondition condition) =>
             condition.conditionType == AIConditionType.TargetLineOfSight;
 
-        internal static bool IsProjectileNearCondition(AICondition condition) =>
-            condition.conditionType == AIConditionType.ProjectileNear;
+        internal static bool IsNearbyHostileProjectileCountCondition(AICondition condition) =>
+            condition.conditionType == AIConditionType.NearbyHostileProjectileCount;
+
+        private static bool IsOnlyLineOfSightGated(AIRule[] rules, int actionIndex)
+        {
+            bool hasMatchingRule = false;
+            foreach (AIRule rule in rules)
+            {
+                if (rule.actionIndex != actionIndex)
+                {
+                    continue;
+                }
+                if (rule.conditions == null || !Array.Exists(rule.conditions, IsLineOfSightCondition))
+                {
+                    return false;
+                }
+                hasMatchingRule = true;
+            }
+            return hasMatchingRule;
+        }
 
         private static bool IsInteraction(ActionSlot[] actions, int index)
         {

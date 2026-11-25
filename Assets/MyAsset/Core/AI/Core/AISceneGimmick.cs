@@ -6,7 +6,7 @@ namespace Game.Core
     public struct AISceneGimmick
     {
         public const float k_LureHeightTolerance = 0.25f;
-        private const float k_MaxLureRun = 12f;
+        public const float k_MaxLureRun = 12f;
 
         public int id;
         public int generation;

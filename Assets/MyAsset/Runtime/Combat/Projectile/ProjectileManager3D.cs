@@ -168,15 +168,18 @@ namespace Game.Runtime
             _spatial.Collect(_active, observer.gameObject.scene.GetPhysicsScene(), observer.Body.bounds.center, radius,
                 _nearby, canCache: !_isTicking);
             int count = 0;
-            foreach (Shot shot in _nearby)
+            try
             {
-                if (!CanSimulate(shot) || shot.delay > 0f
-                    || !AttackTargetRules.CanAffect(shot.context.Owner, shot.context.Belong,
-                        target, faction, AttackTargetRelation.Hostile)) { continue; }
-                CharacterActor3D eligible = shot.groundImpact.HasValue ? GetEligibleActor(shot, target) : GetTarget(shot, target);
-                if (eligible == observer) { count++; }
+                foreach (Shot shot in _nearby)
+                {
+                    if (!CanSimulate(shot) || shot.delay > 0f
+                        || !AttackTargetRules.CanAffect(shot.context.Owner, shot.context.Belong,
+                            target, faction, AttackTargetRelation.Hostile)) { continue; }
+                    CharacterActor3D eligible = shot.groundImpact.HasValue ? GetEligibleActor(shot, target) : GetTarget(shot, target);
+                    if (eligible == observer) { count++; }
+                }
             }
-            _nearby.Clear();
+            finally { _nearby.Clear(); }
             return count;
         }
 
@@ -190,18 +193,21 @@ namespace Game.Runtime
             Vector3 center = defender.Body.bounds.center;
             _spatial.Collect(_active, defender.gameObject.scene.GetPhysicsScene(), center, radius,
                 _nearby, canCache: !_isTicking);
-            foreach (Shot shot in _nearby)
+            try
             {
-                if (shot.explicitTarget != target || !CanSimulate(shot) || shot.delay > 0f || shot.Speed <= 0f) { continue; }
-                if (GetTarget(shot, target) != defender) { continue; }
-
-                Vector3 fromTarget = shot.position - center;
-                if (Vector3.Dot(fromTarget, shot.direction) < 0f)
+                foreach (Shot shot in _nearby)
                 {
-                    warnings.Add(new ProjectileLockWarning(shot.leaseId, fromTarget));
+                    if (shot.explicitTarget != target || !CanSimulate(shot) || shot.delay > 0f || shot.Speed <= 0f) { continue; }
+                    if (GetTarget(shot, target) != defender) { continue; }
+
+                    Vector3 fromTarget = shot.position - center;
+                    if (Vector3.Dot(fromTarget, shot.direction) < 0f)
+                    {
+                        warnings.Add(new ProjectileLockWarning(shot.leaseId, fromTarget));
+                    }
                 }
             }
-            _nearby.Clear();
+            finally { _nearby.Clear(); }
         }
 
         internal void SimulationTick(float deltaTime)

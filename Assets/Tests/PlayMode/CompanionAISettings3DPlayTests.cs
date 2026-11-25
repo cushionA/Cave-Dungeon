@@ -1,7 +1,9 @@
 #if UNITY_EDITOR
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Game.Core;
 using Game.Runtime;
 using NUnit.Framework;
@@ -11,6 +13,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 using CharacterInfo = Game.Core.CharacterInfo;
+using Object = UnityEngine.Object;
 
 namespace Game.Tests.PlayMode
 {
@@ -68,6 +71,46 @@ namespace Game.Tests.PlayMode
             Assert.AreEqual(1, applied.shortcutModeBindings[0]);
             Assert.AreEqual("Scout patrol", scout.GetAIConfig().modes[0].modeName);
             Assert.IsFalse(panel.Logic.IsDirty);
+        }
+
+        [UnityTest]
+        public IEnumerator ProjectileConditionPicker_ShowsLegacyDistanceOnlyForExistingRules()
+        {
+            CompanionController3D sister = CreateCompanion("Sister", Vector3.zero);
+            CompanionAISettingsController panel = CreatePanel();
+            yield return null;
+            sister.SetAIConfig(NewTactic("Inspect projectile conditions"));
+            panel.OpenFor(sister);
+            yield return null;
+
+            const string legacyJson = "{\"conditionType\":8,\"compareOp\":1,\"operandA\":5}";
+            AICondition legacy = JsonUtility.FromJson<AICondition>(legacyJson);
+            string legacyLabel = ConditionTypeMetadata.GetLabel(AIConditionType.ProjectileNear);
+            string countLabel = ConditionTypeMetadata.GetLabel(AIConditionType.NearbyHostileProjectileCount);
+            MethodInfo buildRow = typeof(CompanionAISettingsController).GetMethod("BuildConditionRow", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(buildRow);
+            int changes = 0;
+            AICondition changed = default;
+            Action<AICondition> update = condition => { changes++; changed = condition; };
+            VisualElement existingRow = (VisualElement)buildRow.Invoke(panel, new object[] { legacy, update });
+            VisualElement newRow = (VisualElement)buildRow.Invoke(panel, new object[] { default(AICondition), null });
+            Root.Add(existingRow);
+            Root.Add(newRow);
+
+            DropdownField existingPicker = existingRow.Q<DropdownField>(className: "condition-row__type");
+            DropdownField newPicker = newRow.Q<DropdownField>(className: "condition-row__type");
+            Assert.That(newPicker.choices, Does.Contain(countLabel));
+            Assert.That(newPicker.choices, Does.Not.Contain(legacyLabel));
+            Assert.AreEqual(legacyLabel, existingPicker.value);
+            Assert.AreEqual("旧距離設定 5m", existingRow.Q<Label>(className: "condition-row__none").text);
+            Assert.That(changes, Is.Zero);
+
+            existingPicker.index = existingPicker.choices.IndexOf(countLabel);
+            Assert.AreEqual(1, changes);
+            Assert.AreEqual(AIConditionType.NearbyHostileProjectileCount, changed.conditionType);
+            Assert.AreEqual(CompareOp.GreaterEqual, changed.compareOp);
+            Assert.AreEqual(1, changed.operandA);
+            Assert.That(existingPicker.choices, Does.Not.Contain(legacyLabel));
         }
 
         [UnityTest]

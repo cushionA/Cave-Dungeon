@@ -210,18 +210,27 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
-        public void ConditionTypeMetadata_GetWidgetKind_ProjectileNear_ReturnsInteger()
+        public void ConditionTypeMetadata_GetWidgetKind_NearbyHostileProjectileCount_ReturnsInteger()
         {
             Assert.AreEqual(ConditionTypeMetadata.WidgetKind.Integer,
-                ConditionTypeMetadata.GetWidgetKind(AIConditionType.ProjectileNear));
+                ConditionTypeMetadata.GetWidgetKind(AIConditionType.NearbyHostileProjectileCount));
         }
 
         [Test]
-        public void ConditionTypeMetadata_ProjectileNear_DefaultsToAtLeastOneHostileProjectile()
+        public void ConditionTypeMetadata_NearbyHostileProjectileCount_DefaultsToAtLeastOneHostileProjectile()
         {
-            Assert.AreEqual(1, ConditionTypeMetadata.GetDefaultOperandA(AIConditionType.ProjectileNear));
-            Assert.AreEqual(CompareOp.GreaterEqual, ConditionTypeMetadata.GetDefaultCompareOp(AIConditionType.ProjectileNear));
-            StringAssert.Contains("8m", ConditionTypeMetadata.GetDescription(AIConditionType.ProjectileNear));
+            Assert.AreEqual(1, ConditionTypeMetadata.GetDefaultOperandA(AIConditionType.NearbyHostileProjectileCount));
+            Assert.AreEqual(CompareOp.GreaterEqual, ConditionTypeMetadata.GetDefaultCompareOp(AIConditionType.NearbyHostileProjectileCount));
+            StringAssert.Contains("8m", ConditionTypeMetadata.GetDescription(AIConditionType.NearbyHostileProjectileCount));
+        }
+
+        [Test]
+        public void ConditionTypeMetadata_LegacyProjectileNear_IdentifiesTheInactiveDistanceSetting()
+        {
+            Assert.AreEqual(ConditionTypeMetadata.WidgetKind.None, ConditionTypeMetadata.GetWidgetKind(AIConditionType.ProjectileNear));
+            Assert.AreEqual(3, ConditionTypeMetadata.GetDefaultOperandA(AIConditionType.ProjectileNear));
+            Assert.AreEqual(CompareOp.LessEqual, ConditionTypeMetadata.GetDefaultCompareOp(AIConditionType.ProjectileNear));
+            StringAssert.Contains("旧条件・無効", ConditionTypeMetadata.GetLabel(AIConditionType.ProjectileNear));
         }
 
         [Test]
@@ -504,7 +513,7 @@ namespace Game.Tests.EditMode
         [Test]
         public void ConditionTypeMetadata_Integer_SupportsInRange_ViaDefaultCompareOpPath()
         {
-            // Integer (Distance/Count/DamageScore/ProjectileNear) は下限+上限の 2 つの IntegerField が
+            // Integer (Distance/Count/DamageScore/NearbyHostileProjectileCount) は下限+上限の 2 つの IntegerField が
             // 自然に並べられるため InRange 対応。UI 側の opChoices に「範囲内」を追加する。
             Assert.AreEqual(ConditionTypeMetadata.WidgetKind.Integer,
                 ConditionTypeMetadata.GetWidgetKind(AIConditionType.Distance));
