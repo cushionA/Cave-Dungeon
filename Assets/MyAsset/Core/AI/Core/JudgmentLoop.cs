@@ -31,6 +31,7 @@ namespace Game.Core
         private int _compiledModeIndex;
         private int _revision;
         private bool _disposed;
+        private bool _modesRequireNearbyHostileProjectileCount;
         private AIDecisionSystem _decisions;
 
         internal int OwnerHash => _ownerHash;
@@ -44,6 +45,10 @@ namespace Game.Core
         public int CurrentTargetHash => _targets != null ? CurrentTargetRef.Hash : _currentTargetHash;
         public long ObservationTick => _observation != null ? _observation.Tick : 0;
         public bool RequiresTargetLineOfSight { get; private set; }
+        public bool RequiresNearbyHostileProjectileCount =>
+            _modesRequireNearbyHostileProjectileCount || TransitionsRequireNearbyHostileProjectileCount;
+
+        internal bool TransitionsRequireNearbyHostileProjectileCount { get; set; }
 
         public void ResetActorLifetime()
         {
@@ -112,6 +117,8 @@ namespace Game.Core
             if (!ReferenceEquals(_compiledModes, compiledModes))
             {
                 RequiresTargetLineOfSight = Array.Exists(compiledModes, compiled => compiled.requiresTargetLineOfSight);
+                _modesRequireNearbyHostileProjectileCount =
+                    Array.Exists(compiledModes, compiled => compiled.requiresNearbyHostileProjectileCount);
             }
             _compiledModes = compiledModes;
             _compiledModeIndex = modeIndex;

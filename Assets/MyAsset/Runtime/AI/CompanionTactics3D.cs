@@ -108,6 +108,12 @@ namespace Game.Runtime
             {
                 if (_observation.TryGetActor(hash, out AIActorObservation actor)) { _previous.Add(actor.actor); }
             }
+            ProjectileManager3D projectiles = _judgment.RequiresNearbyHostileProjectileCount ? GameManager.Projectiles3D : null;
+            if (projectiles != null && projectiles.isActiveAndEnabled && _observation.Contains(_ownerRef))
+            {
+                int count = projectiles.CountNearbyHostileProjectiles(_owner, AIObservationContext.NearbyHostileProjectileRadius);
+                _observation.SetNearbyHostileProjectileCount(_ownerRef, count);
+            }
             if (_knight != null) { _observation.SetProtectedPlayer(_knight.Actor); }
         }
 

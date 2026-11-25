@@ -7,6 +7,8 @@ namespace Game.Runtime
 {
     public partial class HudController
     {
+        [SerializeField, Min(0f)] private float projectileWarningRadius = ProjectileSpatialIndex.DefaultQueryRadius;
+
         private readonly List<ProjectileLockWarning> _projectileLockWarnings = new List<ProjectileLockWarning>(4);
         private ProjectileWarningOverlay _projectileWarningOverlay;
 
@@ -38,7 +40,7 @@ namespace Game.Runtime
             ProjectileManager projectiles = GameManager.Projectiles;
             if (camera != null && projectiles != null && GameManager.Actors.TryGet(player.ObjectHash, out ActorRef target))
             {
-                projectiles.CollectLockWarnings(target, _projectileLockWarnings);
+                projectiles.CollectLockWarnings(target, _projectileLockWarnings, projectileWarningRadius);
             }
             else
             {

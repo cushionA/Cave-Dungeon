@@ -74,12 +74,15 @@ namespace Game.Core
     /// <summary>同じ固定tickの判断器が共有する値snapshot。取得していない情報はfalseで返す。</summary>
     public sealed class AIObservationContext
     {
+        public const float NearbyHostileProjectileRadius = 8f;
+
         private readonly Dictionary<int, AIActorObservation> _actors = new Dictionary<int, AIActorObservation>();
         private readonly List<int> _hashes = new List<int>();
         private readonly Dictionary<(ActorRef owner, ActorRef source), float> _scores = new Dictionary<(ActorRef, ActorRef), float>();
         private readonly Dictionary<ActorRef, ActorRef> _lastAttackers = new Dictionary<ActorRef, ActorRef>();
         private readonly Dictionary<ActorRef, ActorRef> _targets = new Dictionary<ActorRef, ActorRef>();
         private readonly Dictionary<ActorRef, float> _stunRemaining = new Dictionary<ActorRef, float>();
+        private readonly Dictionary<ActorRef, int> _nearbyHostileProjectileCounts = new Dictionary<ActorRef, int>();
         private readonly Dictionary<(ActorRef owner, ActorRef target), bool> _targetLineOfSight = new();
         private readonly Dictionary<ActorRef, int> _targetCounts = new Dictionary<ActorRef, int>();
         private readonly List<AISceneGimmick> _gimmicks = new List<AISceneGimmick>();
@@ -123,6 +126,7 @@ namespace Game.Core
             Time = time;
             _actors.Clear(); _hashes.Clear(); _scores.Clear(); _lastAttackers.Clear();
             _targets.Clear(); _targetCounts.Clear(); _stunRemaining.Clear(); _targetLineOfSight.Clear();
+            _nearbyHostileProjectileCounts.Clear();
             ProtectedPlayer = default;
             _gimmicks.Clear();
             _gimmickIndices.Clear();
@@ -230,6 +234,7 @@ namespace Game.Core
                     }
                 }
                 _stunRemaining.Remove(previous.actor);
+                _nearbyHostileProjectileCounts.Remove(previous.actor);
             }
             _actors[actor.actor.Hash] = actor;
             if (ProtectedPlayer.Hash == actor.actor.Hash && (ProtectedPlayer != actor.actor || !IsLiving(actor)))
@@ -263,6 +268,18 @@ namespace Game.Core
         {
             seconds = 0f;
             return Contains(actor) && _stunRemaining.TryGetValue(actor, out seconds);
+        }
+
+        public void SetNearbyHostileProjectileCount(ActorRef observer, int count)
+        {
+            if (!Contains(observer) || count < 0) { return; }
+            _nearbyHostileProjectileCounts[observer] = count;
+        }
+
+        public bool TryGetNearbyHostileProjectileCount(ActorRef observer, out int count)
+        {
+            count = 0;
+            return Contains(observer) && _nearbyHostileProjectileCounts.TryGetValue(observer, out count);
         }
 
         public void SetTargetLineOfSight(ActorRef owner, ActorRef target, bool visible)

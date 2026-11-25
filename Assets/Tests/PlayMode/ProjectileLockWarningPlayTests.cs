@@ -5,6 +5,7 @@ using Game.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 using CharacterInfo = Game.Core.CharacterInfo;
@@ -24,6 +25,7 @@ namespace Game.Tests.PlayMode
         private Camera _camera;
         private PanelSettings _panel;
         private UIDocument _document;
+        private Scene _foreignWorld;
 
         private ProjectileWarningOverlay Overlay =>
             _document.rootVisualElement.Q<ProjectileWarningOverlay>("projectile-lock-warnings");
@@ -78,6 +80,7 @@ namespace Game.Tests.PlayMode
         public IEnumerator TearDown()
         {
             if (_projectiles != null) { _projectiles.ClearAll(); }
+            if (_foreignWorld.isLoaded) { yield return SceneManager.UnloadSceneAsync(_foreignWorld); }
             Object.Destroy(_world);
             yield return null;
 
@@ -119,7 +122,7 @@ namespace Game.Tests.PlayMode
         public IEnumerator ProjectileLockWarning_WhenShotPassesOrUnlocks_RemovesOnlyItsArc()
         {
             ProjectileController passing = Spawn(Actor(_knight), new Vector2(5f, 1.25f));
-            ProjectileController released = Spawn(Actor(_knight), new Vector2(12f, 2f));
+            ProjectileController released = Spawn(Actor(_knight), new Vector2(7.6f, 2f));
             yield return null;
             Assert.That(Overlay.Directions.Count, Is.EqualTo(2));
 
@@ -134,6 +137,74 @@ namespace Game.Tests.PlayMode
             Assert.IsTrue(released.CoreProjectile.TrySetTarget(default, GameManager.Actors));
             yield return null;
             Assert.IsEmpty(Overlay.Directions);
+        }
+
+        [UnityTest]
+        public IEnumerator ProjectileLockWarning_EnteringTheNearbyRadius_AddsTheSameLease()
+        {
+            ActorRef knight = Actor(_knight);
+            ProjectileController shot = Spawn(knight, new Vector2(12f, 1f));
+            ulong lease = shot.CoreProjectile.LeaseId;
+            yield return null;
+            Assert.IsEmpty(Overlay.Directions);
+            _projectiles.CollectLockWarnings(knight, _warnings, radius: 13f);
+            Assert.AreEqual(1, _warnings.Count);
+            Assert.AreEqual(lease, _warnings[0].LeaseId);
+
+            _projectiles.SimulationTick(0.45f);
+            Assert.That(shot.CoreProjectile.Position.x, Is.EqualTo(7.5f).Within(0.01f));
+            _projectiles.CollectLockWarnings(knight, _warnings);
+            Assert.AreEqual(1, _warnings.Count);
+            Assert.AreEqual(lease, _warnings[0].LeaseId);
+            yield return null;
+            Assert.AreEqual(1, Overlay.Directions.Count);
+        }
+
+        [UnityTest]
+        public IEnumerator ProjectileProximity_UsesCircularRadiusCurrentLeasesAndTheObserversPhysicsWorld()
+        {
+            _foreignWorld = SceneManager.CreateScene(nameof(ProjectileProximity_UsesCircularRadiusCurrentLeasesAndTheObserversPhysicsWorld),
+                new CreateSceneParameters(LocalPhysicsMode.Physics2D));
+            CharacterInfo info = CreateInfo(CharacterBelong.Ally, CharacterFeature.Companion, "Other-world observer");
+            GameObject foreign = TestSceneHelper.CreateBaseCharacterObjectWithDamageReceiver(info, Vector2.zero);
+            SceneManager.MoveGameObjectToScene(foreign, _foreignWorld);
+            BaseCharacter observer = foreign.GetComponent<BaseCharacter>();
+            observer.Rigidbody.gravityScale = 0f;
+            yield return null;
+
+            ActorRef knight = Actor(_knight);
+            ActorRef foreignActor = Actor(observer);
+            const float radius = ProjectileSpatialIndex.DefaultQueryRadius;
+            ProjectileController nearby = Spawn(knight, new Vector2(5f, 0.75f));
+            Spawn(default, new Vector2(radius, 0f));
+            Spawn(default, new Vector2(radius, 1f));
+            ProjectileController foreignMarked = Spawn(foreignActor, new Vector2(6f, 0f));
+            Spawn(default, new Vector2(4f, 1f), delay: 1f);
+            Spawn(default, new Vector2(3f, 1f), type: MagicType.Recover);
+            Spawn(default, new Vector2(4f, 0.45f), caster: Actor(_sister), targetPolicy: new AttackTargetPolicy
+            {
+                overrideTargets = true,
+                targets = AttackTargetRelation.Friendly,
+            });
+
+            Assert.AreEqual(3, _projectiles.CountNearbyHostileProjectiles(_knight, radius));
+            Assert.AreEqual(0, _projectiles.CountNearbyHostileProjectiles(observer, radius));
+            Assert.AreEqual(foreignActor, foreignMarked.CoreProjectile.ExplicitTargetRef);
+            _projectiles.CollectLockWarnings(foreignActor, _warnings);
+            Assert.IsEmpty(_warnings);
+
+            Projectile previous = nearby.CoreProjectile;
+            ulong previousLease = previous.LeaseId;
+            _projectiles.ReturnProjectile(nearby);
+            Assert.AreEqual(2, _projectiles.CountNearbyHostileProjectiles(_knight, radius));
+            _projectiles.SimulationTick(0f);
+            ProjectileController reused = Spawn(knight, new Vector2(30f, 1f));
+            Assert.AreSame(previous, reused.CoreProjectile);
+            Assert.AreNotEqual(previousLease, reused.CoreProjectile.LeaseId);
+            Assert.AreEqual(2, _projectiles.CountNearbyHostileProjectiles(_knight, radius));
+
+            _projectiles.ClearAll();
+            Assert.AreEqual(0, _projectiles.CountNearbyHostileProjectiles(_knight, radius));
         }
 
         [UnityTest]
@@ -201,14 +272,17 @@ namespace Game.Tests.PlayMode
             return actorRef;
         }
 
-        private ProjectileController Spawn(ActorRef target, Vector2? position = null, BulletMoveType move = BulletMoveType.Straight)
+        private ProjectileController Spawn(ActorRef target, Vector2? position = null,
+            BulletMoveType move = BulletMoveType.Straight, ActorRef caster = default, MagicType type = MagicType.Attack,
+            float delay = 0f, AttackTargetPolicy targetPolicy = default)
         {
             MagicDefinition magic = new MagicDefinition
             {
-                magicType = MagicType.Attack,
-                bulletProfile = new BulletProfile { moveType = move, speed = 10f, lifeTime = 5f },
+                magicType = type,
+                targetPolicy = targetPolicy,
+                bulletProfile = new BulletProfile { moveType = move, speed = 10f, lifeTime = 5f, spawnDelay = delay },
             };
-            ProjectileController projectile = _projectiles.SpawnProjectile(Actor(_caster), magic,
+            ProjectileController projectile = _projectiles.SpawnProjectile(caster.IsValid ? caster : Actor(_caster), magic,
                 position ?? new Vector2(7f, 1f), Vector2.left, target);
             Assert.IsNotNull(projectile);
             return projectile;

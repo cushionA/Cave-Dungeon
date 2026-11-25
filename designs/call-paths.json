@@ -9377,5 +9377,200 @@
         "designs/systems/LevelUpSystem.md": "c4de1897af942908f22b4f220a4433b76360f3cee071111980c058baec7027f3"
       }
     }
+  },
+  {
+    "feature": "Projectile_NearbyObservation",
+    "path": {
+      "key": "2d-hostile-projectile-observation",
+      "title": "2Dの固定更新から敵弾数をAI判断へ渡す",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "runtime_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/GameManager.cs",
+          "symbol": "GameManager.CaptureNearbyHostileProjectiles",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.LockWarnings.cs",
+          "symbol": "ProjectileManager.CountNearbyHostileProjectiles",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileSpatialIndex.cs",
+          "symbol": "ProjectileSpatialIndex.Collect",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs",
+          "symbol": "AIObservationContext.SetNearbyHostileProjectileCount",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs",
+          "symbol": "AIDecisionSystem.CaptureWorld",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs",
+          "symbol": "AIQueryKernel.TryConditionValue",
+          "kind": "read"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/ProjectileSpatialIndexTests.cs",
+        "Assets/Tests/EditMode/AIDecisionSystemTests.cs",
+        "Assets/Tests/PlayMode/ProjectileTargetPolicyPlayTests.cs"
+      ],
+      "notes": "近接飛翔体条件を持つAIは、自分の周囲8ユニットの敵対弾数を固定更新で取得する。同期とBurstは同じ世代付きスナップショットを読み、未観測と0発を区別する。2DはXYの円で候補を絞る。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "63402fd54528711e3838088c74f7ed879f204bb0b28533af00135a103bcc8e0b",
+        "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": "b1a9d42549ebcf7572f72b0723c42a24e9a6647f3ca9b19689f9a9eb5910d06e",
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "4de0514e55c2341cdebe0645135a2b02eb6f904a07e00a4fad40209bcd7b02fc",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.LockWarnings.cs": "5fde917f636b03b42d7b1f5f9445fef046d90f2617c56a74a48d6bf7a4d26943",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileSpatialIndex.cs": "54067e8bc38861b2baf4f3a1d154282cbd1175661240ce26d852ca5b5c550d97",
+        "Assets/MyAsset/Runtime/GameManager.cs": "e1dbb46b0858d77f83ae1f6b5e108f851a3f27dc972c50d29bb70781d5334803",
+        "Assets/Tests/EditMode/AIDecisionSystemTests.cs": "709fced7f62de3945c8d5d62d5940f2f82791820b9abd1d5867ac269b169359d",
+        "Assets/Tests/EditMode/ProjectileSpatialIndexTests.cs": "508e2c9d7985b56248173b4bb6e95a72b3b96aff834a80677519f2a9f118a559",
+        "Assets/Tests/PlayMode/ProjectileTargetPolicyPlayTests.cs": "ff773bd556519211f5311883469db9e074d41503afd3e50db73e53b34ec8c7ca"
+      }
+    }
+  },
+  {
+    "feature": "Projectile_NearbyObservation",
+    "path": {
+      "key": "3d-hostile-projectile-observation",
+      "title": "3Dの近接飛翔体条件を既存のガードと組み合わせる",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "runtime_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/AI/CompanionTactics3D.cs",
+          "symbol": "CompanionTactics3D.Capture",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs",
+          "symbol": "ProjectileManager3D.CountNearbyHostileProjectiles",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileSpatialIndex.cs",
+          "symbol": "ProjectileSpatialIndex.Collect",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs",
+          "symbol": "AIObservationContext.SetNearbyHostileProjectileCount",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs",
+          "symbol": "AIQueryKernel.TryConditionValue",
+          "kind": "read"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/ProjectileSpatialIndexTests.cs",
+        "Assets/Tests/PlayMode/CompanionController3DPlayTests.cs"
+      ],
+      "notes": "3DはXYZの球と同一PhysicsSceneで候補を絞る。味方の弾は数えず、敵弾が増えると設定されたガードを始め、弾の消去後は既存の持続時間に従ってガードを終える。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": "b1a9d42549ebcf7572f72b0723c42a24e9a6647f3ca9b19689f9a9eb5910d06e",
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "4de0514e55c2341cdebe0645135a2b02eb6f904a07e00a4fad40209bcd7b02fc",
+        "Assets/MyAsset/Runtime/AI/CompanionTactics3D.cs": "20b10306db375277be736cfcd764695a6ee78f2453e9025904cb0efde06ef22d",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "6d94b78d84153071d827203acdc82cc5ffc374aa2f2f7ff8b0e9893189ff4220",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileSpatialIndex.cs": "54067e8bc38861b2baf4f3a1d154282cbd1175661240ce26d852ca5b5c550d97",
+        "Assets/Tests/EditMode/ProjectileSpatialIndexTests.cs": "508e2c9d7985b56248173b4bb6e95a72b3b96aff834a80677519f2a9f118a559",
+        "Assets/Tests/PlayMode/CompanionController3DPlayTests.cs": "10dc92709a4c2aa2b81cfb5a77f7735d0375b4a6ef9bf8530a2d635b40a01168"
+      }
+    }
+  },
+  {
+    "feature": "Projectile_NearbyObservation",
+    "path": {
+      "key": "2d-nearby-projectile-lock-warning",
+      "title": "2Dの接近ロック弾に距離を加えてHUDへ渡す",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "runtime_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/UI/HudController.ProjectileWarnings.cs",
+          "symbol": "HudController.LateUpdate",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.LockWarnings.cs",
+          "symbol": "ProjectileManager.CollectLockWarnings",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileSpatialIndex.cs",
+          "symbol": "ProjectileSpatialIndex.Collect",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/UI/HudController.ProjectileWarnings.cs",
+          "symbol": "ProjectileWarningOverlay.UpdateWarnings",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/PlayMode/ProjectileLockWarningPlayTests.cs"
+      ],
+      "notes": "接近中の明示ロック弾を、プレイヤーの周囲の指定半径内で表示する。初期値は8ユニット。範囲へ進入した際に同じleaseを表示し、プール再利用時は現在のleaseと対象の世代を照合する。",
+      "verification_hashes": {
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.LockWarnings.cs": "5fde917f636b03b42d7b1f5f9445fef046d90f2617c56a74a48d6bf7a4d26943",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileSpatialIndex.cs": "54067e8bc38861b2baf4f3a1d154282cbd1175661240ce26d852ca5b5c550d97",
+        "Assets/MyAsset/Runtime/UI/HudController.ProjectileWarnings.cs": "21f86a8ac441a907167dce9e934ea1f0a86cb655e93847f85daf5930c8f98cd8",
+        "Assets/Tests/PlayMode/ProjectileLockWarningPlayTests.cs": "79a4895cac5b5d61bc84f0018d46577c9b717343f807103457894fa27a725e82"
+      }
+    }
+  },
+  {
+    "feature": "Projectile_NearbyObservation",
+    "path": {
+      "key": "3d-nearby-projectile-lock-warning",
+      "title": "3Dの接近ロック弾に距離を加えてHUDへ渡す",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "runtime_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/UI/ProjectileLockWarningHud3D.cs",
+          "symbol": "ProjectileLockWarningHud3D.LateUpdate",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs",
+          "symbol": "ProjectileManager3D.CollectLockWarnings",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileSpatialIndex.cs",
+          "symbol": "ProjectileSpatialIndex.Collect",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/UI/HudController.ProjectileWarnings.cs",
+          "symbol": "ProjectileWarningOverlay.UpdateWarnings",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/PlayMode/ProjectileLockWarning3DPlayTests.cs"
+      ],
+      "notes": "接近中の明示ロック弾を、騎士の周囲の指定半径内で表示する。別の物理空間、上下に離れた弾、発射待ちの弾は候補から除く。近傍検索は通常は直接比較し、大量の弾に繰り返し照会した場合にグリッドを固定更新内で再利用する。",
+      "verification_hashes": {
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "6d94b78d84153071d827203acdc82cc5ffc374aa2f2f7ff8b0e9893189ff4220",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileSpatialIndex.cs": "54067e8bc38861b2baf4f3a1d154282cbd1175661240ce26d852ca5b5c550d97",
+        "Assets/MyAsset/Runtime/UI/HudController.ProjectileWarnings.cs": "21f86a8ac441a907167dce9e934ea1f0a86cb655e93847f85daf5930c8f98cd8",
+        "Assets/MyAsset/Runtime/UI/ProjectileLockWarningHud3D.cs": "a1f5f33f3113b587d516df9b73fdadbfaca8ca4d411a45d7871b46e369a87f81",
+        "Assets/Tests/PlayMode/ProjectileLockWarning3DPlayTests.cs": "00d95a0e961c5e1c298cc64b168ea44d383123f88f7058fc6ac4d9814d4fa74e"
+      }
+    }
   }
 ]

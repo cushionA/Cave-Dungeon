@@ -213,6 +213,7 @@ namespace Game.Runtime
             AIObservationContext observation = _observations.Observation;
             if (_core.Actors.TryGet(CharacterRegistry.PlayerHash, out ActorRef player)) { observation.SetProtectedPlayer(player); }
             using (s_TargetLineOfSightMarker.Auto()) { CaptureTargetLineOfSight(observation); }
+            CaptureNearbyHostileProjectiles(observation);
             if (!AISceneGimmickController.Capture(observation)) { return; }
             for (int i = 0; i < observation.ActorHashes.Count; i++)
             {
@@ -222,6 +223,23 @@ namespace Game.Runtime
                 {
                     observation.SetGimmickVelocity(actor, character.PhysicsVelocity);
                 }
+            }
+        }
+
+        private void CaptureNearbyHostileProjectiles(AIObservationContext observation)
+        {
+            ProjectileManager projectiles = Projectiles;
+            if (projectiles == null) { return; }
+
+            for (int i = 0; i < _simulationActors.Count; i++)
+            {
+                ActorRef observerRef = _simulationActors[i];
+                if (!TryGetSimulationCharacter(i, true, out BaseCharacter observer)
+                    || observer.FieldOrderJudgment?.RequiresNearbyHostileProjectileCount != true
+                    || observer.PhysicsBackend == null || !observation.Contains(observerRef)) { continue; }
+
+                int count = projectiles.CountNearbyHostileProjectiles(observer, ProjectileSpatialIndex.DefaultQueryRadius);
+                observation.SetNearbyHostileProjectileCount(observerRef, count);
             }
         }
 

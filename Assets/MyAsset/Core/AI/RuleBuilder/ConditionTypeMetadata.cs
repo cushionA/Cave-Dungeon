@@ -45,11 +45,7 @@ namespace Game.Core
                 case AIConditionType.Count:
                 case AIConditionType.Distance:
                 case AIConditionType.DamageScore:
-                    return WidgetKind.Integer;
-
                 case AIConditionType.ProjectileNear:
-                    // ConditionEvaluator のコメントで「operandA を閾値距離として使う」と明記されている。
-                    // ビットマスクではなく単純な距離(Integer)入力として扱う。
                     return WidgetKind.Integer;
 
                 case AIConditionType.NearbyFaction:
@@ -117,7 +113,7 @@ namespace Game.Core
                 case AIConditionType.NearbyFaction:
                     return "周囲にいる陣営ビットフラグをチェックします";
                 case AIConditionType.ProjectileNear:
-                    return "近くに飛翔体が存在するかチェックします";
+                    return $"自分の周囲{AIObservationContext.NearbyHostileProjectileRadius:0}m以内にある敵対飛翔体の数を比較します";
                 case AIConditionType.ObjectNearby:
                     return "周囲の認識対象オブジェクトのビットフラグをチェックします";
                 case AIConditionType.DamageScore:
@@ -147,12 +143,10 @@ namespace Game.Core
                     // UI もスライダー(0-100)で統一。
                     return 50;
                 case AIConditionType.Count:
+                case AIConditionType.ProjectileNear:
                     return 1;
                 case AIConditionType.Distance:
                     return 5;
-                case AIConditionType.ProjectileNear:
-                    // 飛翔体検出の既定閾値距離（3m 以内に飛翔体があるか）
-                    return 3;
                 case AIConditionType.DamageScore:
                     return 100;
                 default:
@@ -235,6 +229,7 @@ namespace Game.Core
         /// </summary>
         public static CompareOp GetDefaultCompareOp(AIConditionType type)
         {
+            if (type == AIConditionType.ProjectileNear) { return CompareOp.GreaterEqual; }
             WidgetKind kind = GetWidgetKind(type);
             switch (kind)
             {

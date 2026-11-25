@@ -89,6 +89,7 @@ namespace Game.Core
         private NativeParallelHashMap<int, int> _indices;
         private NativeArray<int> _snapshotHashes;
         private NativeArray<ActorRef> _actorRefs;
+        private NativeArray<int> _nearbyHostileProjectileCounts;
         private NativeArray<ActorRef> _lastAttackers;
         private NativeArray<CandidateTargetFacts> _candidateFacts;
         private bool _usesCandidateFacts;
@@ -233,6 +234,7 @@ namespace Game.Core
                 indices = _indices,
                 hashes = _snapshotHashes,
                 actors = _actorRefs,
+                nearbyHostileProjectileCounts = _nearbyHostileProjectileCounts,
                 lastAttackers = _lastAttackers,
                 candidateFacts = _candidateFacts,
                 protectedPlayer = _observation.ProtectedPlayer,
@@ -344,6 +346,7 @@ namespace Game.Core
             _snapshotCount = count;
             EnsureCapacity(ref _snapshotHashes, count);
             EnsureCapacity(ref _actorRefs, count);
+            EnsureCapacity(ref _nearbyHostileProjectileCounts, count);
             EnsureCapacity(ref _lastAttackers, count);
             EnsureCapacity(ref _targetCounts, count);
             EnsureCapacity(ref _positions, count);
@@ -389,6 +392,8 @@ namespace Game.Core
                 _indices.Add(hash, i);
                 _snapshotHashes[i] = hash;
                 _actorRefs[i] = actor.actor;
+                _nearbyHostileProjectileCounts[i] = _observation.TryGetNearbyHostileProjectileCount(actor.actor, out int projectileCount)
+                    ? projectileCount : -1;
                 if (needsCandidateFacts)
                 {
                     CandidateTargetFacts facts = default;
@@ -558,6 +563,7 @@ namespace Game.Core
                 _targetSight.Dispose();
                 _visibleGimmicks.Dispose();
                 DisposeArray(ref _actorRefs);
+                DisposeArray(ref _nearbyHostileProjectileCounts);
                 DisposeArray(ref _lastAttackers);
                 DisposeArray(ref _candidateFacts);
                 DisposeArray(ref _targetCounts);
@@ -597,6 +603,7 @@ namespace Game.Core
             public NativeParallelHashMap<ulong, float> scores;
             public NativeParallelHashMap<ulong, byte>.ReadOnly targetSight;
             public NativeArray<ActorRef> actors;
+            public NativeArray<int> nearbyHostileProjectileCounts;
             public NativeArray<ActorRef> lastAttackers;
             public NativeArray<CandidateTargetFacts> candidateFacts;
             public ActorRef protectedPlayer;
@@ -652,6 +659,15 @@ namespace Game.Core
                 CandidateTargetFacts facts = candidateFacts[index];
                 seconds = facts.stunRemaining;
                 return facts.stunKnown;
+            }
+
+            public bool TryGetNearbyHostileProjectileCount(ActorRef observer, out int count)
+            {
+                count = 0;
+                if (!TryGetIndex(observer.Hash, out int index) || actors[index] != observer
+                    || nearbyHostileProjectileCounts[index] < 0) { return false; }
+                count = nearbyHostileProjectileCounts[index];
+                return true;
             }
 
             public bool TryGetTargetLineOfSight(ActorRef owner, ActorRef target, out bool visible)
@@ -750,6 +766,7 @@ namespace Game.Core
             [ReadOnly] public NativeParallelHashMap<int, int> indices;
             [ReadOnly] public NativeArray<int> hashes;
             [ReadOnly] public NativeArray<ActorRef> actors;
+            [ReadOnly] public NativeArray<int> nearbyHostileProjectileCounts;
             [ReadOnly] public NativeArray<ActorRef> lastAttackers;
             [ReadOnly] public NativeArray<CandidateTargetFacts> candidateFacts;
             public ActorRef protectedPlayer;
@@ -784,6 +801,7 @@ namespace Game.Core
                 {
                     indices = indices, positions = positions, ratios = ratios, hp = hp,
                     scores = scores, actors = actors, lastAttackers = lastAttackers, hashes = hashes,
+                    nearbyHostileProjectileCounts = nearbyHostileProjectileCounts,
                     targetSight = targetSight,
                     candidateFacts = candidateFacts, protectedPlayer = protectedPlayer,
                     targetCounts = targetCounts, scoresAvailable = scoresAvailable,
