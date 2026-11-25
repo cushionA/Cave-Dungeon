@@ -40,6 +40,7 @@ namespace Game.Runtime
         private Func<int, bool> _canApplyAIDecision;
         private readonly SimulationTickRunner _simulation = new SimulationTickRunner();
         private static readonly ProfilerMarker s_PrepareMarker = new ProfilerMarker("GameLoop.PrepareAI");
+        private static readonly ProfilerMarker s_TargetLineOfSightMarker = new ProfilerMarker("AI.Observation.TargetLineOfSight");
         private static readonly ProfilerMarker s_DecisionMarker = new ProfilerMarker("GameLoop.AI.ScheduleAndComplete");
         private static readonly ProfilerMarker s_ControlMarker = new ProfilerMarker("GameLoop.ApplyCharacterControl");
         [SerializeField] private StatusEffectCatalog _statusEffectCatalog;
@@ -211,7 +212,7 @@ namespace Game.Runtime
             _observations.Capture(tick, currentTime);
             AIObservationContext observation = _observations.Observation;
             if (_core.Actors.TryGet(CharacterRegistry.PlayerHash, out ActorRef player)) { observation.SetProtectedPlayer(player); }
-            CaptureTargetLineOfSight(observation);
+            using (s_TargetLineOfSightMarker.Auto()) { CaptureTargetLineOfSight(observation); }
             if (!AISceneGimmickController.Capture(observation)) { return; }
             for (int i = 0; i < observation.ActorHashes.Count; i++)
             {
