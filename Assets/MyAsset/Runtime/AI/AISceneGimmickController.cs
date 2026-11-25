@@ -175,6 +175,7 @@ namespace Game.Runtime
             SoACharaDataDic data = GameManager.Data;
             ManagedCharacter managed = data.GetManaged(hash);
             character = managed as BaseCharacter;
+            if (managed?.Uses3DPhysics == true) { return false; }
             CharacterFlags flags = data.GetFlags(hash);
             return data.GetVitals(hash).currentHp > 0 && flags.ActState != ActState.Dead && !flags.IsVanished
                 && (managed == null ? world == Physics2D.defaultPhysicsScene

@@ -51,8 +51,21 @@ namespace Game.Core
         [Tooltip("既定は攻撃・支援が敵対、回復が味方と自分。上書き時は発射元から見た対象を指定")]
         public AttackTargetPolicy targetPolicy;
 
+        [TitleGroup("対象条件")]
+        [MinValue(0)]
+        [Tooltip("マルチロックの射程。0なら通常の攻撃対象を使用")]
+        public float multiLockRange;
+
         [TitleGroup("攻撃移動")]
         public AttackContactType contactType;
+
+        [TitleGroup("3Dの命中判定")]
+        public AttackProfile3D attack3D;
+
+        [TitleGroup("持続ヒット")]
+        [InlineProperty]
+        [Tooltip("近接や直接の床範囲攻撃が有効な間に、同じ個体へ繰り返し命中させる設定")]
+        public HitRepeatSettings repeatHits;
 
         [TitleGroup("攻撃移動")]
         [Tooltip("空中攻撃時の移動方向（正規化済み）。yを正にすると上昇")]
@@ -151,6 +164,9 @@ namespace Game.Core
         [FoldoutGroup("サウンド")]
         [Tooltip("落下攻撃着地時のSE")]
         public AudioClip landingSound;
+        [FoldoutGroup("サウンド")]
+        [Tooltip("ジャストガード不可の近接攻撃が予備動作に入った時の警告SE")]
+        public AudioClip guardWarningSound;
     }
 
     [Serializable]
@@ -174,6 +190,9 @@ namespace Game.Core
         [MinValue(0)] public int pierceCount;
         [ToggleGroup("hasProjectile")]
         [MinValue(0)] public float aoeRadius;
+        [ToggleGroup("hasProjectile")]
+        [Tooltip("指定地点で爆発する単発弾の照準距離。0は通常の接触爆発")]
+        [MinValue(0)] public float groundImpactRange;
         [ToggleGroup("hasProjectile")]
         [MinValue(1)] public int projectileCount;
         [ToggleGroup("hasProjectile")]

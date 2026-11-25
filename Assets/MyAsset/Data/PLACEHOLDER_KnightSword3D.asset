@@ -1,0 +1,124 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 55a1ec93ce0944c47887ddab2ae86a7a, type: 3}
+  m_Name: PLACEHOLDER_KnightSword3D
+  m_EditorClassIdentifier: Game.Core::Game.Core.AttackInfo
+  persistentId: 7295114ea564084dfb3c47f8085f9841
+  motion: {fileID: 11400000, guid: dfe5114fd6f64a47ad43b99922d3e1ed, type: 2}
+  staminaCost: 5
+  mpCost: 0
+  staminaPerSecond: 0
+  cancelAfter: -1
+  cancelPoint: -1
+  endMode: 0
+  durationMode: 0
+  duration: 0
+  resources: 29
+  priority: 10
+  actState: 7
+  gameplay: 0
+  actionEffects: []
+  transitions: []
+  movement:
+    speed: 0
+    startTime: 0
+    duration: 0
+    usesInput: 0
+  chargeTimeMin: 0
+  chargeTimeMax: 0
+  chargeDamageMultiplier: 0
+  attackName: "\u9A0E\u58EB\u306E\u5263"
+  category: 0
+  baseDamage:
+    slash: 0
+    strike: 0
+    pierce: 0
+    fire: 0
+    thunder: 0
+    light: 0
+    dark: 0
+  damageMultiplier: 1.25
+  effectSoundInfo:
+    hitEffect: {fileID: 0}
+    castEffect: {fileID: 0}
+    chargeEffect: {fileID: 0}
+    trailEffect: {fileID: 0}
+    attackSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    chargeSound: {fileID: 0}
+    chargeCompleteSound: {fileID: 0}
+    landingSound: {fileID: 0}
+    guardWarningSound: {fileID: 0}
+  projectileInfo:
+    hasProjectile: 0
+    projectilePrefab: {fileID: 0}
+    trajectory: 0
+    speed: 0
+    lifetime: 0
+    homingStrength: 0
+    pierceCount: 0
+    aoeRadius: 0
+    groundImpactRange: 0
+    projectileCount: 0
+    spreadAngle: 0
+  knockbackInfo:
+    hasKnockback: 0
+    force: {x: 0, y: 0}
+    stunDuration: 0
+    groundBounce: 0
+    wallBounce: 0
+    gravityScale: 0
+  statusEffects: []
+  equipmentSource: 0
+  aiEvaluation:
+    effectiveRangeMin: 0
+    effectiveRangeMax: 0
+    threatLevel: 0
+    isBlockable: 0
+    isParriable: 0
+    totalWindupTime: 0
+    preferredUseHpThreshold: 0
+    priority: 0
+  targetPolicy:
+    overrideTargets: 0
+    targets: 0
+  multiLockRange: 0
+  contactType: 0
+  attack3D:
+    shape: 1
+    localCenter: {x: 0, y: 0.85, z: 1}
+    halfExtents: {x: 0.72, y: 0.6, z: 1}
+    radius: 0
+    targetLayers:
+      serializedVersion: 2
+      m_Bits: 256
+    obstructionLayers:
+      serializedVersion: 2
+      m_Bits: 1
+  aerialMoveDirection: {x: 0, y: 0}
+  airHangDuration: 0.3
+  airHangGravityScale: 0.1
+  aerialMoveSpeedDefault: 3
+  divingGravityMultiplier: 3
+  divingForwardSpeed: 1
+  divingLandingRecoveryDuration: 0.3
+  isParriable: 0
+  guardDamage: 0
+  armorBreakValue: 0
+  feature: 0
+  attackElement: 1
+  isAutoChain: 0
+  isChainEndPoint: 0
+  inputWindow: 0
+  justGuardResistance: 0
+  magicType: 0
+  healAmount: 0

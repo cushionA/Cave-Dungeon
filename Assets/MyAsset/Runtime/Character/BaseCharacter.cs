@@ -110,10 +110,11 @@ namespace Game.Runtime
 
         protected virtual void OnDestroy()
         {
-            GameManager.Actions?.StopActor(_objectHash);
-            if (_isRegistered && GameManager.Instance != null)
+            GameManager world = GameManager.Instance;
+            if (_isRegistered && world != null && world.TryGetRegisteredActor(this, out ActorRef actor))
             {
-                GameManager.Instance.UnregisterCharacter(_objectHash);
+                GameManager.Actions?.StopActor(actor.Hash);
+                world.UnregisterCharacter(this, actor);
             }
             _physicsBackend?.Dispose();
         }

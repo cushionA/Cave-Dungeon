@@ -271,7 +271,8 @@ namespace Game.Runtime
 
         private void BuildAttackPickerContent(VisualElement container, bool onlyCasters, Action<ActionSlot> onPicked)
         {
-            if (_attackCatalog == null || _attackCatalog.Length == 0)
+            IReadOnlyList<AttackInfo> attacks = CurrentAttackCatalog;
+            if (attacks == null || attacks.Count == 0)
             {
                 Label empty = new Label("(AttackInfo カタログが未設定です)");
                 empty.AddToClassList("mode-detail-empty");
@@ -281,9 +282,9 @@ namespace Game.Runtime
 
             // カテゴリ別にグルーピング
             Dictionary<AttackCategory, List<int>> byCategory = new Dictionary<AttackCategory, List<int>>();
-            for (int i = 0; i < _attackCatalog.Length; i++)
+            for (int i = 0; i < attacks.Count; i++)
             {
-                AttackInfo info = _attackCatalog[i];
+                AttackInfo info = attacks[i];
                 if (info == null)
                 {
                     continue;
@@ -318,7 +319,7 @@ namespace Game.Runtime
                 foreach (int idx in kv.Value)
                 {
                     int paramId = idx;
-                    AttackInfo info = _attackCatalog[idx];
+                    AttackInfo info = attacks[idx];
                     string definitionId = info.PersistentId;
                     string displayName = string.IsNullOrEmpty(info.attackName) ? info.name : info.attackName;
 
@@ -340,7 +341,11 @@ namespace Game.Runtime
                         + "\nMPコスト: " + info.mpCost
                         + "\nスタミナコスト: " + info.staminaCost;
                     item.AddToClassList("action-picker-item");
-                    if (string.IsNullOrEmpty(definitionId))
+                    if (companion3D != null && info.attack3D.shape == AttackShape3D.None)
+                    {
+                        DisableUnsupportedAction(item);
+                    }
+                    else if (string.IsNullOrEmpty(definitionId))
                     {
                         item.SetEnabled(false);
                         item.tooltip = "行動定義IDが未設定です。行動アセットを保存してください。";
@@ -439,9 +444,14 @@ namespace Game.Runtime
             }
         }
 
-        private static bool IsRuntimeActionSupported(ActionExecType type, int parameter)
+        private IReadOnlyList<AttackInfo> CurrentAttackCatalog => ReferenceEquals(companion3D, null)
+            ? _attackCatalog : companion3D != null ? companion3D.AvailableAttacks : null;
+
+        private bool IsRuntimeActionSupported(ActionExecType type, int parameter)
         {
-            ActionCommand command = ActionCommand.FromLegacySlot(new ActionSlot { execType = type, paramId = parameter });
+            ActionSlot slot = new ActionSlot { execType = type, paramId = parameter };
+            if (companion3D != null) { return CompanionController3D.SupportsAIAction(slot); }
+            ActionCommand command = ActionCommand.FromLegacySlot(slot);
             return command.kind != ActionCommandKind.Unsupported;
         }
 

@@ -59,6 +59,7 @@
 
 ### experiments/
 
+- [2026-11-25 3D遠征モックの確認範囲](experiments/2026-11-25_expedition-mock-3d.md)
 - [2026-11-24 戦闘中に装置を使うAIの実験](experiments/2026-11-24_ai-terrain-gimmicks.md)
 
 ### migrations/

@@ -4,7 +4,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Game.Core
 {
-    public class InventoryManager : ISaveable
+    public class InventoryManager : ISaveableWithMissingEntry
     {
         /// <summary>インベントリの最大スロット数（暫定）</summary>
         public const int k_MaxSlotCount = 99;
@@ -42,6 +42,8 @@ namespace Game.Core
             }
         }
 
+        void ISaveableWithMissingEntry.RestoreMissingEntry() => _items.Clear();
+
         public int ItemCount => _items.Count;
 
         public InventoryManager()
@@ -50,13 +52,13 @@ namespace Game.Core
         }
 
         /// <summary>
-        /// アイテム追加。同一itemIdの全スタックを走査して余裕があれば順次充填し、
+        /// アイテム追加。同一itemId・カテゴリの全スタックを走査して余裕があれば順次充填し、
         /// 余剰分は新スロットとして追加する（k_MaxSlotCount まで）。
         /// 戻り値: 実際に追加された数量（上限到達で受け入れ切れなかった分は加算されない）。
         /// </summary>
         public int Add(int itemId, ItemCategory category, int count, int maxStack)
         {
-            if (count <= 0)
+            if (count <= 0 || maxStack <= 0)
             {
                 return 0;
             }
@@ -64,10 +66,10 @@ namespace Game.Core
             int remaining = count;
             int added = 0;
 
-            // Pass 1: 既存の同一itemIdスタックに余地があれば順次詰める
+            // Pass 1: 同じアイテムとカテゴリの既存スタックに順次詰める。
             for (int i = 0; i < _items.Count && remaining > 0; i++)
             {
-                if (_items[i].itemId != itemId)
+                if (_items[i].itemId != itemId || _items[i].category != category)
                 {
                     continue;
                 }
@@ -111,7 +113,11 @@ namespace Game.Core
         /// 空になったスタックはエントリごと除去する。
         /// 戻り値: 実際に削除された数量（総数不足時は削れた分だけ返る）。
         /// </summary>
-        public int Remove(int itemId, int count)
+        public int Remove(int itemId, int count) => Remove(itemId, count, category: null);
+
+        internal bool TryRemoveConsumable(int itemId) => itemId >= 0 && Remove(itemId, 1, ItemCategory.Consumable) == 1;
+
+        private int Remove(int itemId, int count, ItemCategory? category)
         {
             if (count <= 0)
             {
@@ -123,14 +129,14 @@ namespace Game.Core
 
             for (int i = 0; i < _items.Count && remaining > 0;)
             {
-                if (_items[i].itemId != itemId)
+                ItemEntry entry = _items[i];
+                if (entry.itemId != itemId || (category.HasValue && entry.category != category.Value))
                 {
                     i++;
                     continue;
                 }
 
-                ItemEntry entry = _items[i];
-                int toRemove = Math.Min(remaining, entry.count);
+                int toRemove = Math.Min(remaining, Math.Max(0, entry.count));
                 entry.count -= toRemove;
                 removed += toRemove;
                 remaining -= toRemove;
@@ -169,17 +175,26 @@ namespace Game.Core
         /// <summary>
         /// アイテムID指定で数量取得（複数スタック分を合算）。なければ0。
         /// </summary>
-        public int GetCount(int itemId)
+        public int GetCount(int itemId) => GetCount(itemId, category: null);
+
+        /// <summary>指定した消耗品の数量。同じIDの別カテゴリは数えない。</summary>
+        public int GetConsumableCount(int itemId) => itemId >= 0 ? GetCount(itemId, ItemCategory.Consumable) : 0;
+
+        /// <summary>指定カテゴリ内の数量。同じIDの別カテゴリは数えない。</summary>
+        public int GetCount(int itemId, ItemCategory category) => GetCount(itemId, (ItemCategory?)category);
+
+        private int GetCount(int itemId, ItemCategory? category)
         {
-            int total = 0;
+            long total = 0;
             for (int i = 0; i < _items.Count; i++)
             {
-                if (_items[i].itemId == itemId)
+                ItemEntry entry = _items[i];
+                if (entry.itemId == itemId && (!category.HasValue || entry.category == category.Value))
                 {
-                    total += _items[i].count;
+                    total += Math.Max(0, entry.count);
                 }
             }
-            return total;
+            return (int)Math.Min(total, int.MaxValue);
         }
 
         /// <summary>

@@ -10,6 +10,7 @@ namespace Game.Core
     public struct AttackMotionData
     {
         public long actionInstanceId;
+        [NonSerialized] public ActionTargetSelection? selectedTargets;
         [FoldoutGroup("対象条件")]
         public AttackTargetPolicy targetPolicy;
         [FoldoutGroup("基本")]
@@ -28,6 +29,8 @@ namespace Game.Core
 
         [FoldoutGroup("ヒット")]
         [MinValue(1)] public int maxHitCount;
+        [FoldoutGroup("ヒット")]
+        public HitRepeatSettings repeatHits;
         [FoldoutGroup("ヒット")]
         [MinValue(0)] public float guardDamage;
         [FoldoutGroup("ヒット")]

@@ -11,6 +11,12 @@ namespace Game.Runtime
     /// </summary>
     public class DialogueSystemBridge : MonoBehaviour
     {
+        [SerializeField] private CharacterActor3D player3D;
+
+        private DialogueSystemController _controller;
+        private float _timeScaleBeforeConversation;
+        private bool _pausedForConversation;
+
         private void OnEnable()
         {
             // Lua関数登録: Dialogue Systemの会話条件からゲームデータを参照
@@ -26,8 +32,13 @@ namespace Game.Runtime
                 SymbolExtensions.GetMethodInfo(() => SetFlagValue(string.Empty, 0)));
 
             // 会話イベントコールバック
-            DialogueManager.instance.conversationStarted += OnConversationStarted;
-            DialogueManager.instance.conversationEnded += OnConversationEnded;
+            _controller = GetComponent<DialogueSystemController>();
+            if (_controller == null) { _controller = DialogueManager.instance; }
+            if (_controller != null)
+            {
+                _controller.conversationStarted += OnConversationStarted;
+                _controller.conversationEnded += OnConversationEnded;
+            }
         }
 
         private void OnDisable()
@@ -39,16 +50,20 @@ namespace Game.Runtime
             Lua.UnregisterFunction("GetFlagValue");
             Lua.UnregisterFunction("SetFlagValue");
 
-            if (DialogueManager.instance != null)
+            if (_controller != null)
             {
-                DialogueManager.instance.conversationStarted -= OnConversationStarted;
-                DialogueManager.instance.conversationEnded -= OnConversationEnded;
+                _controller.conversationStarted -= OnConversationStarted;
+                _controller.conversationEnded -= OnConversationEnded;
             }
+            _controller = null;
+            RestoreConversationTime();
         }
 
         private void OnConversationStarted(Transform actor)
         {
-            // 会話中はゲームを一時停止
+            if (_pausedForConversation || (player3D != null && actor != player3D.transform)) { return; }
+            _timeScaleBeforeConversation = Time.timeScale;
+            _pausedForConversation = true;
             Time.timeScale = 0f;
 #if UNITY_EDITOR
             Debug.Log($"[Dialogue] Conversation started with {actor?.name}");
@@ -57,10 +72,18 @@ namespace Game.Runtime
 
         private void OnConversationEnded(Transform actor)
         {
-            Time.timeScale = 1f;
+            if (player3D != null && actor != player3D.transform) { return; }
+            RestoreConversationTime();
 #if UNITY_EDITOR
             Debug.Log($"[Dialogue] Conversation ended with {actor?.name}");
 #endif
+        }
+
+        private void RestoreConversationTime()
+        {
+            if (!_pausedForConversation) { return; }
+            _pausedForConversation = false;
+            Time.timeScale = _timeScaleBeforeConversation;
         }
 
         // === Lua関数 ===
@@ -72,7 +95,7 @@ namespace Game.Runtime
                 return 0;
             }
 
-            int playerHash = CharacterRegistry.PlayerHash;
+            int playerHash = GetPlayerHash();
             if (playerHash == 0 || !GameManager.Data.TryGetValue(playerHash, out int _))
             {
                 return 0;
@@ -88,7 +111,7 @@ namespace Game.Runtime
                 return 0;
             }
 
-            int playerHash = CharacterRegistry.PlayerHash;
+            int playerHash = GetPlayerHash();
             if (playerHash == 0 || !GameManager.Data.TryGetValue(playerHash, out int _))
             {
                 return 0;
@@ -96,6 +119,8 @@ namespace Game.Runtime
 
             return GameManager.Data.GetVitals(playerHash).currentMp;
         }
+
+        private int GetPlayerHash() => player3D != null ? player3D.Actor.Hash : CharacterRegistry.PlayerHash;
 
         public bool IsCharacterAlive(string characterName)
         {

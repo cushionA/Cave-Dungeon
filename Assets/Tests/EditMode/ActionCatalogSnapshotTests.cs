@@ -68,6 +68,198 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
+        public void ActionCatalog_GroundImpactIsAuthored_PreservesItsRangeAndRadius()
+        {
+            AttackInfo attack = CreateAttack();
+            attack.projectileInfo = new ProjectileInfo
+            {
+                hasProjectile = true, speed = 4f, aoeRadius = 1.5f, groundImpactRange = 7f,
+            };
+            int id = _catalog.Register(attack);
+            Assert.IsTrue(_catalog.TryGet(id, out ActionCatalog.Entry entry));
+            attack.projectileInfo = default;
+
+            MagicDefinition magic = entry.CreateMagic();
+            Assert.AreEqual(7f, magic.groundImpactRange);
+            Assert.AreEqual(1.5f, magic.bulletProfile.explodeRadius);
+            Assert.AreEqual(1, magic.bulletCount);
+        }
+
+        [Test]
+        public void ActionCatalog_AttackRepeatUnset_PreservesLegacySingleHitPacket()
+        {
+            AttackInfo attack = CreateAttack();
+            attack.projectileInfo = default;
+            int id = _catalog.Register(attack);
+
+            Assert.IsTrue(_catalog.TryGet(id, out ActionCatalog.Entry entry));
+            AttackMotionData packet = entry.CreateAttack();
+            Assert.AreEqual(1, packet.maxHitCount);
+            Assert.AreEqual(0, packet.repeatHits.maxHitsPerTarget);
+            Assert.AreEqual(0f, packet.repeatHits.interval);
+        }
+
+        [TestCase(AttackShape3D.Melee)]
+        [TestCase(AttackShape3D.GroundArea)]
+        public void ActionCatalog_AttackRepeatAuthoringChanges_PreservesRegisteredCountAndInterval(AttackShape3D shape)
+        {
+            AttackInfo attack = CreateAttack();
+            attack.projectileInfo = default;
+            attack.attack3D = new AttackProfile3D { shape = shape, halfExtents = Vector3.one, radius = 1.5f };
+            attack.repeatHits = new HitRepeatSettings { maxHitsPerTarget = 3, interval = 0.15f };
+            int id = _catalog.Register(attack);
+
+            attack.repeatHits = new HitRepeatSettings { maxHitsPerTarget = 5, interval = 0.4f };
+            Assert.AreEqual(id, _catalog.Register(attack));
+            Assert.IsTrue(_catalog.TryGet(id, out ActionCatalog.Entry entry));
+            AttackMotionData packet = entry.CreateAttack();
+            Assert.AreEqual(3, packet.repeatHits.maxHitsPerTarget);
+            Assert.AreEqual(0.15f, packet.repeatHits.interval);
+            packet.repeatHits = default;
+
+            AttackInfo other = CreateAttack();
+            other.projectileInfo = default;
+            other.attack3D = attack.attack3D;
+            other.repeatHits = attack.repeatHits;
+            int otherId = _catalog.Register(other);
+            Assert.IsTrue(_catalog.TryGet(otherId, out ActionCatalog.Entry otherEntry));
+            Assert.AreEqual(5, otherEntry.CreateAttack().repeatHits.maxHitsPerTarget);
+            Assert.AreEqual(0.4f, otherEntry.CreateAttack().repeatHits.interval);
+            Assert.AreEqual(3, entry.CreateAttack().repeatHits.maxHitsPerTarget);
+            Assert.AreEqual(0.15f, entry.CreateAttack().repeatHits.interval);
+        }
+
+        [TestCase(-1, 0f)]
+        [TestCase(1, -0.1f)]
+        [TestCase(2, 0f)]
+        [TestCase(1, float.NaN)]
+        [TestCase(2, float.PositiveInfinity)]
+        public void ActionCatalog_InvalidAttackRepeat_RejectsBeforeRegistrationAndCanRetry(int count, float interval)
+        {
+            AttackInfo attack = CreateAttack();
+            attack.projectileInfo = default;
+            attack.attack3D = new AttackProfile3D { shape = AttackShape3D.Melee, halfExtents = Vector3.one };
+            attack.repeatHits = new HitRepeatSettings { maxHitsPerTarget = count, interval = interval };
+
+            Assert.Throws<ArgumentException>(() => _catalog.Register(attack));
+            Assert.AreEqual(0, _execution.DefinitionCount);
+
+            attack.repeatHits = new HitRepeatSettings { maxHitsPerTarget = 2, interval = 0.1f };
+            int id = _catalog.Register(attack);
+            Assert.IsTrue(_catalog.TryGet(id, out _));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void ActionCatalog_AttackRepeatOptInForProjectile_RejectsWithoutChangingProjectileLimits(bool native3D)
+        {
+            AttackInfo attack = CreateAttack();
+            if (native3D)
+            {
+                attack.attack3D = new AttackProfile3D { shape = AttackShape3D.Projectile, projectileRadius = 0.16f };
+            }
+            else
+            {
+                attack.projectileInfo.pierceCount = 2;
+            }
+            attack.repeatHits = new HitRepeatSettings { maxHitsPerTarget = 2, interval = 0.1f };
+
+            Assert.Throws<ArgumentException>(() => _catalog.Register(attack));
+            Assert.AreEqual(0, _execution.DefinitionCount);
+
+            attack.repeatHits = default;
+            int id = _catalog.Register(attack);
+            Assert.IsTrue(_catalog.TryGet(id, out ActionCatalog.Entry entry));
+            Assert.AreEqual(native3D ? 1 : 3, entry.CreateMagic().bulletProfile.hitLimit);
+        }
+
+        [Test]
+        public void ActionCatalog_Registered3DAttack_PreservesTheAuthoredShape()
+        {
+            AttackInfo attack = CreateAttack();
+            attack.projectileInfo = default;
+            attack.attack3D = new AttackProfile3D
+            {
+                shape = AttackShape3D.Melee,
+                localCenter = new Vector3(0f, 0.9f, 1.2f),
+                halfExtents = new Vector3(0.8f, 0.6f, 1f),
+                targetLayers = 1 << 8,
+            };
+            int id = _catalog.Register(attack);
+            attack.attack3D = default;
+
+            Assert.IsTrue(_catalog.TryGet(id, out ActionCatalog.Entry entry));
+            Assert.AreEqual(AttackShape3D.Melee, entry.attack3D.shape);
+            Assert.AreEqual(new Vector3(0f, 0.9f, 1.2f), entry.attack3D.localCenter);
+            Assert.AreEqual(new Vector3(0.8f, 0.6f, 1f), entry.attack3D.halfExtents);
+            Assert.AreEqual(1 << 8, entry.attack3D.targetLayers.value);
+        }
+
+        [Test]
+        public void ActionCatalog_Invalid3DAreaRadius_CanRegisterAfterCorrection()
+        {
+            AttackInfo attack = CreateAttack();
+            attack.projectileInfo = default;
+            attack.attack3D = new AttackProfile3D { shape = AttackShape3D.GroundArea, radius = float.NaN };
+            Assert.Throws<ArgumentException>(() => _catalog.Register(attack));
+
+            attack.attack3D.radius = 1.5f;
+            int id = _catalog.Register(attack);
+            Assert.IsTrue(_catalog.TryGet(id, out ActionCatalog.Entry entry));
+            Assert.AreEqual(1.5f, entry.attack3D.radius);
+        }
+
+        [Test]
+        public void ActionCatalog_3DProjectileRadiusRequired_CapturesWorldShapeAndFlightProfile()
+        {
+            AttackInfo attack = CreateAttack();
+            attack.attack3D = new AttackProfile3D { shape = AttackShape3D.Projectile, localCenter = Vector3.up };
+            attack.projectileInfo = new ProjectileInfo
+            {
+                hasProjectile = true,
+                trajectory = BulletMoveType.Homing,
+                speed = 12f,
+                lifetime = 2f,
+                homingStrength = 8f,
+            };
+            Assert.Throws<ArgumentException>(() => _catalog.Register(attack));
+
+            attack.attack3D.projectileRadius = 0.16f;
+            int id = _catalog.Register(attack);
+            Assert.IsTrue(_catalog.TryGet(id, out ActionCatalog.Entry entry));
+            Assert.AreEqual(0.16f, entry.attack3D.projectileRadius);
+            Assert.AreEqual(Vector3.up, entry.attack3D.localCenter);
+            Assert.AreEqual(BulletMoveType.Homing, entry.CreateMagic().bulletProfile.moveType);
+        }
+
+        [Test]
+        public void ActionCatalog_3DGroundProjectile_RequiresPairedRangeAndRadiusAndACommittedTrajectory()
+        {
+            AttackInfo attack = CreateAttack();
+            attack.attack3D = new AttackProfile3D { shape = AttackShape3D.Projectile, projectileRadius = 0.16f };
+            attack.projectileInfo = new ProjectileInfo
+            {
+                hasProjectile = true,
+                trajectory = BulletMoveType.Homing,
+                speed = 8f,
+                lifetime = 1.5f,
+                groundImpactRange = 6f,
+            };
+            Assert.Throws<ArgumentException>(() => _catalog.Register(attack));
+            attack.projectileInfo.aoeRadius = 1.4f;
+            Assert.Throws<ArgumentException>(() => _catalog.Register(attack));
+
+            attack.projectileInfo.trajectory = BulletMoveType.Straight;
+            int id = _catalog.Register(attack);
+            attack.projectileInfo = default;
+            Assert.IsTrue(_catalog.TryGet(id, out ActionCatalog.Entry entry));
+            MagicDefinition magic = entry.CreateMagic();
+            Assert.AreEqual(BulletMoveType.Straight, magic.bulletProfile.moveType);
+            Assert.AreEqual(6f, magic.groundImpactRange);
+            Assert.AreEqual(1.4f, magic.bulletProfile.explodeRadius);
+        }
+
+        [Test]
         public void ActionCatalog_PacketArraysAreMutated_LeavesLaterAttackAndMagicPacketsUnchanged()
         {
             int id = _catalog.Register(CreateAttack());

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Game.Core;
@@ -30,6 +31,7 @@ namespace Game.Runtime
         private string _loadOperationScene;
         private AsyncOperation _unloadOperation;
         private string _unloadOperationScene;
+        private readonly Dictionary<Scene, string> _streamedScenes = new Dictionary<Scene, string>();
 
         // シーン有効性チェックの注入フック（テスト用）。null時は SceneManager.GetSceneByName を使用。
         private Func<string, bool> _sceneValidityChecker;
@@ -76,10 +78,13 @@ namespace Game.Runtime
 
             // エリアアンロード完了時に Enemy/Projectile プールを解放（ゾンビオブジェクト残留防止）
             _orchestrator.OnAreaUnloadCompleted += HandleAreaUnloadCompleted;
+            SceneManager.sceneUnloaded -= HandleExternalUnload;
+            SceneManager.sceneUnloaded += HandleExternalUnload;
         }
 
         private void OnDestroy()
         {
+            SceneManager.sceneUnloaded -= HandleExternalUnload;
             if (_orchestrator != null)
             {
                 _orchestrator.OnAreaUnloadCompleted -= HandleAreaUnloadCompleted;
@@ -114,19 +119,21 @@ namespace Game.Runtime
 
             if (_loadOperation != null && _loadOperation.isDone)
             {
-                HandleLoadComplete(_loadOperationScene);
+                string sceneName = _loadOperationScene;
                 _loadOperation = null;
                 _loadOperationScene = null;
+                HandleLoadComplete(sceneName);
             }
 
             if (_unloadOperation != null && _unloadOperation.isDone)
             {
-                _orchestrator.NotifyUnloadComplete(_unloadOperationScene);
+                string sceneName = _unloadOperationScene;
                 _unloadOperation = null;
                 _unloadOperationScene = null;
+                _orchestrator.NotifyUnloadComplete(sceneName);
             }
 
-            _orchestrator.ProcessQueue();
+            if (_loadOperation == null && _unloadOperation == null) { _orchestrator.ProcessQueue(); }
         }
 
         /// <summary>
@@ -138,10 +145,26 @@ namespace Game.Runtime
         {
             if (IsSceneValid(sceneName))
             {
+                Scene scene = ResolveScene(sceneName);
+                if (scene.isLoaded) { _streamedScenes[scene] = sceneName; }
                 _orchestrator.NotifyLoadComplete(sceneName);
                 return;
             }
 
+            HandleLoadFailure(sceneName);
+        }
+
+        private void HandleExternalUnload(Scene scene)
+        {
+            if (_streamedScenes.Remove(scene, out string sceneName) && sceneName != _unloadOperationScene)
+            {
+                _orchestrator.ForgetUnloadedArea(sceneName);
+            }
+        }
+
+        private void HandleLoadFailure(string sceneName)
+        {
+            _orchestrator.NotifyLoadFailed(sceneName);
             if (string.IsNullOrEmpty(fallbackSceneName))
             {
                 Debug.LogError($"[LevelStreamingController] Scene load failed for '{sceneName}'. No fallback scene configured.");
@@ -160,8 +183,14 @@ namespace Game.Runtime
                 return _sceneValidityChecker(sceneName);
             }
 
-            Scene scene = SceneManager.GetSceneByName(sceneName);
+            Scene scene = ResolveScene(sceneName);
             return scene.IsValid() && scene.isLoaded;
+        }
+
+        private static Scene ResolveScene(string sceneName)
+        {
+            Scene scene = SceneManager.GetSceneByPath(sceneName);
+            return scene.IsValid() ? scene : SceneManager.GetSceneByName(sceneName);
         }
 
         /// <summary>
@@ -176,13 +205,13 @@ namespace Game.Runtime
                 return;
             }
 
-            SceneManager.LoadSceneAsync(fallbackSceneName, LoadSceneMode.Additive);
+            LoadAdditiveIfAvailable(fallbackSceneName);
         }
 
         /// <summary>外部からエリアロードを要求する。AreaBoundaryTriggerから呼ばれる。</summary>
         public bool RequestAreaLoad(string sceneName)
         {
-            if (_orchestrator == null)
+            if (_orchestrator == null || string.IsNullOrWhiteSpace(sceneName))
             {
                 return false;
             }
@@ -193,7 +222,7 @@ namespace Game.Runtime
         /// <summary>外部からエリアアンロードを要求する。</summary>
         public bool RequestAreaUnload(string sceneName)
         {
-            if (_orchestrator == null)
+            if (_orchestrator == null || _unloadOperation != null || string.IsNullOrWhiteSpace(sceneName))
             {
                 return false;
             }
@@ -203,13 +232,36 @@ namespace Game.Runtime
 
         private void OnLoadSceneRequested(string sceneName)
         {
-            _loadOperation = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
+            _loadOperation = LoadAdditiveIfAvailable(sceneName);
+            if (_loadOperation == null)
+            {
+                HandleLoadFailure(sceneName);
+                return;
+            }
             _loadOperationScene = sceneName;
+        }
+
+        private static AsyncOperation LoadAdditiveIfAvailable(string sceneName)
+        {
+            int index = SceneUtility.GetBuildIndexByScenePath(sceneName);
+            if (index >= 0)
+            {
+                return Application.CanStreamedLevelBeLoaded(index) ? SceneManager.LoadSceneAsync(index, LoadSceneMode.Additive) : null;
+            }
+
+            return Application.CanStreamedLevelBeLoaded(sceneName) ? SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive) : null;
         }
 
         private void OnUnloadSceneRequested(string sceneName)
         {
-            _unloadOperation = SceneManager.UnloadSceneAsync(sceneName);
+            Scene scene = ResolveScene(sceneName);
+            if (!scene.IsValid() || !scene.isLoaded)
+            {
+                _orchestrator.NotifyUnloadComplete(sceneName);
+                return;
+            }
+
+            _unloadOperation = SceneManager.UnloadSceneAsync(scene);
             _unloadOperationScene = sceneName;
         }
 

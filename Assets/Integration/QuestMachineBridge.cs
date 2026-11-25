@@ -1,6 +1,6 @@
 using UnityEngine;
 using Game.Core;
-using PixelCrushers.QuestMachine;
+using PixelCrushers;
 
 namespace Game.Runtime
 {
@@ -8,26 +8,32 @@ namespace Game.Runtime
     /// Quest MachineとGameManagerのイベントシステムを接続するブリッジ。
     /// C# standard eventで購読（R3不要）。
     /// </summary>
-    public class QuestMachineBridge : MonoBehaviour
+    public class QuestMachineBridge : MonoBehaviour, IMessageHandler
     {
+        [SerializeField]
+        [Tooltip("Quest Machine の成功アクションまたは物語イベントから ExpeditionAidCompleted を送ります。Parameter はこの欄の Completion Id に合わせます。")]
+        private ExpeditionAidUnlocks.Completion[] aidCompletions;
+
+        private GameEvents _events;
+
         private void OnEnable()
         {
-            if (GameManager.Events == null)
+            MessageSystem.AddListener(this, ExpeditionAidUnlocks.k_CompletionMessage, string.Empty);
+            _events = GameManager.Events;
+            if (_events != null)
             {
-                return;
+                _events.OnCharacterDeathEvent += OnCharacterDeath;
             }
-
-            GameManager.Events.OnCharacterDeathEvent += OnCharacterDeath;
         }
 
         private void OnDisable()
         {
-            if (GameManager.Events == null)
+            MessageSystem.RemoveListener(this, ExpeditionAidUnlocks.k_CompletionMessage, string.Empty);
+            if (_events != null)
             {
-                return;
+                _events.OnCharacterDeathEvent -= OnCharacterDeath;
+                _events = null;
             }
-
-            GameManager.Events.OnCharacterDeathEvent -= OnCharacterDeath;
         }
 
         private void OnCharacterDeath(int deadHash, int killerHash)
@@ -82,6 +88,12 @@ namespace Game.Runtime
                 gameObject,
                 eventName,
                 parameter);
+        }
+
+        void IMessageHandler.OnMessage(MessageArgs message)
+        {
+            if (PixelCrushersSaveSlotBridge.IsRestoring || PixelCrushers.QuestMachine.QuestMachine.isLoadingGame) { return; }
+            GameManager.ExpeditionAid?.TryComplete(message.parameter, aidCompletions);
         }
     }
 }

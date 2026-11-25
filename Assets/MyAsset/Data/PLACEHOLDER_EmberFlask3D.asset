@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aee989bb168a48ea8416108b708d57fb, type: 3}
+  m_Name: PLACEHOLDER_EmberFlask3D
+  m_EditorClassIdentifier: Game.Core::Game.Core.ConsumableDefinition
+  itemId: 4102
+  displayName: "\u706B\u708E\u74F6"
+  useAction: {fileID: 11400000, guid: a388f260c95aa4f80ab21b924e62431d, type: 2}
+  basePower: 22
+  scalingStat: 2
+  statScale: 0.65
+  consumeOnUse: 1
+  maxStack: 99
+  effectPrefab: {fileID: 7198514730412559908, guid: 068ae3a508231ca56835270d51d28585, type: 3}
+  effectOffset: {x: 0, y: 0.18, z: 0}
+  effectLifetime: 1.15

@@ -1,0 +1,268 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!213 &21300000
+Sprite:
+  serializedVersion: 2
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: PLACEHOLDER_ProjectileDot
+  m_Rect:
+    serializedVersion: 2
+    x: 0
+    y: 0
+    width: 16
+    height: 16
+  m_Offset: {x: 0, y: 0}
+  m_Border: {x: 0, y: 0, z: 0, w: 0}
+  m_PixelsToUnits: 45
+  m_Pivot: {x: 0.5, y: 0.5}
+  m_Extrude: 0
+  m_PackingTag:
+  m_RenderDataKey:
+    00000000000000000000000000000000: 0
+  m_AtlasTags: []
+  m_SpriteAtlas: {fileID: 0}
+  m_RD:
+    serializedVersion: 4
+    texture: {fileID: 1294429035064430148}
+    alphaTexture: {fileID: 0}
+    secondaryTextures: []
+    m_SubMeshes:
+    - serializedVersion: 2
+      firstByte: 0
+      indexCount: 6
+      topology: 0
+      baseVertex: 0
+      firstVertex: 0
+      vertexCount: 4
+      localAABB:
+        m_Center: {x: 0, y: 0, z: 0}
+        m_Extent: {x: 0, y: 0, z: 0}
+    m_IndexBuffer: 000001000200020001000300y
+    m_VertexData:
+      serializedVersion: 3
+      m_VertexCount: 4
+      m_Channels:
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 3
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 0
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 0
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 0
+      - stream: 1
+        offset: 0
+        format: 0
+        dimension: 2
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 0
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 0
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 0
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 0
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 0
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 0
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 0
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 0
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 0
+      m_DataSize: 80
+      _typelessdata: 610b36be610b363e00000000610b363e610b363e00000000610b36be610b36be00000000610b363e610b36be000000000000000000000000000000000000000000000000000000000000000000000000
+    m_Bindpose: []
+    m_BlendShapes:
+      vertices: []
+      shapes: []
+      channels: []
+      fullWeights: []
+    textureRect:
+      serializedVersion: 2
+      x: 0
+      y: 0
+      width: 16
+      height: 16
+    textureRectOffset: {x: 0, y: 0}
+    atlasRectOffset: {x: -1, y: -1}
+    settingsRaw: 3136
+    uvTransform: {x: 45, y: 8, z: 45, w: 8}
+    downscaleMultiplier: 1
+  m_AtlasRD:
+    serializedVersion: 4
+    texture: {fileID: 1294429035064430148}
+    alphaTexture: {fileID: 0}
+    secondaryTextures: []
+    m_SubMeshes:
+    - serializedVersion: 2
+      firstByte: 0
+      indexCount: 6
+      topology: 0
+      baseVertex: 0
+      firstVertex: 0
+      vertexCount: 4
+      localAABB:
+        m_Center: {x: 0, y: 0, z: 0}
+        m_Extent: {x: 0, y: 0, z: 0}
+    m_IndexBuffer: 000001000200020001000300y
+    m_VertexData:
+      serializedVersion: 3
+      m_VertexCount: 4
+      m_Channels:
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 3
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 0
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 0
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 0
+      - stream: 1
+        offset: 0
+        format: 0
+        dimension: 2
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 0
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 0
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 0
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 0
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 0
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 0
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 0
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 0
+      - stream: 0
+        offset: 0
+        format: 0
+        dimension: 0
+      m_DataSize: 80
+      _typelessdata: 610b36be610b363e00000000610b363e610b363e00000000610b36be610b36be00000000610b363e610b36be000000000000000000000000000000000000000000000000000000000000000000000000
+    m_Bindpose: []
+    m_BlendShapes:
+      vertices: []
+      shapes: []
+      channels: []
+      fullWeights: []
+    textureRect:
+      serializedVersion: 2
+      x: 0
+      y: 0
+      width: 16
+      height: 16
+    textureRectOffset: {x: 0, y: 0}
+    atlasRectOffset: {x: -1, y: -1}
+    settingsRaw: 3136
+    uvTransform: {x: 45, y: 8, z: 45, w: 8}
+    downscaleMultiplier: 1
+  m_PhysicsShape: []
+  m_Bones: []
+  m_ScriptableObjects: []
+  m_SpriteID:
+--- !u!28 &1294429035064430148
+Texture2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Projectile Dot
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 4
+  m_Width: 16
+  m_Height: 16
+  m_CompleteImageSize: 1024
+  m_MipsStripped: 0
+  m_TextureFormat: 4
+  m_MipCount: 1
+  m_IsReadable: 1
+  m_IsPreProcessed: 0
+  m_IgnoreMipmapLimit: 1
+  m_MipmapLimitGroupName:
+  m_StreamingMipmaps: 0
+  m_StreamingMipmapsPriority: 0
+  m_VTOnly: 0
+  m_AlphaIsTransparency: 0
+  m_ImageCount: 1
+  m_TextureDimension: 2
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 1
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_LightmapFormat: 0
+  m_ColorSpace: 1
+  m_PlatformBlob:
+  image data: 1024
+  _typelessdata: 752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff1e762fff897c38ffd37f3cfffa7f3cfffa7c38ffd3762fff89752eff1e752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff647f3cfffa884bffff8f55ffff925affff925affff8f55ffff884bffff7f3cfffa752eff64752eff00752eff00752eff00752eff00752eff00752eff648241ffff8f55ffff9a65ffffa271ffffa678ffffa678ffffa271ffff9a65ffff8f55ffff8241ffff752eff64752eff00752eff00752eff00752eff1e7f3cfffa8f55ffff9e6bffffaa7fffffb48dffffb995ffffb995ffffb48dffffaa7fffff9e6bffff8f55ffff7f3cfffa752eff1e752eff00752eff00762fff89884bffff9a65ffffaa7fffffb995ffffc6a8ffffcdb3ffffcdb3ffffc6a8ffffb995ffffaa7fffff9a65ffff884bffff762fff89752eff00752eff007c38ffd38f55ffffa271ffffb48dffffc6a8ffffd5c0ffffe0d0ffffe0d0ffffd5c0ffffc6a8ffffb48dffffa271ffff8f55ffff7c38ffd3752eff00752eff007f3cfffa925affffa678ffffb995ffffcdb3ffffe0d0fffff1eafffff1eaffffe0d0ffffcdb3ffffb995ffffa678ffff925affff7f3cfffa752eff00752eff007f3cfffa925affffa678ffffb995ffffcdb3ffffe0d0fffff1eafffff1eaffffe0d0ffffcdb3ffffb995ffffa678ffff925affff7f3cfffa752eff00752eff007c38ffd38f55ffffa271ffffb48dffffc6a8ffffd5c0ffffe0d0ffffe0d0ffffd5c0ffffc6a8ffffb48dffffa271ffff8f55ffff7c38ffd3752eff00752eff00762fff89884bffff9a65ffffaa7fffffb995ffffc6a8ffffcdb3ffffcdb3ffffc6a8ffffb995ffffaa7fffff9a65ffff884bffff762fff89752eff00752eff00752eff1e7f3cfffa8f55ffff9e6bffffaa7fffffb48dffffb995ffffb995ffffb48dffffaa7fffff9e6bffff8f55ffff7f3cfffa752eff1e752eff00752eff00752eff00752eff648241ffff8f55ffff9a65ffffa271ffffa678ffffa678ffffa271ffff9a65ffff8f55ffff8241ffff752eff64752eff00752eff00752eff00752eff00752eff00752eff647f3cfffa884bffff8f55ffff925affff925affff8f55ffff884bffff7f3cfffa752eff64752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff1e762fff897c38ffd37f3cfffa7f3cfffa7c38ffd3762fff89752eff1e752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00752eff00
+  m_StreamData:
+    serializedVersion: 2
+    offset: 0
+    size: 0
+    path:

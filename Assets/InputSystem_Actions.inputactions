@@ -159,6 +159,15 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "ItemUse",
+                    "type": "Button",
+                    "id": "90e37129-b02b-472f-ab3d-021b6f17961e",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "FieldOrder",
                     "type": "Button",
                     "id": "27fc9e5d-0bc9-4fe0-8521-532fd2cef631",
@@ -727,6 +736,17 @@
                     "processors": "",
                     "groups": "Gamepad",
                     "action": "Map",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "9ecd499f-0fa2-473e-a2ba-3f6f5d9e16eb",
+                    "path": "<Keyboard>/r",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "ItemUse",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

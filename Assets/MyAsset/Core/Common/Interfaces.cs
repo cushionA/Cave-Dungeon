@@ -38,6 +38,12 @@ namespace Game.Core
         void Deserialize(object data);
     }
 
+    /// <summary>旧スロットに保存項目がなければ初期値へ戻す。</summary>
+    public interface ISaveableWithMissingEntry : ISaveable
+    {
+        void RestoreMissingEntry();
+    }
+
     public interface IEquippable
     {
         EquipSlot Slot { get; }

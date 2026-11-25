@@ -1,0 +1,143 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 010d7ab7d77af164ca657e272b158b9f, type: 3}
+  m_Name: PLACEHOLDER_CaveSentinel3D_Info
+  m_EditorClassIdentifier: Game.Core::Game.Core.CharacterInfo
+  feature: 64
+  belong: 2
+  rank: 0
+  canFly: 0
+  targetingLimit: 0
+  initialLevel: 1
+  baseAttributes:
+    str: 0
+    dex: 0
+    intel: 0
+    vit: 0
+    mnd: 0
+    end: 0
+  maxHp: 90
+  maxMp: 50
+  maxStamina: 100
+  staminaRecoveryRate: 20
+  staminaRecoveryDelay: 0.5
+  baseAttack:
+    slash: 0
+    strike: 0
+    pierce: 0
+    fire: 14
+    thunder: 0
+    light: 0
+    dark: 0
+  baseDefense:
+    slash: 5
+    strike: 0
+    pierce: 0
+    fire: 0
+    thunder: 0
+    light: 0
+    dark: 0
+  weakPoint: 0
+  attackElement: 0
+  moveSpeed: 3
+  walkSpeed: 1.5
+  dashSpeed: 6
+  jumpHeight: 2
+  jumpStaminaCost: 0
+  dodgeStaminaCost: 15
+  sprintStaminaPerSecond: 10
+  dodgeDuration: 0.25
+  dodgeSpeedMultiplier: 2.5
+  sprintSpeedMultiplier: 1.6
+  coyoteTime: 0.1
+  maxArmor: 0
+  armorRecoveryRate: 0
+  armorRecoveryDelay: 0
+  statusResistance: 0
+  statusDefense:
+    commonReduction: 0
+    thresholdMultiplierBonus: 0
+    poison:
+      accumulationReduction: 0
+      threshold: 0
+      immune: 0
+    burn:
+      accumulationReduction: 0
+      threshold: 0
+      immune: 0
+    bleed:
+      accumulationReduction: 0
+      threshold: 0
+      immune: 0
+    stun:
+      accumulationReduction: 0
+      threshold: 0
+      immune: 0
+    freeze:
+      accumulationReduction: 0
+      threshold: 0
+      immune: 0
+    paralyze:
+      accumulationReduction: 0
+      threshold: 0
+      immune: 0
+    slow:
+      accumulationReduction: 0
+      threshold: 0
+      immune: 0
+    blind:
+      accumulationReduction: 0
+      threshold: 0
+      immune: 0
+    silence:
+      accumulationReduction: 0
+      threshold: 0
+      immune: 0
+    weakness:
+      accumulationReduction: 0
+      threshold: 0
+      immune: 0
+    curse:
+      accumulationReduction: 0
+      threshold: 0
+      immune: 0
+    confusion:
+      accumulationReduction: 0
+      threshold: 0
+      immune: 0
+    attackUp:
+      accumulationReduction: 0
+      threshold: 0
+      immune: 0
+    defenseUp:
+      accumulationReduction: 0
+      threshold: 0
+      immune: 0
+    speedUp:
+      accumulationReduction: 0
+      threshold: 0
+      immune: 0
+  physicalResistance:
+    slashResist: 0
+    strikeResist: 0
+    pierceResist: 0
+  knockbackResistance: 0
+  staminaExhaustionPenalty: 2
+  staminaExhaustionRecoveryRatio: 0.3
+  jumpBufferTime: 0.1
+  jumpReleaseVelocityDamping: 0.5
+  moveInputDeadzone: 0.1
+  inputBufferDuration: 0.15
+  chargeThreshold: 0.3
+  sprintHoldThreshold: 0.25
+  initialActState: 0
+  statCaps: 630000006300000063000000630000006300000063000000i

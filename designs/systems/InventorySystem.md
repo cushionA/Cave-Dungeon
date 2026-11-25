@@ -13,7 +13,8 @@ Section: 1 — MVP
 |--------------|------|---------------|
 | InventoryManager | アイテム所持管理 | No (GameManager保持) |
 | ItemData | アイテム定義ベース | No (ScriptableObject) |
-| ConsumableData | 消耗品定義 | No (ScriptableObject) |
+| ConsumableDefinition | 3D用の使用アクション、効果値、演出、消費の設定 | No (ScriptableObject) |
+| ConsumableBelt | 消耗品の登録と選択をセーブスロットごとに管理 | No (GameManager保持) |
 | KeyItemData | 鍵アイテム定義 | No (ScriptableObject) |
 | InventoryUI | インベントリ画面 | Yes |
 
@@ -24,7 +25,7 @@ public enum ItemCategory : byte
     Weapon,         // 武器 → WeaponData
     Shield,         // 盾 → ShieldData
     Core,           // コア → CoreData
-    Consumable,     // 使用アイテム → ConsumableData（ショートカットに装備可能）
+    Consumable,     // 使用アイテム → ConsumableDefinition（ショートカットに登録可能）
     PlayerMagic,    // プレイヤーの魔法 → MagicData（習得型、インベントリ管理）
     CompanionMagic, // NPCの魔法 → MagicData（仲間が使用、連携スロットにセット可能）
     Material,       // 素材（売却・交換用）
@@ -40,7 +41,7 @@ public enum ItemCategory : byte
 | Weapon | 不可(各1) | 不可 | 装備 | WeaponDataで定義 |
 | Shield | 不可(各1) | 不可 | 装備 | ShieldDataで定義 |
 | Core | 不可(各1) | 不可 | 装備 | CoreDataで定義 |
-| Consumable | 可(最大99) | 可 | 使用(効果適用) | ベルトショートカットに装備可能 |
+| Consumable | 可（最大数は定義ごと） | 可 | 使用モーションから効果を発揮 | ベルトショートカットに登録可能 |
 | PlayerMagic | 不可(各1) | 不可 | 装備(魔法ベルト) | 探索で習得、ベルトショートカットにセット |
 | CompanionMagic | 不可(各1) | 不可 | セット(連携スロット) | 仲間用。連携ボタンで発動 |
 | Material | 可(最大999) | 可 | 不可 | 売却・交換・装備強化素材 |
@@ -49,27 +50,14 @@ public enum ItemCategory : byte
 
 ### ベルトショートカット
 戦闘中にすぐ使えるよう、消耗品と魔法それぞれにベルト式ショートカットを持つ。
-スロット数はconst定数で管理し、開発中に調整する（`k_ConsumableBeltSize`, `k_MagicBeltSize`）。
+現在の3D消耗品ベルトは4枠。「消耗品」ボタン、Esc／ゲームパッドのStartで登録画面を開く。所持している消耗品を登録し、全枠を順に切り替えられる。登録と切り替えで所持数は変わらない。使い切った枠も登録を保持し、補充するとその枠から再び使用できる。所持数、登録、選択枠はゲームのセーブスロットに保存する。
 将来的に魔法ベルトのスロット数はステータス（MND等）で変動する可能性あり（Section 2以降で検討）。
 
-```csharp
-public class BeltShortcut<T> where T : ItemData
-{
-    int slotCount;          // 可変（開発段階で調整）
-    int currentIndex;       // 現在選択中のスロット
-    T[] slots;              // セットされたアイテム参照
-
-    void RotateNext();      // 次のスロットへ回転
-    void RotatePrev();      // 前のスロットへ回転
-    T GetCurrent();         // 現在選択中のアイテム取得
-    void Set(int index, T item);
-    void Clear(int index);
-}
-```
+消耗品の登録は `ConsumableBelt.TryAssign(slot, itemId)`、選択は `TrySelect(slot)` または `Next()`／`Prev()`、登録解除は `TryClear(slot)` を使う。現在の枠に登録されたIDは `ActiveItemId` で取得する。
 
 | ベルト種別 | 対象カテゴリ | 操作 | 発動 |
 |-----------|-------------|------|------|
-| アイテムベルト | Consumable | 十字キー左右 / ホイール | 使用ボタン → 即座に効果適用 |
+| アイテムベルト | Consumable | 1・2／十字キー左右 | R／ゲームパッド右側ボタンで使用モーションを開始 |
 | 魔法ベルト | PlayerMagic | 十字キー上下 / 別バインド | 魔法ボタン → MP消費して発動 |
 
 ```
@@ -79,27 +67,21 @@ public class BeltShortcut<T> where T : ItemData
 ```
 
 ## インタフェース
-```csharp
-public class InventoryManager
-{
-    bool Add(string itemId, int count = 1);
-    bool Remove(string itemId, int count = 1);
-    int GetCount(string itemId);
-    bool Has(string itemId);
-    List<InventorySlot> GetByCategory(ItemCategory category);
-    void UseConsumable(string itemId, int targetHash);
-    bool CanSell(string itemId);        // 装備品, KeyItem, Flavor, Magic → false
-    bool CanStack(string itemId);       // 装備・魔法 → false
-    string GetFlavorText(string itemId); // Flavorアイテムのテキスト取得
-}
-```
+`InventoryManager.Add(itemId, category, count, maxStack)` と `Remove(itemId, count)` は実際に増減した個数を返す。カテゴリ別の一覧は `GetByCategory(category)`、ベルト登録・表示・使用で参照する消耗品の合計は `GetConsumableCount(itemId)` を使う。[所持品の実装](../../Assets/MyAsset/Core/Inventory/InventoryManager.cs)
 
 ## 消耗品使用
-```
-アイテムベルト or InventoryUI → UseConsumable(itemId, playerHash)
-    → ConsumableData.Effect 適用（HP回復、バフ等）
-    → Remove(itemId, 1)
-```
+拾ったアイテムは所持品に加わる。ベルトから使うと選択中のアイテムと使用者を確定し、アイテム固有のモーションを準備・効果発揮・後隙の順で再生する。所持数とMPは開始時と効果発揮時に確認し、効果発揮時に消費を確定してから回復や3D攻撃判定とエフェクトを出す。発揮前に中断した場合や、その時点で所持数・MPが足りなくなっていた場合は、所持数とMPを維持する。攻撃アイテムは判定を出した時点で消費が確定する。
+
+アイテム定義の `Consume On Use` と `Mp Cost` は個別に設定できる。所持はどの設定でも必要で、消費するMPはベルトに表示する。`Mp Cost` の初期値は0。
+
+| Consume On Use | Mp Cost | 1回の使用で消費するもの |
+|---|---|---|
+| オン | 0 | アイテム1個 |
+| オフ | 正の値 | 設定したMP |
+| オン | 正の値 | アイテム1個と設定したMP |
+| オフ | 0 | なし |
+
+効果値は `基礎値 + 使用者の有効能力値 × 係数` を四捨五入して求める。係数が0なら固定値になる。HP回復は最大HPまで、攻撃は既存の属性防御や攻撃側の判定設定に従う。[アイテム定義](../../Assets/MyAsset/Core/Inventory/ConsumableDefinition.cs)・[効果発揮の処理](../../Assets/MyAsset/Runtime/Combat/GameActionRuntime.Consumables3D.cs)
 
 ## 魔法使用
 ```
@@ -113,7 +95,7 @@ public class InventoryManager
 |--------|------|-----------|--------|
 | アイテム追加・削除 | 所持数の増減 | EditMode | High |
 | カテゴリ別取得 | 装備/消耗品/素材/鍵の分類 | EditMode | High |
-| 消耗品使用 | 効果適用+在庫減少 | EditMode | High |
+| 消耗品使用 | モーション中の回復・攻撃判定、在庫とMPの確定 | PlayMode | High |
 | アイテムベルト | 消耗品ベルトショートカット（可変枠、回転UI） | PlayMode | High |
 | 魔法ベルト | プレイヤー魔法ベルトショートカット（可変枠、回転UI） | PlayMode | High |
 | フレーバーテキスト閲覧 | Flavorアイテムのテキスト表示UI | PlayMode | Low |
@@ -121,6 +103,6 @@ public class InventoryManager
 | 所持上限 | カテゴリ別の上限チェック | EditMode | Low |
 
 ## 設計メモ
-- アイテムIDはstring（ScriptableObjectのnameと一致）
-- 所持上限は消耗品99個、装備品は各種10個程度（バランスで調整）
+- 3D消耗品のIDは整数で、同じIDを所持品・ベルト・アイテム定義で使う。
+- 3D消耗品は1枠あたりの最大数を定義で指定する。所持品の枠数上限は99枠。
 - ISaveable実装で永続化

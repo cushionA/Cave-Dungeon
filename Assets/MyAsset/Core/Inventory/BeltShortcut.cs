@@ -5,7 +5,7 @@ namespace Game.Core
     /// </summary>
     public class BeltShortcut
     {
-        private const int k_EmptySlot = -1;
+        internal const int k_EmptySlot = -1;
 
         private int[] _slots;
         private int _activeIndex;
@@ -13,6 +13,10 @@ namespace Game.Core
         public int SlotCount => _slots.Length;
         public int ActiveIndex => _activeIndex;
         public int ActiveItemId => _slots[_activeIndex];
+
+        internal int GetItemId(int slotIndex) => _slots[slotIndex];
+
+        internal void Select(int slotIndex) => _activeIndex = slotIndex;
 
         public BeltShortcut(int slotCount)
         {

@@ -22,6 +22,13 @@ namespace Game.Core
         public int ActiveSlotIndex => _activeSlotIndex;
         public int InitOrder => k_InitOrder;
 
+        /// <summary>最後に復元されたデータ。保存・スロット選択・ディスク読み込みだけでは変わらない。</summary>
+        public SaveSlotData LastLoadedSlot { get; private set; }
+        public ulong LoadRevision { get; private set; }
+
+        /// <summary>登録済みのデータをすべて復元し、アクティブスロットを確定した後に通知する。</summary>
+        public event Action<int> Loaded;
+
         public SaveManager()
         {
             _slots = new SaveSlotData[k_MaxSlots];
@@ -73,6 +80,14 @@ namespace Game.Core
         /// ディスク永続化が必要な呼び出し側は、返却された SaveSlotData を SaveDataStore に渡す。</summary>
         public SaveSlotData Save(int slotIndex)
         {
+            SaveSlotData slotData = CaptureSlot(slotIndex);
+            if (slotData != null) { _slots[slotIndex] = slotData; }
+            return slotData;
+        }
+
+        /// <summary>スロットを更新せずに状態を取得する。次周用では周回ごとの項目を除く。</summary>
+        internal SaveSlotData CaptureSlot(int slotIndex, bool forNextPlaythrough = false)
+        {
             if (slotIndex < 0 || slotIndex >= k_MaxSlots)
             {
                 return null;
@@ -83,10 +98,10 @@ namespace Game.Core
             for (int i = 0; i < _saveables.Count; i++)
             {
                 ISaveable saveable = _saveables[i];
+                if (forNextPlaythrough && saveable is IResetOnNextPlaythrough) { continue; }
                 slotData.entries[saveable.SaveId] = saveable.Serialize();
             }
 
-            _slots[slotIndex] = slotData;
             return slotData;
         }
 
@@ -112,9 +127,16 @@ namespace Game.Core
                 {
                     saveable.Deserialize(data);
                 }
+                else if (saveable is ISaveableWithMissingEntry optional)
+                {
+                    optional.RestoreMissingEntry();
+                }
             }
 
             _activeSlotIndex = slotIndex;
+            LastLoadedSlot = slotData;
+            LoadRevision++;
+            Loaded?.Invoke(slotIndex);
             return true;
         }
 
@@ -184,6 +206,9 @@ namespace Game.Core
 
         public void Dispose()
         {
+            Loaded = null;
+            LastLoadedSlot = null;
+            LoadRevision = 0;
             _saveables.Clear();
             _registeredIds.Clear();
             for (int i = 0; i < _slots.Length; i++)

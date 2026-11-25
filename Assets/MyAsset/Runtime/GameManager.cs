@@ -65,12 +65,22 @@ namespace Game.Runtime
         public static AIObservationContext Observation => Instance != null ? Instance._observations?.Observation : null;
         public static AITargetRelations TargetRelations => Instance != null ? Instance._observations?.Targets : null;
         public static GameActionRuntime Actions => Instance != null ? Instance._actions : null;
+        public static ExpeditionAidUnlocks ExpeditionAid => Instance != null ? Instance._core.ExpeditionAid : null;
+        public static ExpeditionPlaythrough Playthrough => Instance != null ? Instance._core.Playthrough : null;
+        public static ExpeditionNextPlaythrough NextPlaythrough => Instance != null ? Instance._core.NextPlaythrough : null;
+        public static InventoryManager Inventory => Instance != null ? Instance._core.Inventory : null;
+        public static ConsumableBelt ConsumableBelt => Instance != null ? Instance._core.ConsumableBelt : null;
+        public static PlayerCombatLoadoutSelection CombatLoadout => Instance != null ? Instance._core.CombatLoadout : null;
+        public static SaveManager Saves => Instance != null ? Instance._core.Saves : null;
+        internal static LevelUpLogic PlayerLevel => Instance != null ? Instance._core.PlayerLevel : null;
+        internal static FlagManager Flags => Instance != null ? Instance._core.Flags : null;
         public static StatusEffectCatalog StatusEffectCatalog => Instance != null ? Instance._statusEffectCatalog : null;
 
         /// <summary>
         /// ProjectileManager への薄いプロキシ。型別辞書からの解決を維持しつつ後方互換 API を提供する。
         /// </summary>
         public static ProjectileManager Projectiles => GetSubManager<ProjectileManager>();
+        public static ProjectileManager3D Projectiles3D => GetSubManager<ProjectileManager3D>();
 
         /// <summary>
         /// EnemySpawnerManager への薄いプロキシ。
@@ -183,6 +193,8 @@ namespace Game.Runtime
             _actions.Tick();
             ProjectileManager projectiles = Projectiles;
             if (projectiles != null) { projectiles.SimulationTick(deltaTime); }
+            ProjectileManager3D projectiles3D = Projectiles3D;
+            if (projectiles3D != null) { projectiles3D.SimulationTick(deltaTime); }
             for (int i = 0; i < _simulationActors.Count; i++)
             {
                 if (TryGetSimulationCharacter(i, false, out BaseCharacter character)) { character.PrepareObservationTick(deltaTime); }
@@ -302,7 +314,8 @@ namespace Game.Runtime
             }
             // A partial snapshot cannot supply a relative position. Use both current positions together.
             SoACharaDataDic data = Data;
-            if (data == null || !data.TryGetVitals(ownerHash, out CharacterVitals ownerVitals)
+            if (data == null || data.Uses3DPhysics(ownerHash) || data.Uses3DPhysics(targetHash)
+                || !data.TryGetVitals(ownerHash, out CharacterVitals ownerVitals)
                 || !data.TryGetVitals(targetHash, out CharacterVitals targetVitals)
                 || Instance.ActorPhysicsScene(ownerHash) != Instance.ActorPhysicsScene(targetHash)) { return false; }
             offset = targetVitals.position - ownerVitals.position;
@@ -367,6 +380,30 @@ namespace Game.Runtime
         public int RegisterCharacter(BaseCharacter chara, CharacterInfo info)
         {
             return RegisterCharacterInternal(chara.ObjectHash, info, chara);
+        }
+
+        public int RegisterCharacter(CharacterActor3D actor, CharacterInfo info)
+        {
+            CharacterRegistration registration = info.CreateRegistration(Physics.gravity.magnitude);
+            int result = _core.RegisterCharacter(actor.ObjectHash, registration, actor);
+            WarnIfCapacityUsageHigh();
+            return result;
+        }
+
+        internal bool TryGetRegisteredActor(ManagedCharacter character, out ActorRef actor)
+        {
+            actor = default;
+            return _core != null && _core.IsInitialized
+                && ReferenceEquals(_core.Data.GetManaged(character.ObjectHash), character)
+                && _core.Actors.TryGet(character.ObjectHash, out actor);
+        }
+
+        internal void UnregisterCharacter(ManagedCharacter character, ActorRef expected)
+        {
+            if (TryGetRegisteredActor(character, out ActorRef actor) && actor == expected)
+            {
+                UnregisterCharacter(actor.Hash);
+            }
         }
 
         private int RegisterCharacterInternal(int hash, CharacterInfo info, BaseCharacter chara)

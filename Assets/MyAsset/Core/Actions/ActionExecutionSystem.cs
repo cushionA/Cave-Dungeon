@@ -275,6 +275,7 @@ namespace Game.Core
                     instanceId = instanceId, groupId = groupId,
                     ownerHash = request.ownerHash, ownerRef = request.ownerRef, definitionId = definition.id,
                     targetHash = request.targetHash, targetRef = request.targetRef, direction = request.direction,
+                    selectedTargets = request.selectedTargets,
                     targetPosition = request.targetPosition, speedMultiplier = request.speedMultiplier == 0f ? 1f : request.speedMultiplier,
                     chargeMultiplier = request.chargeMultiplier,
                     forced = request.forced, sourceInstanceId = request.sourceInstanceId, definition = definition,

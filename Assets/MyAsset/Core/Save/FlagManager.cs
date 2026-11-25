@@ -21,7 +21,7 @@ namespace Game.Core
     /// マップローカル: イベント再生済み、宝箱開封等（mapId単位で切替）。
     /// ISaveable対応で永続化可能。
     /// </summary>
-    public class FlagManager : ISaveable
+    public class FlagManager : ISaveableWithMissingEntry
     {
         private readonly Dictionary<string, bool> _globalFlags;
         private readonly Dictionary<string, Dictionary<string, bool>> _mapLocalFlags;
@@ -109,6 +109,13 @@ namespace Game.Core
         // ===== ISaveable =====
 
         public string SaveId => "FlagManager";
+
+        void ISaveableWithMissingEntry.RestoreMissingEntry()
+        {
+            _globalFlags.Clear();
+            _mapLocalFlags.Clear();
+            _currentMapId = null;
+        }
 
         object ISaveable.Serialize()
         {

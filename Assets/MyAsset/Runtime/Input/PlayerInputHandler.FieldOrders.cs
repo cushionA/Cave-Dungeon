@@ -102,7 +102,9 @@ namespace Game.Runtime
 
         private void OnApplicationFocus(bool focused)
         {
-            if (!focused) { _fieldOrderPressed = false; }
+            if (focused) { return; }
+            _fieldOrderPressed = false;
+            CancelMultiLock();
         }
 
         private void CancelFieldOrder(InputAction.CallbackContext context) => _fieldOrderPressed = false;
@@ -152,7 +154,7 @@ namespace Game.Runtime
         {
             target = default;
             position = null;
-            Camera camera = _playerInput.camera != null ? _playerInput.camera : Camera.main;
+            Camera camera = GameplayCamera;
             if (camera == null || _orderBody == null) { return false; }
 
             Vector2 origin = _orderBody.bounds.center;

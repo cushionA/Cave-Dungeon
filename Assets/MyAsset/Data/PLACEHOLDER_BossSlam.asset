@@ -97,7 +97,7 @@ MonoBehaviour:
   isParriable: 0
   guardDamage: 30
   armorBreakValue: 30
-  feature: 0
+  feature: 2048
   attackElement: 2
   isAutoChain: 0
   isChainEndPoint: 0

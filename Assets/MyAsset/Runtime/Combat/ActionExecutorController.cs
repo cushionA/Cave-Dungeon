@@ -110,6 +110,15 @@ namespace Game.Runtime
 
         public bool ExecuteAttack(AttackInfo definition, int targetHash, float chargeMultiplier,
             ActionVariant variant, out long instanceId, out long groupId)
+            => ExecuteAttack(definition, targetHash, null, chargeMultiplier, variant, out instanceId, out groupId);
+
+        public bool ExecuteMultiLock(AttackInfo definition, IReadOnlyList<ActorRef> targets, float chargeMultiplier,
+            ActionVariant variant, out long instanceId, out long groupId)
+            => ExecuteAttack(definition, 0, targets ?? Array.Empty<ActorRef>(), chargeMultiplier, variant,
+                out instanceId, out groupId);
+
+        private bool ExecuteAttack(AttackInfo definition, int targetHash, IReadOnlyList<ActorRef> targets,
+            float chargeMultiplier, ActionVariant variant, out long instanceId, out long groupId)
         {
             instanceId = groupId = 0;
             if (GameManager.Actions == null || !GameManager.IsCharacterValid(_ownerHash))
@@ -123,8 +132,12 @@ namespace Game.Runtime
                 return false;
             }
             long replaceGroupId = GameManager.Actions.Execution.IsGroupActive(_actionGroupId) ? _actionGroupId : 0;
-            bool accepted = GameManager.Actions.Execute(_ownerHash, definition, targetHash, FacingDirection(),
-                chargeMultiplier, variant, out instanceId, out groupId, replaceGroupId);
+            Vector2 direction = FacingDirection();
+            bool accepted = targets == null
+                ? GameManager.Actions.Execute(_ownerHash, definition, targetHash, direction,
+                    chargeMultiplier, variant, out instanceId, out groupId, replaceGroupId)
+                : GameManager.Actions.ExecuteMultiLock(_ownerHash, definition, targets, direction,
+                    chargeMultiplier, variant, out instanceId, out groupId, replaceGroupId);
             LastDispatchStatus = accepted ? ActionDispatchStatus.Accepted : ActionDispatchStatus.Rejected;
             if (accepted) { TrackAcceptedGroup(groupId); }
             return accepted;

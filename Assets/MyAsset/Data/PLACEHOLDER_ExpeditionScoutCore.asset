@@ -1,0 +1,124 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5bbbcdbcb45747f8b5731d8c7c656d75, type: 3}
+  m_Name: PLACEHOLDER_ExpeditionScoutCore
+  m_EditorClassIdentifier: Game.Core::Game.Core.EquipmentDefinition
+  _slot: 2
+  _weight: 0
+  _grantedFlags: 0
+  _statModifiers:
+    attributes:
+      str: 0
+      dex: 0
+      intel: 0
+      vit: 0
+      mnd: 0
+      end: 0
+    attackBonus:
+      slash: 0
+      strike: 0
+      pierce: 0
+      fire: 0
+      thunder: 0
+      light: 0
+      dark: 0
+    defenseBonus:
+      slash: 0
+      strike: 0
+      pierce: 0
+      fire: 0
+      thunder: 0
+      light: 0
+      dark: 0
+    bonusHp: 0
+    bonusMp: 0
+    bonusStamina: 0
+    bonusArmor: 0
+    strengthScaling: 0
+    dexterityScaling: 0
+    intelligenceScaling: 0
+    overridesGuard: 0
+    guardStats:
+      slashCut: 0
+      strikeCut: 0
+      pierceCut: 0
+      fireCut: 0
+      thunderCut: 0
+      lightCut: 0
+      darkCut: 0
+      guardStrength: 0
+      statusCut: 0
+      guardDirection: 0
+    statusDefense:
+      commonReduction: 0
+      thresholdMultiplierBonus: 0
+      poison:
+        accumulationReduction: 0
+        threshold: 0
+        immune: 0
+      burn:
+        accumulationReduction: 0
+        threshold: 0
+        immune: 0
+      bleed:
+        accumulationReduction: 0
+        threshold: 0
+        immune: 0
+      stun:
+        accumulationReduction: 0
+        threshold: 0
+        immune: 0
+      freeze:
+        accumulationReduction: 0
+        threshold: 0
+        immune: 0
+      paralyze:
+        accumulationReduction: 0
+        threshold: 0
+        immune: 0
+      slow:
+        accumulationReduction: 0
+        threshold: 0
+        immune: 0
+      blind:
+        accumulationReduction: 0
+        threshold: 0
+        immune: 0
+      silence:
+        accumulationReduction: 0
+        threshold: 0
+        immune: 0
+      weakness:
+        accumulationReduction: 0
+        threshold: 0
+        immune: 0
+      curse:
+        accumulationReduction: 0
+        threshold: 0
+        immune: 0
+      confusion:
+        accumulationReduction: 0
+        threshold: 0
+        immune: 0
+      attackUp:
+        accumulationReduction: 0
+        threshold: 0
+        immune: 0
+      defenseUp:
+        accumulationReduction: 0
+        threshold: 0
+        immune: 0
+      speedUp:
+        accumulationReduction: 0
+        threshold: 0
+        immune: 0
+  _onHitStatusEffects: []

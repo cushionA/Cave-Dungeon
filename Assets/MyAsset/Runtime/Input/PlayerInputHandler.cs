@@ -90,6 +90,7 @@ namespace Game.Runtime
         public void SetOverrideInput(MovementInfo input)
         {
             _fieldOrderPressed = false;
+            CancelMultiLock();
             _overrideActive = true;
             _overrideInput = input;
         }
@@ -108,6 +109,7 @@ namespace Game.Runtime
         /// </summary>
         public void ConsumeAttackInput()
         {
+            if (_multiLockReleasePending) { CancelMultiLock(); }
             _attackBuffer = 0f;
             _bufferedChargeMultiplier = 1f;
             _currentInput.attackInput = null;
@@ -160,11 +162,13 @@ namespace Game.Runtime
                 _sprintAction = _playerInput.actions[k_SprintActionName];
             }
             BindFieldOrder();
+            BindMultiLock();
             InputSystem.onAfterUpdate += OnAfterInputUpdate;
         }
 
         private void OnDisable()
         {
+            UnbindMultiLock();
             UnbindFieldOrder();
             InputSystem.onAfterUpdate -= OnAfterInputUpdate;
             _chargeHandler?.CancelCharge();
@@ -212,14 +216,9 @@ namespace Game.Runtime
         {
             if (!isActiveAndEnabled) { return; }
             AdvanceSampling(Time.time);
-            if (value.isPressed)
+            if (value.isPressed && !HasMultiLockSkill())
             {
-                _chargeHandler.CancelCharge();
-                _isHoldingButton = false;
-                _attackBuffer = _inputBufferDuration;
-                _bufferedAttackButtonId = AttackButtonId.Skill;
-                _bufferedIsCharging = false;
-                _bufferedChargeMultiplier = 1f;
+                BufferAttack(AttackButtonId.Skill);
             }
         }
 
@@ -347,6 +346,7 @@ namespace Game.Runtime
 
         private void PublishInput()
         {
+            ValidateMultiLock();
 
             // 攻撃入力変換
             AttackInputType? attackInput = null;
@@ -384,24 +384,32 @@ namespace Game.Runtime
         private void PollAttackButtons()
         {
             bool attackHeld = _attackAction != null && _attackAction.IsPressed();
-            bool shortLightTap = !attackHeld && !_attackHeldLastFrame && _attackAction != null
-                && _attackAction.WasPressedThisFrame() && _attackAction.WasReleasedThisFrame();
-            if (shortLightTap)
+            if (_suppressLightAttack)
             {
-                ProcessLightButton(true);
-                ProcessLightButton(false);
+                _suppressLightAttack = attackHeld;
+                _attackHeldLastFrame = false;
             }
-            else { ProcessLightButton(attackHeld); }
+            else
+            {
+                bool shortLightTap = !attackHeld && !_attackHeldLastFrame && _attackAction != null
+                    && _attackAction.WasPressedThisFrame() && _attackAction.WasReleasedThisFrame();
+                if (shortLightTap) { ProcessLightButton(true); }
+                ProcessLightButton(attackHeld);
+            }
 
             bool heavyHeld = _heavyAttackAction != null && _heavyAttackAction.IsPressed();
-            bool shortHeavyTap = !heavyHeld && !_heavyHeldLastFrame && _heavyAttackAction != null
-                && _heavyAttackAction.WasPressedThisFrame() && _heavyAttackAction.WasReleasedThisFrame();
-            if (shortHeavyTap)
+            if (_suppressHeavyAttack)
             {
-                ProcessHeavyButton(true);
-                ProcessHeavyButton(false);
+                _suppressHeavyAttack = heavyHeld;
+                _heavyHeldLastFrame = false;
             }
-            else { ProcessHeavyButton(heavyHeld); }
+            else
+            {
+                bool shortHeavyTap = !heavyHeld && !_heavyHeldLastFrame && _heavyAttackAction != null
+                    && _heavyAttackAction.WasPressedThisFrame() && _heavyAttackAction.WasReleasedThisFrame();
+                if (shortHeavyTap) { ProcessHeavyButton(true); }
+                ProcessHeavyButton(heavyHeld);
+            }
         }
 
         private void ProcessLightButton(bool attackHeld)

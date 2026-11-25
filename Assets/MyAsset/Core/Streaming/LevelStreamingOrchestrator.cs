@@ -72,7 +72,7 @@ namespace Game.Core
             return true;
         }
 
-        /// <summary>エリアシーンのアンロードを要求する。アクティブシーンはアンロード不可。</summary>
+        /// <summary>エリアシーンのアンロードを要求する。永続シーンとアクティブシーンは維持する。</summary>
         public bool RequestAreaUnload(string sceneName)
         {
             if (!_logic.RequestUnload(sceneName))
@@ -123,12 +123,21 @@ namespace Game.Core
             OnAreaLoadCompleted?.Invoke(sceneName);
         }
 
+        /// <summary>失敗したシーンの再要求と、後続のロードを許可する。</summary>
+        public void NotifyLoadFailed(string sceneName)
+        {
+            if (_pendingLoads.Remove(sceneName)) { _logic.FailLoad(); }
+        }
+
         /// <summary>シーンアンロード完了を通知する。</summary>
         public void NotifyUnloadComplete(string sceneName)
         {
             _logic.CompleteUnload(sceneName);
             OnAreaUnloadCompleted?.Invoke(sceneName);
         }
+
+        /// <summary>別のシーン遷移がアンロードしたエリアをストリーミング状態から取り除く。</summary>
+        public void ForgetUnloadedArea(string sceneName) => _logic.ForgetUnloadedArea(sceneName);
 
         /// <summary>指定シーンがロード済みか。</summary>
         public bool IsLoaded(string sceneName)

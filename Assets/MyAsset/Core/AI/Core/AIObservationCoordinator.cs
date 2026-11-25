@@ -61,6 +61,7 @@ namespace Game.Core
             for (int i = 0; i < _hashes.Count; i++)
             {
                 int hash = _hashes[i];
+                if (_data.Uses3DPhysics(hash)) { continue; }
                 if (!_actors.TryGet(hash, out ActorRef actor)) { RemoveHash(hash); continue; }
                 ref readonly CharacterVitals vitals = ref _data.GetVitals(hash);
                 ref readonly CharacterFlags flags = ref _data.GetFlags(hash);
@@ -114,14 +115,14 @@ namespace Game.Core
         private bool Resolve(ActorRef reference, int hash, out ActorRef current)
         {
             current = reference;
-            if (reference.IsValid) { return _actors.IsCurrent(reference); }
-            return _actors.TryGet(hash, out current);
+            bool resolved = reference.IsValid ? _actors.IsCurrent(reference) : _actors.TryGet(hash, out current);
+            return resolved && !_data.Uses3DPhysics(current.Hash);
         }
 
         private void RegisterHash(int hash)
         {
             RemoveHash(hash);
-            if (_actors.TryGet(hash, out ActorRef actor)) { RegisterActor(actor); }
+            if (!_data.Uses3DPhysics(hash) && _actors.TryGet(hash, out ActorRef actor)) { RegisterActor(actor); }
         }
 
         private void RegisterActor(ActorRef actor)

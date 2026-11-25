@@ -22,7 +22,7 @@ namespace Game.Core
         public static bool CanAffect(Projectile projectile, in MagicDefinition magic,
             SoACharaDataDic data, ActorRegistry actors, ActorRef target)
         {
-            if (projectile == null || data == null) { return false; }
+            if (projectile == null || data == null || data.Uses3DPhysics(target.Hash)) { return false; }
             bool captured = magic.attackContext.IsCaptured;
             if (captured || projectile.CasterRef.IsValid || actors != null)
             {
@@ -31,7 +31,8 @@ namespace Game.Core
                 return CombatDataHelper.CanAffectTarget(magic.attackContext, target, data, actors);
             }
             // Hash-only callers still use the same relation rules, with current source data as their input.
-            if (!data.TryGetValue(projectile.CasterHash, out int _) || !data.TryGetValue(target.Hash, out int _)) { return false; }
+            if (!data.TryGetValue(projectile.CasterHash, out int _) || data.Uses3DPhysics(projectile.CasterHash)
+                || !data.TryGetValue(target.Hash, out int _)) { return false; }
             CharacterFlags targetFlags = data.GetFlags(target.Hash);
             return !targetFlags.IsVanished && AttackTargetRules.CanAffect(data.GetFlags(projectile.CasterHash).Belong,
                 targetFlags.Belong, projectile.CasterHash == target.Hash, magic.targetPolicy.Resolve(magic.magicType));

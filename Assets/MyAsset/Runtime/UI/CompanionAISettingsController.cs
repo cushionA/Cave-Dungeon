@@ -37,6 +37,10 @@ namespace Game.Runtime
         [Tooltip("Cancel/MenuSave/MenuSaveAsPreset を購読する InputActionAsset。未設定なら入力購読をスキップし、マウス/クリックのみで動作する。")]
         [SerializeField] private InputActionAsset _inputActionAsset;
 
+        [SerializeField] private CompanionController3D companion3D;
+        private CharacterActor3D _companionActor3D;
+        private ActorRef _editedActor3D;
+
         // 純ロジック
         private CompanionAISettingsLogic _logic;
         private ModePresetRegistry _modeRegistry;
@@ -165,7 +169,13 @@ namespace Game.Runtime
             QueryElements();
             RegisterEventHandlers();
             SetupInputActions();
+            LoadCompanionTactic();
             RefreshAll();
+        }
+
+        private void Start()
+        {
+            if (_root != null && !_editedActor3D.IsValid && LoadCompanionTactic()) { RefreshAll(); }
         }
 
         private void OnDisable()
@@ -889,12 +899,16 @@ namespace Game.Runtime
 
         private void OnSaveClicked()
         {
+            bool appliesToCurrentTactic = string.IsNullOrEmpty(_logic.EditingConfigId);
+            if (appliesToCurrentTactic && !CanApplyCurrentTactic()) { return; }
+
             bool ok = _logic.SaveBufferToEditingPreset();
             if (!ok)
             {
                 ShowToast("保存に失敗しました", ToastKind.Error);
                 return;
             }
+            if (appliesToCurrentTactic) { ApplyCompanionTactic(); }
             RefreshAll();
             FlashSaveButton();
             ShowToast("保存しました");
@@ -1110,9 +1124,11 @@ namespace Game.Runtime
             VisualElement buttons = BuildButtonRow();
             buttons.Add(BuildDialogButton("現在の戦術に適用", "primary-button", () =>
             {
+                if (!CanApplyCurrentTactic()) { return; }
                 // 現在の戦術にこのプリセットの内容をコピー
-                _logic.SwitchEditingTarget(configId, force: true);
+                if (_logic.SwitchEditingTarget(configId, force: true) != CompanionAISettingsLogic.SwitchResult.Succeeded) { return; }
                 _logic.ApplyBufferToCurrentTactic();
+                ApplyCompanionTactic();
                 RefreshAll();
                 ShowToast($"「{preset.Value.configName}」を現在の戦術に適用しました");
             }));
@@ -1398,6 +1414,56 @@ namespace Game.Runtime
         // =========================================================================
         // Public API (外部からの初期化・テスト用)
         // =========================================================================
+
+        /// <summary>指定した3Dの仲間の戦術を開く。</summary>
+        public void OpenFor(CompanionController3D companion)
+        {
+            if (!TryReadCompanion(companion, out CharacterActor3D actor)) { return; }
+            if (isActiveAndEnabled && _logic.IsDirty)
+            {
+                if (actor.Actor == _editedActor3D) { return; }
+                ShowUnsavedDiscardDialog(() => OpenCompanionTactic(companion));
+                return;
+            }
+            OpenCompanionTactic(companion);
+        }
+
+        private void OpenCompanionTactic(CompanionController3D companion)
+        {
+            if (!TryReadCompanion(companion, out _)) { return; }
+            companion3D = companion;
+            if (!gameObject.activeSelf) { gameObject.SetActive(true); }
+            else if (isActiveAndEnabled && LoadCompanionTactic()) { RefreshAll(); }
+        }
+
+        private bool LoadCompanionTactic()
+        {
+            _editedActor3D = default;
+            if (!TryReadCompanion(companion3D, out _companionActor3D)) { return false; }
+            _editedActor3D = _companionActor3D.Actor;
+            _logic.LoadCurrentTactic(companion3D.GetAIConfig());
+            return true;
+        }
+
+        private static bool TryReadCompanion(CompanionController3D companion, out CharacterActor3D actor)
+        {
+            actor = null;
+            return companion != null && companion.isActiveAndEnabled && companion.TryGetComponent(out actor) && actor.IsAlive;
+        }
+
+        private bool CanApplyCurrentTactic()
+        {
+            if (ReferenceEquals(companion3D, null)) { return true; }
+            if (companion3D != null && companion3D.isActiveAndEnabled && _companionActor3D != null
+                && _editedActor3D.IsValid && _companionActor3D.Actor == _editedActor3D && _companionActor3D.IsAlive) { return true; }
+            ShowToast("設定を反映できる仲間がいません", ToastKind.Error);
+            return false;
+        }
+
+        private void ApplyCompanionTactic()
+        {
+            if (companion3D != null) { companion3D.SetAIConfig(_logic.CurrentTactic); }
+        }
 
         /// <summary>
         /// 外部で作成したレジストリを注入する。Awake前に呼ぶ必要がある。

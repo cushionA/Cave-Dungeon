@@ -18,14 +18,19 @@ namespace Game.Runtime
             public readonly AttackEquipmentSource equipmentSource;
             public readonly AttackContactType contactType;
             public readonly float spreadAngle;
+            public readonly float multiLockRange;
+            public readonly AttackProfile3D attack3D;
             private readonly AttackMotionData _attack;
             private readonly MagicDefinition _magic;
+
+            public Element AttackElement => _attack.attackElement;
 
             public Entry(ActionDefinitionData definition, MotionPresentationData presentation,
                 AttackExecutionSettings attackSettings = default, AttackMotionData attack = default,
                 MagicDefinition magic = default, bool isAttack = false, bool projectile = false,
                 ActionVariant variant = ActionVariant.Default, AttackEquipmentSource equipmentSource = default,
-                AttackContactType contactType = default, float spreadAngle = 0f)
+                AttackContactType contactType = default, float spreadAngle = 0f, float multiLockRange = 0f,
+                AttackProfile3D attack3D = default)
             {
                 this.definition = new ActionDefinitionSnapshot(definition);
                 this.presentation = presentation;
@@ -36,6 +41,8 @@ namespace Game.Runtime
                 this.equipmentSource = equipmentSource;
                 this.contactType = contactType;
                 this.spreadAngle = spreadAngle;
+                this.multiLockRange = multiLockRange;
+                this.attack3D = attack3D;
                 attack.equipmentStatusEffects = CaptureEquipmentEffects(attack.equipmentStatusEffects);
                 magic.equipmentStatusEffects = CaptureEquipmentEffects(magic.equipmentStatusEffects);
                 _attack = attack;
@@ -44,7 +51,7 @@ namespace Game.Runtime
 
             public Entry WithDefinition(ActionDefinitionData data, ActionVariant variant = ActionVariant.Default)
                 => new Entry(data, presentation, attackSettings, _attack, _magic, isAttack, projectile,
-                    variant, equipmentSource, contactType, spreadAngle);
+                    variant, equipmentSource, contactType, spreadAngle, multiLockRange, attack3D);
 
             // packetは実行ごとに書換える。カタログ内部の配列は渡さない。
             public AttackMotionData CreateAttack()
@@ -228,6 +235,7 @@ namespace Game.Runtime
                 statusEffects = hit.statusEffects, equipmentSource = attack.equipmentSource,
                 healAmount = attack.healAmount, bulletCount = Math.Max(1, attack.projectileInfo.projectileCount),
                 projectilePrefab = attack.projectileInfo.projectilePrefab,
+                groundImpactRange = attack.projectileInfo.groundImpactRange,
                 bulletProfile = new BulletProfile
                 {
                     moveType = attack.projectileInfo.trajectory, speed = attack.projectileInfo.speed,
@@ -238,7 +246,7 @@ namespace Game.Runtime
             };
             return new Entry(data, presentation, AttackExecutionSettings.Capture(attack), hit, magic,
                 true, projectile, equipmentSource: attack.equipmentSource, contactType: attack.contactType,
-                spreadAngle: attack.projectileInfo.spreadAngle);
+                spreadAngle: attack.projectileInfo.spreadAngle, multiLockRange: attack.multiLockRange, attack3D: attack.attack3D);
         }
 
         public int Register(ActionDefinition asset, ActionVariant variant)
@@ -333,8 +341,23 @@ namespace Game.Runtime
                 throw new ArgumentException("Invalid attack timing, damage or movement settings.", nameof(attack));
             }
             ProjectileInfo projectile = attack.projectileInfo;
+            ValidateAttack3D(attack.attack3D, projectile, attack.magicType);
+            HitRepeatSettings repeat = attack.repeatHits;
+            if (repeat.maxHitsPerTarget < 0 || !NonNegative(repeat.interval)
+                || (repeat.maxHitsPerTarget > 1 && (repeat.interval <= 0f || projectile.hasProjectile)))
+            {
+                throw new ArgumentException("Repeated hits require a contact or ground area attack with a positive interval.", nameof(attack));
+            }
+            if (!NonNegative(attack.multiLockRange)
+                || (attack.multiLockRange > 0f && MultiLockTargeting.GetRange(attack) == 0f))
+            {
+                throw new ArgumentException("Multi-lock requires hostile targets and a contact attack or directional projectile.", nameof(attack));
+            }
             if (projectile.hasProjectile && (!NonNegative(projectile.speed) || !NonNegative(projectile.lifetime)
                 || !NonNegative(projectile.aoeRadius) || !NonNegative(projectile.homingStrength)
+                || !NonNegative(projectile.groundImpactRange)
+                || (projectile.groundImpactRange > 0f && (projectile.speed <= 0f
+                    || projectile.aoeRadius <= 0f || projectile.projectileCount > 1))
                 || !NonNegative(projectile.spreadAngle) || projectile.spreadAngle > 360f
                 || projectile.pierceCount < 0 || projectile.pierceCount == int.MaxValue || projectile.projectileCount < 0
                 || !Enum.IsDefined(typeof(BulletMoveType), projectile.trajectory)))
@@ -343,7 +366,33 @@ namespace Game.Runtime
             }
         }
 
+        private static void ValidateAttack3D(in AttackProfile3D attack, in ProjectileInfo projectile, MagicType type)
+        {
+            if (attack.shape == AttackShape3D.None) { return; }
+            bool finiteCenter = Finite(attack.localCenter.x) && Finite(attack.localCenter.y)
+                && Finite(attack.localCenter.z);
+            bool straight = projectile.trajectory == BulletMoveType.Straight;
+            bool directProjectile = projectile.aoeRadius == 0f && projectile.groundImpactRange == 0f
+                && (straight || projectile.trajectory == BulletMoveType.Homing);
+            bool groundProjectile = straight && Positive(projectile.aoeRadius) && Positive(projectile.groundImpactRange);
+            bool valid = attack.shape switch
+            {
+                AttackShape3D.Melee => finiteCenter && Positive(attack.halfExtents.x)
+                    && Positive(attack.halfExtents.y) && Positive(attack.halfExtents.z),
+                AttackShape3D.GroundArea => Positive(attack.radius),
+                AttackShape3D.Projectile => finiteCenter && Positive(attack.projectileRadius)
+                    && projectile.hasProjectile && Positive(projectile.speed) && Positive(projectile.lifetime)
+                    && projectile.pierceCount == 0 && (directProjectile || groundProjectile),
+                _ => false,
+            };
+            if (!valid || type != MagicType.Attack)
+            {
+                throw new ArgumentException("3D attacks require a valid damage shape.", nameof(attack));
+            }
+        }
+
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
         private static bool NonNegative(float value) => value >= 0f && !float.IsInfinity(value);
+        private static bool Positive(float value) => value > 0f && !float.IsInfinity(value);
     }
 }

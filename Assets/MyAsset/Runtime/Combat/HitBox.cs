@@ -30,6 +30,11 @@ namespace Game.Runtime
             _triggerCollider.enabled = false;
         }
 
+        private void OnDisable()
+        {
+            if (_isActive && _currentMotion.repeatHits.IsEnabled) { Deactivate(); }
+        }
+
         /// <summary>
         /// ヒットボックスを有効化する。HitboxLogicを初期化してヒット管理開始。
         /// </summary>
@@ -57,22 +62,31 @@ namespace Game.Runtime
             _currentMotion = motion;
             _ownerHash = ownerHash;
             _activationVersion++;
-            _isActive = CombatDataHelper.TryCaptureAttack(ownerHash, motion,
+            _attackContext = default;
+            _isActive = (!motion.repeatHits.IsEnabled || isActiveAndEnabled)
+                && motion.selectedTargets?.Count != 0 && CombatDataHelper.TryCaptureAttack(ownerHash, motion,
                 GameManager.Data, GameManager.Actors, out _attackContext);
 
             if (_logic != null)
             {
-                _logic.Reset(motion.maxHitCount);
+                _logic.Reset(motion.maxHitCount, motion.repeatHits);
             }
             else
             {
-                _logic = new HitboxLogic(motion.maxHitCount);
+                _logic = new HitboxLogic(motion.maxHitCount, motion.repeatHits);
             }
 
             _triggerCollider.enabled = _isActive;
         }
 
-        private void OnTriggerEnter2D(Collider2D other)
+        private void OnTriggerEnter2D(Collider2D other) => TryHit(other);
+
+        private void OnTriggerStay2D(Collider2D other)
+        {
+            if (_currentMotion.repeatHits.IsEnabled) { TryHit(other); }
+        }
+
+        private void TryHit(Collider2D other)
         {
             if (!_isActive || _logic == null)
             {
@@ -87,7 +101,8 @@ namespace Game.Runtime
             {
                 found = GameManager.Actors.TryGet(other.attachedRigidbody.gameObject.GetHashCode(), out target);
             }
-            if (!found || !CombatDataHelper.CanAffectTarget(_attackContext, target,
+            if (!found || GameManager.Data.Uses3DPhysics(target.Hash) || _currentMotion.selectedTargets?.Contains(target) == false
+                || !CombatDataHelper.CanAffectTarget(_attackContext, target,
                 GameManager.Data, GameManager.Actors)) { return; }
             int targetHash = target.Hash;
 
@@ -105,7 +120,7 @@ namespace Game.Runtime
             }
 
             // HitboxLogicでヒット登録（重複防止+上限管理）
-            if (!_logic.TryRegisterHit(target))
+            if (!_logic.TryRegisterHit(target, Time.fixedTimeAsDouble))
             {
                 return;
             }

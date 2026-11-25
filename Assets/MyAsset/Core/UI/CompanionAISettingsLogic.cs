@@ -326,9 +326,12 @@ namespace Game.Core
         /// <summary>
         /// 編集バッファを「現在の戦術」に反映する。プリセットへの書き戻しはしない。
         /// </summary>
-        public void ApplyBufferToCurrentTactic()
+        public void ApplyBufferToCurrentTactic() => LoadCurrentTactic(_editingBuffer);
+
+        /// <summary>選択した仲間の戦術を、保存済みの戦術と編集バッファへ読み込む。</summary>
+        public void LoadCurrentTactic(CompanionAIConfig config)
         {
-            _currentTactic = CloneConfig(_editingBuffer);
+            _currentTactic = CloneConfig(config);
             // 現在の戦術として保存したら、editingConfigId は null に戻す
             _currentTactic.configId = null;
             _currentTactic.configName = "現在の戦術";

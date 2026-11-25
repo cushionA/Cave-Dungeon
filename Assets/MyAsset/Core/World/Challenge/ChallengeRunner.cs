@@ -141,6 +141,18 @@ namespace Game.Core
             State = ChallengeState.Completed;
         }
 
+        /// <summary>進行中の試行を終了し、クリアとしては記録しない。</summary>
+        public bool Abort()
+        {
+            if (State != ChallengeState.Running)
+            {
+                return false;
+            }
+
+            State = ChallengeState.Failed;
+            return true;
+        }
+
         /// <summary>
         /// 現在の結果を生成して返す。ランク判定はクリアタイムベースで行う。
         /// </summary>
@@ -152,6 +164,7 @@ namespace Game.Core
             {
                 challengeId = _definition != null ? _definition.ChallengeId : "",
                 rank = rank,
+                state = State,
                 clearTime = ElapsedTime,
                 score = CalculateScore(),
                 deathCount = DeathCount,

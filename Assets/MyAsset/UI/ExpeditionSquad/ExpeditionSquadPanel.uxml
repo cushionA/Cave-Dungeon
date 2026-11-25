@@ -1,0 +1,29 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:VisualElement name="expedition-squad" class="expedition-squad">
+        <ui:Style src="project://database/Assets/MyAsset/UI/CompanionAISettings/CompanionAISettings.tokens.uss" />
+        <ui:Style src="project://database/Assets/MyAsset/UI/ExpeditionSquad/ExpeditionSquadPanel.uss" />
+        <ui:VisualElement class="expedition-squad__heading">
+            <ui:Label text="探索編成" class="expedition-squad__title" />
+            <ui:Button name="expedition-close" text="閉じる" />
+        </ui:VisualElement>
+        <ui:VisualElement name="expedition-modes" class="expedition-squad__controls">
+            <ui:Button name="expedition-sortie" text="出発前" />
+            <ui:Button name="expedition-reinforcements" text="遭遇中の増援" />
+        </ui:VisualElement>
+        <ui:VisualElement name="expedition-presets" class="expedition-squad__controls">
+            <ui:Label text="プリセット" />
+            <ui:DropdownField name="expedition-preset-slot" class="expedition-squad__slot" />
+            <ui:Button name="expedition-preset-load" text="読み込む" />
+            <ui:Button name="expedition-preset-save" text="保存" />
+        </ui:VisualElement>
+        <ui:VisualElement class="expedition-squad__totals">
+            <ui:Label name="expedition-count" class="expedition-squad__total" />
+            <ui:Label name="expedition-cost" class="expedition-squad__total" />
+        </ui:VisualElement>
+        <ui:ScrollView name="expedition-species" class="expedition-squad__species" />
+        <ui:VisualElement class="expedition-squad__footer">
+            <ui:Label name="expedition-status" class="expedition-squad__status" />
+            <ui:Button name="expedition-confirm" text="編成を確定" class="expedition-squad__confirm" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

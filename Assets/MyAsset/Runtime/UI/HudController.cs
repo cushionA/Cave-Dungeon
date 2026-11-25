@@ -12,7 +12,7 @@ namespace Game.Runtime
     /// LitMotionでバー幅をスムース補間する。
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
-    public class HudController : MonoBehaviour
+    public partial class HudController : MonoBehaviour
     {
         [Header("Animation")]
         [SerializeField] private float _barTweenDuration = 0.25f;
@@ -117,10 +117,13 @@ namespace Game.Runtime
             _playerEffects = new StatusEffectIconStrip(root.Q<VisualElement>("player-effects"));
             _companionEffects = new StatusEffectIconStrip(root.Q<VisualElement>("companion-effects"));
             _bossEffects = new StatusEffectIconStrip(root.Q<VisualElement>("boss-effects"));
+            InitializeMultiLockMarkers(root);
+            InitializeProjectileWarnings(root);
         }
 
         private void OnDisable()
         {
+            ClearMultiLockMarkers();
             CancelHandle(ref _hpHandle);
             CancelHandle(ref _hpDamageHandle);
             CancelHandle(ref _mpHandle);
@@ -129,6 +132,7 @@ namespace Game.Runtime
             CancelHandle(ref _companionMpHandle);
             CancelHandle(ref _bossHpHandle);
             ClearStatusEffects();
+            ClearProjectileWarnings();
         }
 
         private void Update()

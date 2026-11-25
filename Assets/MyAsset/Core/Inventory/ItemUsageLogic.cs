@@ -10,16 +10,7 @@ namespace Game.Core
         /// 戻り値: 使用成功か。
         /// </summary>
         public static bool TryUseConsumable(InventoryManager inventory, int itemId)
-        {
-            int currentCount = inventory.GetCount(itemId);
-            if (currentCount <= 0)
-            {
-                return false;
-            }
-
-            inventory.Remove(itemId, 1);
-            return true;
-        }
+            => inventory != null && inventory.TryRemoveConsumable(itemId);
 
         /// <summary>
         /// 魔法使用。MP消費。MP不足なら失敗。
