@@ -51,6 +51,8 @@ namespace Game.Core
         Wait,
         Flee,
         FeintCancel,
+        InteractObject,
+        FieldOrder,
     }
 
     [Serializable]
@@ -66,6 +68,14 @@ namespace Game.Core
         [FoldoutGroup("検知範囲")]
         [MinValue(0)]
         public float combatRange;
+
+        [FoldoutGroup("検知範囲")]
+        [Tooltip("護衛対象のプレイヤーを狙う敵を優先する。該当しなければ通常の最近傍を選ぶ")]
+        public bool targetsProtectedPlayer;
+
+        [FoldoutGroup("検知範囲"), MinValue(0)]
+        [Tooltip("スタン残り秒数が指定値を超える敵を優先する。0で無効。護衛条件と併用すると両方を満たす敵を優先する")]
+        public float stunMustLastBeyondSeconds;
 
         [FoldoutGroup("検知範囲")]
         [Range(0f, 1f)]
@@ -109,6 +119,10 @@ namespace Game.Core
         [EnumToggleButtons]
         public ActType actType;
 
+        [FoldoutGroup("基本"), ShowIf("@actType == ActType.FieldOrder")]
+        [Tooltip("ここを守れは発令者の観測位置を指定します")]
+        public BroadcastAction fieldOrder;
+
         [FoldoutGroup("基本")]
         [Tooltip("攻撃/魔法の永続定義ID。空の場合だけ旧attackInfoIndexを使用")]
         public string actionDefinitionId;
@@ -146,6 +160,7 @@ namespace Game.Core
     [Serializable]
     public struct TriggerJudgeData
     {
+        [Tooltip("CoolTimeReady と TargetStatusEffect は未対応です。選択すると、この行動を AI の行動ルールと既定行動から除外します。")]
         public TriggerConditionType condition;
         [MinValue(0)]
         public float value;

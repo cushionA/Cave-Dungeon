@@ -28,7 +28,7 @@ namespace Game.Core
             }
 
             s_FilterBuffer.Clear();
-            FilterCandidates(select.filter, ownerHash, candidateHashes, data, s_FilterBuffer);
+            FilterCandidates(select.EffectiveFilter, ownerHash, candidateHashes, data, s_FilterBuffer);
             if (s_FilterBuffer.Count == 0)
             {
                 return 0;
@@ -47,6 +47,7 @@ namespace Game.Core
         public static void FilterCandidates(TargetFilter filter, int ownerHash,
             List<int> candidates, SoACharaDataDic data, List<int> output)
         {
+            if (filter.RequiresObservedTargetFacts) { return; }
             for (int i = 0; i < candidates.Count; i++)
             {
                 int hash = candidates[i];
@@ -108,17 +109,7 @@ namespace Game.Core
                 if (filter.weakPoint != 0)
                 {
                     ref CombatStats combat = ref data.GetCombatStats(hash);
-                    bool hasWeakness = false;
-                    for (int e = 0; e < 7; e++)
-                    {
-                        Element elem = (Element)(1 << e);
-                        if ((filter.weakPoint & elem) != 0 && combat.defense.Get(elem) <= 0)
-                        {
-                            hasWeakness = true;
-                            break;
-                        }
-                    }
-                    if (!hasWeakness)
+                    if (!filter.MatchesWeaknesses(AIActorObservation.GetWeakPoints(combat.defense)))
                     {
                         continue;
                     }

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using Game.Core;
 using CharacterInfo = Game.Core.CharacterInfo;
@@ -13,9 +14,25 @@ namespace Game.Runtime
     public class PlayerCharacter : BaseCharacter
     {
         [SerializeField] private AttackInfo[] _lightAttacks;
+        [SerializeField] private AttackInfo _multiLockSkill;
+
+        internal readonly struct MultiLockAttack
+        {
+            public readonly AttackButtonId Button;
+            public readonly AttackInfo Definition;
+            public readonly int ComboStep;
+
+            public MultiLockAttack(AttackButtonId button, AttackInfo definition, int comboStep)
+            {
+                Button = button;
+                Definition = definition;
+                ComboStep = comboStep;
+            }
+        }
 
         private GroundMovementLogic _movementLogic;
         private PlayerInputHandler _inputHandler;
+        public PlayerInputHandler InputHandler => _inputHandler;
         private ActionExecutorController _actionExecutor;
         private CharacterCollisionController _collisionController;
         private SpriteRenderer _spriteRenderer;
@@ -107,6 +124,7 @@ namespace Game.Runtime
 
 #if UNITY_INCLUDE_TESTS
         public void SetLightAttacksForTest(AttackInfo[] attacks) { _lightAttacks = attacks; }
+        public void SetMultiLockSkillForTest(AttackInfo attack) { _multiLockSkill = attack; }
 #endif
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -143,6 +161,7 @@ namespace Game.Runtime
             _isCharging = false;
             if (_inputHandler != null)
             {
+                _inputHandler.CancelMultiLock();
                 _inputHandler.ConsumeAttackInput();
                 _inputHandler.ConsumeDodgeInput();
             }
@@ -220,11 +239,27 @@ namespace Game.Runtime
 
         private void OnDisable()
         {
+            ForgetFieldOrders();
             ResetPlayerState();
             StopObservingExecution();
         }
 
         private int MaxCombo => _lightAttacks != null ? _lightAttacks.Length : 0;
+        private bool InComboWindow => _comboStep > 0 && _comboWindowTimer > 0f && _comboStep < MaxCombo;
+
+        internal bool TryGetMultiLockAttack(AttackButtonId button, out MultiLockAttack attack)
+        {
+            int comboStep = button == AttackButtonId.Light ? (InComboWindow ? _comboStep + 1 : 1) : 0;
+            AttackInfo definition = button switch
+            {
+                AttackButtonId.Skill => _multiLockSkill,
+                AttackButtonId.Light when MaxCombo > 0 => _lightAttacks[comboStep - 1],
+                AttackButtonId.Heavy when MaxCombo > 0 => _lightAttacks[MaxCombo - 1],
+                _ => null,
+            };
+            attack = new MultiLockAttack(button, definition, comboStep);
+            return MultiLockTargeting.GetRange(definition) > 0f;
+        }
 
         public override void PrepareSimulationInput(float currentTime)
         {
@@ -531,11 +566,18 @@ namespace Game.Runtime
                 }
             }
 
+            if (wantsAttack && _inputHandler != null
+                && _inputHandler.TryGetMultiLockCast(out MultiLockAttack multiLockAttack, out IReadOnlyList<ActorRef> targets))
+            {
+                HandleMultiLockAttack(multiLockAttack, targets, isAerial, ref vitals);
+                return;
+            }
+
             bool isLightAttack = wantsAttack && input.attackInput.HasValue
                 && (input.attackInput.Value == AttackInputType.LightAttack
                     || input.attackInput.Value == AttackInputType.AerialLight
                     || input.attackInput.Value == AttackInputType.ChargeLight);
-            bool inComboWindow = _comboStep > 0 && _comboWindowTimer > 0f && _comboStep < MaxCombo;
+            bool inComboWindow = InComboWindow;
             // 入力側は次段の先行入力を保持し、占有・キャンセル時刻は実行系に判断させる。
             if (isLightAttack && executorBusy && inComboWindow)
             {
@@ -652,6 +694,31 @@ namespace Game.Runtime
                     }
                 }
             }
+        }
+
+        private void HandleMultiLockAttack(MultiLockAttack attack, IReadOnlyList<ActorRef> targets, bool isAerial,
+            ref CharacterVitals vitals)
+        {
+            ActionVariant variant = !isAerial || attack.Button == AttackButtonId.Skill ? ActionVariant.Default
+                : attack.Button == AttackButtonId.Heavy ? ActionVariant.Diving : ActionVariant.Aerial;
+            if (_actionExecutor == null
+                || !_actionExecutor.ExecuteMultiLock(attack.Definition, targets, 1f, variant,
+                    out long instanceId, out long groupId)
+                || !GameManager.IsCharacterValid(ObjectHash))
+            {
+                return;
+            }
+
+            vitals = ref GameManager.Data.GetVitals(ObjectHash);
+            _attackConsumed = true;
+            _inputHandler.ConsumeAttackInput();
+            ResetStaminaRecoveryDelay(ref vitals);
+            GameManager.Actions.TryGetAttackSettings(attack.Definition, variant, out AttackExecutionSettings settings);
+            TrackAerialExecution(settings, variant, instanceId, groupId);
+            _comboQueued = false;
+            _comboStep = attack.ComboStep;
+            _comboWindowTimer = _comboStep == 0 ? 0f : settings.InputWindow > 0f ? settings.InputWindow : 0.6f;
+            if (isAerial && attack.Button == AttackButtonId.Light && _comboStep >= MaxCombo) { _aerialComboUsed = true; }
         }
 
         private bool IsActionExecutorBusy()

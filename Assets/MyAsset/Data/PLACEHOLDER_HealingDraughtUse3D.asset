@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7822f84b6f540cd9aa0e08c53a7fb83, type: 3}
+  m_Name: PLACEHOLDER_HealingDraughtUse3D
+  m_EditorClassIdentifier: Game.Core::Game.Core.ActionDefinition
+  persistentId: 9bba15337cb696c0098f9b5c78905c97
+  motion: {fileID: 11400000, guid: 67417345898ce6041875f4a96c297740, type: 2}
+  staminaCost: 0
+  mpCost: 0
+  staminaPerSecond: 0
+  cancelAfter: -1
+  cancelPoint: -1
+  endMode: 0
+  durationMode: 0
+  duration: 0
+  resources: 29
+  priority: 10
+  actState: 7
+  gameplay: 0
+  actionEffects: []
+  transitions: []
+  movement:
+    speed: 0
+    startTime: 0
+    duration: 0
+    usesInput: 0
+  chargeTimeMin: 0
+  chargeTimeMax: 0
+  chargeDamageMultiplier: 0

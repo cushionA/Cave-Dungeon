@@ -9,7 +9,7 @@
 - **Scripting Backend**: Mono (Standalone/Editor) / IL2CPP (Android) / **.NET**: Standard 2.1 相当
 
 ## プロジェクト概要
-- 2D アクションゲーム（サイドスクロール）
+- 骸骨騎士とシスターが進む3Dダンジョン探索アクションRPG。少人数で探索し、道中でNPC魔物の物語を進めると、魔物溜まりや指定ボス戦でシスターが援軍を呼ぶ。企画と既存プロトタイプから引き継ぐ仕組みは[GDD](designs/game-design.md)を参照。
 - 独自アーキテクチャ: SoA + SourceGenerator、GameManager 中央ハブ、ハッシュベース O(1) アクセス
 - コーギーエンジンからの脱却・自前設計
 - 設計文書: `Architect/` ディレクトリの 6 本（00 概要 / 01 データコンテナ / 02 ベースキャラ / 03 武器戦闘 / 04 ダメージ / 05 AI / 06 情報クラス）

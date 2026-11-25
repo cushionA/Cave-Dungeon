@@ -47,39 +47,27 @@ namespace Game.Core
         /// アトミック書き込み: .tmp に本体を書く → File.Replace で filePath を置換 + 旧ファイルを .bak に退避。
         /// filePath 不在時 (初回 / 復旧後) は .tmp → filePath を File.Move し、既存 .bak は破壊しない。
         /// 途中で電源断しても filePath または .bak のどちらかは整合した状態で残る。</summary>
-        public void WriteToDisk(SaveSlotData slotData)
+        public void WriteToDisk(SaveSlotData slotData) => TryWriteToDisk(slotData);
+
+        /// <summary>セーブファイルのアトミック書き込みが完了した場合に true を返す。</summary>
+        public bool TryWriteToDisk(SaveSlotData slotData)
         {
             if (slotData == null)
             {
-                return;
+                return false;
             }
 
-            if (!Directory.Exists(_savesDir))
+            string fileJson;
+            try
             {
-                Directory.CreateDirectory(_savesDir);
+                fileJson = SerializeSlot(slotData);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[SaveDataStore] セーブデータのシリアライズに失敗しました (slot={slotData.slotIndex}): {ex.Message}");
+                return false;
             }
 
-            SaveFileData fileData = new SaveFileData
-            {
-                version = k_CurrentVersion,
-                slotIndex = slotData.slotIndex,
-                timestamp = slotData.timestamp,
-                entries = new Dictionary<string, SaveEntryData>()
-            };
-
-            foreach (KeyValuePair<string, object> kvp in slotData.entries)
-            {
-                string json = JsonConvert.SerializeObject(kvp.Value);
-                string typeName = kvp.Value != null ? kvp.Value.GetType().FullName : "null";
-
-                fileData.entries[kvp.Key] = new SaveEntryData
-                {
-                    typeName = typeName,
-                    json = json
-                };
-            }
-
-            string fileJson = JsonConvert.SerializeObject(fileData, Formatting.Indented);
             string filePath = GetSlotFilePath(slotData.slotIndex);
             string backupPath = GetBackupFilePath(slotData.slotIndex);
             string tempPath = GetTempFilePath(slotData.slotIndex);
@@ -102,12 +90,13 @@ namespace Game.Core
             // Step 1: 一時ファイルへ書き込み (前回残骸があれば上書きされる)
             try
             {
+                Directory.CreateDirectory(_savesDir);
                 File.WriteAllText(tempPath, fileJson);
             }
             catch (Exception ex)
             {
                 Debug.LogError($"[SaveDataStore] 一時ファイル書き込みに失敗しました (slot={slotData.slotIndex}, path='{tempPath}'): {ex.Message}");
-                return;
+                return false;
             }
 
             // Step 2: アトミック置換
@@ -131,7 +120,32 @@ namespace Game.Core
             {
                 Debug.LogError($"[SaveDataStore] アトミック置換に失敗しました (slot={slotData.slotIndex}, temp='{tempPath}', dest='{filePath}'): {ex.Message}");
                 TryDeleteTemp(tempPath);
+                return false;
             }
+
+            return true;
+        }
+
+        private static string SerializeSlot(SaveSlotData slotData)
+        {
+            SaveFileData fileData = new SaveFileData
+            {
+                version = k_CurrentVersion,
+                slotIndex = slotData.slotIndex,
+                timestamp = slotData.timestamp,
+                entries = new Dictionary<string, SaveEntryData>()
+            };
+
+            foreach (KeyValuePair<string, object> kvp in slotData.entries)
+            {
+                fileData.entries[kvp.Key] = new SaveEntryData
+                {
+                    json = JsonConvert.SerializeObject(kvp.Value),
+                    typeName = kvp.Value != null ? kvp.Value.GetType().FullName : "null"
+                };
+            }
+
+            return JsonConvert.SerializeObject(fileData, Formatting.Indented);
         }
 
         /// <summary>書き込み失敗後の .tmp 残骸を best-effort で削除する。</summary>

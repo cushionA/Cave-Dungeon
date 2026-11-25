@@ -25,6 +25,7 @@ namespace Game.Core
         private StanceManager _stanceManager;
         private CompanionMpManager _mpManager;
         private ActionExecutor _executor;
+        private readonly BroadcastActionHandler _fieldOrders;
         private SoACharaDataDic _data;
         private int _companionHash;
         private int _playerHash;
@@ -74,7 +75,8 @@ namespace Game.Core
             _executor.Register(new CastActionHandler());
             _executor.Register(new InstantActionHandler());
             _executor.Register(new SustainedActionHandler());
-            _executor.Register(new BroadcastActionHandler());
+            _fieldOrders = new BroadcastActionHandler(companionHash, FieldOrderIssuer.CompanionAI, events);
+            _executor.Register(_fieldOrders);
 
             _judgmentLoop = new JudgmentLoop(_executor, data, companionHash);
             _modeController = new ModeController(_judgmentLoop);
@@ -107,6 +109,7 @@ namespace Game.Core
         {
             if (_disposed) { return; }
             _disposed = true;
+            _fieldOrders.ClearOwner();
             _judgmentLoop.Dispose();
             _mpManager.OnVanish -= _judgmentLoop.InvalidateDecision;
             _confusionClearedSubscription?.Dispose();

@@ -28,6 +28,8 @@ namespace Game.Runtime
         private readonly List<int> _candidates = new List<int>(8);
 
         public DamageDealer DamageDealer => _damageDealer;
+        internal override JudgmentLoop FieldOrderJudgment => _enemyController?.JudgmentLoop;
+        internal bool HasCommanderOrders { get; private set; }
         public override bool CanApplyAIDecision => base.CanApplyAIDecision
             && _enemyController != null && _enemyController.IsActive;
 
@@ -60,6 +62,7 @@ namespace Game.Runtime
             AIMode[] modes = AIInfoConverter.ConvertModes(_aiInfo);
             ModeTransitionRule[] transitions = AIInfoConverter.ConvertTransitions(_aiInfo);
             _enemyController.SetAIModes(modes, transitions);
+            HasCommanderOrders = ContainsCommanderOrder(modes);
 
             // AI内部Executorのアクション実行を検知するために
             // AttackActionHandlerを監視する
@@ -86,6 +89,7 @@ namespace Game.Runtime
 
                 BridgeAIActionForJudgmentLoop(_enemyController.JudgmentLoop, _actionExecutorController);
                 if (!GameManager.TryGetObservation(ObjectHash, out AIObservationContext observation)) { return; }
+                if (PrepareFieldOrder(_candidates)) { return; }
                 _enemyController.PrepareTick(deltaTime, _candidates, observation.Time, decisions,
                     observation, GameManager.TargetRelations);
             }
@@ -94,6 +98,7 @@ namespace Game.Runtime
         public override void SimulateCharacterTick(float deltaTime, float currentTime)
         {
             if (!IsAlive || (GameManager.Actions != null && GameManager.Actions.IsPhysicsControlled(ObjectHash))) { return; }
+            if (ApplyFieldOrderMovement()) { return; }
             if (_enemyController != null) { UpdateMovement(); }
             UpdateFacingToTarget();
         }
@@ -109,15 +114,13 @@ namespace Game.Runtime
             }
 
             int targetHash = _enemyController.JudgmentLoop.CurrentTargetHash;
-            if (targetHash == 0 || !GameManager.IsCharacterValid(targetHash))
+            if (targetHash == 0 || !GameManager.IsCharacterValid(targetHash)
+                || !GameManager.TryGetTargetOffset(ObjectHash, targetHash, out Vector2 targetOffset))
             {
                 return;
             }
 
-            ref CharacterVitals targetVitals = ref GameManager.Data.GetVitals(targetHash);
-            ref CharacterVitals myVitals = ref GameManager.Data.GetVitals(ObjectHash);
-            float diff = GameManager.ObservedPosition(targetHash, targetVitals.position).x
-                - GameManager.ObservedPosition(ObjectHash, myVitals.position).x;
+            float diff = targetOffset.x;
 
             if (diff > 0.1f)
             {
@@ -145,18 +148,16 @@ namespace Game.Runtime
             }
 
             int targetHash = _enemyController.JudgmentLoop?.CurrentTargetHash ?? 0;
-            if (targetHash == 0 || !GameManager.IsCharacterValid(targetHash))
+            if (targetHash == 0 || !GameManager.IsCharacterValid(targetHash)
+                || !GameManager.TryGetTargetOffset(ObjectHash, targetHash, out Vector2 targetOffset))
             {
                 SetPhysicsVelocity(new Vector2(0f, PhysicsVelocity.y));
                 return;
             }
 
-            ref CharacterVitals targetVitals = ref GameManager.Data.GetVitals(targetHash);
-            ref CharacterVitals myVitals = ref GameManager.Data.GetVitals(ObjectHash);
             MoveParams moveParams = GetEffectiveMoveParams(GameConstants.k_FallbackMoveSpeed);
 
-            float diff = GameManager.ObservedPosition(targetHash, targetVitals.position).x
-                - GameManager.ObservedPosition(ObjectHash, myVitals.position).x;
+            float diff = targetOffset.x;
             float absDist = Mathf.Abs(diff);
 
             // 攻撃範囲の外ならターゲットへ移動
@@ -172,6 +173,25 @@ namespace Game.Runtime
                 SetPhysicsVelocity(new Vector2(0f, PhysicsVelocity.y));
             }
         }
+
+        private static bool ContainsCommanderOrder(AIMode[] modes)
+        {
+            foreach (AIMode mode in modes)
+            {
+                if (mode.actions == null) { continue; }
+                foreach (ActionSlot slot in mode.actions)
+                {
+                    if (slot.execType == ActionExecType.Broadcast && (uint)slot.paramId <= byte.MaxValue
+                        && FieldOrderCatalog.Allows((BroadcastAction)slot.paramId, FieldOrderIssuer.EnemyCommander))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        private void OnDisable() => ForgetFieldOrders();
 
         protected override void OnDestroy()
         {

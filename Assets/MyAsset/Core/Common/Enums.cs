@@ -368,6 +368,8 @@ namespace Game.Core
         FocusFire,
         Disengage,
         ModeSync,
+        DefendPoint,
+        ReleaseOrder,
     }
 
     public enum GateType : byte

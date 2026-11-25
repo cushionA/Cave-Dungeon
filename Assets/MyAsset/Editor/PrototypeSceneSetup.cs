@@ -131,6 +131,10 @@ namespace Game.Editor
             // InputSystem
             UnityEngine.InputSystem.PlayerInput pi = player.AddComponent<UnityEngine.InputSystem.PlayerInput>();
 
+            pi.actions = AssetDatabase.LoadAssetAtPath<UnityEngine.InputSystem.InputActionAsset>(
+                "Assets/InputSystem_Actions.inputactions");
+            pi.defaultActionMap = "Player";
+
             // MonoBehaviour
             PlayerInputHandler inputHandler = player.AddComponent<PlayerInputHandler>();
             PlayerCharacter pc = player.AddComponent<PlayerCharacter>();

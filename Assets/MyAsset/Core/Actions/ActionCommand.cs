@@ -15,6 +15,7 @@ namespace Game.Core
         Follow,
         Retreat,
         Flee,
+        InteractObject,
     }
 
     public enum ActionVariant : byte
@@ -56,6 +57,13 @@ namespace Game.Core
         public ActionCommandKind kind;
         public AttackActionParameters attack;
         public SustainedActionParameters sustained;
+        public AISceneGimmick gimmick;
+        public ActorRef gimmickOwner;
+        public ActorRef gimmickTarget;
+        public long observationTick;
+
+        internal static bool IsGimmickInteraction(in ActionSlot slot) =>
+            slot.execType == ActionExecType.Instant && slot.paramId == (int)InstantAction.InteractObject;
 
         public static ActionCommand FromLegacySlot(in ActionSlot slot)
         {
@@ -72,7 +80,11 @@ namespace Game.Core
             }
             if (slot.execType == ActionExecType.Instant)
             {
-                command.kind = slot.paramId == (int)InstantAction.Dodge ? ActionCommandKind.Dodge : ActionCommandKind.Unsupported;
+                switch (slot.paramId)
+                {
+                    case (int)InstantAction.Dodge: command.kind = ActionCommandKind.Dodge; break;
+                    case (int)InstantAction.InteractObject: command.kind = ActionCommandKind.InteractObject; break;
+                }
                 return command;
             }
             if (slot.execType != ActionExecType.Sustained) { return command; }

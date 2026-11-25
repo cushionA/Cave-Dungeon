@@ -107,5 +107,45 @@ namespace Game.Tests.PlayMode
             Assert.AreEqual(4, GameManager.Data.GetAttributes(hash).vit);
             yield break;
         }
+
+        [UnityTest]
+        public IEnumerator CharacterStats3D_WhenGrowthIsApplied_UpdatesLiveVitalsAndResetsOnNewGeneration()
+        {
+            CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo();
+            info.initialLevel = 3;
+            _created.Add(info);
+            GameObject root = new GameObject("3D growth actor");
+            root.SetActive(false);
+            _created.Add(root);
+            CharacterActor3D actor = root.AddComponent<CharacterActor3D>();
+            actor.SetCharacterInfoForTest(info);
+            root.SetActive(true);
+            yield return null;
+
+            ActorRef owner = actor.Actor;
+            LevelUpLogic levelUp = new LevelUpLogic(GameManager.Data.GetGrowth(owner.Hash).level);
+            Assert.AreEqual(3, levelUp.Level);
+            Assert.AreEqual(1, levelUp.AddExp(levelUp.GetExpForNextLevel()));
+            Assert.IsTrue(levelUp.AllocatePoint(StatType.Vit));
+            Assert.IsTrue(levelUp.AllocatePoint(StatType.Mnd));
+            GameManager.Data.GetVitals(owner.Hash).currentHp = 64;
+            GameManager.Data.GetVitals(owner.Hash).currentMp = 12.5f;
+            GameManager.Instance.ApplyCharacterGrowth(owner.Hash, levelUp.Growth);
+
+            Assert.AreEqual(owner, actor.Actor);
+            Assert.AreEqual(4, GameManager.Data.GetVitals(owner.Hash).level);
+            Assert.AreEqual(110, GameManager.Data.GetVitals(owner.Hash).maxHp);
+            Assert.AreEqual(55, GameManager.Data.GetVitals(owner.Hash).maxMp);
+            Assert.AreEqual(64, GameManager.Data.GetVitals(owner.Hash).currentHp);
+            Assert.AreEqual(12.5f, GameManager.Data.GetVitals(owner.Hash).currentMp);
+
+            actor.enabled = false;
+            actor.enabled = true;
+            Assert.AreNotEqual(owner, actor.Actor);
+            Assert.AreEqual(3, GameManager.Data.GetGrowth(owner.Hash).level);
+            Assert.AreEqual(0, GameManager.Data.GetGrowth(owner.Hash).allocatedStats.vit);
+            Assert.AreEqual(100, GameManager.Data.GetVitals(owner.Hash).currentHp);
+            Assert.AreEqual(50f, GameManager.Data.GetVitals(owner.Hash).currentMp);
+        }
     }
 }

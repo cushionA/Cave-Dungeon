@@ -1,0 +1,561 @@
+using System;
+using System.Collections;
+using System.IO;
+using System.Reflection;
+using System.Text.RegularExpressions;
+using Game.Core;
+using Game.Runtime;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.TestTools;
+using Object = UnityEngine.Object;
+
+namespace Game.Tests.PlayMode
+{
+    public sealed class PixelCrushersStorySlotPlayTests
+    {
+        private const string k_StoryKey = "PixelCrushers.Story";
+        private const string k_QuestId = "story.slot-test";
+        private const string k_Variable = "StorySlotChoice";
+        private const string k_Completion = "story.slot-test.complete";
+        private const string k_Species = "slot-test-scout";
+
+        private GameObject _story;
+        private GameObject _serializer;
+        private ScriptableObject _questAsset;
+        private ScriptableObject _messageAction;
+        private ScriptableObject _dialogueDatabase;
+        private Component _journal;
+        private Component _dialogueSaver;
+        private Behaviour _bridge;
+        private string _directory;
+        private Scene _room;
+
+        [UnityTest]
+        public IEnumerator VendorStory_WhenLoadingDiskSlots_RestoresJournalAndDialogueBeforeLoadedWithoutRegrantingAid()
+        {
+            TestSceneHelper.Cleanup();
+            yield return null;
+            TestSceneHelper.CreateGameManager();
+            CreateVendorStory();
+            yield return null;
+            yield return null;
+            SaveManager saves = GameManager.Saves;
+            SaveSlotData withoutAward = saves.Save(1);
+            Assert.That(QuestState(), Is.EqualTo("WaitingToStart"));
+            Assert.That(Choice(), Is.EqualTo("unanswered"));
+            Assert.IsFalse(GameManager.ExpeditionAid.IsUnlocked(k_Species));
+
+            CompleteQuest();
+            SetChoice("accepted");
+            Assert.IsTrue(GameManager.ExpeditionAid.IsUnlocked(k_Species));
+            SaveSlotData withAward = saves.Save(0);
+            Assert.That(withAward.entries[k_StoryKey], Is.TypeOf<string>());
+            withoutAward.entries[k_StoryKey] = withAward.entries[k_StoryKey];
+
+            _directory = Path.Combine(Path.GetTempPath(), "PixelCrushersStorySlot-" + Guid.NewGuid().ToString("N"));
+            SaveDataStore disk = new SaveDataStore(_directory);
+            disk.WriteToDisk(withAward);
+            disk.WriteToDisk(withoutAward);
+            disk.WriteToDisk(new SaveSlotData(2));
+            for (int slot = 0; slot < SaveManager.k_MaxSlots; slot++)
+            {
+                SaveSlotData restored = disk.ReadFromDisk(slot);
+                Assert.IsNotNull(restored);
+                saves.SetSlotData(slot, restored);
+            }
+
+            (int slot, string state, string choice, bool unlocked) observed = default;
+            saves.Loaded += slot => observed = (slot, QuestState(), Choice(), GameManager.ExpeditionAid.IsUnlocked(k_Species));
+            Assert.IsTrue(saves.Load(2));
+            Assert.That(observed, Is.EqualTo((2, "WaitingToStart", "unanswered", false)));
+            yield return null;
+            yield return null;
+
+            Assert.IsTrue(saves.Load(1));
+            Assert.That(observed, Is.EqualTo((1, "Successful", "accepted", false)));
+            yield return null;
+            yield return null;
+            yield return null;
+            Assert.IsFalse(GameManager.ExpeditionAid.IsUnlocked(k_Species), "Restoring the completed quest does not grant aid again.");
+
+            SetChoice("changed in memory");
+            Assert.IsTrue(saves.Load(0));
+            Assert.That(observed, Is.EqualTo((0, "Successful", "accepted", true)));
+        }
+
+        [UnityTest]
+        public IEnumerator VendorStory_WhenBeginningNextPlaythrough_ResetsJournalAndLuaAndKeepsUnlockedAid()
+        {
+            TestSceneHelper.Cleanup();
+            yield return null;
+            TestSceneHelper.CreateGameManager();
+            CreateVendorStory();
+            yield return null;
+            yield return null;
+
+            CompleteQuest();
+            SetChoice("accepted");
+            Assert.That(QuestState(), Is.EqualTo("Successful"));
+            Assert.That(Choice(), Is.EqualTo("accepted"));
+            Assert.IsTrue(GameManager.ExpeditionAid.IsUnlocked(k_Species));
+
+            SaveManager saves = GameManager.Saves;
+            int slot = saves.ActiveSlotIndex;
+            int cycle = GameManager.Playthrough.CycleNumber;
+            _directory = Path.Combine(Path.GetTempPath(), "PixelCrushersStorySlot-" + Guid.NewGuid().ToString("N"));
+            SaveDataStore disk = new SaveDataStore(_directory);
+            SaveSlotData previous = saves.Save(slot);
+            Assert.IsTrue(previous.entries.ContainsKey(k_StoryKey));
+            Assert.IsTrue(disk.TryWriteToDisk(previous));
+
+            ExpeditionNextPlaythrough next = GameManager.NextPlaythrough;
+            next.MarkCleared();
+            Assert.IsTrue(next.TryBeginNextPlaythrough(slot, saves.LoadRevision, cycle, "start", disk));
+            Assert.That(GameManager.Playthrough.CycleNumber, Is.EqualTo(cycle + 1));
+            Assert.IsFalse(disk.ReadFromDisk(slot).entries.ContainsKey(k_StoryKey));
+
+            yield return null;
+            yield return null;
+            Assert.That(QuestState(), Is.EqualTo("WaitingToStart"));
+            Assert.That(Choice(), Is.EqualTo("unanswered"));
+            Assert.IsTrue(GameManager.ExpeditionAid.IsUnlocked(k_Species));
+        }
+
+        [UnityTest]
+        public IEnumerator VendorStory_WhenEnabledAfterLoad_RestoresOnlyTheMostRecentSuccessfulLoad()
+        {
+            TestSceneHelper.Cleanup();
+            yield return null;
+            TestSceneHelper.CreateGameManager();
+            CreateVendorStory();
+            yield return null;
+            yield return null;
+
+            SaveManager saves = GameManager.Saves;
+            SetChoice("snapshot");
+            SaveSlotData storySlot = saves.Save(0);
+            Assert.IsTrue(storySlot.entries.ContainsKey(k_StoryKey));
+            _bridge.enabled = false;
+            SetChoice("working values");
+            Assert.IsFalse(saves.Save(1).entries.ContainsKey(k_StoryKey));
+            saves.SetActiveSlot(0);
+            _bridge.enabled = true;
+            Assert.That(Choice(), Is.EqualTo("working values"));
+
+            _bridge.enabled = false;
+            Assert.IsTrue(saves.Load(0));
+            saves.SetActiveSlot(1);
+            Assert.IsFalse(saves.Load(2));
+            _bridge.enabled = true;
+            Assert.That(Choice(), Is.EqualTo("snapshot"));
+            yield return null;
+            yield return null;
+            yield return null;
+
+            _bridge.enabled = false;
+            SetChoice("changed again");
+            Assert.IsTrue(saves.Load(0));
+            Assert.AreSame(storySlot, saves.LastLoadedSlot);
+            _bridge.enabled = true;
+            Assert.That(Choice(), Is.EqualTo("snapshot"));
+        }
+
+        [UnityTest]
+        public IEnumerator VendorStory_WhenReplacingBridgeAfterLoad_PreservesLiveQuestAndLuaUntilAnotherLoad()
+        {
+            TestSceneHelper.Cleanup();
+            yield return null;
+            TestSceneHelper.CreateGameManager();
+            CreateVendorStory();
+            yield return null;
+            yield return null;
+
+            SaveManager saves = GameManager.Saves;
+            SetChoice("first slot checkpoint");
+            SaveSlotData checkpoint = saves.Save(0);
+            SetChoice("second slot checkpoint");
+            Assert.IsTrue(saves.Save(1).entries.ContainsKey(k_StoryKey));
+            Assert.IsTrue(saves.Load(0));
+            yield return null;
+            yield return null;
+            yield return null;
+            Assert.That(QuestState(), Is.EqualTo("WaitingToStart"));
+            Assert.That(Choice(), Is.EqualTo("first slot checkpoint"));
+
+            SetChoice("live progress after load");
+            ulong revision = saves.LoadRevision;
+            _bridge.enabled = false;
+            Object.Destroy(_bridge);
+            yield return null;
+            Assert.IsFalse(saves.Save(2).entries.ContainsKey(k_StoryKey));
+            CompleteQuest();
+            SetChoice("live progress while detached");
+
+            saves.SetActiveSlot(1);
+            GameObject replacement = new GameObject("Replacement story bridge");
+            replacement.SetActive(false);
+            replacement.transform.SetParent(_story.transform, false);
+            _bridge = CreateBridge(replacement);
+            replacement.SetActive(true);
+            yield return null;
+            yield return null;
+
+            Assert.AreEqual(1, saves.ActiveSlotIndex);
+            Assert.AreEqual(revision, saves.LoadRevision);
+            Assert.AreSame(checkpoint, saves.LastLoadedSlot);
+            Assert.IsTrue(saves.Save(2).entries.ContainsKey(k_StoryKey), "The replacement bridge registered with the existing save manager.");
+            Assert.That(QuestState(), Is.EqualTo("Successful"));
+            Assert.That(Choice(), Is.EqualTo("live progress while detached"));
+
+            Component originalJournal = _journal;
+            _bridge.enabled = false;
+            DestroyVendorStory();
+            yield return null;
+            yield return null;
+            Assert.IsTrue(originalJournal == null);
+            CreateVendorStory();
+            yield return null;
+            yield return null;
+            yield return null;
+            Assert.AreEqual(revision, saves.LoadRevision);
+            Assert.AreSame(checkpoint, saves.LastLoadedSlot);
+            Assert.That(QuestState(), Is.EqualTo("Successful"));
+            Assert.That(Choice(), Is.EqualTo("live progress while detached"));
+
+            Assert.IsTrue(saves.Load(1));
+            Assert.That(QuestState(), Is.EqualTo("WaitingToStart"));
+            Assert.That(Choice(), Is.EqualTo("second slot checkpoint"));
+            Assert.IsFalse(GameManager.ExpeditionAid.IsUnlocked(k_Species));
+        }
+
+        [UnityTest]
+        public IEnumerator VendorStory_WhenDiskSlotLoadsBeforeColdStartup_RestoresQuestAndLua()
+        {
+            TestSceneHelper.Cleanup();
+            yield return null;
+            TestSceneHelper.CreateGameManager();
+            CreateVendorStory();
+            yield return null;
+            yield return null;
+
+            SaveManager originalSaves = GameManager.Saves;
+            Assert.IsTrue(originalSaves.Save(1).entries.ContainsKey(k_StoryKey));
+            Assert.IsTrue(originalSaves.Load(1));
+            yield return null;
+            yield return null;
+            yield return null;
+            CompleteQuest();
+            SetChoice("disk progress");
+            _directory = Path.Combine(Path.GetTempPath(), "PixelCrushersStorySlot-" + Guid.NewGuid().ToString("N"));
+            SaveDataStore disk = new SaveDataStore(_directory);
+            Assert.IsTrue(disk.TryWriteToDisk(originalSaves.Save(1)));
+            ulong previousRevision = originalSaves.LoadRevision;
+            SetChoice("unsaved in the old world");
+            _bridge.enabled = false;
+            DestroyVendorStory();
+            TestSceneHelper.Cleanup();
+            yield return null;
+            yield return null;
+
+            TestSceneHelper.CreateGameManager();
+            SaveManager coldSaves = GameManager.Saves;
+            Assert.AreNotSame(originalSaves, coldSaves);
+            Assert.IsFalse(coldSaves.Save(0).entries.ContainsKey(k_StoryKey));
+            SaveSlotData saved = disk.ReadFromDisk(1);
+            Assert.IsNotNull(saved);
+            Assert.IsTrue(saved.entries.ContainsKey(k_StoryKey));
+            coldSaves.SetSlotData(1, saved);
+            Assert.IsTrue(coldSaves.Load(1));
+            Assert.AreEqual(previousRevision, coldSaves.LoadRevision);
+            Assert.AreSame(saved, coldSaves.LastLoadedSlot);
+
+            CreateVendorStory();
+            yield return null;
+            yield return null;
+            yield return null;
+            Assert.IsTrue(coldSaves.Save(2).entries.ContainsKey(k_StoryKey));
+            Assert.That(QuestState(), Is.EqualTo("Successful"));
+            Assert.That(Choice(), Is.EqualTo("disk progress"));
+            Assert.IsTrue(GameManager.ExpeditionAid.IsUnlocked(k_Species));
+        }
+
+        [UnityTest]
+        public IEnumerator VendorStory_WhenPresentBadSlotPrecedesBridge_KeepsRawUntilAValidLoadRecovers()
+        {
+            TestSceneHelper.Cleanup();
+            yield return null;
+            TestSceneHelper.CreateGameManager();
+            CreateVendorStory();
+            yield return null;
+            yield return null;
+            CompleteQuest();
+            SetChoice("recoverable checkpoint");
+            SaveSlotData valid = GameManager.Saves.Save(1);
+            Assert.That(valid.entries[k_StoryKey], Is.TypeOf<string>());
+            DestroyVendorStory();
+            TestSceneHelper.Cleanup();
+            yield return null;
+            yield return null;
+
+            TestSceneHelper.CreateGameManager();
+            SaveManager saves = GameManager.Saves;
+            const string malformed = "unrecognized story archive";
+            SaveSlotData corrupt = new SaveSlotData(0);
+            corrupt.entries[k_StoryKey] = malformed;
+            saves.SetSlotData(0, corrupt);
+            Assert.IsTrue(saves.Load(0));
+
+            LogAssert.Expect(LogType.Error, new Regex(@"PixelCrushers\.Story.*起動時復元に失敗しました"));
+            CreateVendorStory();
+            yield return null;
+            yield return null;
+            Assert.That(QuestState(), Is.EqualTo("WaitingToStart"));
+            Assert.That(Choice(), Is.EqualTo("unanswered"));
+            Assert.AreEqual(malformed, saves.Save(2).entries[k_StoryKey]);
+
+            saves.SetSlotData(1, valid);
+            Assert.IsTrue(saves.Load(1));
+            Assert.That(QuestState(), Is.EqualTo("Successful"));
+            Assert.That(Choice(), Is.EqualTo("recoverable checkpoint"));
+            Assert.AreNotEqual(malformed, saves.Save(2).entries[k_StoryKey]);
+        }
+
+        [UnityTest]
+        public IEnumerator VendorStory_WhenSnapshotIsMalformedOrUnsupported_RejectsLoadAndPreservesLiveProgress()
+        {
+            yield return PrepareStoryLoadValidation();
+            SaveManager saves = GameManager.Saves;
+            SaveSlotData candidate = saves.GetSlotData(1);
+            string validSnapshot = (string)candidate.entries[k_StoryKey];
+            const string supportedVersion = "\"version\":1";
+            Assert.That(validSnapshot, Does.Contain(supportedVersion));
+
+            candidate.entries[k_StoryKey] = "not a story snapshot";
+            AssertStoryLoadRejected(saves, 1, "JSON");
+
+            candidate.entries[k_StoryKey] = validSnapshot.Replace(supportedVersion, "\"version\":999");
+            AssertStoryLoadRejected(saves, 1, "バージョン");
+        }
+
+        [UnityTest]
+        public IEnumerator VendorStory_WhenJournalConfigurationIsMissing_RejectsLoadBeforeApplyingAnyState()
+        {
+            yield return PrepareStoryLoadValidation();
+            Type configurationType = FindType("PixelCrushers.QuestMachine.QuestMachineConfiguration");
+            Component configuration = _story.GetComponent(configurationType);
+            Assert.IsNotNull(configuration);
+            Object.Destroy(configuration);
+            yield return null;
+
+            Assert.IsTrue((Component)configurationType.GetProperty("instance").GetValue(null) == null);
+            Assert.IsTrue(_bridge.isActiveAndEnabled);
+            AssertStoryLoadRejected(GameManager.Saves, 1, "Quest Machine Configuration");
+        }
+
+        private IEnumerator PrepareStoryLoadValidation()
+        {
+            TestSceneHelper.Cleanup();
+            yield return null;
+            TestSceneHelper.CreateGameManager();
+            CreateVendorStory();
+            yield return null;
+            yield return null;
+
+            SaveManager saves = GameManager.Saves;
+            Assert.That(saves.Save(0).entries[k_StoryKey], Is.TypeOf<string>());
+            SetChoice("other slot");
+            Assert.That(saves.Save(1).entries[k_StoryKey], Is.TypeOf<string>());
+            Assert.IsTrue(saves.Load(0));
+            yield return null;
+            yield return null;
+            yield return null;
+
+            CompleteQuest();
+            SetChoice("current live progress");
+            Assert.That(QuestState(), Is.EqualTo("Successful"));
+            Assert.IsTrue(GameManager.ExpeditionAid.IsUnlocked(k_Species));
+        }
+
+        private void AssertStoryLoadRejected(SaveManager saves, int candidateSlot, string reason)
+        {
+            int activeSlot = saves.ActiveSlotIndex;
+            ulong revision = saves.LoadRevision;
+            SaveSlotData checkpoint = saves.LastLoadedSlot;
+            object quest = ReadQuest();
+            int loadEvents = 0;
+            void CountLoad(int _) => loadEvents++;
+
+            saves.Loaded += CountLoad;
+            try
+            {
+                LogAssert.Expect(LogType.Error, new Regex($@"\[SaveManager\].*スロットの事前検証に失敗しました.*PixelCrushers\.Story.*{Regex.Escape(reason)}"));
+                Assert.IsFalse(saves.Load(candidateSlot));
+                Assert.AreEqual(activeSlot, saves.ActiveSlotIndex);
+                Assert.AreEqual(revision, saves.LoadRevision);
+                Assert.AreSame(checkpoint, saves.LastLoadedSlot);
+                Assert.That(loadEvents, Is.Zero);
+                Assert.AreSame(quest, ReadQuest());
+                Assert.That(QuestState(), Is.EqualTo("Successful"));
+                Assert.That(Choice(), Is.EqualTo("current live progress"));
+                Assert.IsTrue(GameManager.ExpeditionAid.IsUnlocked(k_Species));
+            }
+            finally
+            {
+                saves.Loaded -= CountLoad;
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator VendorStory_WhenUnloadingDuringJournalRestore_ReleasesVendorLoadingState()
+        {
+            TestSceneHelper.Cleanup();
+            yield return null;
+            TestSceneHelper.CreateGameManager();
+            CreateVendorStory();
+            _room = SceneManager.CreateScene("Story load cancellation");
+            SceneManager.MoveGameObjectToScene(_story, _room);
+            yield return null;
+            yield return null;
+
+            SaveManager saves = GameManager.Saves;
+            Assert.IsTrue(saves.Save(0).entries.ContainsKey(k_StoryKey));
+            Assert.IsTrue(saves.Load(0));
+            PropertyInfo loading = FindType("PixelCrushers.QuestMachine.QuestMachine").GetProperty("isLoadingGame");
+            PropertyInfo receivesMessages = FindType("PixelCrushers.MessageSystem").GetProperty("allowReceiveSameFrameAdded");
+            Assert.AreEqual(true, loading.GetValue(null));
+            Assert.AreEqual(false, receivesMessages.GetValue(null));
+
+            // シーンの非同期破棄を待つ前にベンダーのロード解除コルーチンが確実に止まるようにする。
+            _story.SetActive(false);
+            yield return SceneManager.UnloadSceneAsync(_room);
+            yield return null;
+            yield return null;
+            yield return null;
+            Assert.AreEqual(false, loading.GetValue(null));
+            Assert.AreEqual(true, receivesMessages.GetValue(null));
+        }
+
+        private void CreateVendorStory()
+        {
+            _serializer = new GameObject("Story test serialization");
+            _serializer.AddComponent(FindType("PixelCrushers.SaveSystem"));
+            _serializer.AddComponent(FindType("PixelCrushers.JsonDataSerializer"));
+
+            _story = new GameObject("Story test controllers");
+            _story.SetActive(false);
+            _story.AddComponent(FindType("PixelCrushers.QuestMachine.QuestMachineConfiguration"));
+            _journal = _story.AddComponent(FindType("PixelCrushers.QuestMachine.QuestJournal"));
+            _journal.GetType().GetProperty("includeInSavedGameData").SetValue(_journal, true);
+            _journal.GetType().GetProperty("saveQuestsToJson").SetValue(_journal, true);
+
+            Type questType = FindType("PixelCrushers.QuestMachine.Quest");
+            Type stringField = FindType("PixelCrushers.StringField");
+            _questAsset = ScriptableObject.CreateInstance(questType);
+            questType.GetMethod("Initialize").Invoke(_questAsset, null);
+            questType.GetProperty("id").SetValue(_questAsset, Activator.CreateInstance(stringField, k_QuestId));
+            IList quests = (IList)_journal.GetType().GetProperty("questList").GetValue(_journal);
+            quests.Add(_questAsset);
+
+            _messageAction = ScriptableObject.CreateInstance(FindType("PixelCrushers.QuestMachine.MessageQuestAction"));
+            _messageAction.GetType().GetProperty("message").SetValue(_messageAction,
+                Activator.CreateInstance(stringField, ExpeditionAidUnlocks.k_CompletionMessage));
+            _messageAction.GetType().GetProperty("parameter").SetValue(_messageAction,
+                Activator.CreateInstance(stringField, k_Completion));
+            object successInfo = questType.GetMethod("GetStateInfo").Invoke(_questAsset, new[] { SuccessfulState() });
+            ((IList)successInfo.GetType().GetProperty("actionList").GetValue(successInfo)).Add(_messageAction);
+
+            Component questBridge = _story.AddComponent(FindType("Game.Runtime.QuestMachineBridge"));
+            SetPrivateField(questBridge, "aidCompletions", new[] { new ExpeditionAidUnlocks.Completion(k_Completion, k_Species) });
+
+            Type controllerType = FindType("PixelCrushers.DialogueSystem.DialogueSystemController");
+            Component controller = _story.AddComponent(controllerType);
+            Type databaseType = FindType("PixelCrushers.DialogueSystem.DialogueDatabase");
+            _dialogueDatabase = ScriptableObject.CreateInstance(databaseType);
+            Type templateType = FindType("PixelCrushers.DialogueSystem.Template");
+            object template = templateType.GetMethod("FromDefault").Invoke(null, null);
+            object defaultChoice = templateType.GetMethod("CreateVariable", new[] { typeof(int), typeof(string), typeof(string) })
+                .Invoke(template, new object[] { 1, k_Variable, "unanswered" });
+            ((IList)databaseType.GetField("variables").GetValue(_dialogueDatabase)).Add(defaultChoice);
+            controllerType.GetField("initialDatabase").SetValue(controller, _dialogueDatabase);
+            controllerType.GetField("dontDestroyOnLoad").SetValue(controller, false);
+            _dialogueSaver = _story.AddComponent(FindType("PixelCrushers.DialogueSystem.DialogueSystemSaver"));
+            _bridge = CreateBridge(_story);
+            _story.SetActive(true);
+        }
+
+        private Behaviour CreateBridge(GameObject host)
+        {
+            Behaviour bridge = (Behaviour)host.AddComponent(FindType("Game.Runtime.PixelCrushersSaveSlotBridge"));
+            SetPrivateField(bridge, "questJournal", _journal);
+            SetPrivateField(bridge, "dialogueSystemSaver", _dialogueSaver);
+            return bridge;
+        }
+
+        private object ReadQuest()
+            => _journal.GetType().GetMethod("FindQuest", new[] { typeof(string) }).Invoke(_journal, new object[] { k_QuestId });
+
+        private string QuestState()
+        {
+            object quest = ReadQuest();
+            return quest?.GetType().GetMethod("GetState").Invoke(quest, null).ToString();
+        }
+
+        private void CompleteQuest()
+        {
+            object quest = ReadQuest();
+            Assert.IsNotNull(quest);
+            quest.GetType().GetMethod("SetState").Invoke(quest, new object[] { SuccessfulState(), true });
+        }
+
+        private static object SuccessfulState()
+            => Enum.Parse(FindType("PixelCrushers.QuestMachine.QuestState"), "Successful");
+
+        private static string Choice()
+            => (string)FindType("PixelCrushers.DialogueSystem.DialogueLua")
+                .GetMethod("GetVariable", new[] { typeof(string), typeof(string) })
+                .Invoke(null, new object[] { k_Variable, string.Empty });
+
+        private static void SetChoice(string choice)
+            => FindType("PixelCrushers.DialogueSystem.DialogueLua")
+                .GetMethod("SetVariable", new[] { typeof(string), typeof(object) }).Invoke(null, new object[] { k_Variable, choice });
+
+        private static void SetPrivateField(Component component, string name, object value)
+            => component.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(component, value);
+
+        private static Type FindType(string name)
+        {
+            // アダプターとベンダーが既定アセンブリにあり、テストの asmdef から直接参照できない。
+            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                Type type = assembly.GetType(name);
+                if (type != null) { return type; }
+            }
+            throw new InvalidOperationException(name);
+        }
+
+        private void DestroyVendorStory()
+        {
+            Object.Destroy(_story);
+            Object.Destroy(_serializer);
+            Object.Destroy(_questAsset);
+            Object.Destroy(_messageAction);
+            Object.Destroy(_dialogueDatabase);
+        }
+
+        [UnityTearDown]
+        public IEnumerator TearDown()
+        {
+            // Quest Machine はロード中フラグを2フレーム後に解除する。
+            yield return null;
+            yield return null;
+            yield return null;
+            if (_room.isLoaded) { yield return SceneManager.UnloadSceneAsync(_room); }
+            DestroyVendorStory();
+            TestSceneHelper.Cleanup();
+            yield return null;
+            if (Directory.Exists(_directory)) { Directory.Delete(_directory, recursive: true); }
+        }
+    }
+}

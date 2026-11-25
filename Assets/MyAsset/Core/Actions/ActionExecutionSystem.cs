@@ -205,7 +205,7 @@ namespace Game.Core
                 }
                 if (!request.forced && actor.flags.IsVanished
                     && !IsCostFreeRequiredContinuation(request, definition)) { return false; }
-                if (!request.forced && (Blocked(definition, actor) || IsReaction(actor.flags.ActState)))
+                if (!request.forced && (Blocked(definition, actor) || IsActionBlockingReaction(actor.flags.ActState)))
                 {
                     return false;
                 }
@@ -275,6 +275,7 @@ namespace Game.Core
                     instanceId = instanceId, groupId = groupId,
                     ownerHash = request.ownerHash, ownerRef = request.ownerRef, definitionId = definition.id,
                     targetHash = request.targetHash, targetRef = request.targetRef, direction = request.direction,
+                    selectedTargets = request.selectedTargets,
                     targetPosition = request.targetPosition, speedMultiplier = request.speedMultiplier == 0f ? 1f : request.speedMultiplier,
                     chargeMultiplier = request.chargeMultiplier,
                     forced = request.forced, sourceInstanceId = request.sourceInstanceId, definition = definition,
@@ -945,7 +946,8 @@ namespace Game.Core
                 || ((definition.gameplay & ActionGameplayFlags.Move) != 0 && actor.statusEffects.BlocksMovement);
         }
 
-        private static bool IsReaction(ActState state)
+        /// <summary>被弾や起き上がりの最中は任意の新規行動を開始できない。</summary>
+        public static bool IsActionBlockingReaction(ActState state)
         {
             return HitReactionLogic.IsArmorResetStun(state) || state == ActState.WakeUp;
         }

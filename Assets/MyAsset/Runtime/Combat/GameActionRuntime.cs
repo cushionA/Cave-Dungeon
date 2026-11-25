@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Game.Runtime
 {
-    public sealed class GameActionRuntime : IDisposable
+    public sealed partial class GameActionRuntime : IDisposable
     {
         private enum Builtin { Move, Stop, Idle, Dodge, Jump, Guard, Flinch, GuardBreak, Knockback, WakeUp, Effects }
         private sealed class CombatExecution
@@ -14,11 +14,20 @@ namespace Game.Runtime
             public AttackMotionData attack;
             public MagicDefinition magic;
             public bool projectile;
+            public float multiLockRange;
+            public ActionTargetSelection multiLockTargets;
+            public Vector2 groundImpactPosition;
+            public GameObject groundImpactWarning;
+            public AttackProfile3D attack3D;
+            public GroundAttack3D groundAttack3D;
+            public SpatialRepeat repeat3D;
         }
 
         private readonly SoACharaDataDic _data;
         private readonly GameEvents _events;
         private readonly ActionCatalog _catalog;
+        private readonly AttackWarningPresentation _attackWarnings = new AttackWarningPresentation();
+        private readonly MultiLockTargeting _multiLockTargeting = new MultiLockTargeting();
         private readonly Dictionary<(int owner, Builtin kind), int> _definitions = new();
         private readonly Dictionary<(int owner, Builtin kind), long> _held = new();
         private readonly Dictionary<int, ActionExecutorController> _controllers = new();
@@ -74,16 +83,42 @@ namespace Game.Runtime
 
         public bool Execute(int owner, ActionDefinition definition, int targetHash, Vector2 direction,
             float chargeMultiplier, ActionVariant variant, out long instanceId, out long groupId, long replaceGroupId = 0)
+            => Execute(owner, definition, targetHash, default, direction, chargeMultiplier, variant,
+                out instanceId, out groupId, replaceGroupId);
+
+        public bool ExecuteMultiLock(int owner, ActionDefinition definition, IReadOnlyList<ActorRef> targets,
+            Vector2 direction, float chargeMultiplier, ActionVariant variant, out long instanceId, out long groupId,
+            long replaceGroupId = 0)
+        {
+            ActionTargetSelection selected = default;
+            if (targets != null)
+            {
+                for (int i = 0; i < targets.Count && selected.Count < ActionTargetSelection.MaxTargets; i++)
+                {
+                    selected.TryAdd(targets[i]);
+                }
+            }
+            instanceId = groupId = 0;
+            return selected.Count != 0 && Execute(owner, definition, 0, selected, direction,
+                chargeMultiplier, variant, out instanceId, out groupId, replaceGroupId);
+        }
+
+        private bool Execute(int owner, ActionDefinition definition, int targetHash, ActionTargetSelection selectedTargets,
+            Vector2 direction, float chargeMultiplier, ActionVariant variant, out long instanceId, out long groupId,
+            long replaceGroupId)
         {
             instanceId = groupId = 0;
-            if (!GameManager.IsCharacterValid(owner) || definition == null || !Finite(direction))
+            if (!GameManager.IsCharacterValid(owner) || _data.Uses3DPhysics(owner)
+                || _data.Uses3DPhysics(targetHash) || definition == null || !Finite(direction))
             {
                 return false;
             }
             if (chargeMultiplier <= 0f || float.IsNaN(chargeMultiplier) || float.IsInfinity(chargeMultiplier)
                 || !Enum.IsDefined(typeof(ActionVariant), variant)) { return false; }
             int definitionId = _catalog.Register(definition, variant);
-            if (_catalog.TryGet(definitionId, out ActionCatalog.Entry captured) && captured.projectile && GameManager.Projectiles == null)
+            if (_catalog.TryGet(definitionId, out ActionCatalog.Entry captured)
+                && ((captured.projectile && GameManager.Projectiles == null)
+                    || (selectedTargets.Count != 0 && captured.multiLockRange <= 0f)))
             {
                 return false;
             }
@@ -95,7 +130,7 @@ namespace Game.Runtime
             return Execution.TryStart(new ActionRequest
             {
                 ownerHash = owner, definitionId = definitionId, targetHash = targetHash,
-                ownerRef = ownerRef, targetRef = targetRef,
+                ownerRef = ownerRef, targetRef = targetRef, selectedTargets = selectedTargets,
                 direction = direction, speedMultiplier = 1f, chargeMultiplier = chargeMultiplier, replaceGroupId = replaceGroupId,
             }, out instanceId, out groupId);
         }
@@ -347,6 +382,7 @@ namespace Game.Runtime
                 }
                 SyncDefense(owner);
             }
+            TickSpatialRepeats();
         }
 
         public void Present()
@@ -383,17 +419,35 @@ namespace Game.Runtime
         private void HandleExecution(ActionExecutionEvent notification)
         {
             ref readonly ActionExecution current = ref notification.execution;
+            TrackConsumableExecution(notification);
             int owner = current.ownerHash;
             if (current.ownerRef.IsValid && (GameManager.Actors == null || !GameManager.Actors.IsCurrent(current.ownerRef)))
             {
-                _combat.Remove(current.instanceId);
+                RemoveCombat(current.instanceId);
                 _movementOutputs.Remove(current.instanceId);
+                return;
+            }
+            if (_data.TryGetValue(owner, out _) && _data.GetManaged(owner) is CharacterActor3D actor3D)
+            {
+                HandleSpatialExecution(notification, actor3D);
+                SyncDefense(owner);
+                _events.FireActionExecution(notification);
                 return;
             }
             if (notification.kind == ActionSignalKind.Started && _catalog.TryGet(current.definitionId, out ActionCatalog.Entry entry)
                 && entry.isAttack)
             {
-                CombatExecution captured = new CombatExecution { projectile = entry.projectile };
+                CombatExecution captured = new CombatExecution
+                {
+                    projectile = entry.projectile,
+                    multiLockRange = entry.multiLockRange,
+                    multiLockTargets = current.selectedTargets,
+                };
+                if (captured.multiLockRange > 0f && captured.multiLockTargets.Count == 0
+                    && owner != CharacterRegistry.PlayerHash)
+                {
+                    captured.multiLockTargets = _multiLockTargeting.SelectForAI(current, entry.multiLockRange);
+                }
                 if (entry.projectile)
                 {
                     captured.magic = entry.CreateMagic();
@@ -410,6 +464,16 @@ namespace Game.Runtime
                     captured.attack.equipmentStatusEffects = GameManager.Equipment.GetOnHitEffects(owner, entry.equipmentSource);
                 }
                 _combat[current.instanceId] = captured;
+                if (captured.magic.groundImpactRange > 0f)
+                {
+                    CaptureGroundImpact(current, captured);
+                }
+                if (!entry.projectile && current.phase == AnimationPhase.Anticipation
+                    && (captured.attack.feature & AttackFeature.JustGuardImmune) != 0
+                    && WarnsPlayer(owner, captured.attack.targetPolicy.Resolve(MagicType.Attack)))
+                {
+                    _attackWarnings.PlayDangerousMelee(entry.attackSettings.GuardWarningSound);
+                }
                 if (_data.GetManaged(owner) is BaseCharacter actor && actor.CollisionController != null)
                 {
                     actor.CollisionController.SetCollisionMode(entry.contactType);
@@ -417,28 +481,59 @@ namespace Game.Runtime
             }
             if (_combat.TryGetValue(current.instanceId, out CombatExecution combat))
             {
+                bool enteringActive = notification.kind == ActionSignalKind.PhaseChanged && current.phase == AnimationPhase.Active;
+                if (enteringActive && !combat.projectile && combat.multiLockRange > 0f)
+                {
+                    ActionTargetSelection targets = _multiLockTargeting.Revalidate(current.ownerRef,
+                        combat.multiLockTargets, combat.multiLockRange);
+                    combat.attack.selectedTargets = targets;
+                    combat.attack.maxHitCount = Math.Max(1, targets.Count);
+                }
                 if (_controllers.TryGetValue(owner, out ActionExecutorController controller) && controller != null)
                 {
                     controller.HandleExecution(notification, combat.attack, combat.projectile);
                 }
-                if (notification.kind == ActionSignalKind.PhaseChanged && current.phase == AnimationPhase.Active && combat.projectile)
+                if (enteringActive && combat.projectile)
                 {
-                    Vector2 position = _data.GetVitals(owner).position;
-                    Vector2 direction = current.direction.sqrMagnitude > 0f ? current.direction : Vector2.right;
-                    int targetHash = current.targetRef.IsValid && GameManager.Actors != null
-                        && GameManager.Actors.IsCurrent(current.targetRef) ? current.targetHash : 0;
-                    if (GameManager.IsCharacterValid(targetHash))
+                    if (combat.magic.groundImpactRange > 0f)
                     {
-                        direction = (_data.GetVitals(targetHash).position - position).normalized;
+                        GameObject warning = combat.groundImpactWarning;
+                        combat.groundImpactWarning = null;
+                        ProjectileManager projectiles = GameManager.Projectiles;
+                        if (projectiles != null)
+                        {
+                            projectiles.SpawnGroundImpactFromExecution(current, combat.magic,
+                                _data.GetVitals(owner).position, combat.groundImpactPosition, warning);
+                        }
+                        else
+                        {
+                            AttackWarningPresentation.HideGroundImpact(warning);
+                        }
                     }
-                    ActorRef target = targetHash != 0 ? current.targetRef : default;
-                    GameManager.Projectiles.SpawnSpreadFromExecution(current, combat.magic, position, direction,
-                        combat.magic.bulletCount, EntrySpread(current.definitionId), target);
+                    else if (combat.multiLockRange > 0f)
+                    {
+                        GameManager.Projectiles.SpawnMultiLockFromExecution(current, combat.magic,
+                            combat.multiLockTargets, combat.multiLockRange, _multiLockTargeting);
+                    }
+                    else
+                    {
+                        Vector2 position = _data.GetVitals(owner).position;
+                        Vector2 direction = current.direction.sqrMagnitude > 0f ? current.direction : Vector2.right;
+                        int targetHash = current.targetRef.IsValid && !_data.Uses3DPhysics(current.targetRef.Hash) && GameManager.Actors != null
+                            && GameManager.Actors.IsCurrent(current.targetRef) ? current.targetHash : 0;
+                        if (GameManager.IsCharacterValid(targetHash))
+                        {
+                            direction = (_data.GetVitals(targetHash).position - position).normalized;
+                        }
+                        ActorRef target = targetHash != 0 ? current.targetRef : default;
+                        GameManager.Projectiles.SpawnSpreadFromExecution(current, combat.magic, position, direction,
+                            combat.magic.bulletCount, EntrySpread(current.definitionId), target);
+                    }
                 }
             }
             if (notification.kind == ActionSignalKind.Completed || notification.kind == ActionSignalKind.Interrupted)
             {
-                bool hadCombat = _combat.Remove(current.instanceId);
+                bool hadCombat = RemoveCombat(current.instanceId);
                 _movementOutputs.Remove(current.instanceId);
                 if (_data.TryGetValue(owner, out _) && _data.GetManaged(owner) is BaseCharacter actor)
                 {
@@ -456,6 +551,44 @@ namespace Game.Runtime
                 character.CollisionController.SetInvincible(Execution.EvaluateEffects(owner).isInvincible);
             }
             _events.FireActionExecution(notification);
+        }
+
+        private void CaptureGroundImpact(in ActionExecution current, CombatExecution captured)
+        {
+            Vector2 origin = _data.GetVitals(current.ownerHash).position;
+            float range = captured.magic.groundImpactRange;
+            Vector2 direction = current.direction.sqrMagnitude > 0f ? current.direction.normalized : Vector2.right;
+            Vector2 offset = direction * range;
+            if (GameManager.Actors != null && GameManager.Actors.IsCurrent(current.targetRef)
+                && !_data.Uses3DPhysics(current.targetRef.Hash)
+                && GameManager.IsCharacterValid(current.targetRef.Hash)
+                && !_data.GetFlags(current.targetRef.Hash).IsVanished && _data.GetVitals(current.targetRef.Hash).currentHp > 0)
+            {
+                offset = Vector2.ClampMagnitude(_data.GetVitals(current.targetRef.Hash).position - origin, range);
+            }
+            captured.groundImpactPosition = origin + offset;
+            if (WarnsPlayer(current.ownerHash, captured.magic.targetPolicy.Resolve(captured.magic.magicType)))
+            {
+                captured.groundImpactWarning = _attackWarnings.ShowGroundImpact(
+                    captured.groundImpactPosition, captured.magic.bulletProfile.explodeRadius);
+            }
+        }
+
+        private bool WarnsPlayer(int owner, AttackTargetRelation targets)
+        {
+            int player = CharacterRegistry.PlayerHash;
+            return (targets & AttackTargetRelation.Hostile) != 0 && GameManager.IsCharacterValid(player)
+                && _data.GetVitals(player).currentHp > 0 && !_data.GetFlags(player).IsVanished
+                && AttackTargetRules.GetRelation(_data.GetFlags(owner).Belong, _data.GetFlags(player).Belong, owner == player)
+                    == AttackTargetRelation.Hostile;
+        }
+
+        private bool RemoveCombat(long instanceId)
+        {
+            if (!_combat.Remove(instanceId, out CombatExecution combat)) { return false; }
+            _repeatingSpatialActions.Remove(instanceId);
+            AttackWarningPresentation.HideGroundImpact(combat.groundImpactWarning);
+            return true;
         }
 
         private float EntrySpread(int id) => _catalog.TryGet(id, out ActionCatalog.Entry entry) ? entry.spreadAngle : 0f;
@@ -596,6 +729,13 @@ namespace Game.Runtime
         {
             _registered.Dispose(); _removed.Dispose(); _damage.Dispose(); _requested.Dispose(); _death.Dispose();
             Execution.Changed -= HandleExecution;
+            foreach (CombatExecution combat in _combat.Values)
+            {
+                AttackWarningPresentation.HideGroundImpact(combat.groundImpactWarning);
+            }
+            _attackWarnings.Dispose();
+            _repeatingSpatialActions.Clear();
+            _consumableUses.Clear();
             _combat.Clear(); _movementOutputs.Clear(); _controllers.Clear(); _held.Clear(); _definitions.Clear(); _owners.Clear();
         }
     }

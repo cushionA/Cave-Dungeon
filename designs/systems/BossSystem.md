@@ -8,6 +8,14 @@ Section: 3 — 世界の広がり
 - 入力: AICore（AIBrain, AIMode, ActionSlot）、DamageSystem（HP監視、ダメージ処理）、GameManager.Events
 - 出力: OnBossPhaseChanged, OnBossDefeated, OnBossEncounterStart イベント → GateSystem（ClearGate開放）、UISystem（ボスHPバー）
 
+## 3D遭遇での設定
+
+`BossEncounter3D` に騎士、敵のボス個体、チャレンジ、ボスIDを指定し、`Boss` をオンにする。自動開始か、シーンのイベントから `BeginEncounter` を呼ぶ方法を選べる。集団戦を兼ねる場合は `GroupBattle` もオンにし、必要に応じて陣形・号令と増援枠を設定する。[ボス遭遇の実装](../../Assets/MyAsset/Runtime/World/BossEncounter3D.cs)
+
+フェーズ遷移はボスのHP割合、遭遇経過時間、開始した行動数を `BossControllerLogic` に渡して評価する。`onPhaseChanged` は移行先のフェーズ番号を通知する。撃破は戦闘開始時に登録したボス個体の死亡通知で確定し、クリア時は `onCompleted` を呼ぶ。撤退やロードでは試行を終了する。[ボス戦の試作部屋](../../Assets/Scenes/BossArena3DTestScene.unity)
+
+周回の召喚解放を付ける場合は、ボスID、召喚する種ID、最低周回と任意の前提フラグを `aidRules` に設定する。試行の開始から撃破までの周回を照合して解放する。[召喚解放の条件](../../Assets/MyAsset/Core/AI/Summon/ExpeditionAidUnlocks.Bosses.cs)
+
 ## コンポーネント構成
 
 | コンポーネント | 責務 | MonoBehaviour? |

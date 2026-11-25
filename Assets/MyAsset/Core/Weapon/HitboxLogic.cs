@@ -1,26 +1,20 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Game.Core
 {
     /// <summary>
-    /// ヒットボックス判定ロジック。矩形判定、ヒット回数管理、同一ターゲット重複防止。
+    /// ヒットボックスの矩形判定と、同一対象への命中間隔の管理。
     /// </summary>
     public class HitboxLogic
     {
-        private int _hitCount;
-        private int _maxHitCount;
-        private HashSet<ActorRef> _hitTargets;
+        private readonly AttackHitTracker _hits;
 
-        public int HitCount => _hitCount;
-        public bool IsExhausted => _hitCount >= _maxHitCount;
+        public int HitCount => _hits.HitCount;
+        public bool IsExhausted => _hits.IsExhausted;
 
-        public HitboxLogic(int maxHitCount)
-        {
-            _maxHitCount = maxHitCount;
-            _hitCount = 0;
-            _hitTargets = new HashSet<ActorRef>();
-        }
+        public HitboxLogic(int maxHitCount) : this(maxHitCount, default) { }
+
+        public HitboxLogic(int maxHitCount, HitRepeatSettings repeatHits) => _hits = new AttackHitTracker(maxHitCount, repeatHits);
 
         /// <summary>
         /// 矩形ヒットボックスに点が含まれるか判定する。
@@ -35,39 +29,27 @@ namespace Game.Core
         }
 
         /// <summary>
-        /// ヒット記録。同一ターゲット重複防止。上限到達でfalse。
+        /// ヒット記録。対象数や同じ対象への命中間隔と上限を満たさなければfalse。
         /// </summary>
         /// <param name="targetHash">ターゲット識別ハッシュ。</param>
         /// <returns>ヒットが記録された場合true。上限到達または重複の場合false。</returns>
         public bool TryRegisterHit(int targetHash)
-            => TryRegisterHit(new ActorRef(targetHash, 0));
+            => TryRegisterHit(targetHash, 0);
 
-        /// <summary>Runtime経路では登録世代ごとに重複を防ぐ。</summary>
-        public bool TryRegisterHit(ActorRef target)
-        {
-            if (_hitCount >= _maxHitCount)
-            {
-                return false;
-            }
+        public bool TryRegisterHit(int targetHash, double time)
+            => TryRegisterHit(new ActorRef(targetHash, 0), time);
 
-            if (!_hitTargets.Add(target))
-            {
-                return false;
-            }
+        /// <summary>Runtime経路では登録世代ごとに命中を記録する。</summary>
+        public bool TryRegisterHit(ActorRef target) => TryRegisterHit(target, 0);
 
-            _hitCount++;
-            return true;
-        }
+        public bool TryRegisterHit(ActorRef target, double time) => _hits.TryRegisterHit(target, time);
 
         /// <summary>
         /// リセット（次の攻撃モーション開始時に呼ぶ）。
         /// </summary>
         /// <param name="newMaxHitCount">新しいヒット上限。</param>
-        public void Reset(int newMaxHitCount)
-        {
-            _maxHitCount = newMaxHitCount;
-            _hitCount = 0;
-            _hitTargets.Clear();
-        }
+        public void Reset(int newMaxHitCount) => Reset(newMaxHitCount, default);
+
+        public void Reset(int newMaxHitCount, HitRepeatSettings repeatHits) => _hits.Reset(newMaxHitCount, repeatHits);
     }
 }

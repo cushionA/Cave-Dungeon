@@ -160,6 +160,8 @@ public enum BroadcastAction : byte
     FocusFire,          // 集中攻撃指示
     Disengage,          // 戦闘離脱指示
     ModeSync,           // モード同期（味方全員を同じモードに）
+    DefendPoint,        // 地点を守る
+    ReleaseOrder,       // 号令を解いて自律行動に戻す
 }
 ```
 
@@ -428,13 +430,17 @@ paramIdでBroadcastAction enum値を引く。
 
 | BroadcastAction | 説明 |
 |-----------------|------|
-| DesignateTarget | ターゲット指示（味方全員のターゲットを上書き） |
+| DesignateTarget | 担当や交戦相手がまだいない味方に標的を知らせる |
 | Rally | 集合（味方に集合点を指定） |
 | Scatter | 散開（味方を散らす） |
 | Taunt | 挑発（周囲の敵のターゲットを自分に向ける） |
-| FocusFire | 集中攻撃指示（味方全員で1体を攻撃） |
+| FocusFire | 交戦中の味方にも、指示した一体を優先するよう求める |
 | Disengage | 戦闘離脱指示 |
 | ModeSync | モード同期（味方全員を同じモードに切替） |
+| DefendPoint | 指定地点を守る |
+| ReleaseOrder | 現在の任務を終了し、元の個体設定を再開する |
+
+号令のIDはデータに保存される。既存の0～6を維持し、地点防衛と指示解除を末尾に追加した。各定義の使用者マスクをプレイヤー用の装備候補と実行時の検査で共用する。一回の発令には、実際の発令者に対応する一つのビットと、世代付きの個体参照を渡す。使用者の区分と受け手の陣営は別々に検査する。敵専用の挑発なら敵指揮官が発行し、効果を受けるのは対立陣営のAIである。AIの作者は `ActType.FieldOrder` の行動をモードに載せ、`ActData.fieldOrder` に号令を指定する。AIが地点防衛を出したときは、判断時に観測した発令者の位置が持ち場になる。2D試作では集合・標的指定・集中攻撃・地点防衛・解除・挑発を受信できる。散開・戦闘離脱・モード同期には将来用のIDと発令権限を割り当てている。[号令と権限](../../Assets/MyAsset/Core/AI/Core/FieldOrder.cs)・[2D戦場での配送](../../Assets/MyAsset/Runtime/AI/RuntimeFieldOrders.cs)
 
 ---
 
@@ -475,7 +481,7 @@ AIMode[1] "フェーズ2":
   default: ActionSlot(Sustained, paramId=Retreat, paramValue=8.0)
 ```
 
-### 仲間AI（カスタム）
+### シスターの仲間AI（プレイヤーカスタム）
 
 ```
 AIMode[0] "攻撃特化":
@@ -551,12 +557,29 @@ AIConditionType(12種): None, Count, HpRatio, MpRatio, StaminaRatio, ArmorRatio,
 
 CompareOp(9種): Less, LessEqual, Equal, GreaterEqual, Greater, NotEqual, InRange, HasFlag, HasAny
 
-**環境物利用の条件判定**: AIConditionType.ObjectNearby で環境物の存在を検知し、条件成立時にInstant(InteractObject)で利用する。
+**シーン装置の利用**
+
+1. シーンの装置に `AISceneGimmickController` を付け、認識ビット、操作点とその半径、効果の中心とその半径を設定する。たとえば落下物なら、操作点はレバー、効果の中心は落下先に置く。操作を遮るレイヤーの初期値は Ground。壁付けのレバーは操作点をプレイヤー側の面から少し離すと、壁自体で操作が遮られるのを防げる。
+2. `On Activated` に扉を開く、落下物を解放するなどのシーン側の処理を割り当てる。イベントは起動時に一度発火する。演出や物理効果が遅れる場合は、その秒数を `Effect Delay` に設定する。再有効化すると新しい使用世代になる。
+3. 敵・仲間の `AIInfo` で、使わせたいモードの行動に `ActType.InteractObject` を追加する。ルールからは `InstantAction.InteractObject` を使う。`ObjectNearby` は観測者が操作圏内にいて操作点まで遮られていない未使用装置の種類ビットを返す。共通観測に装置の照会元を接続していない場合は未取得となる。
+4. AIは同じ2D物理ワールドにある装置から、そのtickの戦闘標的に効果が届くものを選ぶ。遅延がある場合は現在速度から標的の到達位置を推定し、自分・味方が効果範囲を横切る候補を除く。どれも使えない場合に備え、ガードや接近などの行動を同じモードに設定できる。実行直前にも位置、速度、遮蔽物、行動制限、標的・装置の世代を確かめる。
 
 ## ターゲット選択（TargetSelector）
 1. TargetFilter で候補を絞り込み（CharacterFlags のビット演算で高速フィルタ）
 2. TargetSortKey で最適な1体を選択（Distance, HpRatio, DamageScore等11種）
 3. isDescending で昇順/降順を切替
+
+### 標的とスタンを使うルール
+
+`GameManager` の固定tickで、状態効果を進めた後にキャラクターを観測する。`AITargetRelations` が持つ「誰が誰を狙うか」を世代付きでコピーし、同じ観測から被ターゲット数を読める。スタンの残り秒数は `StatusEffectStore` から取得する。観測を作成した後の標的変更と状態効果の解除は、次回の観測に現れる。
+
+- プレイヤーを護衛する仲間は `targetsProtectedPlayer` を指定すると、現在のプレイヤーを狙う敵を候補にできる。別の味方を狙っている敵は、距離や被ターゲット数が同じでも区別できる。
+- `stunMustLastBeyondSeconds` に正の秒数を設定すると、その時間を**超えて**スタンが残る候補を選ぶ。0で無効。1秒と設定した場合、残り1秒ちょうどの敵は条件から外れる。ここで指定するのは作者の固定値で、移動や攻撃の発生を含む到達予測は別途必要になる。
+- 2つの条件を有効にすると、両方を満たす同じ候補を探す。優先候補がない場合に通常の選定へ進めたいルールは `continueIfEmpty` を使う。`AIInfo` のモードでは、優先条件と従来の距離選択をこの順で組み立てる。仲間AI設定画面からも設定できる。
+
+同期評価とBurstの評価は同じ選定処理を使う。実行側は選択した個体の世代と判定版を照合する。スケジュール後に別の処理が実行者の標的を変更した場合は、その新しい命令を優先して古い判断を破棄する。装置の操作時は、移動した味方・遮蔽物などの物理状態も再確認する。
+
+`AIInfo` の行動トリガー `CoolTimeReady` と `TargetStatusEffect` は変換に未対応。これらを指定した行動はスロットに残り、自動選択と既定行動の候補から外れる。ほかに使える行動がないモードでは、行動を開始しない。
 
 ## DamageScoreTracker
 - DamageScoreEntry[4-8] per character（SoAコンテナ管理）
@@ -605,5 +628,5 @@ Hard:   2フレーム + 0-2ランダム → 0.03-0.13秒
 - 攻撃も魔法もワープも移動もガードも同じActionSlot構造体で表現 → AIエディタが一つで済む
 - Sustained行動のreactionTriggerでカウンター系を統一的に表現（カウンター攻撃、カウンターワープ、カウンター回避）
 - 環境物利用はAIConditionType.ObjectNearbyで条件判定し、Instant(InteractObject)で実行
-- 仲間AIのカスタムは「プレイヤーがActionSlotを自分で組む」こと
+- プレイヤーがActionSlotのルールを組める仲間はシスター。召喚魔物は作者が設定した種の行動で戦い、指揮官を経由して騎士の簡易指揮を受ける。
 - 07_AI判定システム再設計のActionDataをActionSlotに更新する必要あり

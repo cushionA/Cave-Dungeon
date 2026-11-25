@@ -106,6 +106,66 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
+        public void AIObservation_TargetOfDistinguishesIdleMissingAndReusedActors()
+        {
+            var observation = new AIObservationContext();
+            var relations = new AITargetRelations();
+            var attacker = Actor(1, 1, CharacterBelong.Enemy, Vector2.zero);
+            var player = Actor(2, 2, CharacterBelong.Ally, Vector2.right);
+            var unregistered = Actor(3, 3, CharacterBelong.Ally, Vector2.left);
+            observation.BeginSnapshot(1, 0f);
+            observation.AddActor(attacker);
+            observation.AddActor(player);
+            observation.AddActor(unregistered);
+            relations.Register(attacker.actor);
+            relations.Register(player.actor);
+            Assert.IsFalse(observation.TryGetTargetOf(attacker.actor, out _));
+            Assert.IsTrue(relations.SetTarget(attacker.actor, player.actor));
+            relations.CopyTo(observation);
+            Assert.IsTrue(observation.TryGetTargetOf(attacker.actor, out ActorRef target));
+            Assert.AreEqual(player.actor, target);
+            Assert.IsTrue(observation.TryGetTargetOf(player.actor, out ActorRef idleTarget));
+            Assert.IsFalse(idleTarget.IsValid);
+            Assert.IsFalse(observation.TryGetTargetOf(unregistered.actor, out _));
+
+            var replacement = Actor(player.actor.Hash, 99, CharacterBelong.Ally, Vector2.right);
+            relations.Register(replacement.actor);
+            Assert.IsTrue(observation.TryGetTargetOf(attacker.actor, out target));
+            Assert.AreEqual(player.actor, target);
+            observation.BeginSnapshot(2, 1f);
+            observation.AddActor(attacker);
+            observation.AddActor(replacement);
+            relations.CopyTo(observation);
+            var allyFilter = new TargetFilter { belong = CharacterBelong.Ally };
+            Assert.IsFalse(observation.Matches(allyFilter, attacker.actor.Hash, player));
+            Assert.IsTrue(observation.Matches(allyFilter, attacker.actor.Hash, replacement));
+            Assert.IsFalse(observation.TryGetTargetOf(player.actor, out _));
+            Assert.IsTrue(observation.TryGetTargetOf(attacker.actor, out idleTarget));
+            Assert.IsFalse(idleTarget.IsValid);
+            observation.SetProtectedPlayer(player.actor);
+            Assert.IsFalse(observation.ProtectedPlayer.IsValid);
+        }
+
+        [Test]
+        public void AIObservation_StunSampleRejectsMissingSourceAndOldGeneration()
+        {
+            var observation = new AIObservationContext();
+            var target = Actor(10, 1, CharacterBelong.Enemy, Vector2.zero);
+            var replaced = Actor(10, 2, CharacterBelong.Enemy, Vector2.zero);
+            observation.BeginSnapshot(1, 0f);
+            observation.AddActor(target);
+            Assert.IsFalse(observation.TryGetStunRemaining(target.actor, out _));
+            observation.SetStunRemaining(target.actor, 0f);
+            Assert.IsTrue(observation.TryGetStunRemaining(target.actor, out float seconds));
+            Assert.AreEqual(0f, seconds);
+            observation.BeginSnapshot(2, 1f);
+            observation.AddActor(replaced);
+            observation.SetStunRemaining(target.actor, 5f);
+            Assert.IsFalse(observation.TryGetStunRemaining(target.actor, out _));
+            Assert.IsFalse(observation.TryGetStunRemaining(replaced.actor, out _));
+        }
+
+        [Test]
         public void AIObservation_LastAttacker_UsesRecordedEventOrderInsteadOfHighestDamageScore()
         {
             AIObservationContext observation = new AIObservationContext();

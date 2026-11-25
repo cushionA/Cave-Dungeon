@@ -11,6 +11,34 @@ namespace Game.Core
     public class GameEvents : IDisposable
     {
         private readonly ActorRegistry _actors;
+        private Func<ActorRef, FieldOrderIssuer> _resolveFieldOrderIssuer;
+        private Func<FieldOrder, bool> _receiveFieldOrder;
+
+        public void SetFieldOrderReceiver(Func<ActorRef, FieldOrderIssuer> resolveIssuer, Func<FieldOrder, bool> receiver)
+        {
+            _resolveFieldOrderIssuer = resolveIssuer;
+            _receiveFieldOrder = receiver;
+        }
+
+        internal ActorRef GetCurrentFieldOrderActor(int hash) =>
+            _actors != null && _actors.TryGet(hash, out ActorRef actor) ? actor : default;
+
+        public bool TryIssueFieldOrder(in FieldOrder order)
+        {
+            if (_receiveFieldOrder == null || _resolveFieldOrderIssuer == null || _actors == null
+                || !_actors.IsCurrent(order.Source) || !FieldOrderCatalog.Allows(order.Action, order.Issuer)
+                || _resolveFieldOrderIssuer(order.Source) != order.Issuer) { return false; }
+            if (FieldOrderCatalog.RequiresTarget(order.Action))
+            {
+                if (!_actors.IsCurrent(order.Target) || order.Target == order.Source) { return false; }
+            }
+            else if (order.Target != default) { return false; }
+            if (FieldOrderCatalog.RequiresPosition(order.Action) != order.Position.HasValue) { return false; }
+            if (order.Position is UnityEngine.Vector2 point && (float.IsNaN(point.x) || float.IsInfinity(point.x)
+                || float.IsNaN(point.y) || float.IsInfinity(point.y))) { return false; }
+            return _receiveFieldOrder(order);
+        }
+
         public GameEvents(ActorRegistry actors = null) { _actors = actors; }
         private readonly Subject<ActionExecutionEvent> _onActionExecution = new();
         private readonly Subject<ActionRequest> _onActionRequested = new();
@@ -217,6 +245,7 @@ namespace Game.Core
 
         public void Dispose()
         {
+            SetFieldOrderReceiver(null, null);
             _onActionExecution.Dispose();
             _onActionRequested.Dispose();
             _onCharacterRegistered.Dispose();

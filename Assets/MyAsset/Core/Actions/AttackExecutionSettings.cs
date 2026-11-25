@@ -16,6 +16,7 @@ namespace Game.Core
         public float DivingForwardSpeed { get; }
         public float DivingLandingRecoveryDuration { get; }
         public AudioClip LandingSound { get; }
+        public AudioClip GuardWarningSound { get; }
 
         private AttackExecutionSettings(AttackInfo source)
         {
@@ -29,6 +30,7 @@ namespace Game.Core
             DivingForwardSpeed = source.divingForwardSpeed;
             DivingLandingRecoveryDuration = source.divingLandingRecoveryDuration;
             LandingSound = source.effectSoundInfo.landingSound;
+            GuardWarningSound = source.effectSoundInfo.guardWarningSound;
         }
 
         public static AttackExecutionSettings Capture(AttackInfo source)

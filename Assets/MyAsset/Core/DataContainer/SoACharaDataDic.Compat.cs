@@ -135,6 +135,8 @@ namespace Game.Core
             return managed != null;
         }
 
+        public bool Uses3DPhysics(int hash) => GetManaged(hash)?.Uses3DPhysics == true;
+
         public int Add(int hash, CharacterVitals vitals, CombatStats combatStats,
             CharacterFlags flags, MoveParams moveParams,
             EquipmentStatus equipmentStatus = default, CharacterStatusEffects statusEffects = default,

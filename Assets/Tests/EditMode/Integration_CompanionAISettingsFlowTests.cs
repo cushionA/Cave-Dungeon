@@ -591,12 +591,15 @@ namespace Game.Tests.EditMode
                         sortKey = TargetSortKey.HpRatio,
                         elementFilter = Element.Fire | Element.Thunder,
                         isDescending = false,
+                        continueIfEmpty = true,
                         filter = new TargetFilter
                         {
                             belong = CharacterBelong.Enemy,
                             feature = CharacterFeature.Boss,
                             weakPoint = Element.Fire,
                             distanceRange = new Vector2(0f, 20f),
+                            targetsProtectedPlayer = true,
+                            stunMustLastBeyondSeconds = 0.75f,
                             filterFlags = FilterBitFlag.FeatureAnd,
                             includeSelf = false,
                         },
@@ -657,6 +660,9 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(CharacterFeature.Boss, reloaded.targetSelects[1].filter.feature);
             Assert.AreEqual(Element.Fire, reloaded.targetSelects[1].filter.weakPoint);
             Assert.AreEqual(new Vector2(0f, 20f), reloaded.targetSelects[1].filter.distanceRange);
+            Assert.IsTrue(reloaded.targetSelects[1].continueIfEmpty);
+            Assert.IsTrue(reloaded.targetSelects[1].filter.targetsProtectedPlayer);
+            Assert.AreEqual(0.75f, reloaded.targetSelects[1].filter.stunMustLastBeyondSeconds);
             Assert.IsTrue((reloaded.targetSelects[1].filter.filterFlags & FilterBitFlag.FeatureAnd) != 0);
 
             // targetRules 全フィールド

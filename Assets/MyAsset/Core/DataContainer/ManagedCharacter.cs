@@ -6,5 +6,6 @@ namespace Game.Core
     {
         public abstract int ObjectHash { get; }
         public abstract IDamageable Damageable { get; }
+        public virtual bool Uses3DPhysics => false;
     }
 }

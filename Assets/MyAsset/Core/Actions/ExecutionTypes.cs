@@ -100,6 +100,7 @@ namespace Game.Core
         public int definitionId;
         public int targetHash;
         public ActorRef targetRef;
+        public ActionTargetSelection selectedTargets;
         public Vector2 direction;
         public Vector2 targetPosition;
         public float speedMultiplier;
@@ -134,6 +135,7 @@ namespace Game.Core
         public int definitionId;
         public int targetHash;
         public ActorRef targetRef;
+        public ActionTargetSelection selectedTargets;
         public Vector2 direction;
         public Vector2 targetPosition;
         public float speedMultiplier;

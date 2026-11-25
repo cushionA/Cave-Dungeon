@@ -23,6 +23,10 @@ Section: 1 — MVP
 
 以下の構成表・例にはMVP時の設計案を含む。現在の受付・費用・寿命は上記の共通実行契約を参照する。
 
+## 3Dプレイヤーの装備と魔法枠
+
+Tab／LT で戦闘準備を開き、所持品の武器・コアと習得済みの魔法から選択する。武器を交換すると通常攻撃の定義が変わり、コアは共通の装備処理から能力値に反映する。魔法は3枠に登録でき、選択した枠を Q／RB で使う。装備品IDと各枠の登録・選択は同じセーブスロットに保存する。[装備と魔法枠](../../Assets/MyAsset/Runtime/Character/PlayerCombatLoadout3D.cs)・[戦闘準備](../../Assets/MyAsset/Runtime/UI/ExpeditionLoadoutPanel3D.cs)
+
 ## コンポーネント構成
 
 | コンポーネント | 責務 | MonoBehaviour? |
@@ -75,11 +79,17 @@ public class WeaponHolder : MonoBehaviour, IAbility
 4. アニメーション再生
 5. AttackMover.StartMove(distance, duration, contactType)
 6. DamageDealer.Activate(motionData) → ヒットボックス有効化
-7. ヒット時 → DamageData生成 → IDamageable.ReceiveDamage()
-8. hitCount < maxHitCount でヒット制限
+7. 接触時に、攻撃ごとの命中記録で対象数・対象別回数・間隔を照合
+8. 命中を受け付けたら DamageData生成 → IDamageable.ReceiveDamage()
 9. isAutoChain → 自動で次モーションへ / else → inputWindow内の入力待ち
 10. コンボ終了 → リカバリーモーション → 行動可能に
 ```
+
+### 持続する判定の多段ヒット
+
+`AttackInfo` の「持続ヒット」で、一体あたりの上限回数と再命中までの秒数を指定する。上限が 0 または 1 の攻撃は従来どおり一体につき一回。たとえば上限 3、間隔 0.15 秒なら、最初の命中からさらに 0.15 秒以上空けて二回目、三回目を受け付ける。判定は固定更新の刻みで行うため、設定した秒数を経過した次の判定が再命中の候補になる。
+
+命中履歴は攻撃の有効時間ごとに作り、対象を登録世代付きの `ActorRef` で区別する。対象が判定から出ても、同じ攻撃が続く間は回数と間隔を引き継ぐ。2D の近接は接触中、3D の近接と直接の床範囲攻撃は `Active` 中に再判定する。再命中時もその場の接触や床の条件を照合する。
 
 ## 攻撃移動 (AttackMover)
 ```csharp
@@ -118,7 +128,7 @@ public class AttackMover
 | 空中攻撃 | aerialAttacks配列の実行 | PlayMode | Medium |
 | 落下攻撃 | 空中から急降下攻撃 | PlayMode | Medium |
 | 飛翔体発射 | ProjectileConfig設定に基づく弾発射 | PlayMode | Medium |
-| ヒット数制限 | maxHitCountによるマルチヒット管理 | EditMode | Medium |
+| ヒット数制限 | 対象数と、対象ごとの命中回数・間隔を制御 | EditMode / PlayMode | Medium |
 
 ## 設計メモ
 - 参考コードのWeaponAbillity.csを大幅リビルド。ActType enumの冗長な分岐を排除

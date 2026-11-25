@@ -35,6 +35,7 @@ namespace Game.Core
                 armorBreakValue = info.armorBreakValue,
                 guardDamage = info.guardDamage,
                 maxHitCount = maxHitCount,
+                repeatHits = info.repeatHits,
                 staminaCost = info.staminaCost,
                 mpCost = info.mpCost,
                 statusEffects = StatusEffectApplicationLogic.Resolve(info.statusEffects),

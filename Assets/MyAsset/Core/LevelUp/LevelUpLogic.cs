@@ -19,7 +19,7 @@ namespace Game.Core
     /// Handles experience accumulation, level-up judgment, stat point allocation,
     /// and vitals recalculation.
     /// </summary>
-    public class LevelUpLogic : ISaveable
+    public class LevelUpLogic : ISaveableWithMissingEntry
     {
         public const int k_PointsPerLevel = 3;
         public const int k_HpPerVit = 10;
@@ -47,6 +47,7 @@ namespace Game.Core
         private int _level;
         private int _availablePoints;
         private StatModifier _allocatedStats;
+        private readonly int _initialLevel;
         private readonly LevelUpConfig _config;
 
         public int CurrentExp => _currentExp;
@@ -87,10 +88,8 @@ namespace Game.Core
             }
 
             _config = config;
-            _level = initialLevel;
-            _currentExp = 0;
-            _availablePoints = 0;
-            _allocatedStats = default;
+            _initialLevel = initialLevel;
+            Reset();
         }
 
         /// <summary>
@@ -99,7 +98,7 @@ namespace Game.Core
         /// </summary>
         public int GetExpForNextLevel()
         {
-            return _level * 100;
+            return (int)Math.Min((long)_level * 100, int.MaxValue);
         }
 
         /// <summary>
@@ -113,23 +112,20 @@ namespace Game.Core
                 throw new ArgumentOutOfRangeException(nameof(amount), "Experience amount cannot be negative.");
             }
 
-            _currentExp += amount;
+            long remainingExp = (long)_currentExp + amount;
             int levelsGained = 0;
             int maxLevel = MaxLevel;
 
-            while (_level < maxLevel && _currentExp >= GetExpForNextLevel())
+            while (_level < maxLevel && remainingExp >= GetExpForNextLevel())
             {
-                _currentExp -= GetExpForNextLevel();
+                remainingExp -= GetExpForNextLevel();
                 _level++;
                 _availablePoints += k_PointsPerLevel;
                 levelsGained++;
             }
 
             // 最大レベル到達時は余剰 exp を破棄（無限蓄積防止）
-            if (_level >= maxLevel)
-            {
-                _currentExp = 0;
-            }
+            _currentExp = _level < maxLevel ? (int)remainingExp : 0;
 
             return levelsGained;
         }
@@ -312,6 +308,16 @@ namespace Game.Core
         // ===== ISaveable =====
 
         public string SaveId => "LevelUpLogic";
+
+        void ISaveableWithMissingEntry.RestoreMissingEntry() => Reset();
+
+        private void Reset()
+        {
+            _level = _initialLevel;
+            _currentExp = 0;
+            _availablePoints = 0;
+            _allocatedStats = default;
+        }
 
         object ISaveable.Serialize()
         {

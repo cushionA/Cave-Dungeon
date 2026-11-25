@@ -17,6 +17,7 @@ namespace Game.Core
     /// </summary>
     public class LevelStreamingLogic
     {
+        private readonly string _persistentScene;
         private string _activeScene;
         private HashSet<string> _loadedScenes;
         private Queue<string> _loadQueue;
@@ -28,6 +29,7 @@ namespace Game.Core
 
         public LevelStreamingLogic(string initialScene)
         {
+            _persistentScene = initialScene;
             _activeScene = initialScene;
             _loadedScenes = new HashSet<string> { initialScene };
             _loadQueue = new Queue<string>();
@@ -67,7 +69,15 @@ namespace Game.Core
             _state = StreamingState.Loaded;
         }
 
-        /// <summary>シーンアンロード要求。アクティブシーンはアンロード不可。</summary>
+        internal void FailLoad()
+        {
+            if (_state == StreamingState.Loading)
+            {
+                _state = _loadedScenes.Count > 1 ? StreamingState.Loaded : StreamingState.Idle;
+            }
+        }
+
+        /// <summary>シーンアンロード要求。永続シーンとアクティブシーンは維持する。</summary>
         public bool RequestUnload(string sceneName)
         {
             if (!_loadedScenes.Contains(sceneName))
@@ -75,7 +85,7 @@ namespace Game.Core
                 return false;
             }
 
-            if (_activeScene == sceneName)
+            if (_activeScene == sceneName || _persistentScene == sceneName)
             {
                 return false;
             }
@@ -89,6 +99,13 @@ namespace Game.Core
         {
             _loadedScenes.Remove(sceneName);
             _state = StreamingState.Idle;
+        }
+
+        internal void ForgetUnloadedArea(string sceneName)
+        {
+            if (sceneName == _persistentScene || !_loadedScenes.Remove(sceneName)) { return; }
+            if (_activeScene == sceneName) { _activeScene = _persistentScene; }
+            if (_state == StreamingState.Loaded && _activeScene == _persistentScene) { _state = StreamingState.Idle; }
         }
 
         /// <summary>指定シーンがロード済みか</summary>

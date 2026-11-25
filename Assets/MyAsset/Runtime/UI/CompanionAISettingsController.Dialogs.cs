@@ -907,15 +907,10 @@ namespace Game.Runtime
                 return slot.displayName;
             }
 
-            // Attack/Cast は _attackCatalog から解決
-            if ((slot.execType == ActionExecType.Attack || slot.execType == ActionExecType.Cast)
-                && _attackCatalog != null
-                && slot.paramId >= 0
-                && slot.paramId < _attackCatalog.Length
-                && _attackCatalog[slot.paramId] != null)
+            if (slot.execType == ActionExecType.Attack || slot.execType == ActionExecType.Cast)
             {
-                AttackInfo info = _attackCatalog[slot.paramId];
-                return string.IsNullOrEmpty(info.attackName) ? info.name : info.attackName;
+                AttackInfo info = ResolveAttackSlot(slot);
+                if (info != null) { return string.IsNullOrEmpty(info.attackName) ? info.name : info.attackName; }
             }
 
             // UseItem は _itemCatalog から paramValue (itemId) で解決
@@ -943,6 +938,25 @@ namespace Game.Runtime
 
             // fallback
             return ActionSlotLabelTable.GetFallbackLabel(slot);
+        }
+
+        private AttackInfo ResolveAttackSlot(ActionSlot slot)
+        {
+            IReadOnlyList<AttackInfo> attacks = CurrentAttackCatalog;
+            if (attacks == null) { return null; }
+            if (companion3D != null && !string.IsNullOrEmpty(slot.actionDefinitionId))
+            {
+                for (int i = 0; i < attacks.Count; i++)
+                {
+                    AttackInfo attack = attacks[i];
+                    if (attack != null && string.Equals(attack.PersistentId, slot.actionDefinitionId, StringComparison.Ordinal))
+                    {
+                        return attack;
+                    }
+                }
+                return null;
+            }
+            return slot.paramId >= 0 && slot.paramId < attacks.Count ? attacks[slot.paramId] : null;
         }
 
         private VisualElement BuildDetailSection(string title)

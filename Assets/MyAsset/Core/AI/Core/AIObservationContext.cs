@@ -9,6 +9,7 @@ namespace Game.Core
     {
         public readonly ActorRef actor;
         public readonly Vector2 position;
+        public readonly PhysicsScene2D physicsScene;
         public readonly CharacterFlags flags;
         public readonly int currentHp;
         public readonly float hpPercent;
@@ -21,9 +22,10 @@ namespace Game.Core
         public readonly Element weakPoints;
 
         private AIActorObservation(ActorRef actor, in CharacterVitals vitals,
-            in CombatStats combat, in CharacterFlags flags)
+            in CombatStats combat, in CharacterFlags flags, PhysicsScene2D physicsScene)
         {
             this.actor = actor;
+            this.physicsScene = physicsScene;
             position = vitals.position;
             this.flags = flags;
             currentHp = vitals.currentHp;
@@ -35,22 +37,28 @@ namespace Game.Core
             armorPercent = vitals.maxArmor > 0 ? 100f * vitals.currentArmor / vitals.maxArmor : 0f;
             attackPower = combat.attack.Total;
             defensePower = combat.defense.Total;
+            weakPoints = GetWeakPoints(combat.defense);
+        }
+
+        internal static Element GetWeakPoints(in ElementalStatus defense)
+        {
             // 弱点の現行契約は「指定属性の防御値が0以下」。作者の弱点設定との統合は別タスク。
             Element weak = default;
-            if (combat.defense.slash <= 0) { weak |= Element.Slash; }
-            if (combat.defense.strike <= 0) { weak |= Element.Strike; }
-            if (combat.defense.pierce <= 0) { weak |= Element.Pierce; }
-            if (combat.defense.fire <= 0) { weak |= Element.Fire; }
-            if (combat.defense.thunder <= 0) { weak |= Element.Thunder; }
-            if (combat.defense.light <= 0) { weak |= Element.Light; }
-            if (combat.defense.dark <= 0) { weak |= Element.Dark; }
-            weakPoints = weak;
+            if (defense.slash <= 0) { weak |= Element.Slash; }
+            if (defense.strike <= 0) { weak |= Element.Strike; }
+            if (defense.pierce <= 0) { weak |= Element.Pierce; }
+            if (defense.fire <= 0) { weak |= Element.Fire; }
+            if (defense.thunder <= 0) { weak |= Element.Thunder; }
+            if (defense.light <= 0) { weak |= Element.Light; }
+            if (defense.dark <= 0) { weak |= Element.Dark; }
+            return weak;
         }
 
         internal AIActorObservation(ActorRef actor, Vector2 position, CharacterFlags flags, int currentHp,
             float hpPercent, float hpFraction, float mpPercent, float staminaPercent, float armorPercent,
-            int attackPower, int defensePower, Element weakPoints)
+            int attackPower, int defensePower, Element weakPoints, PhysicsScene2D physicsScene)
         {
+            this.physicsScene = physicsScene;
             this.actor = actor; this.position = position; this.flags = flags; this.currentHp = currentHp;
             this.hpPercent = hpPercent; this.hpFraction = hpFraction; this.mpPercent = mpPercent;
             this.staminaPercent = staminaPercent; this.armorPercent = armorPercent;
@@ -59,7 +67,8 @@ namespace Game.Core
 
         /// <summary>現在値をAIの判定に必要な値だけへ投影し、次のsnapshotまで固定する。</summary>
         public static AIActorObservation Capture(ActorRef actor, in CharacterVitals vitals,
-            in CombatStats combat, in CharacterFlags flags) => new AIActorObservation(actor, vitals, combat, flags);
+            in CombatStats combat, in CharacterFlags flags, PhysicsScene2D physicsScene = default) =>
+            new AIActorObservation(actor, vitals, combat, flags, physicsScene);
     }
 
     /// <summary>同じ固定tickの判断器が共有する値snapshot。取得していない情報はfalseで返す。</summary>
@@ -69,10 +78,21 @@ namespace Game.Core
         private readonly List<int> _hashes = new List<int>();
         private readonly Dictionary<(ActorRef owner, ActorRef source), float> _scores = new Dictionary<(ActorRef, ActorRef), float>();
         private readonly Dictionary<ActorRef, ActorRef> _lastAttackers = new Dictionary<ActorRef, ActorRef>();
+        private readonly Dictionary<ActorRef, ActorRef> _targets = new Dictionary<ActorRef, ActorRef>();
+        private readonly Dictionary<ActorRef, float> _stunRemaining = new Dictionary<ActorRef, float>();
         private readonly Dictionary<ActorRef, int> _targetCounts = new Dictionary<ActorRef, int>();
+        private readonly List<AISceneGimmick> _gimmicks = new List<AISceneGimmick>();
+        private readonly Dictionary<int, int> _gimmickIndices = new Dictionary<int, int>();
+        private readonly Dictionary<ActorRef, Vector2> _gimmickVelocities = new Dictionary<ActorRef, Vector2>();
+        private readonly HashSet<(ActorRef observer, int id, int generation)> _visibleGimmicks =
+            new HashSet<(ActorRef, int, int)>();
+        internal bool GimmicksAvailable { get; private set; }
+        internal int GimmickCount => _gimmicks.Count;
+        internal AISceneGimmick GimmickAt(int index) => _gimmicks[index];
         private bool _damageScoresAvailable;
         private bool _targetsAvailable;
 
+        public ActorRef ProtectedPlayer { get; private set; }
         public long Tick { get; private set; }
         public float Time { get; private set; }
         public IReadOnlyList<int> ActorHashes => _hashes;
@@ -100,22 +120,149 @@ namespace Game.Core
         {
             Tick = tick;
             Time = time;
-            _actors.Clear(); _hashes.Clear(); _scores.Clear(); _lastAttackers.Clear(); _targetCounts.Clear();
+            _actors.Clear(); _hashes.Clear(); _scores.Clear(); _lastAttackers.Clear();
+            _targets.Clear(); _targetCounts.Clear(); _stunRemaining.Clear();
+            ProtectedPlayer = default;
+            _gimmicks.Clear();
+            _gimmickIndices.Clear();
+            _visibleGimmicks.Clear();
+            _gimmickVelocities.Clear();
+            GimmicksAvailable = false;
             _damageScoresAvailable = false;
             _targetsAvailable = false;
+        }
+
+        /// <summary>このtickの装置照会を開始する。0件を観測済みとして返せる。</summary>
+        public void BeginGimmickObservation()
+        {
+            _gimmicks.Clear();
+            _gimmickIndices.Clear();
+            _visibleGimmicks.Clear();
+            GimmicksAvailable = true;
+        }
+
+        public void AddGimmick(in AISceneGimmick gimmick)
+        {
+            if (!GimmicksAvailable || !gimmick.IsValid) { return; }
+            if (_gimmickIndices.TryGetValue(gimmick.id, out int index))
+            {
+                _gimmicks[index] = gimmick;
+                return;
+            }
+            _gimmickIndices.Add(gimmick.id, _gimmicks.Count);
+            _gimmicks.Add(gimmick);
+        }
+
+        public bool TryGetGimmick(int id, int generation, out AISceneGimmick gimmick)
+        {
+            if (_gimmickIndices.TryGetValue(id, out int index) && _gimmicks[index].generation == generation)
+            {
+                gimmick = _gimmicks[index];
+                return true;
+            }
+            gimmick = default;
+            return false;
+        }
+
+        public void SetGimmickOperationVisible(ActorRef observer, in AISceneGimmick gimmick)
+        {
+            if (TryGetActor(observer.Hash, out AIActorObservation actor) && actor.actor == observer
+                && TryGetGimmick(gimmick.id, gimmick.generation, out AISceneGimmick captured)
+                && captured.requiresClearOperation && captured.physicsScene == actor.physicsScene)
+            {
+                _visibleGimmicks.Add((observer, captured.id, captured.generation));
+            }
+        }
+
+        public bool IsGimmickOperationVisible(ActorRef observer, in AISceneGimmick gimmick) =>
+            TryGetActor(observer.Hash, out AIActorObservation actor) && actor.actor == observer
+                && TryGetGimmick(gimmick.id, gimmick.generation, out AISceneGimmick captured)
+                && captured.physicsScene == actor.physicsScene && (!captured.requiresClearOperation || _visibleGimmicks.Contains((observer, captured.id, captured.generation)));
+
+        internal void CopyVisibleGimmicks(List<(int observerHash, int gimmickId)> output)
+        {
+            output.Clear();
+            foreach (var pair in _visibleGimmicks)
+            {
+                // Native側の組キーはhash/idだけ。捕捉中に世代交代した組はここで除く。
+                if (Contains(pair.observer) && TryGetGimmick(pair.id, pair.generation, out _))
+                {
+                    output.Add((pair.observer.Hash, pair.id));
+                }
+            }
+        }
+
+        public void SetGimmickVelocity(ActorRef actor, Vector2 velocity)
+        {
+            if (!Contains(actor)) { return; }
+            if (float.IsNaN(velocity.x) || float.IsInfinity(velocity.x)
+                || float.IsNaN(velocity.y) || float.IsInfinity(velocity.y))
+            {
+                _gimmickVelocities.Remove(actor);
+                return;
+            }
+            _gimmickVelocities[actor] = velocity;
+        }
+
+        public bool TryGetGimmickVelocity(ActorRef actor, out Vector2 velocity)
+        {
+            velocity = default;
+            return Contains(actor) && _gimmickVelocities.TryGetValue(actor, out velocity);
         }
 
         public void AddActor(in AIActorObservation actor)
         {
             if (!actor.actor.IsValid) { return; }
-            if (!_actors.ContainsKey(actor.actor.Hash)) { _hashes.Add(actor.actor.Hash); }
+            if (!_actors.TryGetValue(actor.actor.Hash, out AIActorObservation previous))
+            {
+                _hashes.Add(actor.actor.Hash);
+            }
+            else if (previous.actor != actor.actor)
+            {
+                ForgetTargetOf(previous.actor);
+                if (_targetCounts.Remove(previous.actor))
+                {
+                    foreach (int hash in _hashes)
+                    {
+                        ActorRef owner = _actors[hash].actor;
+                        if (_targets.TryGetValue(owner, out ActorRef target) && target == previous.actor) { _targets.Remove(owner); }
+                    }
+                }
+                _stunRemaining.Remove(previous.actor);
+            }
             _actors[actor.actor.Hash] = actor;
+            if (ProtectedPlayer.Hash == actor.actor.Hash && (ProtectedPlayer != actor.actor || !IsLiving(actor)))
+            {
+                ProtectedPlayer = default;
+            }
         }
 
         public bool TryGetActor(int hash, out AIActorObservation actor) => _actors.TryGetValue(hash, out actor);
         public bool Contains(ActorRef actor) => actor.IsValid && _actors.TryGetValue(actor.Hash, out AIActorObservation value) && value.actor.Equals(actor);
         public void SetDamageScoresAvailable() => _damageScoresAvailable = true;
         public void SetTargetRelationsAvailable() => _targetsAvailable = true;
+
+        public void SetProtectedPlayer(ActorRef player)
+        {
+            ProtectedPlayer = TryGetActor(player.Hash, out AIActorObservation actor) && actor.actor == player
+                && IsLiving(actor) ? player : default;
+        }
+
+        private static bool IsLiving(in AIActorObservation actor) =>
+            actor.currentHp > 0 && actor.flags.ActState != ActState.Dead && !actor.flags.IsVanished;
+
+        public void SetStunRemaining(ActorRef actor, float seconds)
+        {
+            if (!Contains(actor)) { return; }
+            if (float.IsNaN(seconds) || float.IsInfinity(seconds) || seconds < 0f) { _stunRemaining.Remove(actor); }
+            else { _stunRemaining[actor] = seconds; }
+        }
+
+        public bool TryGetStunRemaining(ActorRef actor, out float seconds)
+        {
+            seconds = 0f;
+            return Contains(actor) && _stunRemaining.TryGetValue(actor, out seconds);
+        }
 
         public void RecordDamageScore(ActorRef owner, ActorRef source, float score)
         {
@@ -136,11 +283,42 @@ namespace Game.Core
             return true;
         }
 
+        internal void BeginTargetRelations()
+        {
+            _targets.Clear();
+            _targetCounts.Clear();
+            SetTargetRelationsAvailable();
+        }
+
+        /// <summary>所有者ごとに1件を更新する。defaultは観測済みの「標的なし」、観測外の標的は不明。</summary>
         public void RecordTarget(ActorRef owner, ActorRef target)
         {
-            if (!Contains(owner) || !Contains(target)) { return; }
+            if (!Contains(owner)) { return; }
+            if (_targets.TryGetValue(owner, out ActorRef previous) && previous == target) { return; }
+            ForgetTargetOf(owner);
+            if (target != default && !Contains(target)) { return; }
+            _targets[owner] = target;
+            if (!target.IsValid) { return; }
             _targetCounts.TryGetValue(target, out int count);
             _targetCounts[target] = count + 1;
+        }
+
+        private void ForgetTargetOf(ActorRef owner)
+        {
+            if (!_targets.TryGetValue(owner, out ActorRef previous)) { return; }
+            _targets.Remove(owner);
+            if (!previous.IsValid) { return; }
+            int count = _targetCounts[previous];
+            if (count == 1) { _targetCounts.Remove(previous); }
+            else { _targetCounts[previous] = count - 1; }
+        }
+
+        public bool TryGetTargetOf(ActorRef owner, out ActorRef target)
+        {
+            target = default;
+            if (!_targetsAvailable || !Contains(owner) || !_targets.TryGetValue(owner, out ActorRef captured)) { return false; }
+            target = captured;
+            return true;
         }
 
         public bool TryGetTargetingCount(int targetHash, out int count)
@@ -153,12 +331,10 @@ namespace Game.Core
 
         public bool Matches(in TargetFilter filter, int ownerHash, in AIActorObservation candidate)
         {
+            if (!Contains(candidate.actor)) { return false; }
             AIManagedWorld world = new AIManagedWorld { observation = this };
             return AIQueryKernel.MatchesFilter(filter, ownerHash, candidate.actor.Hash, ref world);
         }
-
-        internal bool Matches(in TargetFilter filter, in AIActorObservation owner, in AIActorObservation candidate)
-            => Matches(filter, owner.actor.Hash, candidate);
 
         public bool TryGetConditionValue(in AICondition condition, int ownerHash, int targetHash, out float value)
         {
@@ -170,12 +346,6 @@ namespace Game.Core
         {
             AIManagedWorld world = new AIManagedWorld { observation = this };
             return AIQueryKernel.TrySortValue(key, ownerHash, targetHash, ref world, out value);
-        }
-
-        internal bool TryGetSortValue(TargetSortKey key, in AIActorObservation owner,
-            in AIActorObservation target, out float value)
-        {
-            return TryGetSortValue(key, owner.actor.Hash, target.actor.Hash, out value);
         }
     }
 }

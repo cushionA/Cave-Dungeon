@@ -25,5 +25,20 @@ namespace Game.Core
 
         /// <summary>自分を対象に含めるか</summary>
         public bool includeSelf;
+
+        [Tooltip("護衛する味方プレイヤーを、同じ観測で標的にしている敵に限る")]
+        public bool targetsProtectedPlayer;
+
+        [Min(0f), Tooltip("スタン残り秒数が指定値を超える候補に限る。0で無効")]
+        public float stunMustLastBeyondSeconds;
+
+        internal readonly bool MatchesWeaknesses(Element candidateWeaknesses)
+        {
+            if (weakPoint == 0) { return true; }
+            Element matched = candidateWeaknesses & weakPoint;
+            return (filterFlags & FilterBitFlag.WeakPointAnd) != 0 ? matched == weakPoint : matched != 0;
+        }
+
+        internal readonly bool RequiresObservedTargetFacts => targetsProtectedPlayer || stunMustLastBeyondSeconds != 0f;
     }
 }

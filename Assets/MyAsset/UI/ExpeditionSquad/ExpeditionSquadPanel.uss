@@ -1,0 +1,118 @@
+.expedition-squad {
+    align-self: center;
+    margin-top: var(--s-lg);
+    width: 520px;
+    max-width: 94%;
+    max-height: 86%;
+    padding: var(--s-lg);
+    border-radius: var(--r-md);
+    background-color: var(--color-bg-panel);
+    color: var(--color-text-primary);
+    font-size: var(--fs-body);
+}
+
+.expedition-squad__heading {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--s-md);
+}
+
+.expedition-squad__title {
+    font-size: var(--fs-h2);
+    -unity-font-style: bold;
+}
+
+.expedition-squad__controls {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: var(--s-sm);
+}
+
+.expedition-squad__slot {
+    min-width: 104px;
+}
+
+.expedition-squad__mode--active {
+    color: var(--color-text-on-accent);
+    background-color: var(--color-accent);
+}
+
+.expedition-squad__totals {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-bottom: var(--s-sm);
+}
+
+.expedition-squad__total {
+    margin-right: var(--s-md);
+    color: var(--color-accent);
+    -unity-font-style: bold;
+}
+
+.expedition-squad__species {
+    flex-shrink: 1;
+}
+
+.expedition-squad__row {
+    flex-direction: row;
+    align-items: center;
+    min-height: 44px;
+    padding: var(--s-xs) var(--s-sm);
+    margin-bottom: var(--s-xs);
+    border-radius: var(--r-sm);
+    background-color: var(--color-bg-item);
+}
+
+.expedition-squad__name {
+    flex-grow: 1;
+    flex-basis: 0;
+    white-space: normal;
+}
+
+.expedition-squad__unit-cost {
+    color: var(--color-text-muted);
+    margin-right: var(--s-sm);
+}
+
+.expedition-squad__quantity {
+    min-width: 36px;
+    -unity-text-align: middle-center;
+    -unity-font-style: bold;
+}
+
+.expedition-squad__adjust {
+    min-width: 36px;
+    min-height: 32px;
+}
+
+.expedition-squad__footer {
+    flex-direction: row;
+    align-items: center;
+    margin-top: var(--s-md);
+}
+
+.expedition-squad__status {
+    flex-grow: 1;
+    flex-basis: 0;
+    color: var(--color-text-secondary);
+    white-space: normal;
+}
+
+.expedition-squad__confirm {
+    min-height: 36px;
+    background-color: var(--color-accent);
+    color: var(--color-text-on-accent);
+    -unity-font-style: bold;
+}
+
+.expedition-squad__confirm:hover:enabled,
+.expedition-squad__confirm:focus:enabled {
+    background-color: var(--color-accent-hover);
+}
+
+.expedition-squad__confirm:disabled {
+    background-color: var(--color-bg-item);
+    color: var(--color-text-muted);
+}

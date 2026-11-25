@@ -15,6 +15,7 @@ namespace Game.Core
         private JudgmentLoop _judgmentLoop;
         private ModeController _modeController;
         private ActionExecutor _executor;
+        private readonly BroadcastActionHandler _fieldOrders;
         private SoACharaDataDic _data;
         private int _enemyHash;
         private bool _isActive;
@@ -40,7 +41,8 @@ namespace Game.Core
             _executor.Register(new CastActionHandler());
             _executor.Register(new InstantActionHandler());
             _executor.Register(new SustainedActionHandler());
-            _executor.Register(new BroadcastActionHandler());
+            _fieldOrders = new BroadcastActionHandler(enemyHash, FieldOrderIssuer.EnemyCommander, events);
+            _executor.Register(_fieldOrders);
 
             _judgmentLoop = new JudgmentLoop(_executor, data, enemyHash);
             _modeController = new ModeController(_judgmentLoop);
@@ -69,6 +71,7 @@ namespace Game.Core
         public void Dispose()
         {
             _isActive = false;
+            _fieldOrders.ClearOwner();
             _judgmentLoop.Dispose();
             _confusionClearedSubscription?.Dispose();
             _confusionClearedSubscription = null;
@@ -130,6 +133,7 @@ namespace Game.Core
         public void Deactivate()
         {
             _isActive = false;
+            _fieldOrders.ClearOwner();
             _judgmentLoop.InvalidateDecision();
             _executor.CancelCurrent();
         }
@@ -140,6 +144,7 @@ namespace Game.Core
         public void Activate()
         {
             _judgmentLoop.ResetActorLifetime();
+            _fieldOrders.BindCurrentOwner();
             _isActive = true;
         }
     }

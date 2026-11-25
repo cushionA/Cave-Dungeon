@@ -10,7 +10,7 @@ namespace Game.Runtime
     /// Controllerは表示とUnity接触を担当し、生成・寿命・派生・回収はここを通る。
     /// IGameSubManager を実装し、GameManager から Priority 順に初期化される。
     /// </summary>
-    public class ProjectileManager : MonoBehaviour, IGameSubManager
+    public partial class ProjectileManager : MonoBehaviour, IGameSubManager
     {
         /// <summary>InitOrder: 飛翔体は Enemy スポナーより後に初期化する。</summary>
         private const int k_InitOrder = 300;
@@ -149,11 +149,12 @@ namespace Game.Runtime
         {
             if (!CanBeginPublicShot(caster)) { return null; }
             if (!TryCaptureAttack(caster, ref magic)) { return null; }
-            return SpawnCapturedProjectile(caster, magic, position, direction, target);
+            return SpawnCapturedProjectile(caster, magic, position, direction, target, explicitTarget: true);
         }
 
         private ProjectileController SpawnCapturedProjectile(ActorRef caster, in MagicDefinition magic,
-            Vector2 position, Vector2 direction, ActorRef target)
+            Vector2 position, Vector2 direction, ActorRef target, bool explicitTarget = false,
+            bool requireTarget = false, GroundImpactShot? groundImpact = null)
         {
             if (_corePool == null || _isClearing || !magic.attackContext.IsCaptured
                 || magic.attackContext.Owner != caster) { return null; }
@@ -163,22 +164,30 @@ namespace Game.Runtime
             // Reparenting a designer prefab can invoke OnTransformParentChanged. Do it before leasing Core.
             ProjectileController controller = GetOrCreateController(prefab);
             if (controller == null) { return null; }
-            if (_isClearing || clearVersion != _clearVersion)
-            {
-                controller.transform.SetParent(_poolParent, false);
-                if (controller != null) { GetControllerPool(prefab).Enqueue(controller); }
-                return null;
-            }
+            if (_isClearing || clearVersion != _clearVersion) { ReturnUnusedController(); return null; }
             Projectile core = _corePool.Get();
             ulong lease = core.LeaseId;
             core.Initialize(caster, magic.bulletProfile, spawnPosition, direction);
             if (ProjectileHitProcessor.CanAffect(core, magic, GameManager.Data, GameManager.Actors, target))
             {
-                core.TrySetTarget(target, GameManager.Actors);
+                if (explicitTarget) { core.TrySetExplicitTarget(target, GameManager.Actors); }
+                else { core.TrySetTarget(target, GameManager.Actors); }
+            }
+            if (requireTarget && (!core.ExplicitTargetRef.IsValid
+                || !MultiLockTargeting.TryGetActor(core.ExplicitTargetRef, out _)
+                || GameManager.Actions?.Execution.CanApplyExecutionEffects(magic.actionInstanceId) != true))
+            {
+                _corePool.TryReturn(core, lease);
+                ReturnUnusedController();
+                return null;
             }
             controller.ActiveIndex = _activeProjectiles.Count;
             _activeProjectiles.Add(new ProjectileStep(controller, core, lease));
-            try { controller.Activate(core, magic, this); }
+            try
+            {
+                if (groundImpact.HasValue) { _groundImpactShots.Add(lease, groundImpact.Value); }
+                controller.Activate(core, magic, this, canCollide: !groundImpact.HasValue);
+            }
             catch
             {
                 ReturnControllerInternal(controller, core, lease, false);
@@ -194,17 +203,24 @@ namespace Game.Runtime
                 SpawnChildProjectiles(core, controller.CapturedMagic);
             }
             return IsCurrent(controller, core, lease) ? controller : null;
+
+            void ReturnUnusedController()
+            {
+                controller.transform.SetParent(_poolParent, false);
+                if (controller != null) { GetControllerPool(prefab).Enqueue(controller); }
+            }
         }
 
         private bool CanBeginPublicShot(ActorRef caster) => GameManager.Actors != null
             && GameManager.Actors.IsCurrent(caster) && GameManager.IsCharacterValid(caster.Hash)
+            && !GameManager.Data.Uses3DPhysics(caster.Hash)
             && !GameManager.Data.GetFlags(caster.Hash).IsVanished;
 
         private bool TryCaptureAttack(ActorRef caster, ref MagicDefinition magic, bool acceptedExecution = false)
         {
             if (magic.attackContext.IsCaptured) { return magic.attackContext.Owner == caster; }
             if (GameManager.Actors == null || !GameManager.Actors.IsCurrent(caster)
-                || !GameManager.IsCharacterValid(caster.Hash)) { return false; }
+                || !GameManager.IsCharacterValid(caster.Hash) || GameManager.Data.Uses3DPhysics(caster.Hash)) { return false; }
             if (!acceptedExecution && GameManager.Data.GetFlags(caster.Hash).IsVanished) { return false; }
             if (magic.equipmentStatusEffects == null)
             {
@@ -258,11 +274,41 @@ namespace Game.Runtime
         {
             if (!CanBeginPublicShot(caster)) { return; }
             if (!TryCaptureAttack(caster, ref magic)) { return; }
-            SpawnCapturedSpread(caster, magic, position, baseDirection, count, spreadAngle, target);
+            SpawnCapturedSpread(caster, magic, position, baseDirection, count, spreadAngle, target, explicitTarget: true);
         }
 
         internal void SpawnSpreadFromExecution(in ActionExecution source, MagicDefinition magic,
             Vector2 position, Vector2 baseDirection, int count, float spreadAngle, ActorRef target = default)
+        {
+            if (!TryCaptureExecutionShot(source, ref magic)) { return; }
+            SpawnCapturedSpread(source.ownerRef, magic, position, baseDirection, count, spreadAngle, target,
+                explicitTarget: magic.bulletProfile.moveType == BulletMoveType.Homing);
+        }
+
+        internal void SpawnMultiLockFromExecution(in ActionExecution source, MagicDefinition magic,
+            in ActionTargetSelection targets, float range, MultiLockTargeting targeting)
+        {
+            if (targets.Count == 0 || !TryCaptureExecutionShot(source, ref magic)
+                || !MultiLockTargeting.TryGetActor(source.ownerRef, out BaseCharacter caster)) { return; }
+
+            Physics2D.SyncTransforms();
+            uint clearVersion = _clearVersion;
+            for (int i = 0; i < targets.Count; i++)
+            {
+                if (_isClearing || clearVersion != _clearVersion
+                    || GameManager.Actions?.Execution.CanApplyExecutionEffects(source.instanceId) != true) { break; }
+                ActorRef target = targets[i];
+                if (!targeting.TryGetCandidate(source.ownerRef, target, range, out Vector2 targetPosition)) { continue; }
+                Vector2 position = caster.TargetingCenter;
+                Vector2 offset = targetPosition - position;
+                Vector2 direction = offset.sqrMagnitude > 0f ? offset.normalized
+                    : source.direction.sqrMagnitude > 0f ? source.direction.normalized : Vector2.right;
+                SpawnCapturedProjectile(source.ownerRef, magic, position, direction, target,
+                    explicitTarget: true, requireTarget: true);
+            }
+        }
+
+        private bool TryCaptureExecutionShot(in ActionExecution source, ref MagicDefinition magic)
         {
             if (GameManager.Actions == null || GameManager.Actors == null
                 || !GameManager.Actors.IsCurrent(source.ownerRef)
@@ -270,18 +316,17 @@ namespace Game.Runtime
                 || current.groupId != source.groupId || current.ownerRef != source.ownerRef
                 || magic.actionInstanceId != current.instanceId
                 || !AttackContext.CanFinishAcceptedCast(source.ownerRef, current)
-                || !GameManager.Actions.Execution.CanApplyExecutionEffects(current.instanceId)) { return; }
-            if (!TryCaptureAttack(current.ownerRef, ref magic, true)) { return; }
-            SpawnCapturedSpread(current.ownerRef, magic, position, baseDirection, count, spreadAngle, target);
+                || !GameManager.Actions.Execution.CanApplyExecutionEffects(current.instanceId)) { return false; }
+            return TryCaptureAttack(current.ownerRef, ref magic, true);
         }
 
         private void SpawnCapturedSpread(ActorRef caster, in MagicDefinition magic,
-            Vector2 position, Vector2 baseDirection, int count, float spreadAngle, ActorRef target)
+            Vector2 position, Vector2 baseDirection, int count, float spreadAngle, ActorRef target, bool explicitTarget = false)
         {
             if (count <= 0) { return; }
             if (count == 1)
             {
-                SpawnCapturedProjectile(caster, magic, position, baseDirection, target);
+                SpawnCapturedProjectile(caster, magic, position, baseDirection, target, explicitTarget);
                 return;
             }
 
@@ -297,7 +342,7 @@ namespace Game.Runtime
                 float rad = angle * Mathf.Deg2Rad;
                 Vector2 dir = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
 
-                SpawnCapturedProjectile(caster, magic, position, dir, target);
+                SpawnCapturedProjectile(caster, magic, position, dir, target, explicitTarget);
             }
         }
 
@@ -323,7 +368,7 @@ namespace Game.Runtime
                         ReturnControllerInternal(step.controller, step.core, step.lease, false);
                         continue;
                     }
-                    if (step.core.IsAlive)
+                    if (step.core.IsAlive && !TryStepGroundImpact(step, deltaTime))
                     {
                         ProjectileMovement.UpdateProjectile(step.core, deltaTime, Vector2.zero, true);
                         step.controller.SweepToCorePosition(step.core, step.lease);
@@ -358,6 +403,7 @@ namespace Game.Runtime
             Projectile core = controller.CoreProjectile;
             if (core == null || !IsCurrent(controller, core, controller.LeaseId)) { return; }
             core.Kill();
+            RemoveGroundImpact(controller.LeaseId);
             controller.StopCollision();
         }
 
@@ -464,6 +510,12 @@ namespace Game.Runtime
 
                 if (core.CapturedProfile.moveType != BulletMoveType.Homing)
                 {
+                    ActorRef locked = core.ExplicitTargetRef;
+                    if (locked.IsValid && (!step.controller.CanAffectTarget(core, locked)
+                        || GameManager.Data.GetVitals(locked.Hash).currentHp <= 0))
+                    {
+                        core.ClearExplicitTarget();
+                    }
                     continue;
                 }
 
@@ -477,8 +529,9 @@ namespace Game.Runtime
                 }
                 if (currentTarget && GameManager.IsCharacterValid(core.TargetHash))
                 {
-                    ref CharacterVitals targetVitals = ref GameManager.Data.GetVitals(core.TargetHash);
-                    core.TargetPosition = targetVitals.position;
+                    BaseCharacter actor = GameManager.Data.GetManaged(core.TargetHash) as BaseCharacter;
+                    core.TargetPosition = core.ExplicitTargetRef.IsValid && actor != null
+                        ? actor.TargetingCenter : GameManager.Data.GetVitals(core.TargetHash).position;
                 }
                 else
                 {
@@ -581,6 +634,7 @@ namespace Game.Runtime
                 if (!ReferenceEquals(last.controller, null)) { last.controller.ActiveIndex = index; }
             }
             _activeProjectiles.RemoveAt(lastIndex);
+            RemoveGroundImpact(lease);
             if (!ReferenceEquals(controller, null)) { controller.ActiveIndex = -1; }
             _corePool.TryReturn(core, lease);
             if (controller != null)
@@ -649,10 +703,14 @@ namespace Game.Runtime
                 SpawnCapturedSpread(children.caster, children.magic, children.position,
                     children.direction, children.count, children.spread, children.target);
             }
-            else
+            else if (CanBeginPublicShot(children.caster))
             {
-                SpawnSpread(children.caster, children.magic, children.position,
-                    children.direction, children.count, children.spread, children.target);
+                MagicDefinition magic = children.magic;
+                if (TryCaptureAttack(children.caster, ref magic))
+                {
+                    SpawnCapturedSpread(children.caster, magic, children.position,
+                        children.direction, children.count, children.spread, children.target);
+                }
             }
         }
 

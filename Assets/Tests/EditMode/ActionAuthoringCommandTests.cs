@@ -10,6 +10,7 @@ namespace Game.Tests.EditMode
         [TestCase(ActType.Move, ActionCommandKind.MoveToTarget)]
         [TestCase(ActType.Dodge, ActionCommandKind.Dodge)]
         [TestCase(ActType.Flee, ActionCommandKind.Flee)]
+        [TestCase(ActType.InteractObject, ActionCommandKind.InteractObject)]
         public void ActionAuthoring_BuiltinType_IgnoresUnrelatedAttackIndex(ActType type, ActionCommandKind expected)
         {
             ActionSlot slot = AIInfoConverter.ConvertAction(new ActData

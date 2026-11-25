@@ -8,23 +8,10 @@ namespace Game.Core
         public static int SelectTarget(in AITargetSelect select, int ownerHash,
             AIObservationContext observation, IReadOnlyList<int> candidates = null)
         {
-            if (observation == null || !observation.TryGetActor(ownerHash, out AIActorObservation owner)) { return 0; }
-            IReadOnlyList<int> hashes = candidates ?? observation.ActorHashes;
-            int best = 0;
-            float bestValue = 0f;
-            for (int i = 0; i < hashes.Count; i++)
-            {
-                int hash = hashes[i];
-                if (!observation.TryGetActor(hash, out AIActorObservation candidate)
-                    || !observation.Matches(select.filter, owner, candidate)
-                    || !observation.TryGetSortValue(select.sortKey, owner, candidate, out float value)) { continue; }
-                if (best == 0 || (select.isDescending ? value > bestValue : value < bestValue))
-                {
-                    best = hash;
-                    bestValue = value;
-                }
-            }
-            return best;
+            if (observation == null) { return 0; }
+            AIManagedWorld world = new AIManagedWorld { observation = observation };
+            AIManagedCandidates sampled = new AIManagedCandidates { hashes = candidates ?? observation.ActorHashes };
+            return AIQueryKernel.SelectTarget(select, ownerHash, ref world, ref sampled);
         }
     }
 }

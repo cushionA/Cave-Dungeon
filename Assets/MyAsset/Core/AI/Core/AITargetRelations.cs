@@ -57,10 +57,11 @@ namespace Game.Core
 
         public void CopyTo(AIObservationContext observation)
         {
-            observation.SetTargetRelationsAvailable();
-            foreach (KeyValuePair<ActorRef, ActorRef> pair in _targets)
+            observation.BeginTargetRelations();
+            foreach (ActorRef owner in _actors.Values)
             {
-                observation.RecordTarget(pair.Key, pair.Value);
+                _targets.TryGetValue(owner, out ActorRef target);
+                observation.RecordTarget(owner, target);
             }
         }
     }

@@ -115,6 +115,48 @@ namespace Game.Tests.EditMode
             }
         }
 
+        [TestCase("legacy")]
+        [TestCase("observed")]
+        [TestCase("scheduled")]
+        public void TargetRules_ExhaustedEmptySelectionClearsTargetAndFallbackReadsPriorTarget(string path)
+        {
+            using var loop = CreateLoop(1, new RecordingBackend());
+            AIDecisionSystem decisions = _core.AIDecisions;
+            int Decide(AIMode mode, int candidate)
+            {
+                loop.SetMode(mode);
+                var candidates = new List<int> { candidate };
+                if (path != "legacy") { BeginTick(decisions, loop); }
+                if (path == "scheduled")
+                {
+                    loop.PrepareTick(0.02f, candidates, 0f, decisions);
+                    decisions.Schedule();
+                    decisions.CompleteAndApply();
+                }
+                else { loop.Tick(0.02f, candidates, 0f); }
+                return loop.CurrentTargetHash;
+            }
+
+            AIMode ordinary = CreateMode();
+            Assert.AreEqual(10, Decide(ordinary, 10));
+            AIRule nearPreviousTarget = new AIRule { actionIndex = 1, conditions = new[] { new AICondition {
+                conditionType = AIConditionType.Distance, compareOp = CompareOp.LessEqual, operandA = 2 } } };
+            AIRule tryAlly = new AIRule { actionIndex = 0 };
+            AIMode mode = CreateMode();
+            mode.targetSelects = new[] { new AITargetSelect { continueIfEmpty = true,
+                filter = new TargetFilter { belong = CharacterBelong.Ally } }, ordinary.targetSelects[0] };
+            mode.targetRules = new[] { tryAlly, nearPreviousTarget };
+
+            Assert.AreEqual(20, Decide(mode, 20), "The fallback condition reads target 10 at distance 2.");
+            mode.targetRules = new[] { nearPreviousTarget };
+            Assert.AreEqual(20, Decide(mode, 10), "No rule matches the prior target at distance 8.");
+            mode.targetRules = new[] { tryAlly, nearPreviousTarget };
+            Assert.AreEqual(0, Decide(mode, 10), "The first selection is empty and the fallback condition fails.");
+            Assert.AreEqual(10, Decide(ordinary, 10));
+            mode.targetRules = new[] { tryAlly };
+            Assert.AreEqual(0, Decide(mode, 20), "A single exhausted preference clears the prior target.");
+        }
+
         [Test]
         public void AIDecisionSystem_ModeChangesAfterScheduling_DiscardsStaleDecision()
         {
@@ -339,6 +381,124 @@ namespace Game.Tests.EditMode
                 decisions.CompleteAndApply();
                 Assert.AreEqual(0, backend.Count);
             }
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void AIDecisionSystem_ProtectsTheRegisteredPlayerWhenCountsStayEqualAndAttackersSwap(bool scheduled)
+        {
+            Assert.IsTrue(_core.Actors.TryGet(1, out ActorRef sister));
+            Assert.IsTrue(_core.Actors.TryGet(2, out ActorRef player));
+            Assert.IsTrue(_core.Actors.TryGet(10, out ActorRef near));
+            Assert.IsTrue(_core.Actors.TryGet(20, out ActorRef far));
+            _observations.Targets.SetTarget(near, sister);
+            _observations.Targets.SetTarget(far, player);
+            _observations.Capture(++_tick, 1f);
+            var observation = _observations.Observation;
+            var filter = new TargetFilter { belong = CharacterBelong.Enemy };
+            Assert.AreEqual(near.Hash, SelectFromCurrentObservation(filter, scheduled));
+            filter.targetsProtectedPlayer = true;
+            Assert.AreEqual(0, SelectFromCurrentObservation(filter, scheduled));
+            observation.SetProtectedPlayer(player);
+            _observations.Targets.SetTarget(near, player);
+            _observations.Targets.SetTarget(far, sister);
+            Assert.IsTrue(observation.TryGetTargetingCount(player.Hash, out int before));
+            Assert.AreEqual(1, before);
+            Assert.AreEqual(far.Hash, SelectFromCurrentObservation(filter, scheduled));
+
+            _observations.Capture(++_tick, 2f);
+            observation.SetProtectedPlayer(player);
+            Assert.IsTrue(observation.TryGetTargetingCount(player.Hash, out int after));
+            Assert.AreEqual(before, after);
+            Assert.AreEqual(near.Hash, SelectFromCurrentObservation(filter, scheduled));
+            // A long stun on a different enemy cannot satisfy the requirement for the attacker.
+            filter.stunMustLastBeyondSeconds = 1f;
+            observation.SetStunRemaining(near, 1f);
+            observation.SetStunRemaining(far, 3f);
+            Assert.AreEqual(0, SelectFromCurrentObservation(filter, scheduled));
+            observation.SetStunRemaining(near, 1.25f);
+            Assert.AreEqual(near.Hash, SelectFromCurrentObservation(filter, scheduled));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void AIDecisionSystem_StunFilterRequiresKnownTimeStrictlyBeyondTheHorizon(bool scheduled)
+        {
+            _observations.Capture(++_tick, 0f);
+            var observation = _observations.Observation;
+            Assert.IsTrue(_core.Actors.TryGet(10, out ActorRef near));
+            Assert.IsTrue(_core.Actors.TryGet(20, out ActorRef far));
+            var filter = new TargetFilter { belong = CharacterBelong.Enemy, stunMustLastBeyondSeconds = 1.5f };
+            Assert.AreEqual(0, SelectFromCurrentObservation(filter, scheduled));
+            observation.SetStunRemaining(near, 1.5f);
+            observation.SetStunRemaining(far, 0f);
+            Assert.AreEqual(0, SelectFromCurrentObservation(filter, scheduled));
+            observation.SetStunRemaining(far, 1.75f);
+            Assert.AreEqual(far.Hash, SelectFromCurrentObservation(filter, scheduled));
+            filter.stunMustLastBeyondSeconds = 0f;
+            Assert.AreEqual(near.Hash, SelectFromCurrentObservation(filter, scheduled));
+        }
+
+        [TestCase(false, AIConditionType.Count)]
+        [TestCase(true, AIConditionType.Count)]
+        [TestCase(false, AIConditionType.NearbyFaction)]
+        [TestCase(true, AIConditionType.NearbyFaction)]
+        public void AIDecisionSystem_ZeroStunnedEnemiesRequiresEveryRelevantCandidateToBeKnown(
+            bool scheduled, AIConditionType countType)
+        {
+            AIMode mode = CreateMode();
+            mode.actionRules[0].conditions = new[] { new AICondition {
+                conditionType = countType, compareOp = CompareOp.Equal, operandA = 0,
+                filter = new TargetFilter { belong = CharacterBelong.Enemy, stunMustLastBeyondSeconds = 1f },
+            } };
+            mode.actions = new[] { mode.actions[0], new ActionSlot { execType = ActionExecType.Attack, paramId = 55 } };
+            mode.defaultActionIndex = 1;
+            _observations.Capture(++_tick, 0f);
+            var observation = _observations.Observation;
+            Assert.IsTrue(_core.Actors.TryGet(10, out ActorRef near));
+            Assert.IsTrue(_core.Actors.TryGet(20, out ActorRef far));
+            observation.SetStunRemaining(near, 0f);
+            DecideFromCurrentObservation(mode, scheduled, out int action);
+            Assert.AreEqual(55, action); // The other enemy has no sample.
+            observation.SetStunRemaining(far, 0f);
+            DecideFromCurrentObservation(mode, scheduled, out action);
+            Assert.AreEqual(7, action); // Both sampled; zero match.
+            observation.SetStunRemaining(far, 2f);
+            DecideFromCurrentObservation(mode, scheduled, out action);
+            Assert.AreEqual(55, action); // One match.
+        }
+
+        private int SelectFromCurrentObservation(TargetFilter filter, bool scheduled)
+        {
+            AIMode mode = CreateMode();
+            mode.targetSelects[0].filter = filter;
+            return DecideFromCurrentObservation(mode, scheduled, out _);
+        }
+
+        private int DecideFromCurrentObservation(AIMode mode, bool scheduled, out int action)
+        {
+            var executor = new ActionExecutor();
+            var backend = new RecordingBackend();
+            executor.SetExecutionBackend(backend);
+            using var loop = new JudgmentLoop(executor, _data, 1);
+            loop.SetMode(mode);
+            AIObservationContext observation = _observations.Observation;
+            Assert.IsTrue(loop.UseObservation(observation, _observations.Targets));
+            var candidates = new List<int> { 10, 20 };
+            if (scheduled)
+            {
+                AIDecisionSystem decisions = _core.AIDecisions;
+                decisions.BeginTick(observation);
+                loop.PrepareTick(0.02f, candidates, observation.Time, decisions);
+                decisions.Schedule();
+                decisions.CompleteAndApply();
+            }
+            else
+            {
+                loop.Tick(0.02f, candidates, observation.Time);
+            }
+            action = backend.Action;
+            return loop.CurrentTargetHash;
         }
 
         private void AddCharacter(int hash, CharacterBelong belong, Vector2 position)

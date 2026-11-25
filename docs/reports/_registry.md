@@ -39,6 +39,7 @@
 
 <!-- 新規 handoff note を作成したら、ここに `- [YYYY-MM-DD タイトル](handoffs/YYYY-MM-DD_slug.md)` を最上部追加 -->
 
+- [2026-11-24 マルチロック魔術と攻撃予告の実装ハンズオン](handoffs/2026-11-24_multilock-and-attack-warnings.md) — in-progress / branch: codex/ai-terrain-decision-dataflow
 - [2026-04-25 Wave 5 (高度パターン) 6 PR 完成](handoffs/2026-04-25_wave5-6phases-complete.md) — in-progress / branch: feature/wave5-handoff-2026-04-25
 - [2026-04-25 Wave 4 完了 / 最終 handoff](handoffs/2026-04-25_wave4-complete-final.md) — resolved / branch: feature/wave4-phase12-adversarial-review
 - [2026-04-25 Wave 3 完了 / Wave 4 着手前](handoffs/2026-04-25_wave3-complete-wave4-start.md) — in-progress / branch: main
@@ -58,7 +59,8 @@
 
 ### experiments/
 
-- *エントリなし*
+- [2026-11-25 3D遠征モックの確認範囲](experiments/2026-11-25_expedition-mock-3d.md)
+- [2026-11-24 戦闘中に装置を使うAIの実験](experiments/2026-11-24_ai-terrain-gimmicks.md)
 
 ### migrations/
 

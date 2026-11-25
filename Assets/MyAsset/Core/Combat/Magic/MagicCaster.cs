@@ -22,6 +22,7 @@ namespace Game.Core
         public FireType fireType;
         public float castTime;
         public int bulletCount;
+        public float groundImpactRange;
         public BulletProfile bulletProfile;
         /// <summary>登録時に固定した表示Prefab。未指定時はProjectileManagerの既定Prefabを使う。</summary>
         public GameObject projectilePrefab;

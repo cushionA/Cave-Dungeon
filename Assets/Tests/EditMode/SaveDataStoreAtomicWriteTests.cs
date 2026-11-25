@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
@@ -52,6 +53,46 @@ namespace Game.Tests.EditMode
         private string GetTempPath(int slotIndex)
         {
             return GetSlotPath(slotIndex) + SaveDataStore.k_TempExtension;
+        }
+
+        [Test]
+        public void SaveDataStore_TryWriteToDisk_WhenSaveDirectoryIsBlocked_ReturnsFalse()
+        {
+            File.WriteAllText(Path.Combine(_testDir, "saves"), "blocks the directory");
+            LogAssert.Expect(LogType.Error, new Regex(@"\[SaveDataStore\].+一時ファイル書き込みに失敗しました"));
+
+            Assert.IsFalse(_store.TryWriteToDisk(new SaveSlotData(0)));
+            Assert.IsFalse(_store.HasSlotFile(0));
+        }
+
+        [Test]
+        public void SaveDataStore_TryWriteToDisk_WhenSerializationFails_PreservesExistingSave()
+        {
+            SaveSlotData original = new SaveSlotData(0);
+            original.entries["val"] = 42;
+            Assert.IsTrue(_store.TryWriteToDisk(original));
+            string existing = File.ReadAllText(GetSlotPath(0));
+            SaveSlotData invalid = new SaveSlotData(0);
+            Dictionary<string, object> circular = new Dictionary<string, object>();
+            circular["self"] = circular;
+            invalid.entries["val"] = circular;
+            LogAssert.Expect(LogType.Error, new Regex(@"\[SaveDataStore\].+セーブデータのシリアライズに失敗しました"));
+
+            Assert.IsFalse(_store.TryWriteToDisk(invalid));
+            Assert.AreEqual(existing, File.ReadAllText(GetSlotPath(0)));
+            Assert.IsFalse(File.Exists(GetTempPath(0)));
+        }
+
+        [Test]
+        public void SaveDataStore_TryWriteToDisk_WhenCommitIsBlocked_PreservesBackupAndRemovesTempFile()
+        {
+            Directory.CreateDirectory(GetSlotPath(0));
+            File.WriteAllText(GetBackupPath(0), "existing backup");
+            LogAssert.Expect(LogType.Error, new Regex(@"\[SaveDataStore\].+アトミック置換に失敗しました"));
+
+            Assert.IsFalse(_store.TryWriteToDisk(new SaveSlotData(0)));
+            Assert.AreEqual("existing backup", File.ReadAllText(GetBackupPath(0)));
+            Assert.IsFalse(File.Exists(GetTempPath(0)));
         }
 
         // ---------- 一時ファイルのクリーンアップ ----------

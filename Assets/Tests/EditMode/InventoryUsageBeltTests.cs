@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using NUnit.Framework;
 using Game.Core;
 
@@ -54,6 +56,121 @@ namespace Game.Tests.EditMode
 
             Assert.IsFalse(failResult);
             Assert.AreEqual(10f, currentMp, 0.001f);
+        }
+
+        [Test]
+        public void ItemUsageLogic_TryUseConsumable_DoesNotConsumeSameIdInAnotherCategory()
+        {
+            InventoryManager inventory = new InventoryManager();
+            inventory.Add(10, ItemCategory.Material, 3, 10);
+            Assert.IsFalse(ItemUsageLogic.TryUseConsumable(inventory, 10));
+            Assert.AreEqual(0, inventory.GetConsumableCount(10));
+
+            Assert.AreEqual(1, inventory.Add(10, ItemCategory.Consumable, 1, 10));
+            Assert.AreEqual(1, inventory.GetConsumableCount(10));
+            Assert.IsTrue(ItemUsageLogic.TryUseConsumable(inventory, 10));
+            Assert.IsFalse(ItemUsageLogic.TryUseConsumable(inventory, 10));
+            Assert.AreEqual(3, inventory.GetByCategory(ItemCategory.Material)[0].count);
+            Assert.AreEqual(3, inventory.GetCount(10));
+        }
+
+        [Test]
+        public void ConsumableBelt_AssignmentRequiresStockAndRemainsWhileDepleted()
+        {
+            InventoryManager inventory = new InventoryManager();
+            ConsumableBelt belt = new ConsumableBelt(inventory);
+            inventory.Add(0, ItemCategory.Consumable, 1, 1);
+            inventory.Add(1, ItemCategory.Weapon, 1, 1);
+
+            Assert.AreEqual(4, belt.SlotCount);
+            Assert.AreEqual(-1, belt.GetItemId(-1));
+            Assert.IsFalse(belt.TryAssign(-1, 0));
+            Assert.IsFalse(belt.TryAssign(3, 1));
+            Assert.IsFalse(belt.TryAssign(3, 2));
+            Assert.IsTrue(belt.TryAssign(3, 0));
+            belt.Prev();
+            Assert.AreEqual(3, belt.ActiveIndex);
+            Assert.AreEqual(0, belt.ActiveItemId);
+            Assert.IsTrue(ItemUsageLogic.TryUseConsumable(inventory, belt.ActiveItemId));
+            Assert.IsFalse(ItemUsageLogic.TryUseConsumable(inventory, belt.ActiveItemId));
+            Assert.AreEqual(0, belt.ActiveItemId);
+
+            inventory.Add(0, ItemCategory.Consumable, 1, 1);
+            Assert.IsTrue(ItemUsageLogic.TryUseConsumable(inventory, belt.ActiveItemId));
+            Assert.IsTrue(belt.TryClear(3));
+            Assert.AreEqual(-1, belt.ActiveItemId);
+            belt.Next();
+            Assert.AreEqual(0, belt.ActiveIndex);
+            Assert.IsFalse(belt.TrySelect(4));
+        }
+
+        [Test]
+        public void ConsumableBelt_AndInventory_RestoreSeparateSlotsAndOlderMissingEntries()
+        {
+            string path = Path.Combine(Path.GetTempPath(), "ConsumableBelt-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                SaveDataStore disk = new SaveDataStore(path);
+                using GameManagerCore original = new GameManagerCore();
+                original.Inventory.Add(5, ItemCategory.Consumable, 1, 3);
+                original.Inventory.Add(6, ItemCategory.Consumable, 2, 3);
+                Assert.IsTrue(original.ConsumableBelt.TryAssign(2, 5));
+                Assert.IsTrue(original.ConsumableBelt.TrySelect(2));
+                Assert.IsTrue(ItemUsageLogic.TryUseConsumable(original.Inventory, original.ConsumableBelt.ActiveItemId));
+                Assert.IsTrue(disk.TryWriteToDisk(original.Saves.Save(0)));
+
+                Assert.IsTrue(original.ConsumableBelt.TryClear(2));
+                Assert.IsTrue(original.ConsumableBelt.TryAssign(1, 6));
+                Assert.IsTrue(original.ConsumableBelt.TrySelect(1));
+                Assert.IsTrue(ItemUsageLogic.TryUseConsumable(original.Inventory, original.ConsumableBelt.ActiveItemId));
+                Assert.IsTrue(disk.TryWriteToDisk(original.Saves.Save(1)));
+
+                SaveSlotData legacy = new SaveSlotData(2);
+                legacy.entries[original.Inventory.SaveId] = ((ISaveable)original.Inventory).Serialize();
+                Assert.IsTrue(disk.TryWriteToDisk(legacy));
+
+                using GameManagerCore restored = new GameManagerCore();
+                for (int slot = 0; slot < SaveManager.k_MaxSlots; slot++)
+                {
+                    SaveSlotData saved = disk.ReadFromDisk(slot);
+                    Assert.IsNotNull(saved);
+                    restored.Saves.SetSlotData(slot, saved);
+                }
+
+                Assert.IsTrue(restored.Saves.Load(1));
+                Assert.AreEqual(1, restored.Inventory.GetConsumableCount(6));
+                Assert.AreEqual(1, restored.ConsumableBelt.ActiveIndex);
+                Assert.AreEqual(6, restored.ConsumableBelt.ActiveItemId);
+
+                Assert.IsTrue(restored.Saves.Load(0));
+                Assert.AreEqual(2, restored.Inventory.GetConsumableCount(6));
+                Assert.AreEqual(0, restored.Inventory.GetConsumableCount(5));
+                Assert.AreEqual(2, restored.ConsumableBelt.ActiveIndex);
+                Assert.AreEqual(5, restored.ConsumableBelt.ActiveItemId);
+                Assert.AreEqual(-1, restored.ConsumableBelt.GetItemId(1));
+
+                Assert.IsTrue(restored.Saves.Load(2));
+                Assert.AreEqual(1, restored.Inventory.GetConsumableCount(6));
+                Assert.AreEqual(0, restored.ConsumableBelt.ActiveIndex);
+                Assert.AreEqual(-1, restored.ConsumableBelt.GetItemId(2));
+
+                restored.Saves.SetSlotData(2, new SaveSlotData(2));
+                Assert.IsTrue(restored.Saves.Load(2));
+                Assert.AreEqual(0, restored.Inventory.ItemCount);
+
+                Assert.IsTrue(restored.Saves.Load(0));
+                restored.NextPlaythrough.MarkCleared();
+                Assert.IsTrue(restored.NextPlaythrough.TryBeginNextPlaythrough(
+                    0, restored.Saves.LoadRevision, restored.Playthrough.CycleNumber, "start", disk));
+                Assert.AreEqual(2, restored.Playthrough.CycleNumber);
+                Assert.AreEqual(2, restored.Inventory.GetConsumableCount(6));
+                Assert.AreEqual(2, restored.ConsumableBelt.ActiveIndex);
+                Assert.AreEqual(5, restored.ConsumableBelt.ActiveItemId);
+            }
+            finally
+            {
+                if (Directory.Exists(path)) { Directory.Delete(path, true); }
+            }
         }
 
         [Test]

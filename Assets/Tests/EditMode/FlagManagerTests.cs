@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using Game.Core;
@@ -154,6 +155,48 @@ namespace Game.Tests.EditMode
             restored.SwitchMap("map_x");
             Assert.IsTrue(restored.GetLocalFlag("local_1"));
             Assert.IsFalse(restored.GetLocalFlag("local_2"));
+        }
+
+        [Test]
+        public void FlagManager_LoadingLegacySlotWithoutFlags_DoesNotInheritFlagsFromAnotherSlot()
+        {
+            SaveManager saves = new SaveManager();
+            saves.Register(_flagManager);
+            _flagManager.SwitchMap("mine");
+            _flagManager.SetGlobalFlag("boss_defeated", true);
+            _flagManager.SetLocalFlag("reward_claimed", true);
+            saves.Save(0);
+            saves.SetSlotData(1, new SaveSlotData(1));
+
+            Assert.IsTrue(saves.Load(1));
+            Assert.IsNull(_flagManager.CurrentMapId);
+            _flagManager.SwitchMap("mine");
+            Assert.IsFalse(_flagManager.GetGlobalFlag("boss_defeated"));
+            Assert.IsFalse(_flagManager.GetLocalFlag("reward_claimed"));
+
+            Assert.IsTrue(saves.Load(0));
+            Assert.IsTrue(_flagManager.GetGlobalFlag("boss_defeated"));
+            Assert.IsTrue(_flagManager.GetLocalFlag("reward_claimed"));
+        }
+
+        [Test]
+        public void FlagManager_Deserialize_RejectsMalformedDataWithoutOverwritingLiveFlags()
+        {
+            _flagManager.SetGlobalFlag("boss_defeated", true);
+            _flagManager.SwitchMap("mine");
+            _flagManager.SetLocalFlag("reward_claimed", true);
+
+            ISaveable saveable = _flagManager;
+            Assert.Throws<ArgumentException>(() => saveable.Deserialize(null));
+            Assert.Throws<ArgumentException>(() => saveable.Deserialize(42));
+            Assert.Throws<ArgumentException>(() => saveable.Deserialize(new FlagSaveData
+            {
+                mapLocalFlags = new Dictionary<string, Dictionary<string, bool>> { { "mine", null } },
+            }));
+
+            Assert.AreEqual("mine", _flagManager.CurrentMapId);
+            Assert.IsTrue(_flagManager.GetGlobalFlag("boss_defeated"));
+            Assert.IsTrue(_flagManager.GetLocalFlag("reward_claimed"));
         }
 
         // ===== CurrentMapId =====

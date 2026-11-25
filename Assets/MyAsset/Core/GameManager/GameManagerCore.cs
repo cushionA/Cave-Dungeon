@@ -28,12 +28,38 @@ namespace Game.Core
         public CharacterStatsSystem Stats => _equipment?.Stats;
         public ActionExecutionSystem Actions => _actions;
         public AIDecisionSystem AIDecisions => _aiDecisions;
+        public FlagManager Flags { get; }
+        public ExpeditionAidUnlocks ExpeditionAid { get; }
+        public ExpeditionPlaythrough Playthrough { get; }
+        public ExpeditionNextPlaythrough NextPlaythrough { get; }
+        public InventoryManager Inventory { get; }
+        public ConsumableBelt ConsumableBelt { get; }
+        public LevelUpLogic PlayerLevel { get; }
+        public PlayerCombatLoadoutSelection CombatLoadout { get; }
+        public SaveManager Saves { get; }
         public bool IsInitialized => _initialized;
 
         public GameManagerCore()
         {
             _subManagers = new List<IGameSubManager>();
             _events = new GameEvents(_actors);
+            Flags = new FlagManager();
+            ExpeditionAid = new ExpeditionAidUnlocks(Flags);
+            Playthrough = new ExpeditionPlaythrough();
+            Inventory = new InventoryManager();
+            ConsumableBelt = new ConsumableBelt(Inventory);
+            PlayerLevel = new LevelUpLogic();
+            CombatLoadout = new PlayerCombatLoadoutSelection(Inventory);
+            Saves = new SaveManager();
+            NextPlaythrough = new ExpeditionNextPlaythrough(Saves, Flags, Playthrough);
+            Saves.Register(Flags);
+            Saves.Register(Playthrough);
+            Saves.Register(NextPlaythrough);
+            Saves.Register(Inventory);
+            Saves.Register(ConsumableBelt);
+            Saves.Register(PlayerLevel);
+            Saves.Register(CombatLoadout);
+            RegisterSubManager(Saves);
         }
 
         /// <summary>
@@ -139,6 +165,7 @@ namespace Game.Core
                 return;
             }
 
+            NextPlaythrough.Dispose();
             foreach (IGameSubManager mgr in _subManagers)
             {
                 mgr.Dispose();

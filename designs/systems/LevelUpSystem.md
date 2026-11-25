@@ -24,33 +24,20 @@ Section: 1 — MVP
 
 プール再取得はCharacterInfoから同じ初期値を作り直す。成長を保持して再生成する呼び出し元は、保存した成長入力を明示して登録する。敵に経験値・ポイント配分を必須にせず、共通の成長入力だけを受け付ける。
 
-LevelUpLogicは経験値・未配分ポイント・配分操作・保存を担当し、`Growth` で共通入力を公開する。`GameManager.ApplyCharacterGrowth` が共有データへの反映口となる。経験値報酬・成長UI・SaveManagerへの登録・シスターの自動レベル同期は未接続であり、この登録契約の完成とは区別する。`statCaps` は従来どおり追加配分値の上限で、基礎能力込みの上限へ変更しない。
+`LevelUpLogic` は経験値・未配分ポイント・配分操作・保存を担当し、`Growth` で共通入力を公開する。3Dの騎士は `PlayerProgression3D` が保存済みの成長を `GameManager.ApplyCharacterGrowth` に渡し、プレイヤーの再登録とセーブ読み込み時にも反映する。`statCaps` は追加配分値に適用する。[成長の接続](../../Assets/MyAsset/Runtime/Character/PlayerProgression3D.cs)
 
 ## コンポーネント構成
 | コンポーネント | 責務 | MonoBehaviour? |
 |--------------|------|---------------|
-| LevelManager | 経験値・レベル管理 | No (GameManager保持) |
-| StatAllocator | 能力値振り分けロジック | No |
-| LevelUpUI | 振り分けUI | Yes |
+| LevelUpLogic | 経験値・レベル・ポイント配分をセーブスロットごとに管理 | No（GameManager保持） |
+| PlayerProgression3D | 発見と撃破の報酬を受け、騎士に成長を反映 | Yes |
+| ExpeditionLoadoutPanel3D | 経験値・残りポイントの確認と能力値配分 | Yes |
 
 ## レベルアップフロー
-```
-敵撃破 → OnExpGained(expAmount)
-    → LevelManager.AddExp(amount)
-    → 累計EXP >= 次レベル必要EXP
-    → レベルアップ！
-    → statPoints += pointsPerLevel (例: 3ポイント)
-    → OnLevelUp発火
-    → セーブポイントでStatAllocatorを使って振り分け
-```
+発見地点に固有のIDと経験値を設定する。最初に通過したときに加算し、受け取り済みのIDを保存する。敵の経験値は倒された個体の登録世代ごとに一度、騎士または指定した同行者・召喚の撃破に付与する。必要経験値に達したらレベルが上がり、1レベルにつき3ポイントを獲得する。経験値と配分を次周へ持ち越し、発見地点の受け取りは次周で再開する。[探索報酬](../../Assets/MyAsset/Runtime/World/ExplorationExperience3D.cs)・[撃破報酬](../../Assets/MyAsset/Runtime/World/DefeatExperience3D.cs)
 
 ## 能力値振り分け
-```
-セーブポイント → 「レベルアップ」メニュー
-    → 未使用statPointsを表示
-    → STR / DEX / INT / VIT / MND / END に振り分け
-    → 確定 → ステータス再計算 → EquipmentSystem再計算トリガー
-```
+3Dのプレイヤー操作中に Tab／LT で「戦闘準備」を開き、「能力値」で残りポイントを確認する。配分ボタンを押すたびに1ポイントを使用し、騎士の有効能力値を再計算する。[成長画面](../../Assets/MyAsset/Runtime/UI/ExpeditionLoadoutPanel3D.cs)
 
 ### 能力値→ステータス影響（Common_Section1 §6準拠）
 - STR → 物理攻撃力, 光攻撃力(部分), 最大重量上限
@@ -61,19 +48,18 @@ LevelUpLogicは経験値・未配分ポイント・配分操作・保存を担�
 - END → 最大スタミナ, スタミナ回復速度, 最大重量上限(部分)
 
 ## 経験値テーブル
-- EXP必要量はAnimationCurveで定義（レベルごとの必要EXP曲線）
-- バランスシートで調整
+- 現在の次レベル必要量は `現在レベル × 100`。
+- 最大レベルは `LevelUpConfig.maxLevel` で設定する。
 
 ## 機能分解
 | 機能名 | 説明 | テスト種別 | 優先度 |
 |--------|------|-----------|--------|
-| 経験値蓄積 | 敵撃破時のEXP加算 | EditMode | High |
+| 経験値蓄積 | 発見・敵撃破からのEXP加算と二重受け取り防止 | PlayMode | High |
 | レベルアップ判定 | 累計EXP vs テーブル | EditMode | High |
 | 能力値振り分け | ポイント割り当てとステータス再計算 | EditMode | High |
-| 振り分けUI | セーブポイントでの振り分け画面 | PlayMode | Medium |
+| 振り分けUI | 3D戦闘準備パネルでポイント配分 | PlayMode | Medium |
 | ステータス再計算 | 能力値変更→全ステータス更新 | EditMode | Medium |
 
 ## 設計メモ
-- 振り分けはセーブポイントでのみ可能（レベルアップ即時ではない）
 - リスペック（振り直し）は対象外（Section3以降で検討）
-- 仲間AIのレベルアップはプレイヤーと自動同期（独立振り分けなし）
+- 仲間AIの成長同期は別途設計する。

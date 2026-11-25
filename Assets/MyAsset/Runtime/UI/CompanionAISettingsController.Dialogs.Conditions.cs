@@ -141,7 +141,7 @@ namespace Game.Runtime
 
             // TargetFilter が制約を持っているときだけ末尾に追記（空のときに冗長な
             //「条件なし（全員が対象）」は出さない）
-            if (HasFilterConstraints(cond.filter))
+            if (CountsCandidates(cond.conditionType) && HasFilterConstraints(cond.filter))
             {
                 main += " [" + FormatFilterSummary(cond.filter) + "]";
             }
@@ -158,8 +158,13 @@ namespace Game.Runtime
                 || f.feature != 0
                 || f.weakPoint != 0
                 || f.distanceRange.x > 0f
-                || f.distanceRange.y > 0f;
+                || f.distanceRange.y > 0f
+                || f.targetsProtectedPlayer
+                || f.stunMustLastBeyondSeconds > 0f;
         }
+
+        private static bool CountsCandidates(AIConditionType type) =>
+            type == AIConditionType.Count || type == AIConditionType.NearbyFaction;
 
         /// <summary>
         /// CompareOp を記号表記へ変換する。
@@ -262,6 +267,22 @@ namespace Game.Runtime
             };
             rebuildInputs();
 
+            VisualElement filterContainer = new VisualElement();
+            row.Add(filterContainer);
+            void RefreshCandidateFilter()
+            {
+                filterContainer.Clear();
+                if (CountsCandidates(current.conditionType))
+                {
+                    filterContainer.Add(BuildTargetFilterSection(current.filter, updatedFilter =>
+                    {
+                        current.filter = updatedFilter;
+                        onChanged?.Invoke(current);
+                    }));
+                }
+            }
+            RefreshCandidateFilter();
+
             typeDropdown.RegisterValueChangedCallback(evt =>
             {
                 int newIdx = typeDropdown.index;
@@ -277,15 +298,8 @@ namespace Game.Runtime
                 typeDropdown.tooltip = ConditionTypeMetadata.GetDescription(current.conditionType);
                 onChanged?.Invoke(current);
                 rebuildInputs();
+                RefreshCandidateFilter();
             });
-
-            // 対象キャラクターフィルター (Foldout で折りたたみ)
-            VisualElement filterSection = BuildTargetFilterSection(current.filter, updatedFilter =>
-            {
-                current.filter = updatedFilter;
-                onChanged?.Invoke(current);
-            });
-            row.Add(filterSection);
 
             return row;
         }

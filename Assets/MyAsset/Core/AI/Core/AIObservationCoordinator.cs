@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using R3;
+using UnityEngine;
 
 namespace Game.Core
 {
@@ -9,6 +10,9 @@ namespace Game.Core
     {
         private readonly SoACharaDataDic _data;
         private readonly ActorRegistry _actors;
+        private readonly StatusEffectStore _statusEffects;
+        private readonly List<ActiveEffect> _activeEffects = new List<ActiveEffect>();
+        private readonly Func<int, PhysicsScene2D> _physicsSceneForActor;
         private readonly Dictionary<ActorRef, DamageScoreTracker> _scores = new Dictionary<ActorRef, DamageScoreTracker>();
         private readonly Dictionary<ActorRef, HashSet<ActorRef>> _sources = new Dictionary<ActorRef, HashSet<ActorRef>>();
         private readonly Dictionary<ActorRef, ActorRef> _lastAttackers = new Dictionary<ActorRef, ActorRef>();
@@ -24,10 +28,13 @@ namespace Game.Core
         public AIObservationContext Observation { get; } = new AIObservationContext();
         public AITargetRelations Targets { get; } = new AITargetRelations();
 
-        public AIObservationCoordinator(SoACharaDataDic data, ActorRegistry actors, GameEvents events)
+        public AIObservationCoordinator(SoACharaDataDic data, ActorRegistry actors, GameEvents events,
+            Func<int, PhysicsScene2D> physicsSceneForActor = null, StatusEffectStore statusEffects = null)
         {
             _data = data;
             _actors = actors;
+            _physicsSceneForActor = physicsSceneForActor;
+            _statusEffects = statusEffects;
             _registeredSubscription = events.OnCharacterRegistered.Subscribe(RegisterHash);
             _removedSubscription = events.OnCharacterRemoved.Subscribe(RemoveHash);
             _deathSubscription = events.OnCharacterDeath.Subscribe(death => RemoveHash(death.deadHash));
@@ -54,14 +61,17 @@ namespace Game.Core
             for (int i = 0; i < _hashes.Count; i++)
             {
                 int hash = _hashes[i];
+                if (_data.Uses3DPhysics(hash)) { continue; }
                 if (!_actors.TryGet(hash, out ActorRef actor)) { RemoveHash(hash); continue; }
                 ref readonly CharacterVitals vitals = ref _data.GetVitals(hash);
                 ref readonly CharacterFlags flags = ref _data.GetFlags(hash);
                 if (vitals.currentHp <= 0 || flags.ActState == ActState.Dead) { RemoveHash(hash); continue; }
                 if (flags.IsVanished) { Targets.RemoveHash(hash); continue; }
                 RegisterActor(actor);
-                AIActorObservation snapshot = AIActorObservation.Capture(actor, vitals, _data.GetCombatStats(hash), flags);
+                AIActorObservation snapshot = AIActorObservation.Capture(actor, vitals, _data.GetCombatStats(hash), flags,
+                    _physicsSceneForActor != null ? _physicsSceneForActor(hash) : default);
                 Observation.AddActor(snapshot);
+                if (_statusEffects != null) { Observation.SetStunRemaining(actor, 0f); }
             }
             Observation.SetDamageScoresAvailable();
             foreach (KeyValuePair<ActorRef, DamageScoreTracker> owner in _scores)
@@ -77,19 +87,42 @@ namespace Game.Core
                 }
             }
             Targets.CopyTo(Observation);
+            CaptureStunRemaining();
+        }
+
+        private void CaptureStunRemaining()
+        {
+            if (_statusEffects == null) { return; }
+            _statusEffects.CopyActiveEffects(_activeEffects);
+            foreach (ActiveEffect effect in _activeEffects)
+            {
+                if (effect.id != StatusEffectId.Stun) { continue; }
+                if (!effect.targetRef.IsValid)
+                {
+                    // hashのみの旧式入力は、同じhashを再利用した別の個体へ帰属させない。
+                    if (Observation.TryGetActor(effect.targetHash, out AIActorObservation actor))
+                    {
+                        Observation.SetStunRemaining(actor.actor, float.NaN);
+                    }
+                }
+                else if (Observation.TryGetStunRemaining(effect.targetRef, out float remaining) && effect.remainTime > remaining)
+                {
+                    Observation.SetStunRemaining(effect.targetRef, effect.remainTime);
+                }
+            }
         }
 
         private bool Resolve(ActorRef reference, int hash, out ActorRef current)
         {
             current = reference;
-            if (reference.IsValid) { return _actors.IsCurrent(reference); }
-            return _actors.TryGet(hash, out current);
+            bool resolved = reference.IsValid ? _actors.IsCurrent(reference) : _actors.TryGet(hash, out current);
+            return resolved && !_data.Uses3DPhysics(current.Hash);
         }
 
         private void RegisterHash(int hash)
         {
             RemoveHash(hash);
-            if (_actors.TryGet(hash, out ActorRef actor)) { RegisterActor(actor); }
+            if (!_data.Uses3DPhysics(hash) && _actors.TryGet(hash, out ActorRef actor)) { RegisterActor(actor); }
         }
 
         private void RegisterActor(ActorRef actor)

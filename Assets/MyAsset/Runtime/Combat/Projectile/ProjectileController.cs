@@ -20,6 +20,7 @@ namespace Game.Runtime
         private ChildBulletConfig _childSnapshot;
         private bool _componentsInitialized;
         private bool _isActive;
+        private bool _canCollide;
         private bool _hasSimulated;
         private ulong _leaseId;
         private ProjectileManager _manager;
@@ -70,7 +71,7 @@ namespace Game.Runtime
         }
 
         /// <summary>状態を先に設定し、OnEnableが完全な個体を観測できる順序で有効化する。</summary>
-        public void Activate(Projectile projectile, MagicDefinition magic, ProjectileManager manager)
+        public void Activate(Projectile projectile, MagicDefinition magic, ProjectileManager manager, bool canCollide = true)
         {
             EnsureComponents();
             if (magic.childBullet != null)
@@ -87,13 +88,13 @@ namespace Game.Runtime
             _magic = magic;
             _manager = manager;
             _isActive = true;
+            _canCollide = canCollide;
             _hasSimulated = false;
             _hitCounts.Clear();
             _sweptTargets.Clear();
             _sweepHits.Clear();
             _rb.linearVelocity = Vector2.zero;
             _rb.angularVelocity = 0f;
-            _triggerCollider.enabled = !projectile.IsSpawnDelayed;
             SyncTransform();
             gameObject.SetActive(true);
         }
@@ -151,7 +152,7 @@ namespace Game.Runtime
                 _localScaleModified = true;
             }
             bool visible = !_coreProjectile.IsSpawnDelayed;
-            _triggerCollider.enabled = visible && _coreProjectile.IsAlive;
+            _triggerCollider.enabled = _canCollide && visible && _coreProjectile.IsAlive;
             if (_spriteRenderer != null) { _spriteRenderer.enabled = visible; }
         }
 
@@ -217,7 +218,7 @@ namespace Game.Runtime
         {
             Projectile projectile = _coreProjectile;
             ulong leaseId = _leaseId;
-            if (!_isActive || projectile == null || projectile.IsSpawnDelayed || !projectile.IsAlive
+            if (!_isActive || !_canCollide || projectile == null || projectile.IsSpawnDelayed || !projectile.IsAlive
                 || !TryResolveTarget(other, out ActorRef target) || _sweptTargets.Contains(target)) { return; }
             ProcessTarget(target, projectile, leaseId);
         }

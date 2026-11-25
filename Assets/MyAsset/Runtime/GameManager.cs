@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Game.Core;
 using Unity.Profiling;
 using CharacterInfo = Game.Core.CharacterInfo;
@@ -31,6 +32,8 @@ namespace Game.Runtime
         private GameLoop _loop;
         private GameActionRuntime _actions;
         private AIObservationCoordinator _observations;
+        [SerializeField, Min(0f)] private float _fieldOrderRange = 20f;
+        private RuntimeFieldOrders _fieldOrders;
         private readonly List<int> _simulationHashes = new List<int>();
         private readonly List<ActorRef> _simulationActors = new List<ActorRef>();
         private readonly Dictionary<int, ActorRef> _decisionActors = new Dictionary<int, ActorRef>();
@@ -52,6 +55,7 @@ namespace Game.Runtime
         public static GameManager Instance { get; private set; }
         public GameLoop Loop => _loop;
         public static SoACharaDataDic Data => Instance != null ? Instance._core.Data : null;
+        internal static RuntimeFieldOrders FieldOrders => Instance != null ? Instance._fieldOrders : null;
         public static GameEvents Events => Instance != null ? Instance._core.Events : null;
         public static StatusEffectSystem StatusEffects => Instance != null ? Instance._core.StatusEffects : null;
         public static EquipmentStore Equipment => Instance != null ? Instance._core.Equipment : null;
@@ -61,12 +65,22 @@ namespace Game.Runtime
         public static AIObservationContext Observation => Instance != null ? Instance._observations?.Observation : null;
         public static AITargetRelations TargetRelations => Instance != null ? Instance._observations?.Targets : null;
         public static GameActionRuntime Actions => Instance != null ? Instance._actions : null;
+        public static ExpeditionAidUnlocks ExpeditionAid => Instance != null ? Instance._core.ExpeditionAid : null;
+        public static ExpeditionPlaythrough Playthrough => Instance != null ? Instance._core.Playthrough : null;
+        public static ExpeditionNextPlaythrough NextPlaythrough => Instance != null ? Instance._core.NextPlaythrough : null;
+        public static InventoryManager Inventory => Instance != null ? Instance._core.Inventory : null;
+        public static ConsumableBelt ConsumableBelt => Instance != null ? Instance._core.ConsumableBelt : null;
+        public static PlayerCombatLoadoutSelection CombatLoadout => Instance != null ? Instance._core.CombatLoadout : null;
+        public static SaveManager Saves => Instance != null ? Instance._core.Saves : null;
+        internal static LevelUpLogic PlayerLevel => Instance != null ? Instance._core.PlayerLevel : null;
+        internal static FlagManager Flags => Instance != null ? Instance._core.Flags : null;
         public static StatusEffectCatalog StatusEffectCatalog => Instance != null ? Instance._statusEffectCatalog : null;
 
         /// <summary>
         /// ProjectileManager への薄いプロキシ。型別辞書からの解決を維持しつつ後方互換 API を提供する。
         /// </summary>
         public static ProjectileManager Projectiles => GetSubManager<ProjectileManager>();
+        public static ProjectileManager3D Projectiles3D => GetSubManager<ProjectileManager3D>();
 
         /// <summary>
         /// EnemySpawnerManager への薄いプロキシ。
@@ -122,8 +136,9 @@ namespace Game.Runtime
             _core = new GameManagerCore();
             _core.Initialize(k_InitialContainerCapacity);
             _actions = new GameActionRuntime(_core.Data, _core.Events, _core.Actions);
-            _observations = new AIObservationCoordinator(_core.Data, _core.Actors, _core.Events);
+            _observations = new AIObservationCoordinator(_core.Data, _core.Actors, _core.Events, ActorPhysicsScene, _core.StatusEffects.Store);
             _statusEffectPresentation = new StatusEffectPresentationController(_core.Data, _core.StatusEffects.Store, _statusEffectCatalog);
+            _fieldOrders = new RuntimeFieldOrders(_core.Events, _fieldOrderRange);
             _canApplyAIDecision = CanApplyAIDecision;
             _loop = new GameLoop(this, _actions, _statusEffectPresentation);
             _loop.Install();
@@ -178,13 +193,35 @@ namespace Game.Runtime
             _actions.Tick();
             ProjectileManager projectiles = Projectiles;
             if (projectiles != null) { projectiles.SimulationTick(deltaTime); }
+            ProjectileManager3D projectiles3D = Projectiles3D;
+            if (projectiles3D != null) { projectiles3D.SimulationTick(deltaTime); }
             for (int i = 0; i < _simulationActors.Count; i++)
             {
                 if (TryGetSimulationCharacter(i, false, out BaseCharacter character)) { character.PrepareObservationTick(deltaTime); }
             }
         }
 
-        void ISimulationTickWorld.CaptureSimulationObservation(long tick, float currentTime) => _observations.Capture(tick, currentTime);
+        private PhysicsScene2D ActorPhysicsScene(int hash) => PhysicsSceneOf(_core.Data.GetManaged(hash));
+
+        internal static PhysicsScene2D PhysicsSceneOf(ManagedCharacter character) =>
+            character != null ? character.gameObject.scene.GetPhysicsScene2D() : Physics2D.defaultPhysicsScene;
+
+        void ISimulationTickWorld.CaptureSimulationObservation(long tick, float currentTime)
+        {
+            _observations.Capture(tick, currentTime);
+            AIObservationContext observation = _observations.Observation;
+            if (_core.Actors.TryGet(CharacterRegistry.PlayerHash, out ActorRef player)) { observation.SetProtectedPlayer(player); }
+            if (!AISceneGimmickController.Capture(observation)) { return; }
+            for (int i = 0; i < observation.ActorHashes.Count; i++)
+            {
+                int hash = observation.ActorHashes[i];
+                if (_core.Data.GetManaged(hash) is BaseCharacter character && character.PhysicsBackend != null
+                    && _core.Actors.TryGet(hash, out ActorRef actor))
+                {
+                    observation.SetGimmickVelocity(actor, character.PhysicsVelocity);
+                }
+            }
+        }
 
         void ISimulationTickWorld.SimulateCharacters(float deltaTime, float currentTime)
         {
@@ -248,11 +285,41 @@ namespace Game.Runtime
                 && observation.Contains(actor);
         }
 
-        public static Vector2 ObservedPosition(int hash, Vector2 fallback)
+        private static bool TryGetCurrentObservedActor(AIObservationContext observation, int hash, out AIActorObservation actor)
+        {
+            actor = default;
+            return observation != null && observation.TryGetActor(hash, out actor) && Actors.IsCurrent(actor.actor);
+        }
+
+        public static Vector2 ObservedPosition(int hash, Vector2 fallback) =>
+            TryGetCurrentObservedActor(Observation, hash, out AIActorObservation actor) ? actor.position : fallback;
+
+        internal static bool TryGetObservedPair(int ownerHash, int targetHash,
+            out AIActorObservation owner, out AIActorObservation target)
         {
             AIObservationContext observation = Observation;
-            return observation != null && observation.TryGetActor(hash, out AIActorObservation actor)
-                ? actor.position : fallback;
+            target = default;
+            return TryGetCurrentObservedActor(observation, ownerHash, out owner)
+                && TryGetCurrentObservedActor(observation, targetHash, out target);
+        }
+
+        internal static bool TryGetTargetOffset(int ownerHash, int targetHash, out Vector2 offset)
+        {
+            offset = default;
+            if (TryGetObservedPair(ownerHash, targetHash, out AIActorObservation owner, out AIActorObservation target))
+            {
+                if (owner.physicsScene != target.physicsScene) { return false; }
+                offset = target.position - owner.position;
+                return true;
+            }
+            // A partial snapshot cannot supply a relative position. Use both current positions together.
+            SoACharaDataDic data = Data;
+            if (data == null || data.Uses3DPhysics(ownerHash) || data.Uses3DPhysics(targetHash)
+                || !data.TryGetVitals(ownerHash, out CharacterVitals ownerVitals)
+                || !data.TryGetVitals(targetHash, out CharacterVitals targetVitals)
+                || Instance.ActorPhysicsScene(ownerHash) != Instance.ActorPhysicsScene(targetHash)) { return false; }
+            offset = targetVitals.position - ownerVitals.position;
+            return true;
         }
 
         /// <summary>
@@ -315,6 +382,30 @@ namespace Game.Runtime
             return RegisterCharacterInternal(chara.ObjectHash, info, chara);
         }
 
+        public int RegisterCharacter(CharacterActor3D actor, CharacterInfo info)
+        {
+            CharacterRegistration registration = info.CreateRegistration(Physics.gravity.magnitude);
+            int result = _core.RegisterCharacter(actor.ObjectHash, registration, actor);
+            WarnIfCapacityUsageHigh();
+            return result;
+        }
+
+        internal bool TryGetRegisteredActor(ManagedCharacter character, out ActorRef actor)
+        {
+            actor = default;
+            return _core != null && _core.IsInitialized
+                && ReferenceEquals(_core.Data.GetManaged(character.ObjectHash), character)
+                && _core.Actors.TryGet(character.ObjectHash, out actor);
+        }
+
+        internal void UnregisterCharacter(ManagedCharacter character, ActorRef expected)
+        {
+            if (TryGetRegisteredActor(character, out ActorRef actor) && actor == expected)
+            {
+                UnregisterCharacter(actor.Hash);
+            }
+        }
+
         private int RegisterCharacterInternal(int hash, CharacterInfo info, BaseCharacter chara)
         {
             CharacterRegistration registration = info.CreateRegistration(Physics2D.gravity.magnitude);
@@ -333,6 +424,7 @@ namespace Game.Runtime
         {
             if (_core != null && _core.IsInitialized)
             {
+                if (_core.Actors.TryGet(hash, out ActorRef actor)) { _fieldOrders.Forget(actor); }
                 _core.UnregisterCharacter(hash);
                 // 下回ったら再警告できるようフラグ復帰
                 if (_capacityWarningFired && _core.Data != null
@@ -372,6 +464,7 @@ namespace Game.Runtime
             if (Instance == this)
             {
                 _loop?.Dispose();
+                _fieldOrders?.Dispose();
                 _observations?.Dispose();
                 _statusEffectPresentation?.Dispose();
                 _actions?.Dispose();

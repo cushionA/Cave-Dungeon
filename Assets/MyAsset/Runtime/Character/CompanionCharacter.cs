@@ -37,6 +37,7 @@ namespace Game.Runtime
         private readonly List<int> _candidates = new List<int>(8);
 
         public CompanionController AIController => _aiController;
+        internal override JudgmentLoop FieldOrderJudgment => _aiController?.JudgmentLoop;
         public override bool CanApplyAIDecision => base.CanApplyAIDecision && !_vanishApplied
             && _playerTransform != null && _aiController != null && !_aiController.MpManager.IsVanished;
 
@@ -157,6 +158,7 @@ namespace Game.Runtime
 
                 BridgeAIActionForJudgmentLoop(_aiController.JudgmentLoop, _actionExecutorController);
                 if (!GameManager.TryGetObservation(ObjectHash, out AIObservationContext observation)) { return; }
+                if (PrepareFieldOrder(_candidates)) { return; }
                 _aiController.PrepareTick(deltaTime, _candidates, observation.Time, decisions,
                     observation, GameManager.TargetRelations);
             }
@@ -169,7 +171,7 @@ namespace Game.Runtime
             if (_vanishApplied || (GameManager.Actions != null && GameManager.Actions.IsPhysicsControlled(ObjectHash))) { return; }
             if (_aiController != null)
             {
-                ApplyFollowMovement();
+                if (!ApplyFieldOrderMovement()) { ApplyFollowMovement(); }
             }
             else
             {
@@ -194,8 +196,12 @@ namespace Game.Runtime
             }
 
             FollowState followState = _aiController.FollowBehavior.CurrentState;
-            Vector2 myPos = GameManager.ObservedPosition(ObjectHash, PhysicsPosition);
-            Vector2 playerPos = GameManager.ObservedPosition(CharacterRegistry.PlayerHash, GetPlayerPhysicsPosition());
+            Vector2 myPos = default, playerPos = default;
+            if (followState != FollowState.Waiting && !TryGetFollowPositions(out myPos, out playerPos))
+            {
+                SetPhysicsVelocity(new Vector2(0f, PhysicsVelocity.y));
+                return;
+            }
 
             switch (followState)
             {
@@ -238,12 +244,14 @@ namespace Game.Runtime
         /// </summary>
         private void MoveTowardTarget(int targetHash)
         {
-            ref CharacterVitals targetVitals = ref GameManager.Data.GetVitals(targetHash);
-            ref CharacterVitals myVitals = ref GameManager.Data.GetVitals(ObjectHash);
+            if (!GameManager.TryGetTargetOffset(ObjectHash, targetHash, out Vector2 targetOffset))
+            {
+                SetPhysicsVelocity(new Vector2(0f, PhysicsVelocity.y));
+                return;
+            }
             MoveParams moveParams = GetEffectiveMoveParams(GameConstants.k_FallbackMoveSpeed);
 
-            float diff = GameManager.ObservedPosition(targetHash, targetVitals.position).x
-                - GameManager.ObservedPosition(ObjectHash, myVitals.position).x;
+            float diff = targetOffset.x;
             float absDist = Mathf.Abs(diff);
             if (absDist > GameConstants.k_DefaultAttackRange)
             {
@@ -279,12 +287,27 @@ namespace Game.Runtime
             }
         }
 
-        private Vector2 GetPlayerPhysicsPosition()
+        private bool TryGetFollowPositions(out Vector2 myPosition, out Vector2 playerPosition)
         {
-            if (_playerCharacter != null) { return _playerCharacter.PhysicsPosition; }
             int playerHash = CharacterRegistry.PlayerHash;
-            return GameManager.IsCharacterValid(playerHash)
-                ? GameManager.Data.GetVitals(playerHash).position : PhysicsPosition;
+            if (GameManager.TryGetObservedPair(ObjectHash, playerHash,
+                    out AIActorObservation owner, out AIActorObservation player))
+            {
+                myPosition = owner.position;
+                playerPosition = player.position;
+                return owner.physicsScene == player.physicsScene;
+            }
+            bool registered = GameManager.IsCharacterValid(playerHash);
+            ManagedCharacter livePlayer = _playerCharacter != null ? _playerCharacter : GameManager.Data?.GetManaged(playerHash);
+            if ((_playerCharacter != null || registered) && GameManager.PhysicsSceneOf(this) != GameManager.PhysicsSceneOf(livePlayer))
+            {
+                myPosition = playerPosition = default;
+                return false;
+            }
+            myPosition = PhysicsPosition;
+            playerPosition = _playerCharacter != null ? _playerCharacter.PhysicsPosition
+                : registered ? GameManager.Data.GetVitals(playerHash).position : myPosition;
+            return true;
         }
 
         /// <summary>
@@ -292,8 +315,11 @@ namespace Game.Runtime
         /// </summary>
         private void ApplySimpleFollow()
         {
-            Vector2 myPos = GameManager.ObservedPosition(ObjectHash, PhysicsPosition);
-            Vector2 playerPos = GameManager.ObservedPosition(CharacterRegistry.PlayerHash, GetPlayerPhysicsPosition());
+            if (!TryGetFollowPositions(out Vector2 myPos, out Vector2 playerPos))
+            {
+                SetPhysicsVelocity(new Vector2(0f, PhysicsVelocity.y));
+                return;
+            }
             float sqrDist = (myPos - playerPos).sqrMagnitude;
 
             if (sqrDist > _maxLeashDistance * _maxLeashDistance)
@@ -332,6 +358,7 @@ namespace Game.Runtime
         private void OnEnable() => SyncAvailability();
         private void OnDisable()
         {
+            ForgetFieldOrders();
             // AIだけを停止しても、存在状態は共有データの正本に従う。
             // GameObjectの終了・プール返却では保存した物理設定を戻す。
             if (gameObject.activeInHierarchy) { SyncAvailability(); }

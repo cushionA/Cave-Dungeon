@@ -59,6 +59,25 @@ namespace Game.Tests.EditMode
         // ----- Test 2: Tick time limit -----
 
         [Test]
+        public void Abort_AfterStart_EndsOnlyTheCurrentRunAndAllowsRetry()
+        {
+            Assert.IsFalse(_runner.Abort());
+            _runner.Start(_definition);
+            _runner.Tick(2f);
+
+            Assert.IsTrue(_runner.Abort());
+            Assert.IsFalse(_runner.Abort());
+            _runner.Complete();
+            Assert.AreEqual(ChallengeState.Failed, _runner.GetResult().state);
+            Assert.AreEqual(ChallengeRank.None, _runner.GetResult().rank);
+
+            _runner.Start(_definition);
+            Assert.AreEqual(0f, _runner.ElapsedTime);
+            _runner.Complete();
+            Assert.AreEqual(ChallengeState.Completed, _runner.GetResult().state);
+        }
+
+        [Test]
         public void Tick_WhenTimeLimitExceeded_ShouldSetStateToFailed()
         {
             _runner.Start(_definition);

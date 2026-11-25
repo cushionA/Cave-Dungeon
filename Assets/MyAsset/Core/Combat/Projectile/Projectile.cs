@@ -12,6 +12,8 @@ namespace Game.Core
         public int CasterHash { get; private set; }
         public ActorRef CasterRef { get; private set; }
         public ActorRef TargetRef { get; private set; }
+        /// <summary>発射時にこの弾へ明示的に割り当てた個体。追尾の自動検索では設定しない。</summary>
+        public ActorRef ExplicitTargetRef { get; private set; }
         public int RemainingHits { get; private set; }
         private BulletProfile _profile;
         public BulletProfile Profile => _profile;
@@ -24,7 +26,7 @@ namespace Game.Core
         public int TargetHash
         {
             get => _targetHash;
-            set { _targetHash = value; TargetRef = default; }
+            set { _targetHash = value; TargetRef = default; ExplicitTargetRef = default; }
         }
         public float LastEmitTime { get; set; }
         public Vector2 InitialDirection { get; private set; }
@@ -64,17 +66,28 @@ namespace Game.Core
         {
             if (!target.IsValid && target != default) { return false; }
             if (target.IsValid && (actors == null || !actors.IsCurrent(target))) { return false; }
+            if (target != ExplicitTargetRef) { ExplicitTargetRef = default; }
             TargetRef = target;
             _targetHash = target.Hash;
             return true;
         }
 
+        /// <summary>世代を照合し、この弾へ明示的な対象を割り当てる。</summary>
+        public bool TrySetExplicitTarget(ActorRef target, ActorRegistry actors)
+        {
+            if (!target.IsValid || !TrySetTarget(target, actors)) { return false; }
+            ExplicitTargetRef = target;
+            return true;
+        }
+
+        /// <summary>通常の接触・誘導対象を保持して明示ロックを解除する。</summary>
+        public void ClearExplicitTarget() => ExplicitTargetRef = default;
+
         public bool RefreshTarget(ActorRegistry actors)
         {
             if (!TargetRef.IsValid) { return false; }
             if (actors != null && actors.IsCurrent(TargetRef)) { return true; }
-            TargetRef = default;
-            _targetHash = 0;
+            TrySetTarget(default, actors);
             return false;
         }
 

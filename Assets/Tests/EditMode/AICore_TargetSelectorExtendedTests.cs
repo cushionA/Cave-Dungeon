@@ -200,6 +200,54 @@ namespace Game.Tests.EditMode
             Assert.Greater(result.Count, 0, "弱点フィルタで1体以上通過");
         }
 
+        [TestCase(Element.Strike, Element.None, FilterBitFlag.None, 400)]
+        [TestCase(Element.Strike | Element.Fire, Element.None, FilterBitFlag.WeakPointAnd, 300)]
+        [TestCase(Element.Fire, Element.Strike, FilterBitFlag.None, 400)]
+        [TestCase(Element.Strike, Element.Strike | Element.Fire, FilterBitFlag.None, 300)]
+        [TestCase(Element.Strike, Element.Strike | Element.Fire, FilterBitFlag.WeakPointAnd, 0)]
+        public void SelectTarget_ResolvesWeaknessForObservedAndLegacySelectors(
+            Element legacy, Element configured, FilterBitFlag comparison, int expected)
+        {
+            // The nearer enemy resists strike and the farther enemy resists fire.
+            var select = new AITargetSelect
+            {
+                sortKey = TargetSortKey.Distance, elementFilter = legacy,
+                filter = new TargetFilter { weakPoint = configured, filterFlags = comparison }
+            };
+            var candidates = new List<int> { _enemy1Hash, _enemy2Hash };
+            var observation = new AIObservationContext();
+            observation.BeginSnapshot(1, 0f);
+            foreach (int hash in new[] { _ownerHash, _enemy1Hash, _enemy2Hash })
+            {
+                observation.AddActor(AIActorObservation.Capture(new ActorRef(hash, 1),
+                    _data.GetVitals(hash), _data.GetCombatStats(hash), _data.GetFlags(hash)));
+            }
+            Assert.AreEqual(expected, TargetSelector.SelectTarget(select, _ownerHash, candidates, _data, 0f));
+            Assert.AreEqual(expected, TargetSelector.SelectTarget(select, _ownerHash, observation, candidates));
+        }
+
+        [Test]
+        public void EffectiveFilter_ClearingEditedCopyDoesNotRestoreLegacyWeakness()
+        {
+            var original = new AITargetSelect
+            {
+                elementFilter = Element.Strike,
+                filter = new TargetFilter { belong = CharacterBelong.Enemy, filterFlags = FilterBitFlag.FeatureAnd }
+            };
+            AITargetSelect copy = original;
+            TargetFilter edited = copy.EffectiveFilter;
+            edited.weakPoint = Element.None;
+            copy.EffectiveFilter = edited;
+
+            Assert.AreEqual(Element.None, copy.elementFilter);
+            Assert.AreEqual(Element.None, copy.EffectiveFilter.weakPoint);
+            Assert.AreEqual(CharacterBelong.Enemy, copy.filter.belong);
+            Assert.AreEqual(FilterBitFlag.FeatureAnd, copy.filter.filterFlags);
+            Assert.AreEqual(Element.Strike, original.elementFilter);
+            Assert.AreEqual(Element.Strike, original.EffectiveFilter.weakPoint);
+            Assert.AreEqual(Element.None, original.filter.weakPoint);
+        }
+
         // --- TargetFilter: Feature ---
 
         [Test]

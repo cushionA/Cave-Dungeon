@@ -21,7 +21,7 @@ namespace Game.Core
     /// マップローカル: イベント再生済み、宝箱開封等（mapId単位で切替）。
     /// ISaveable対応で永続化可能。
     /// </summary>
-    public class FlagManager : ISaveable
+    public class FlagManager : ISaveableWithMissingEntry
     {
         private readonly Dictionary<string, bool> _globalFlags;
         private readonly Dictionary<string, Dictionary<string, bool>> _mapLocalFlags;
@@ -110,6 +110,13 @@ namespace Game.Core
 
         public string SaveId => "FlagManager";
 
+        void ISaveableWithMissingEntry.RestoreMissingEntry()
+        {
+            _globalFlags.Clear();
+            _mapLocalFlags.Clear();
+            _currentMapId = null;
+        }
+
         object ISaveable.Serialize()
         {
             FlagSaveData saveData = new FlagSaveData
@@ -140,7 +147,19 @@ namespace Game.Core
             }
             else
             {
-                return;
+                throw new ArgumentException("フラグの保存データの形式が不正です。", nameof(data));
+            }
+
+            if (saveData == null)
+            {
+                throw new ArgumentException("フラグの保存データを読み取れません。", nameof(data));
+            }
+            if (saveData.mapLocalFlags != null)
+            {
+                foreach (Dictionary<string, bool> flags in saveData.mapLocalFlags.Values)
+                {
+                    if (flags == null) { throw new ArgumentException("マップのフラグデータの形式が不正です。", nameof(data)); }
+                }
             }
 
             _globalFlags.Clear();
@@ -161,7 +180,8 @@ namespace Game.Core
                 }
             }
 
-            _currentMapId = saveData.currentMapId;
+            _currentMapId = null;
+            SwitchMap(saveData.currentMapId);
         }
     }
 }

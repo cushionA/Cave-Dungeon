@@ -1,30 +1,36 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Game.Core;
 
 namespace Game.Runtime
 {
     public class DamageReceiver : MonoBehaviour, IDamageable
     {
-        private BaseCharacter _character;
+        private ManagedCharacter _character;
         private int _objectHash;
         private SituationalBonusConfig _bonusConfig = SituationalBonusConfig.Default;
 
         public int ObjectHash => _objectHash;
-        public bool IsAlive => _character != null && _character.IsAlive;
+        public bool IsAlive => _character switch
+        {
+            BaseCharacter character when character != null => character.IsAlive,
+            CharacterActor3D character when character != null => character.IsAlive,
+            _ => false,
+        };
 
         private void Awake()
         {
             _objectHash = gameObject.GetHashCode();
-            _character = GetComponent<BaseCharacter>();
+            _character = GetComponent<ManagedCharacter>();
         }
 
         private void Start()
         {
             if (_character == null)
             {
-                _character = GetComponent<BaseCharacter>();
+                _character = GetComponent<ManagedCharacter>();
             }
-            if (_character != null) { _character.BindDamageReceiver(this); }
+            if (_character is BaseCharacter character && character != null) { character.BindDamageReceiver(this); }
         }
 
         public void SetGuarding(bool isGuarding)
@@ -89,8 +95,47 @@ namespace Game.Runtime
 
         public DamageResult ReceiveDamage(DamageData attack)
         {
+            if (_character is not BaseCharacter character || character == null) { return default; }
+            return ResolveDamage(attack, IsAttackFromFront(attack, character));
+        }
+
+        /// <summary>3Dで検出した接触から、コライダーと同じ物理ワールドの現行個体へダメージを渡す。</summary>
+        internal DamageResult ReceiveDamage3D(DamageData attack, Vector3 origin)
+        {
+            ActorRef attacker = attack.attackContext.Owner;
+            if (attack.isProjectile || GameManager.Actors == null || !GameManager.Actors.IsCurrent(attacker)
+                || GameManager.Data.GetManaged(attacker.Hash) is not CharacterActor3D source || source == null
+                || source.Actor != attacker || !source.IsAlive)
+            {
+                return default;
+            }
+
+            return ResolveDamage3D(attack, origin, source.gameObject.scene.GetPhysicsScene());
+        }
+
+        /// <summary>射手が消えた後も、発射時の攻撃入力と物理ワールドで飛翔体の命中を処理する。</summary>
+        internal DamageResult ReceiveProjectileDamage3D(DamageData attack, Vector3 origin, PhysicsScene world)
+            => attack.isProjectile ? ResolveDamage3D(attack, origin, world) : default;
+
+        private DamageResult ResolveDamage3D(DamageData attack, Vector3 origin, PhysicsScene world)
+        {
+            if (!attack.attackContext.IsCaptured || !world.IsValid() || !IsFinite(origin)
+                || _character is not CharacterActor3D target || target == null || !target.IsAlive
+                || target.Actor != attack.defenderRef || target.gameObject.scene.GetPhysicsScene() != world)
+            {
+                return default;
+            }
+
+            Vector3 toAttacker = origin - target.Body.bounds.center;
+            toAttacker.y = 0f;
+            bool isAttackFromFront = Vector3.Dot(target.Motor.Facing, toAttacker) >= 0f;
+            return ResolveDamage(attack, isAttackFromFront);
+        }
+
+        private DamageResult ResolveDamage(DamageData attack, bool isAttackFromFront)
+        {
             int hash = ObjectHash;
-            if (_character == null || !GameManager.IsCharacterValid(hash))
+            if (!GameManager.IsCharacterValid(hash))
             {
                 return default;
             }
@@ -127,7 +172,7 @@ namespace Game.Runtime
                 attackerAttackMultiplier = attack.attackContext.IsCaptured ? attack.attackContext.AttackMultiplier
                     : GameManager.IsCharacterValid(attack.attackerHash)
                     ? data.GetStatusEffects(attack.attackerHash).AttackMultiplier : 1f,
-                isAttackFromFront = IsAttackFromFront(attack),
+                isAttackFromFront = isAttackFromFront,
                 currentTime = Time.time,
                 bonusConfig = _bonusConfig,
             };
@@ -187,22 +232,25 @@ namespace Game.Runtime
                     else { events.FireCharacterDeath(hash, attack.attackerHash); }
                 }
             }
-            if (_character != null && resolution.knockback.sqrMagnitude > 0f
+            if (_character is BaseCharacter character && character != null && resolution.knockback.sqrMagnitude > 0f
                 && (!targetRef.IsValid || (actors != null && actors.IsCurrent(targetRef))))
             {
-                _character.ApplyPhysicsImpulse(resolution.knockback);
+                character.ApplyPhysicsImpulse(resolution.knockback);
             }
             return result;
         }
 
-        private bool IsAttackFromFront(in DamageData attack)
+        private static bool IsAttackFromFront(in DamageData attack, BaseCharacter character)
         {
             if (attack.knockbackForce.sqrMagnitude < 0.001f)
             {
                 return true;
             }
-            float facingX = _character.transform.localScale.x >= 0f ? 1f : -1f;
+            float facingX = character.transform.localScale.x >= 0f ? 1f : -1f;
             return facingX > 0f ? attack.knockbackForce.x < 0f : attack.knockbackForce.x > 0f;
         }
+
+        private static bool IsFinite(Vector3 value) =>
+            float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
     }
 }

@@ -8,6 +8,21 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/SampleScene.unity
     guid: 8c9cfa26abfee488c85f1582747f6a02
+  - enabled: 1
+    path: Assets/Scenes/BossArena3DTestScene.unity
+    guid: 4d0a90ba021f821baaac4330da95747f
+  - enabled: 1
+    path: Assets/Scenes/StreamingAreaA3DTestScene.unity
+    guid: 0bd80cce3f61e4da89edf9041733ef90
+  - enabled: 1
+    path: Assets/Scenes/StreamingAreaB3DTestScene.unity
+    guid: 4f1f76e41e309e18cba85b2c37cc1a59
+  - enabled: 1
+    path: Assets/Scenes/ExpeditionMock3DScene.unity
+    guid: 9b108dd92b0eea7afaad789bdfa7f3d2
+  - enabled: 1
+    path: Assets/Scenes/ExpeditionEvent3DScene.unity
+    guid: 0e2d77d7d6cde2f5384e2a2619c6c15c
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   m_UseUCBPForAssetBundles: 0
