@@ -38,15 +38,21 @@ namespace Game.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator AuthoredSavePoint_WhenUsedAndReopened_RestoresFirstCycleAtTheSamePoint()
+        public IEnumerator AuthoredSavePoint_WhenActiveAtStartup_RestoresFirstCycleAtTheSamePoint()
+            => SaveAndReopen(activateBeforeStart: true);
+
+        [UnityTest]
+        public IEnumerator AuthoredSavePoint_WhenMadeActiveAfterStartup_RestoresFirstCycleAtTheSamePoint()
+            => SaveAndReopen(activateBeforeStart: false);
+
+        private IEnumerator SaveAndReopen(bool activateBeforeStart)
         {
             SaveDataStore store = new SaveDataStore(_saveFolder);
-            yield return LoadMock();
+            yield return LoadMock(store, activateBeforeStart: true);
 
             CharacterActor3D knight = Find<CharacterActor3D>("[PLACEHOLDER] Knight");
             ExpeditionSavePoint3D checkpoint = Find<ExpeditionSavePoint3D>("[PLACEHOLDER] Expedition save point");
             NpcInteraction3D interaction = checkpoint.GetComponent<NpcInteraction3D>();
-            checkpoint.SetStoreForTest(store);
             Assert.That(interaction.InteractionType, Is.EqualTo(InteractionType.SavePoint));
             SerializedProperty targets = new SerializedObject(knight.GetComponent<PlayerCharacterInput3D>()).FindProperty("interactionTargets");
             Assert.That(Enumerable.Range(0, targets.arraySize)
@@ -66,14 +72,17 @@ namespace Game.Tests.PlayMode
             Assert.That(checkpoint.GetComponentInChildren<TextMesh>().text, Is.EqualTo("SAVED"));
 
             yield return UnloadMock();
-            yield return LoadMock();
+            yield return LoadMock(store, activateBeforeStart);
             knight = Find<CharacterActor3D>("[PLACEHOLDER] Knight");
-            checkpoint = Find<ExpeditionSavePoint3D>("[PLACEHOLDER] Expedition save point");
-            checkpoint.SetStoreForTest(store);
-            Assert.That(GameManager.Flags.GetGlobalFlag("checkpoint-test"), Is.False);
-            Assert.That(SceneManager.SetActiveScene(_mock), Is.True);
-            Assert.That(checkpoint.TryRestoreCurrentSlot(), Is.True);
+            if (!activateBeforeStart)
+            {
+                Assert.That(SceneManager.GetActiveScene(), Is.EqualTo(_previous));
+                Assert.That(GameManager.Saves.LoadRevision, Is.Zero);
+                Assert.That(GameManager.Flags.GetGlobalFlag("checkpoint-test"), Is.False);
+                Assert.That(SceneManager.SetActiveScene(_mock), Is.True);
+            }
 
+            Assert.That(GameManager.Saves.LoadRevision, Is.EqualTo(1UL));
             Assert.That(GameManager.Playthrough.CycleNumber, Is.EqualTo(1));
             Assert.That(GameManager.Flags.GetGlobalFlag("checkpoint-test"), Is.True);
             Assert.That(Vector3.Distance(knight.transform.position, respawn), Is.LessThan(0.01f));
@@ -81,11 +90,24 @@ namespace Game.Tests.PlayMode
             yield return ExpeditionEvent3DScenePlayTests.WaitForJournalRestore();
         }
 
-        private IEnumerator LoadMock()
+        private IEnumerator LoadMock(SaveDataStore store, bool activateBeforeStart)
         {
-            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(k_Mock, new LoadSceneParameters(LoadSceneMode.Additive));
-            _mock = SceneManager.GetSceneByPath(k_Mock);
-            yield return null;
+            void ConfigureBeforeStart(Scene scene, LoadSceneMode _)
+            {
+                if (scene.path != k_Mock) { return; }
+                _mock = scene;
+                Find<ExpeditionSavePoint3D>("[PLACEHOLDER] Expedition save point").SetStoreForTest(store);
+                Find<ExpeditionNextPlaythroughPanel>("Expedition next playthrough").SetStoreForTest(store);
+                if (activateBeforeStart) { Assert.That(SceneManager.SetActiveScene(_mock), Is.True); }
+            }
+
+            SceneManager.sceneLoaded += ConfigureBeforeStart;
+            try
+            {
+                yield return EditorSceneManager.LoadSceneAsyncInPlayMode(k_Mock, new LoadSceneParameters(LoadSceneMode.Additive));
+                yield return null;
+            }
+            finally { SceneManager.sceneLoaded -= ConfigureBeforeStart; }
         }
 
         private IEnumerator UnloadMock()

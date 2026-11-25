@@ -21,6 +21,8 @@ namespace Game.Runtime
 
         private NpcInteraction3D _interaction;
         private SaveDataStore _store;
+        private SaveManager _startupSaves;
+        private int _startupSlot;
 
         public UnityEvent Saved => onSaved;
         public UnityEvent SaveFailed => onSaveFailed;
@@ -32,7 +34,36 @@ namespace Game.Runtime
 
         private void Start()
         {
-            if (restoreOnStart) { TryRestoreCurrentSlot(); }
+            if (!restoreOnStart) { return; }
+            if (gameObject.scene == SceneManager.GetActiveScene())
+            {
+                TryRestoreCurrentSlot();
+                return;
+            }
+
+            // 加算ロードではシーンが有効になった時点で、起動時のスロットを一度だけ試す。
+            SaveManager saves = GameManager.Saves;
+            if (saves == null || saves.LastLoadedSlot != null || saves.HasSaveData(saves.ActiveSlotIndex)) { return; }
+            _startupSaves = saves;
+            _startupSlot = saves.ActiveSlotIndex;
+            SceneManager.activeSceneChanged += RestoreOnActivation;
+        }
+
+        private void OnDisable() => StopWaitingForActivation();
+
+        private void RestoreOnActivation(Scene _, Scene current)
+        {
+            SaveManager saves = _startupSaves;
+            if (saves == null || current != gameObject.scene) { return; }
+            StopWaitingForActivation();
+            if (saves == GameManager.Saves && saves.ActiveSlotIndex == _startupSlot) { TryRestoreCurrentSlot(); }
+        }
+
+        private void StopWaitingForActivation()
+        {
+            if (_startupSaves == null) { return; }
+            SceneManager.activeSceneChanged -= RestoreOnActivation;
+            _startupSaves = null;
         }
 
         internal void SetStoreForTest(SaveDataStore store) => _store = store;
