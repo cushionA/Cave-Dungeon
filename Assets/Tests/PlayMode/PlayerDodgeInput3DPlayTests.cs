@@ -69,6 +69,9 @@ namespace Game.Tests.PlayMode
             _character.dodgeStaminaCost = k_DodgeCost;
             _character.dodgeDuration = k_DodgeDuration;
             _character.dashSpeed = k_DodgeSpeed;
+            _character.staminaRecoveryRate = 16f;
+            _character.staminaRecoveryDelay = 0.125f;
+            _character.staminaExhaustionPenalty = 0.75f;
             _knight.SetCharacterInfoForTest(_character);
             _input = body.AddComponent<PlayerInput>();
             _input.actions = _actions;
@@ -191,6 +194,51 @@ namespace Game.Tests.PlayMode
             TapShift();
             yield return new WaitForFixedUpdate();
             AssertNoDodge(100f);
+        }
+
+        [UnityTest]
+        public IEnumerator StaminaRecovery_WhenDodgeEnds_ResumesAtTheConfiguredRateAndClamps()
+        {
+            TapShift();
+            yield return new WaitForFixedUpdate();
+            Assert.IsTrue(GameManager.Actions.IsDodging(_knight.Actor.Hash));
+            Assert.AreEqual(100f - k_DodgeCost, Stamina());
+
+            GameManager world = GameManager.Instance;
+            world.SimulationTick(0.0625f, 0.0625f);
+            world.SimulationTick(0.125f, 0.1875f);
+            world.SimulationTick(0.03125f, 0.21875f);
+            Assert.AreEqual(100f - k_DodgeCost, Stamina(), "Recovery must stay paused through the dodge.");
+
+            world.SimulationTick(0.0625f, 0.28125f);
+            Assert.IsFalse(GameManager.Actions.IsDodging(_knight.Actor.Hash));
+            Assert.AreEqual(101f - k_DodgeCost, Stamina());
+            world.SimulationTick(1f, 1.28125f);
+            Assert.AreEqual(100f, Stamina());
+        }
+
+        [UnityTest]
+        public IEnumerator StaminaRecovery_WhenExhaustedOrReRegistered_UsesTheCurrentGenerationAndDelay()
+        {
+            GameManager world = GameManager.Instance;
+            ActorRef first = _knight.Actor;
+            GameManager.Data.GetVitals(first.Hash).currentStamina = 0f;
+            world.SimulationTick(0.0625f, 0.0625f);
+            world.SimulationTick(0.625f, 0.6875f);
+            Assert.AreEqual(0f, Stamina());
+            world.SimulationTick(0.25f, 0.9375f);
+            Assert.AreEqual(2f, Stamina());
+
+            _knight.enabled = false;
+            _knight.enabled = true;
+            Assert.AreNotEqual(first, _knight.Actor);
+            GameManager.Data.GetVitals(_knight.Actor.Hash).currentStamina = 90f;
+            world.SimulationTick(0.0625f, 1f);
+            world.SimulationTick(0.125f, 1.125f);
+            Assert.AreEqual(90f, Stamina());
+            world.SimulationTick(0.0625f, 1.1875f);
+            Assert.AreEqual(91f, Stamina());
+            yield return null;
         }
 
         private void AssertNoDodge(float stamina)
