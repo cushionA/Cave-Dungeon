@@ -564,6 +564,8 @@ CompareOp(9種): Less, LessEqual, Equal, GreaterEqual, Greater, NotEqual, InRang
 3. 敵・仲間の `AIInfo` で、使わせたいモードの行動に `ActType.InteractObject` を追加する。ルールからは `InstantAction.InteractObject` を使う。`ObjectNearby` は観測者が操作圏内にいて操作点まで遮られていない未使用装置の種類ビットを返す。共通観測に装置の照会元を接続していない場合は未取得となる。
 4. AIは同じ2D物理ワールドにある装置から、そのtickの戦闘標的に効果が届くものを選ぶ。遅延がある場合は現在速度から標的の到達位置を推定し、自分・味方が効果範囲を横切る候補を除く。どれも使えない場合に備え、ガードや接近などの行動を同じモードに設定できる。実行直前にも位置、速度、遮蔽物、行動制限、標的・装置の世代を確かめる。
 
+2Dの接触罠では `Require Target Contact` を有効にし、同じオブジェクトに置いたトリガーの `Collider2D` を `Contact Trigger` に設定する。操作点と効果範囲を設定し、効果遅延は0秒にする。AIの装置操作は `Contact Timeout` の間だけ罠を作動準備状態にする。選んだ敵が板に触れた時点で効果範囲の味方を再確認し、安全に作動できるときだけ `On Activated` が一度発火する。たとえばこのイベントに通路を開く処理を割り当てられる。[シーン装置](../../Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs)
+
 ## ターゲット選択（TargetSelector）
 1. TargetFilter で候補を絞り込み（CharacterFlags のビット演算で高速フィルタ）
 2. TargetSortKey で最適な1体を選択（Distance, HpRatio, DamageScore等11種）
@@ -587,7 +589,9 @@ CompareOp(9種): Less, LessEqual, Equal, GreaterEqual, Greater, NotEqual, InRang
 
 ### 3D集団戦で障害を迂回する
 
-`EncounterCombat3D` の `Approach Waypoints` に、同じ部屋の床をつなぐ中継点を最大12個設定する。`Approach Ground Layers` には通行を支える床を、`Obstruction Layers` には通行や射線を遮る壁を指定する。通常の接近や集中攻撃では、同じ陣営が目撃した標的へ向けて、歩いて到達できる射程内の地点を選ぶ。中継点と終点の間は個体の幅と床を照会し、通行可能な候補のうち短い経路を使う。攻撃は個体自身の射線が通ってから始める。標的の変化や通路の閉塞があれば次の経路を選び直す。橋の上り下りやジャンプを含む特殊移動は別の経路が必要になる。[遭遇の移動](../../Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs)・[接近経路](../../Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs)
+`EncounterCombat3D` の `Approach Waypoints` に、同じ部屋の床をつなぐ中継点を最大12個設定する。`Approach Ground Layers` には通行を支える床を、`Obstruction Layers` には通行や射線を遮る壁を指定する。通常の接近や集中攻撃では、同じ陣営が目撃した標的へ向けて、射程内の到達可能な地点を選ぶ。中継点と終点の間は個体の幅と床を照会し、通行可能な候補のうち短い経路を使う。攻撃は個体自身の射線が通ってから始める。標的の変化や通路の閉塞があれば次の経路を選び直す。[遭遇の移動](../../Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs)・[接近経路](../../Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs)
+
+溝を越えるジャンプには `Approach Jump Links` で、同じシーンの中継点から踏切・着地を一方向で結び、着地先のコライダーを指定する。`Can Use Jump Links` を有効にした戦闘個体は、自分の移動速度とジャンプ設定で届き、上空と着地先が空いている場合に候補として使う。予定した足場に接地してから攻撃位置へ向かう。ジャンプを使えない個体や着地先が塞がっている場合は、通行可能な歩行経路を選ぶ。[ジャンプリンク](../../Assets/MyAsset/Runtime/AI/EncounterJumpLink3D.cs)・[3D移動](../../Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs)
 
 ## DamageScoreTracker
 - DamageScoreEntry[4-8] per character（SoAコンテナ管理）

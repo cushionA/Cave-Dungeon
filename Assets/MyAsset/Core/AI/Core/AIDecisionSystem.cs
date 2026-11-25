@@ -10,6 +10,7 @@ namespace Game.Core
 {
     public sealed class AIDecisionSystem : IDisposable
     {
+        private static readonly ProfilerMarker s_CopyTargetLineOfSightMarker = new ProfilerMarker("AI.Decision.CopyTargetLineOfSight");
         private static readonly ProfilerMarker s_CompleteMarker = new ProfilerMarker("AI.Decision.Complete");
         private static readonly ProfilerMarker s_ApplyMarker = new ProfilerMarker("AI.Decision.Apply");
         private sealed class ProgramEntry
@@ -366,12 +367,15 @@ namespace Game.Core
             {
                 _visibleGimmicks.Add(PairKey(pair.observerHash, pair.gimmickId));
             }
-            _observation.CopyTargetLineOfSight(_targetSightSamples);
-            _targetSight.Clear();
-            if (_targetSight.Capacity < _targetSightSamples.Count) { _targetSight.Capacity = _targetSightSamples.Count; }
-            foreach (var pair in _targetSightSamples)
+            using (s_CopyTargetLineOfSightMarker.Auto())
             {
-                _targetSight.Add(PairKey(pair.Key.owner.Hash, pair.Key.target.Hash), pair.Value ? (byte)1 : (byte)0);
+                _observation.CopyTargetLineOfSight(_targetSightSamples);
+                _targetSight.Clear();
+                if (_targetSight.Capacity < _targetSightSamples.Count) { _targetSight.Capacity = _targetSightSamples.Count; }
+                foreach (var pair in _targetSightSamples)
+                {
+                    _targetSight.Add(PairKey(pair.Key.owner.Hash, pair.Key.target.Hash), pair.Value ? (byte)1 : (byte)0);
+                }
             }
             EnsureCapacity(ref _gimmickMotion, needsMotion ? count : 0);
             _indices.Clear();

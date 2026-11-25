@@ -13,6 +13,7 @@ namespace Game.Runtime
         [SerializeField] private bool prefersFrontStation;
         [SerializeField] private int assignmentPriority;
         [SerializeField] private Transform home;
+        [SerializeField] private bool canUseJumpLinks;
 
         private CharacterActor3D _actor;
 
@@ -22,5 +23,6 @@ namespace Game.Runtime
         internal bool PrefersFrontStation => prefersFrontStation;
         internal int AssignmentPriority => assignmentPriority;
         internal Transform Home => home;
+        internal bool CanUseJumpLinks => canUseJumpLinks;
     }
 }

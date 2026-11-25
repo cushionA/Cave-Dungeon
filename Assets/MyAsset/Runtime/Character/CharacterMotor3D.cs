@@ -47,6 +47,9 @@ namespace Game.Runtime
         public Vector3 FeetPosition => _controller.transform.TransformPoint(
             _controller.center - Vector3.up * (_controller.height * 0.5f));
         public Vector3 Facing => transform.forward;
+        internal float MoveSpeed => moveSpeed;
+        internal float Gravity => gravity;
+        internal float JumpLaunchSpeed => Mathf.Sqrt(2f * gravity * jumpHeight);
 
         private void Awake()
         {
@@ -128,7 +131,7 @@ namespace Game.Runtime
                     return -groundStickSpeed * deltaTime;
                 }
 
-                _verticalSpeed = Mathf.Sqrt(2f * gravity * jumpHeight);
+                _verticalSpeed = JumpLaunchSpeed;
             }
 
             float nextVerticalSpeed = _verticalSpeed - gravity * deltaTime;

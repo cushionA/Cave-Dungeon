@@ -37,6 +37,8 @@ namespace Game.Runtime
         private Transform[] approachWaypoints;
         [SerializeField, Tooltip("接近経路で歩行床として確認するレイヤー。")]
         private LayerMask approachGroundLayers = Physics.DefaultRaycastLayers;
+        [SerializeField, Tooltip("踏切と着地には上の中継点を設定する。最大12本の片方向リンク。")]
+        private EncounterJumpLink3D[] approachJumpLinks;
 
         private readonly HashSet<EncounterCombatant3D> _combatants = new();
         private readonly List<EncounterCombatant3D> _activeCombatants = new();
@@ -49,6 +51,7 @@ namespace Game.Runtime
         private readonly HashSet<CharacterBelong> _unfinishedRallies = new();
         private MissionAttackSlots3D _attackSlots;
         private EncounterApproachRoutes3D _approachRoutes;
+        private EncounterSession3D _observedObjective;
         private bool _driving;
 
         private bool IsRunning => isActiveAndEnabled
@@ -63,7 +66,13 @@ namespace Game.Runtime
             foreach (EncounterCombatant3D combatant in initialCombatants) { Register(combatant); }
         }
 
-        private void OnDisable() => ClearOrdersAndSlots();
+        private void OnDisable()
+        {
+            if (_observedObjective != null) { _observedObjective.Ended -= OnEncounterEnded; }
+            _observedObjective = null;
+            ClearOrdersAndSlots();
+            _approachRoutes?.Clear();
+        }
 
         public bool Register(EncounterCombatant3D combatant)
             => combatant != null && combatant.gameObject.scene == gameObject.scene
@@ -81,7 +90,8 @@ namespace Game.Runtime
         public Transform GetAssignedStation(CharacterActor3D actor)
             => actor != null && _assignedStations.TryGetValue(actor.Actor, out Transform station) ? station : null;
 
-        internal bool Drives(CharacterActor3D actor) => IsRunning && IsParticipant(actor)
+        internal bool Drives(CharacterActor3D actor) => isActiveAndEnabled && IsParticipant(actor)
+            && (IsRunning || _approachRoutes?.IsCrossing(actor.Actor) == true)
             && actor.TryGetComponent(out EncounterCombatant3D combatant) && combatant.isActiveAndEnabled
             && _combatants.Contains(combatant);
 
@@ -128,10 +138,13 @@ namespace Game.Runtime
 
         private void FixedUpdate()
         {
+            ObserveObjective();
             GameActionRuntime actions = GameManager.Actions;
             if (!IsRunning || actions == null)
             {
                 ClearOrdersAndSlots();
+                if (actions == null) { _approachRoutes?.Clear(); }
+                else { CompleteAirborneMovement(actions); }
                 return;
             }
 
@@ -165,6 +178,32 @@ namespace Game.Runtime
             FinishRally(CharacterBelong.Enemy);
         }
 
+        private void ObserveObjective()
+        {
+            if (ReferenceEquals(_observedObjective, objective)) { return; }
+            if (_observedObjective != null) { _observedObjective.Ended -= OnEncounterEnded; }
+            _approachRoutes?.FinishCurrentJumps();
+            _observedObjective = objective;
+            if (_observedObjective != null) { _observedObjective.Ended += OnEncounterEnded; }
+        }
+
+        private void OnEncounterEnded(ChallengeState _) => _approachRoutes?.FinishCurrentJumps();
+
+        private void CompleteAirborneMovement(GameActionRuntime actions)
+        {
+            if (_approachRoutes?.FinishCurrentJumps() != true) { return; }
+            foreach (EncounterCombatant3D member in _activeCombatants)
+            {
+                if (member == null || !member.isActiveAndEnabled || !_combatants.Contains(member)
+                    || !IsParticipant(member.Actor)) { continue; }
+                CharacterActor3D actor = member.Actor;
+                if (_approachRoutes.TryContinueJump(actor, IsMovementBlocked(actor.Actor, actions), out Vector3 move))
+                {
+                    actor.Motor.SimulateFixedStep(move, false, Time.fixedDeltaTime);
+                }
+            }
+        }
+
         private void CaptureFrame()
         {
             _participants.Clear();
@@ -186,7 +225,17 @@ namespace Game.Runtime
             GameActionRuntime actions)
         {
             ActorRef owner = actor.Actor;
-            if (actions.IsMovementBlocked(owner.Hash) || GameManager.Data.GetStatusEffects(owner.Hash).BlocksActions)
+            bool movementBlocked = IsMovementBlocked(owner, actions);
+            if (_approachRoutes != null && _approachRoutes.TryContinueJump(actor, movementBlocked, out Vector3 airborne))
+            {
+                if (_orders.TryGetValue(faction, out Order crossingOrder) && crossingOrder.action == BroadcastAction.Rally)
+                {
+                    _unfinishedRallies.Add(faction);
+                }
+                actor.Motor.SimulateFixedStep(airborne, false, Time.fixedDeltaTime);
+                return;
+            }
+            if (movementBlocked)
             {
                 if (_orders.TryGetValue(faction, out Order pending) && pending.action == BroadcastAction.Rally)
                 {
@@ -267,6 +316,7 @@ namespace Game.Runtime
             }
 
             Vector3 move = Vector3.zero;
+            bool jumpPressed = false;
             if (canAttack && hasSight && member.Attack != null && actor.Motor.IsGrounded
                 && _observation.CanSee(owner, sighting.Target))
             {
@@ -286,7 +336,7 @@ namespace Game.Runtime
             {
                 _approachRoutes ??= new EncounterApproachRoutes3D();
                 move = _approachRoutes.GetDirection(actor, sighting, member.AttackRange, approachWaypoints,
-                    approachGroundLayers, obstructionLayers);
+                    member.CanUseJumpLinks ? approachJumpLinks : null, approachGroundLayers, obstructionLayers, out jumpPressed);
             }
             else
             {
@@ -296,7 +346,7 @@ namespace Game.Runtime
                     move = Horizontal(destination.Value - actor.Motor.FeetPosition).normalized;
                 }
             }
-            actor.Motor.SimulateFixedStep(move, false, Time.fixedDeltaTime);
+            actor.Motor.SimulateFixedStep(move, jumpPressed, Time.fixedDeltaTime);
         }
 
         private Transform AssignStation(EncounterCombatant3D member, ActorRef owner, CharacterBelong faction)
@@ -356,11 +406,13 @@ namespace Game.Runtime
         {
             _attackSlots?.Dispose();
             _attackSlots = null;
-            _approachRoutes?.Clear();
             _orders.Clear();
             _orderAssignments.Clear();
             _assignedStations.Clear();
         }
+
+        private static bool IsMovementBlocked(ActorRef actor, GameActionRuntime actions)
+            => actions.IsMovementBlocked(actor.Hash) || GameManager.Data.GetStatusEffects(actor.Hash).BlocksActions;
 
         private void FinishRally(CharacterBelong faction)
         {
