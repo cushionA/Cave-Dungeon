@@ -6,9 +6,9 @@ using UnityEngine.SceneManagement;
 
 namespace Game.Runtime
 {
-    /// <summary>シーン上の操作点・効果範囲をAIへ公開し、一度だけ作者の起動イベントを実行する。</summary>
+    /// <summary>シーン上の操作点・効果範囲をAIへ公開し、設定された方法で操作する。</summary>
     [DisallowMultipleComponent]
-    public sealed class AISceneGimmickController : MonoBehaviour
+    public sealed partial class AISceneGimmickController : MonoBehaviour
     {
         private const int GroundMask = 1 << 6;
 
@@ -16,6 +16,8 @@ namespace Game.Runtime
         [SerializeField] private int objectMask = 1 << 4;
         [SerializeField] private Transform operationAnchor;
         [Min(0f)] [SerializeField] private float operationRadius = 2f;
+        [Tooltip("平地を歩いて操作点に近づける距離。0は近距離操作のみ。接触罠には適用しない。")]
+        [Range(0f, AISceneGimmick.k_MaxApproachDistance)] [SerializeField] private float approachDistance;
         [Tooltip("操作点との間で操作を遮るレイヤー。トリガーは無視する。")]
         [SerializeField] private LayerMask operationBlockers = GroundMask;
         [SerializeField] private Transform effectAnchor;
@@ -84,20 +86,23 @@ namespace Game.Runtime
         private readonly RaycastHit2D[] _lureCast = new RaycastHit2D[1];
 
         public bool IsAvailable => isActiveAndEnabled && !consumed
-            && (!requireTargetContact || (HasUsableContactTrigger && !IsContactArmed));
+            && !_approach.owner.IsValid
+            && (shootExplosive ? IsProjectileOperationAvailable : !requireTargetContact || HasUsableContactTrigger && !IsContactArmed);
         public bool IsContactArmed => _contactArm.target.IsValid;
         public UnityEvent OnActivated => onActivated;
-        public AISceneGimmick Snapshot => new AISceneGimmick
+        public AISceneGimmick Snapshot => WithProjectileOperation(new AISceneGimmick
         {
             id = id, generation = generation, objectMask = objectMask, physicsScene = gameObject.scene.GetPhysicsScene2D(),
             operationPosition = operationAnchor != null ? operationAnchor.position : transform.position,
-            operationRadius = operationRadius, requiresClearOperation = operationBlockers.value != 0,
+            operationRadius = operationRadius,
+            approachDistance = requireTargetContact ? 0f : approachDistance,
+            requiresClearOperation = operationBlockers.value != 0 || (!requireTargetContact && approachDistance > 0f),
             effectPosition = effectAnchor != null ? effectAnchor.position : transform.position,
             effectRadius = effectRadius, effectDelay = effectDelay,
             requiresLure = HasLureExit,
             lureExit = HasLureExit && lureExitAnchor != null ? (Vector2)lureExitAnchor.position : default,
             lurePlateX = HasLureExit && contactTrigger != null ? contactTrigger.bounds.center.x : 0f,
-        };
+        });
 
         public void Configure(int mask, Transform operation, float useRadius, Transform effect, float hitRadius,
             float delay = 0f, int blockers = GroundMask)
@@ -111,6 +116,8 @@ namespace Game.Runtime
             effectDelay = delay;
             generation = checked(generation + 1);
             _contactArm = default;
+            _approach = default;
+            _shotToken = 0;
         }
 
 #if UNITY_INCLUDE_TESTS
@@ -128,6 +135,13 @@ namespace Game.Runtime
             lureExitAnchor = exit;
             generation = checked(generation + 1);
             _contactArm = default;
+        }
+
+        internal void SetApproachDistanceForTest(float distance)
+        {
+            approachDistance = distance;
+            generation = checked(generation + 1);
+            _approach = default;
         }
 #endif
 
@@ -151,6 +165,8 @@ namespace Game.Runtime
         {
             registry.Remove(id);
             _contactArm = default;
+            _approach = default;
+            _shotToken = 0;
         }
 
         internal static bool Capture(AIObservationContext observation)
@@ -161,8 +177,9 @@ namespace Game.Runtime
             foreach (AISceneGimmickController source in registry.Values)
             {
                 if (source.IsContactArmed) { source.TryGetArmedContact(out _, out _); }
+                if (source._approach.owner.IsValid) { source.IsApproachCurrent(source._approach.token); }
                 if (!source.IsAvailable) { continue; }
-                if (source.HasLureExit && !transformsSynced)
+                if ((source.HasLureExit || source.shootExplosive) && !transformsSynced)
                 {
                     Physics2D.SyncTransforms();
                     transformsSynced = true;
@@ -181,23 +198,30 @@ namespace Game.Runtime
             for (int i = 0; i < observation.ActorHashes.Count; i++)
             {
                 int hash = observation.ActorHashes[i];
-                if (!observation.TryGetActor(hash, out AIActorObservation actor) || actor.physicsScene != gimmick.physicsScene
-                    || !gimmick.CanOperateFrom(actor.position))
-                {
-                    continue;
-                }
-                // Auto Sync Transforms is off. Flush wall edits once, for the first observer in reach.
+                if (!observation.TryGetActor(hash, out AIActorObservation actor) || actor.physicsScene != gimmick.physicsScene)
+                    { continue; }
+                bool inReach = gimmick.CanOperateFrom(actor.position);
+                Vector2 destination = default;
+                if (!inReach && !gimmick.TryGetApproachDestination(actor.position, out destination)) { continue; }
+                // Auto Sync Transforms is off. Flush floor and wall edits once, for the first candidate.
                 if (!transformsSynced)
                 {
                     Physics2D.SyncTransforms();
                     transformsSynced = true;
                 }
-                if (HasClearOperation(gimmick.physicsScene, actor.position, gimmick.operationPosition))
+                bool reachable = inReach ? CanOperate(gimmick, actor.position)
+                    : TryActor(hash, gimmick.physicsScene, out BaseCharacter owner) && CanApproach(owner)
+                        && HasClearApproach(gimmick, owner, destination);
+                if (reachable)
                 {
                     observation.SetGimmickOperationVisible(actor.actor, gimmick);
                 }
             }
         }
+
+        private bool CanOperate(in AISceneGimmick gimmick, Vector2 position)
+            => gimmick.usesProjectile ? TryAimProjectile(gimmick.physicsScene, position, out _, out _)
+                : HasClearOperation(gimmick.physicsScene, position, gimmick.operationPosition);
 
         private bool HasClearOperation(PhysicsScene2D world, Vector2 start, Vector2 end)
         {
@@ -211,8 +235,15 @@ namespace Game.Runtime
         }
 
         internal static bool TryActivate(in ActionCommand command, PhysicsScene2D world, List<int> liveActors, out LureReservation lure)
+            => TryActivate(command, world, liveActors, allowApproach: false, out lure, out _, out _);
+
+        internal static bool TryActivate(in ActionCommand command, PhysicsScene2D world, List<int> liveActors,
+            bool allowApproach, out LureReservation lure, out ApproachReservation approach, out ShotReservation shot,
+            bool allowProjectile = false)
         {
             lure = default;
+            approach = default;
+            shot = default;
             AIObservationContext observation = GameManager.Observation;
             if (observation == null || observation.Tick != command.observationTick
                 || !observation.Contains(command.gimmickOwner) || !observation.Contains(command.gimmickTarget)
@@ -221,25 +252,25 @@ namespace Game.Runtime
                 || source == null || source.generation != command.gimmick.generation
                 || source.gameObject.scene.GetPhysicsScene2D() != world) { return false; }
             if (source.IsContactArmed) { source.TryGetArmedContact(out _, out _); }
+            if (source._approach.owner.IsValid) { source.IsApproachCurrent(source._approach.token); }
             if (!source.IsAvailable) { return false; }
 
-            if (source.HasLureExit) { Physics2D.SyncTransforms(); }
+            if (source.HasLureExit || source.shootExplosive) { Physics2D.SyncTransforms(); }
             AISceneGimmick current = source.Snapshot;
             if (!current.IsValid || current.objectMask != command.gimmick.objectMask
-                || current.requiresLure != command.gimmick.requiresLure
+                || current.requiresLure != command.gimmick.requiresLure || current.usesProjectile != command.gimmick.usesProjectile
                 || !observation.TryGetGimmick(current.id, current.generation, out AISceneGimmick captured)
                 || captured.physicsScene != world || captured.requiresLure != current.requiresLure
+                || captured.usesProjectile != current.usesProjectile
                 || !observation.IsGimmickOperationVisible(command.gimmickOwner, captured)
                 || !TryActor(command.gimmickOwner.Hash, world, out BaseCharacter owner)
                 || !TryActor(command.gimmickTarget.Hash, world, out BaseCharacter target)) { return false; }
 
             // An earlier activation callback in this tick may have moved a blocker.
-            if (current.requiresClearOperation && !current.requiresLure) { Physics2D.SyncTransforms(); }
+            if (current.requiresClearOperation && !current.requiresLure && !current.usesProjectile) { Physics2D.SyncTransforms(); }
             if (!IsHostile(command.gimmickOwner, command.gimmickTarget, out CharacterBelong ownerBelong)
                 || !TryGetPosition(command.gimmickOwner.Hash, owner, out Vector2 ownerPosition)
-                || !current.CanOperateFrom(ownerPosition)
-                || !source.HasClearOperation(world, ownerPosition, current.operationPosition)
-                || !TryGetPosition(command.gimmickTarget.Hash, target, out Vector2 targetPosition)
+                || !TryGetEffectPosition(current, command.gimmickTarget.Hash, target, out Vector2 targetPosition)
                 || !HasSafeEffect(current, command.gimmickOwner, ownerBelong, liveActors))
             {
                 return false;
@@ -255,6 +286,19 @@ namespace Game.Runtime
             }
             else if (!TryGetVelocity(current.effectDelay, target, out Vector2 targetVelocity)
                 || !current.WillAffectTarget(targetPosition, targetVelocity)) { return false; }
+
+            if (!current.CanOperateFrom(ownerPosition))
+            {
+                return allowApproach && current.TryGetApproachDestination(ownerPosition, out Vector2 destination)
+                    && CanApproach(owner) && source.HasClearApproach(current, owner, destination)
+                    && source.ReserveApproach(command, current, destination, out approach);
+            }
+            if (current.usesProjectile)
+            {
+                Vector2 spawnPosition = GameManager.Data.GetVitals(command.gimmickOwner.Hash).position;
+                return allowProjectile && source.ReserveShot(world, spawnPosition, out shot);
+            }
+            if (!source.HasClearOperation(world, ownerPosition, current.operationPosition)) { return false; }
 
             if (source.requireTargetContact)
             {
@@ -370,6 +414,7 @@ namespace Game.Runtime
             // Mark consumed before callbacks. A listener can dispatch again or replace the scene.
             consumed = true;
             _contactArm = default;
+            _approach = default;
             onActivated.Invoke();
         }
 
@@ -394,7 +439,7 @@ namespace Game.Runtime
                     hash == owner.Hash);
                 if (relation != AttackTargetRelation.Self && relation != AttackTargetRelation.Friendly) { continue; }
                 if (TryActor(hash, gimmick.physicsScene, out BaseCharacter other)
-                    && (!TryGetPosition(hash, other, out Vector2 position)
+                    && (!TryGetEffectPosition(gimmick, hash, other, out Vector2 position)
                         || !TryGetVelocity(gimmick.effectDelay, other, out Vector2 velocity)
                         || gimmick.ThreatensFriendly(position, velocity))) { return false; }
             }
@@ -418,6 +463,13 @@ namespace Game.Runtime
             position = default;
             if (character != null && character.PhysicsBackend == null) { return false; }
             position = character != null ? character.PhysicsPosition : GameManager.Data.GetVitals(hash).position;
+            return float.IsFinite(position.x) && float.IsFinite(position.y);
+        }
+
+        private static bool TryGetEffectPosition(in AISceneGimmick gimmick, int hash, BaseCharacter character, out Vector2 position)
+        {
+            if (!gimmick.usesProjectile || character == null) { return TryGetPosition(hash, character, out position); }
+            position = character.TargetingCenter;
             return float.IsFinite(position.x) && float.IsFinite(position.y);
         }
 

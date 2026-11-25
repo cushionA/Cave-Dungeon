@@ -221,6 +221,16 @@ namespace Game.Runtime
             && !GameManager.Data.Uses3DPhysics(caster.Hash)
             && !GameManager.Data.GetFlags(caster.Hash).IsVanished;
 
+        internal int GetCollisionMask(GameObject customPrefab)
+        {
+            GameObject prefab = customPrefab != null ? customPrefab : _defaultProjectilePrefab;
+            if (prefab != null && prefab.TryGetComponent(out CircleCollider2D collider) && collider.offset != Vector2.zero)
+            {
+                return 0;
+            }
+            return Physics2D.GetLayerCollisionMask(prefab != null ? prefab.layer : 0);
+        }
+
         private bool TryCaptureAttack(ActorRef caster, ref MagicDefinition magic, bool acceptedExecution = false)
         {
             if (magic.attackContext.IsCaptured) { return magic.attackContext.Owner == caster; }
@@ -426,7 +436,9 @@ namespace Game.Runtime
         /// <summary>
         /// 爆発処理を実行する。爆発範囲内の全キャラクターにダメージを与える。
         /// </summary>
-        public void ProcessExplosion(Projectile projectile, MagicDefinition magic)
+        public void ProcessExplosion(Projectile projectile, MagicDefinition magic) => ProcessExplosion(projectile, magic, null);
+
+        internal void ProcessExplosion(Projectile projectile, MagicDefinition magic, PhysicsScene2D? world)
         {
             if (projectile == null || GameManager.Data == null || _corePool == null) { return; }
             ulong lease = projectile.LeaseId;
@@ -446,6 +458,7 @@ namespace Game.Runtime
                 {
                     int hash = query.hashes[i];
                     if (GameManager.Actors == null || !GameManager.Actors.TryGet(hash, out ActorRef target)
+                        || !IsExplosionWorld(hash, world)
                         || !ProjectileHitProcessor.CanAffect(projectile, magic, GameManager.Data,
                             GameManager.Actors, target)) { continue; }
                     if ((GameManager.Data.GetVitals(hash).position - center).sqrMagnitude <= radiusSquared)
@@ -458,7 +471,7 @@ namespace Game.Runtime
                 {
                     if (!_corePool.IsActive(projectile, lease)) { break; }
                     ActorRef target = query.targets[i];
-                    if (!ProjectileHitProcessor.CanAffect(projectile, magic, GameManager.Data,
+                    if (!IsExplosionWorld(target.Hash, world) || !ProjectileHitProcessor.CanAffect(projectile, magic, GameManager.Data,
                         GameManager.Actors, target)) { continue; }
                     IDamageable receiver = GameManager.Data.GetManaged(target.Hash)?.Damageable;
                     if (receiver == null) { continue; }
@@ -473,6 +486,10 @@ namespace Game.Runtime
                 _explosionDepth--;
             }
         }
+
+        private static bool IsExplosionWorld(int hash, PhysicsScene2D? world) => !world.HasValue
+            || (GameManager.Data?.GetManaged(hash) is BaseCharacter actor && actor != null
+                && actor.gameObject.scene.GetPhysicsScene2D() == world.Value);
 
         /// <summary>
         /// 全飛翔体をプールに返却する。シーン遷移時に呼ぶ。

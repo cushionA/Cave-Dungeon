@@ -44,9 +44,12 @@ namespace Game.Runtime
             _enemyView = _enemySightings.AsReadOnly();
         }
 
+        public long Tick { get; private set; }
+
         /// <summary>同じ物理空間内の相手を、胴体間の距離と地形の遮蔽で確認する。</summary>
         public void Capture(IReadOnlyList<ActorRef> participants, float sightRange, LayerMask obstructionLayers)
         {
+            Tick++;
             _participants.Clear();
             _seenParticipants.Clear();
             _visiblePairs.Clear();
@@ -87,7 +90,7 @@ namespace Game.Runtime
                         continue;
                     }
 
-                    sightings.Add(new EncounterSighting3D(observer.actor, target.actor, target.position, target.bodyCenter));
+                    sightings.Add(new EncounterSighting3D(observer.actor, target.actor, Tick, target.position, target.bodyCenter));
                     _visiblePairs.Add((observer.actor, target.actor));
                 }
             }

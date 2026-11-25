@@ -7,11 +7,11 @@ using UnityEngine.SceneManagement;
 
 namespace Game.Runtime
 {
-    /// <summary>近接攻撃が指定コライダーに触れると、一度だけ周囲の敵へ火属性ダメージを与える。</summary>
+    /// <summary>攻撃が指定コライダーに当たると、一度だけ周囲の敵へ火属性ダメージを与える。</summary>
     [DisallowMultipleComponent]
     public sealed class ExplosiveProp2D : MonoBehaviour
     {
-        [Tooltip("このオブジェクト上で近接攻撃を受けるコライダー。")]
+        [Tooltip("このオブジェクト上で近接攻撃や飛翔体を受けるコライダー。")]
         [SerializeField] private Collider2D hitCollider;
         [Tooltip("未設定時はヒットコライダーの中心を使う。")]
         [SerializeField] private Transform blastOrigin;
@@ -25,6 +25,7 @@ namespace Game.Runtime
 
         public bool HasDetonated { get; private set; }
         public UnityEvent OnDetonated => onDetonated;
+        internal Collider2D HitCollider => hitCollider;
 
         private void OnEnable()
         {
@@ -63,9 +64,8 @@ namespace Game.Runtime
         internal static void TryDetonate(Collider2D attackCollider, Collider2D contact,
             in AttackContext strike, long actionInstanceId)
         {
-            if (contact == null || !s_Props.TryGetValue(contact, out ExplosiveProp2D prop)
-                || prop == null || !prop.isActiveAndEnabled || prop.HasDetonated || prop.hitCollider != contact
-                || !contact.isActiveAndEnabled || attackCollider == null || !attackCollider.isActiveAndEnabled
+            ExplosiveProp2D prop = FindLiveContact(contact);
+            if (prop == null || attackCollider == null || !attackCollider.isActiveAndEnabled
                 || !strike.IsCaptured || actionInstanceId == 0)
             {
                 return;
@@ -91,16 +91,27 @@ namespace Game.Runtime
 
             // 同じ剛体の別コライダーが通知を受けても、武器の判定形状が当たったときだけ起動する。
             ColliderDistance2D distance = contact.Distance(attackCollider);
-            if (distance.isValid && distance.distance <= 0f) { prop.Detonate(strike, world, actors, data); }
+            if (distance.isValid && distance.distance <= 0f && prop.TryGetBlast(out Vector2 center, out float radiusSquared))
+            {
+                prop.Detonate(strike, world, actors, data, center, radiusSquared);
+            }
         }
 
-        private void Detonate(in AttackContext strike, PhysicsScene2D world, ActorRegistry actors, SoACharaDataDic data)
-        {
-            float radiusSquared = blastRadius * blastRadius;
-            Vector2 center = blastOrigin != null ? (Vector2)blastOrigin.position : (Vector2)hitCollider.bounds.center;
-            if (blastRadius <= 0f || !float.IsFinite(radiusSquared) || blastDamage <= 0
-                || !float.IsFinite(center.x) || !float.IsFinite(center.y)) { return; }
+        internal static ExplosiveProp2D FindLiveContact(Collider2D contact) => contact != null && contact.isActiveAndEnabled
+            && s_Props.TryGetValue(contact, out ExplosiveProp2D prop) && prop != null && prop.isActiveAndEnabled
+            && !prop.HasDetonated && prop.hitCollider == contact ? prop : null;
 
+        internal bool TryGetBlast(out Vector2 center, out float radiusSquared)
+        {
+            radiusSquared = blastRadius * blastRadius;
+            center = blastOrigin != null ? (Vector2)blastOrigin.position : (Vector2)hitCollider.bounds.center;
+            return blastRadius > 0f && float.IsFinite(radiusSquared) && blastDamage > 0
+                && float.IsFinite(center.x) && float.IsFinite(center.y);
+        }
+
+        internal void Detonate(in AttackContext strike, PhysicsScene2D world, ActorRegistry actors, SoACharaDataDic data,
+            Vector2 center, float radiusSquared)
+        {
             HasDetonated = true;
             hitCollider.enabled = false;
             var stats = new ElementalStatus { fire = blastDamage };

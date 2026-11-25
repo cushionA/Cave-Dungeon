@@ -168,6 +168,72 @@ namespace Game.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator EncounterApproach_WhenObservationOrTargetChanges_RejectsOldRouteDecision()
+        {
+            Surface("Floor", new Vector3(0f, -0.25f, 0f), new Vector3(16f, 0.5f, 10f), Quaternion.identity);
+            CharacterActor3D fighter = Actor("Fighter", Vector3.up * 0.04f, CharacterBelong.Enemy, CharacterFeature.Minion);
+            CharacterActor3D first = Actor("First target", new Vector3(4f, 0.04f, 0f), CharacterBelong.Ally, CharacterFeature.Player);
+            CharacterActor3D second = Actor("Second target", new Vector3(-4f, 0.04f, 0f), CharacterBelong.Ally, CharacterFeature.Summon);
+            LayerMask ground = LayerMask.GetMask("Ground");
+            Transform[] waypoints = { At("Waypoint", new Vector3(0f, 0f, 1f)) };
+            Physics.SyncTransforms();
+            for (int step = 0; step < 12 && !fighter.Motor.IsGrounded; step++)
+            {
+                yield return new WaitForFixedUpdate();
+                fighter.Motor.Simulate(Vector3.zero, false, Time.fixedDeltaTime);
+            }
+            Assert.IsTrue(fighter.Motor.IsGrounded);
+
+            List<ActorRef> participants = new() { fighter.Actor, first.Actor, second.Actor };
+            EncounterApproachRoutes3D routes = new();
+            routes.BeginObservation(1, participants);
+            EncounterSighting3D oldSighting = new(fighter.Actor, first.Actor, 1, first.Motor.FeetPosition, first.Body.bounds.center);
+            Assert.IsTrue(routes.TryPrepare(fighter, oldSighting, 1.6f, waypoints, null, ground, ground,
+                out EncounterApproachRoutes3D.Decision firstRoute));
+            Assert.AreEqual(fighter.Actor, firstRoute.Owner);
+            Assert.AreEqual(first.Actor, firstRoute.Target);
+            Assert.AreEqual(1L, firstRoute.ObservationTick);
+            Assert.That(firstRoute.ArrivalPoint.x, Is.InRange(2.4f, 4f));
+            Assert.That(firstRoute.TravelSeconds, Is.GreaterThan(0f));
+            Assert.IsFalse(routes.TryFollow(second, first.Actor, firstRoute, false, ground, ground, out _, out _));
+            Assert.IsFalse(routes.TryFollow(fighter, second.Actor, firstRoute, false, ground, ground, out _, out _));
+            Assert.IsTrue(routes.TryFollow(fighter, first.Actor, firstRoute, false, ground, ground, out Vector3 east, out bool jumped));
+            Assert.That(east.x, Is.GreaterThan(0.9f));
+            Assert.IsFalse(jumped);
+
+            routes.BeginObservation(2, participants);
+            Assert.IsFalse(routes.TryFollow(fighter, first.Actor, firstRoute, false, ground, ground, out _, out _));
+            Assert.IsFalse(routes.TryPrepare(fighter, oldSighting, 1.6f, waypoints, null, ground, ground, out _));
+            EncounterSighting3D firstSighting = new(fighter.Actor, first.Actor, 2, first.Motor.FeetPosition, first.Body.bounds.center);
+            EncounterSighting3D secondSighting = new(fighter.Actor, second.Actor, 2, second.Motor.FeetPosition, second.Body.bounds.center);
+            Assert.IsTrue(routes.TryPrepare(fighter, firstSighting, 1.6f, waypoints, null, ground, ground,
+                out EncounterApproachRoutes3D.Decision currentFirst));
+            Assert.AreEqual(firstRoute.RouteId, currentFirst.RouteId);
+            Assert.IsTrue(routes.TryPrepare(fighter, secondSighting, 1.6f, waypoints, null, ground, ground,
+                out EncounterApproachRoutes3D.Decision currentSecond));
+            Assert.AreNotEqual(currentFirst.RouteId, currentSecond.RouteId);
+            Assert.IsFalse(routes.TryFollow(fighter, first.Actor, currentFirst, false, ground, ground, out _, out _));
+            Assert.IsTrue(routes.TryFollow(fighter, second.Actor, currentSecond, false, ground, ground,
+                out Vector3 west, out _));
+            Assert.That(west.x, Is.LessThan(-0.9f));
+
+            BoxCollider gate = Surface("Gate", new Vector3(-1.5f, 1f, 0f), new Vector3(0.5f, 2f, 2f), Quaternion.identity);
+            Physics.SyncTransforms();
+            Assert.IsFalse(routes.TryFollow(fighter, second.Actor, currentSecond, false, ground, ground, out _, out _));
+            gate.enabled = false;
+            Physics.SyncTransforms();
+            Assert.IsTrue(routes.TryPrepare(fighter, secondSighting, 1.6f, waypoints, null, ground, ground,
+                out EncounterApproachRoutes3D.Decision replanned));
+            Assert.AreNotEqual(currentSecond.RouteId, replanned.RouteId);
+            Assert.IsFalse(routes.TryFollow(fighter, second.Actor, currentSecond, false, ground, ground, out _, out _));
+
+            second.gameObject.SetActive(false);
+            second.gameObject.SetActive(true);
+            Assert.AreNotEqual(replanned.Target, second.Actor);
+            Assert.IsFalse(routes.TryFollow(fighter, replanned.Target, replanned, false, ground, ground, out _, out _));
+        }
+
+        [UnityTest]
         public IEnumerator EncounterTraversal_WithDirectedJump_CrossesGapAndHitsAfterLanding()
             => TraverseGap(canJump: true, blockLanding: false);
 

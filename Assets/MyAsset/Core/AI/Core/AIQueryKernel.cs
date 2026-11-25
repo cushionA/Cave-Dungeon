@@ -360,6 +360,7 @@ namespace Game.Core
                     target.actor, target.flags.Belong, AttackTargetRelation.Hostile)) { return false; }
 
             float bestDistance = 0f;
+            bool bestInReach = false;
             for (int i = 0; i < world.GimmickCount; i++)
             {
                 AISceneGimmick candidate = world.GimmickAt(i);
@@ -375,22 +376,32 @@ namespace Game.Core
                     if (candidate.effectDelay > 0f && !world.TryGetGimmickVelocity(target.actor, out targetVelocity)) { continue; }
                     if (!candidate.WillAffectTarget(target.position, targetVelocity)) { continue; }
                 }
+                bool inReach = candidate.CanOperateFrom(owner.position);
                 float distance = (owner.position - candidate.operationPosition).sqrMagnitude;
-                if (best.id != 0 && (distance > bestDistance || distance == bestDistance && candidate.id >= best.id)) { continue; }
+                if (best.id != 0 && (bestInReach && !inReach || bestInReach == inReach
+                    && (distance > bestDistance || distance == bestDistance && candidate.id >= best.id))) { continue; }
                 if (!MatchesObjectType(rule, candidate.objectMask, ref program) || HasFriendlyInEffect(candidate, owner, ref world))
                 {
                     continue;
                 }
                 best = candidate;
                 bestDistance = distance;
+                bestInReach = inReach;
             }
             return best.id != 0;
         }
 
         private static bool CanObserveOperation<TWorld>(in AISceneGimmick gimmick,
-            in AIActorObservation owner, ref TWorld world) where TWorld : struct, IAIReadWorld =>
-            gimmick.physicsScene == owner.physicsScene && gimmick.CanOperateFrom(owner.position)
-                && (!gimmick.requiresClearOperation || world.IsGimmickOperationVisible(owner.actor, gimmick));
+            in AIActorObservation owner, ref TWorld world) where TWorld : struct, IAIReadWorld
+        {
+            if (gimmick.physicsScene != owner.physicsScene) { return false; }
+            if (gimmick.CanOperateFrom(owner.position))
+            {
+                return !gimmick.requiresClearOperation || world.IsGimmickOperationVisible(owner.actor, gimmick);
+            }
+            return gimmick.requiresClearOperation && gimmick.TryGetApproachDestination(owner.position, out _)
+                && world.IsGimmickOperationVisible(owner.actor, gimmick);
+        }
 
         private static bool MatchesObjectType<TProgram>(in AIRuleRange rule, int objectMask, ref TProgram program)
             where TProgram : struct, IAIProgram

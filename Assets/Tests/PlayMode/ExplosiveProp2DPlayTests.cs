@@ -33,7 +33,13 @@ namespace Game.Tests.PlayMode
             SceneManager.SetActiveScene(_room);
             _previousSimulation = Physics2D.simulationMode;
             Physics2D.simulationMode = SimulationMode2D.Script;
-            TestSceneHelper.CreateGameManager();
+            var manager = new GameObject("TestGameManager");
+            manager.SetActive(false);
+            var projectiles = new GameObject("Projectiles");
+            projectiles.transform.SetParent(manager.transform, false);
+            projectiles.AddComponent<ProjectileManager>();
+            manager.AddComponent<GameManager>();
+            manager.SetActive(true);
             GameManager.Instance.enabled = false;
             GameObject ground = new GameObject("Ground");
             ground.layer = LayerMask.NameToLayer("Ground");
@@ -52,6 +58,122 @@ namespace Game.Tests.PlayMode
             _assets.Clear();
             TestSceneHelper.Cleanup();
             yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator ProjectileSweep_ConsumesTheClosestImpactAndDetonatesOnlyAttackMagic()
+        {
+            ProjectileManager projectiles = MakeProjectileManager(_room);
+            BaseCharacter caster = MakeVictim("Caster", Vector2.left * 4f, CharacterBelong.Ally);
+            BaseCharacter blocker = MakeVictim("Blocking enemy", Vector2.left * 0.5f, CharacterBelong.Enemy);
+            BaseCharacter next = MakeVictim("Enemy beyond prop", new Vector2(2.05f, 0f), CharacterBelong.Enemy);
+            ExplosiveProp2D prop = MakeProp(out BoxCollider2D hit);
+            int detonations = 0;
+            prop.OnDetonated.AddListener(() => detonations++);
+            yield return null;
+            int blockerHp = Hp(blocker);
+            int nextHp = Hp(next);
+
+            Assert.IsNotNull(Shoot(projectiles, caster));
+            projectiles.SimulationTick(0.05f);
+            Assert.Less(Hp(blocker), blockerHp);
+            Assert.AreEqual(nextHp, Hp(next));
+            Assert.IsFalse(prop.HasDetonated);
+            Assert.AreEqual(0, projectiles.ActiveCount);
+
+            blocker.gameObject.SetActive(false);
+            Assert.IsNotNull(Shoot(projectiles, caster, MagicType.Recover));
+            projectiles.SimulationTick(0.05f);
+            Assert.IsFalse(prop.HasDetonated);
+            projectiles.ClearAll();
+
+            Assert.IsNotNull(Shoot(projectiles, caster));
+            projectiles.SimulationTick(0.05f);
+            Assert.IsTrue(prop.HasDetonated);
+            Assert.IsFalse(hit.enabled);
+            Assert.AreEqual(1, detonations);
+            Assert.Less(Hp(next), nextHp);
+            Assert.AreEqual(0, projectiles.ActiveCount);
+            StepPhysics();
+            Assert.AreEqual(1, detonations);
+        }
+
+        [UnityTest]
+        public IEnumerator ProjectilePropImpact_RemainsInItsPhysicsWorldAndCannotAffectAReturnedLease()
+        {
+            _foreign = SceneManager.CreateScene("Isolated projectile world", new CreateSceneParameters(LocalPhysicsMode.Physics2D));
+            ProjectileManager projectiles = MakeProjectileManager(_foreign);
+            BaseCharacter caster = MakeVictim("Caster", Vector2.left * 4f, CharacterBelong.Ally, _foreign);
+            BaseCharacter local = MakeVictim("Same-world enemy", new Vector2(2.05f, 0f), CharacterBelong.Enemy, _foreign);
+            BaseCharacter other = MakeVictim("Other-world enemy", new Vector2(2.05f, 0f), CharacterBelong.Enemy);
+            ExplosiveProp2D otherProp = MakeProp(out _);
+            ExplosiveProp2D localProp = MakeProp(out _);
+            SceneManager.MoveGameObjectToScene(localProp.gameObject, _foreign);
+            yield return null;
+            int localHp = Hp(local);
+            int otherHp = Hp(other);
+            GameManager.Data.GetVitals(local.ObjectHash).position = local.PhysicsPosition;
+            GameManager.Data.GetVitals(other.ObjectHash).position = other.PhysicsPosition;
+            int sameWorldDamage = 0;
+            using var receiver = GameManager.Events.OnDamageDealt.Subscribe(change =>
+            {
+                if (change.result.defenderRef.Hash == local.ObjectHash) { sameWorldDamage++; }
+            });
+
+            Assert.IsNotNull(Shoot(projectiles, caster, features: BulletFeature.Explode));
+            projectiles.SimulationTick(0.05f);
+            Assert.IsTrue(localProp.HasDetonated);
+            Assert.IsFalse(otherProp.HasDetonated);
+            Assert.AreEqual(2, sameWorldDamage, "The prop and the projectile impact each damage the local actor.");
+            Assert.Less(Hp(local), localHp);
+            Assert.AreEqual(otherHp, Hp(other));
+
+            localProp = MakeProp(out _);
+            SceneManager.MoveGameObjectToScene(localProp.gameObject, _foreign);
+            ProjectileController replacement = null;
+            localProp.OnDetonated.AddListener(() =>
+            {
+                projectiles.ClearAll();
+                replacement = Shoot(projectiles, caster);
+            });
+            ProjectileController former = Shoot(projectiles, caster, features: BulletFeature.Explode);
+            ulong lease = former.CoreProjectile.LeaseId;
+            projectiles.SimulationTick(0.05f);
+            Assert.IsTrue(localProp.HasDetonated);
+            Assert.IsNotNull(replacement);
+            Assert.AreNotEqual(lease, replacement.CoreProjectile.LeaseId);
+            Assert.AreEqual(s_Origin + Vector2.left * 2.5f, replacement.CoreProjectile.Position);
+            Assert.AreEqual(3, sameWorldDamage, "Effects from the old projectile stop after pool reuse.");
+            Assert.AreEqual(1, projectiles.ActiveCount);
+        }
+
+        private static ProjectileManager MakeProjectileManager(Scene scene)
+        {
+            GameObject root = new GameObject("Projectile manager");
+            SceneManager.MoveGameObjectToScene(root, scene);
+            ProjectileManager projectiles = root.AddComponent<ProjectileManager>();
+            projectiles.Initialize();
+            return projectiles;
+        }
+
+        private static ProjectileController Shoot(ProjectileManager projectiles, BaseCharacter caster,
+            MagicType type = MagicType.Attack, BulletFeature features = BulletFeature.None)
+        {
+            return projectiles.SpawnProjectile(caster.ObjectHash, new MagicDefinition
+            {
+                magicType = type,
+                motionValue = 1f,
+                attackElement = Element.Slash,
+                bulletProfile = new BulletProfile
+                {
+                    moveType = BulletMoveType.Straight,
+                    speed = 160f,
+                    lifeTime = 3f,
+                    hitLimit = 1,
+                    features = features,
+                    explodeRadius = 2.25f,
+                },
+            }, s_Origin + Vector2.left * 2.5f, Vector2.right);
         }
 
         [UnityTest]
@@ -185,6 +307,75 @@ namespace Game.Tests.PlayMode
             Assert.IsFalse(GameManager.Actors.IsCurrent(previous));
             Assert.AreEqual(fullHp, Hp(recycled));
             Assert.Less(Hp(recycled == knight ? companion : knight), fullHp);
+        }
+
+        [UnityTest]
+        public IEnumerator AiGimmick_RequiresSafeClearAim_AndOnlyTheProjectileContactDetonates()
+        {
+            AttackInfo shot = MakeAttack();
+            shot.SetPersistentIdForTest("explosive-prop-test-shot");
+            shot.motion.info = new MotionInfo { activeMotionDuration = 0.2f, recoveryDuration = 0.1f };
+            shot.magicType = MagicType.Attack;
+            shot.projectileInfo = new ProjectileInfo
+            {
+                hasProjectile = true, trajectory = BulletMoveType.Straight, speed = 60f, lifetime = 1f, projectileCount = 1,
+            };
+            GameObject body = MakeBody("Enemy archer", Vector2.left * 2.5f);
+            body.AddComponent<ActionExecutorController>();
+            EnemyCharacter archer = AddActor<EnemyCharacter>(body, CharacterBelong.Enemy, CharacterFeature.Minion);
+            var ai = ScriptableObject.CreateInstance<AIInfo>();
+            _assets.Add(ai);
+            ai.actDataList = new[] { new ActData { actType = ActType.InteractObject, weight = 100f } };
+            ai.modes = new[] { new CharacterModeData
+            {
+                mode = CharacterMode.Combat, detectionRange = 10f, availableActIndices = new[] { 0 },
+            } };
+            archer.SetAIInfo(ai);
+            body.SetActive(true);
+            BaseCharacter knight = MakeVictim("Knight beyond the prop", new Vector2(2.05f, 0f), CharacterBelong.Ally);
+            BaseCharacter teammate = MakeVictim("Archer teammate in the blast", new Vector2(1.85f, 0.65f), CharacterBelong.Enemy);
+            ExplosiveProp2D prop = MakeProp(out _);
+            AISceneGimmickController gimmick = prop.gameObject.AddComponent<AISceneGimmickController>();
+            gimmick.Configure(1 << 4, null, 5f, null, 0f);
+            gimmick.SetProjectileOperationForTest(prop, shot);
+            int activations = 0;
+            int detonations = 0;
+            gimmick.OnActivated.AddListener(() => activations++);
+            prop.OnDetonated.AddListener(() => detonations++);
+            yield return null;
+            CharacterRegistry.RegisterPlayer(knight.ObjectHash);
+            int startingHp = Hp(knight);
+            ProjectileManager projectiles = GameManager.Projectiles;
+
+            GameManager.Instance.SimulationTick(0.6f, 1f);
+            Assert.AreEqual(0, projectiles.ActiveCount, "A teammate is inside the blast.");
+            Assert.IsFalse(prop.HasDetonated);
+
+            teammate.SetPhysicsPosition(s_Origin + new Vector2(4.5f, 0.65f));
+            var wall = new GameObject("Wall blocking the shot") { layer = LayerMask.NameToLayer("Ground") };
+            wall.transform.position = s_Origin + Vector2.left;
+            wall.AddComponent<BoxCollider2D>().size = new Vector2(0.2f, 1.5f);
+            GameManager.Instance.SimulationTick(0.6f, 1.6f);
+            Assert.AreEqual(0, projectiles.ActiveCount, "The prop's configured collider is occluded.");
+
+            wall.SetActive(false);
+            GameManager.Instance.SimulationTick(0.6f, 2.2f);
+            Assert.AreEqual(knight.ObjectHash, archer.FieldOrderJudgment.CurrentTargetHash);
+            Assert.IsTrue(GameManager.Actions.Execution.GetPrimary(archer.ObjectHash, out ActionExecution execution));
+            Assert.AreEqual(Vector2.right, execution.direction);
+            Assert.IsFalse(execution.targetRef.IsValid, "Passing the actor to the attack would re-aim the projectile.");
+            Assert.AreEqual(1, projectiles.ActiveCount);
+            Assert.IsFalse(prop.HasDetonated, "Accepting a gimmick command only fires the projectile.");
+            Assert.IsFalse(gimmick.IsAvailable, "The in-flight shot reserves this prop.");
+            Assert.AreEqual(0, activations);
+            Assert.AreEqual(startingHp, Hp(knight));
+
+            projectiles.SimulationTick(0.08f);
+            Assert.IsTrue(prop.HasDetonated);
+            Assert.AreEqual(0, activations);
+            Assert.AreEqual(1, detonations);
+            Assert.AreEqual(0, projectiles.ActiveCount);
+            Assert.Less(Hp(knight), startingHp);
         }
 
         [UnityTest]

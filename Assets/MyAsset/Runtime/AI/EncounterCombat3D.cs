@@ -201,7 +201,8 @@ namespace Game.Runtime
             }
             _activeCombatants.Sort(CompareAssignmentPriority);
             _observation.Capture(_participants, sightRange, obstructionLayers);
-            _approachRoutes?.Retain(_participants);
+            if (approachWaypoints?.Length > 0) { _approachRoutes ??= new EncounterApproachRoutes3D(); }
+            _approachRoutes?.BeginObservation(_observation.Tick, _participants);
         }
 
         private void Drive(EncounterCombatant3D member, CharacterActor3D actor, CharacterBelong faction,
@@ -319,9 +320,14 @@ namespace Game.Runtime
 
             if (approachesTarget && canAttack && member.Attack != null && approachWaypoints?.Length > 0)
             {
-                _approachRoutes ??= new EncounterApproachRoutes3D();
-                move = _approachRoutes.GetDirection(actor, sighting, member.AttackRange, approachWaypoints,
-                    member.CanUseJumpLinks ? approachJumpLinks : null, approachGroundLayers, obstructionLayers, out jumpPressed);
+                EncounterJumpLink3D[] links = member.CanUseJumpLinks ? approachJumpLinks : null;
+                if (_approachRoutes.TryPrepare(actor, sighting, member.AttackRange, approachWaypoints, links,
+                    approachGroundLayers, obstructionLayers, out EncounterApproachRoutes3D.Decision approach))
+                {
+                    // この観測で選んだ相手と経路を受け取り、移動前に区間を再確認する。
+                    _approachRoutes.TryFollow(actor, sighting.Target, approach, links != null,
+                        approachGroundLayers, obstructionLayers, out move, out jumpPressed);
+                }
             }
             else
             {

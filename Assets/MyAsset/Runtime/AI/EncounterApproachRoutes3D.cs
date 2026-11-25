@@ -22,6 +22,27 @@ namespace Game.Runtime
         private const float k_LandingTolerance = 0.24f;
         private const float k_FailedJumpCooldown = 1f;
 
+        internal readonly struct Decision
+        {
+            public ActorRef Owner { get; }
+            public ActorRef Target { get; }
+            public long ObservationTick { get; }
+            public ulong RouteId { get; }
+            public Vector3 ArrivalPoint { get; }
+            public float TravelSeconds { get; }
+
+            internal Decision(ActorRef owner, ActorRef target, long observationTick, ulong routeId,
+                Vector3 arrivalPoint, float travelSeconds)
+            {
+                Owner = owner;
+                Target = target;
+                ObservationTick = observationTick;
+                RouteId = routeId;
+                ArrivalPoint = arrivalPoint;
+                TravelSeconds = travelSeconds;
+            }
+        }
+
         private readonly struct JumpArc
         {
             public readonly Vector3 landing;
@@ -40,6 +61,9 @@ namespace Game.Runtime
         {
             public readonly Vector3[] steps = new Vector3[k_MaxWaypoints + 1];
             public readonly EncounterJumpLink3D[] jumpSteps = new EncounterJumpLink3D[k_MaxWaypoints + 1];
+            public readonly float[] remainingCost = new float[k_MaxWaypoints + 1];
+            public ulong id;
+            public Scene scene;
             public ActorRef target;
             public Vector3 targetPosition;
             public int next = -1;
@@ -69,6 +93,8 @@ namespace Game.Runtime
         private readonly int[] _previous = new int[k_MaxWaypoints + 1];
         private readonly bool[] _settled = new bool[k_MaxWaypoints + 1];
         private readonly Collider[] _overlaps = new Collider[8];
+        private long _observationTick;
+        private ulong _nextRouteId;
 
         internal void Remove(ActorRef owner) => _routes.Remove(owner);
 
@@ -97,8 +123,9 @@ namespace Game.Runtime
             }
         }
 
-        internal void Retain(List<ActorRef> participants)
+        internal void BeginObservation(long tick, List<ActorRef> participants)
         {
+            _observationTick = tick;
             foreach (ActorRef owner in _routes.Keys)
             {
                 if (!participants.Contains(owner)) { _retired.Add(owner); }
@@ -107,27 +134,34 @@ namespace Game.Runtime
             _retired.Clear();
         }
 
-        internal Vector3 GetDirection(CharacterActor3D actor, in EncounterSighting3D sighting, float attackRange,
-            Transform[] waypoints, EncounterJumpLink3D[] jumpLinks, LayerMask groundLayers, LayerMask blockers, out bool jumpPressed)
+        internal bool TryPrepare(CharacterActor3D actor, in EncounterSighting3D sighting, float attackRange,
+            Transform[] waypoints, EncounterJumpLink3D[] jumpLinks, LayerMask groundLayers, LayerMask blockers, out Decision decision)
         {
-            jumpPressed = false;
+            decision = default;
+            if (sighting.ObservationTick == 0 || sighting.ObservationTick != _observationTick) { return false; }
+            ActorRef owner = actor.Actor;
+            if (!owner.IsValid || !actor.IsAlive || GameManager.Data.GetFlags(owner.Hash).IsVanished) { return false; }
             Scene scene = actor.gameObject.scene;
+            float speed = actor.Motor.MoveSpeed;
             if (!actor.Motor.IsGrounded || !(attackRange > 0f) || !float.IsFinite(attackRange)
+                || !(speed > 0f) || !float.IsFinite(speed)
                 || !MultiLockTargeting3D.TryGetActor(sighting.Target, out CharacterActor3D target)
-                || target.gameObject.scene != scene)
+                || target.gameObject.scene != scene || !IsHostile(owner, sighting.Target))
             {
-                Remove(actor.Actor);
-                return Vector3.zero;
+                Remove(owner);
+                return false;
             }
 
-            if (!_routes.TryGetValue(actor.Actor, out Route route))
+            if (!_routes.TryGetValue(owner, out Route route))
             {
                 route = new Route();
-                _routes.Add(actor.Actor, route);
+                _routes.Add(owner, route);
             }
-            if (route.target != sighting.Target) { route.failedJump = default; }
-            if (route.target != sighting.Target || (route.targetPosition - sighting.Position).sqrMagnitude > k_TargetDrift * k_TargetDrift)
+            bool changedTarget = route.scene != scene || route.target != sighting.Target;
+            if (changedTarget) { route.failedJump = default; }
+            if (changedTarget || (route.targetPosition - sighting.Position).sqrMagnitude > k_TargetDrift * k_TargetDrift)
             {
+                route.scene = scene;
                 route.target = sighting.Target;
                 route.targetPosition = sighting.Position;
                 route.next = -1;
@@ -137,9 +171,8 @@ namespace Game.Runtime
             Vector3 feet = actor.Motor.FeetPosition;
             PhysicsScene world = scene.GetPhysicsScene();
             Bounds body = actor.Body.bounds;
-            float radius = Mathf.Min(body.extents.x, body.extents.z);
-            float height = body.size.y;
-            if (!world.IsValid() || !(radius > 0f) || !(height > 0f)) { return Vector3.zero; }
+            if (!world.IsValid() || !actor.Body.enabled || !(Mathf.Min(body.extents.x, body.extents.z) > 0f)
+                || !(body.size.y > 0f)) { return false; }
 
             while (route.next >= 0 && route.jumpSteps[route.next].Takeoff == null
                 && (route.steps[route.next] - feet).sqrMagnitude <= k_WaypointArrival * k_WaypointArrival)
@@ -147,42 +180,89 @@ namespace Game.Runtime
                 route.next--;
                 route.ResetProgress();
             }
-            if (route.next >= 0 && route.jumpSteps[route.next].Takeoff == null)
-            {
-                float distance = (route.steps[route.next] - feet).sqrMagnitude;
-                if (distance < route.bestDistance - 0.0025f) { route.ResetProgress(); route.bestDistance = distance; }
-                else { route.stalledTime += Time.fixedDeltaTime; }
-                float segmentLimit = route.next == 0 ? k_MaxDirectApproach : k_MaxSegment;
-                if (route.stalledTime >= k_StallTime
-                    || !CanWalk(world, feet, route.steps[route.next], radius, height, groundLayers, blockers, segmentLimit))
-                {
-                    route.next = -1;
-                    route.retryAt = 0f;
-                }
-            }
             if (route.next < 0 && Time.fixedTime >= route.retryAt)
             {
                 route.retryAt = Time.fixedTime + k_RetryDelay;
                 route.ResetProgress();
                 FindRoute(route, actor, world, target.Body, feet, sighting, attackRange, waypoints, jumpLinks, groundLayers, blockers);
+                if (route.next >= 0) { route.id = ++_nextRouteId; }
             }
-            if (route.next < 0) { return Vector3.zero; }
+            if (route.next < 0) { return false; }
+
+            // ジャンプは踏切から着地点までの予測時間を、歩行は現在の足元からの残距離を使う。
+            float remaining = route.jumpSteps[route.next].Takeoff != null
+                ? route.remainingCost[route.next + 1]
+                : Vector3.Distance(feet, route.steps[route.next]) + route.remainingCost[route.next];
+            float travelSeconds = remaining / speed;
+            if (!float.IsFinite(travelSeconds)) { return false; }
+            decision = new Decision(owner, sighting.Target, sighting.ObservationTick, route.id, route.steps[0], travelSeconds);
+            return true;
+        }
+
+        internal bool TryFollow(CharacterActor3D actor, ActorRef target, in Decision decision, bool canJump,
+            LayerMask groundLayers, LayerMask blockers, out Vector3 direction, out bool jumpPressed)
+        {
+            direction = Vector3.zero;
+            jumpPressed = false;
+            Scene scene = actor.gameObject.scene;
+            if (decision.RouteId == 0 || decision.ObservationTick != _observationTick
+                || decision.Owner != actor.Actor || decision.Target != target
+                || !_routes.TryGetValue(decision.Owner, out Route route) || route.id != decision.RouteId
+                || route.scene != scene || route.target != target || route.next < 0 || route.airborne
+                || !actor.IsAlive || GameManager.Data.GetFlags(decision.Owner.Hash).IsVanished
+                || !actor.Motor.IsGrounded || !actor.Body.enabled
+                || !MultiLockTargeting3D.TryGetActor(target, out CharacterActor3D liveTarget)
+                || liveTarget.gameObject.scene != scene || !IsHostile(decision.Owner, target)
+                || (liveTarget.Motor.FeetPosition - route.targetPosition).sqrMagnitude > k_TargetDrift * k_TargetDrift)
+            {
+                return false;
+            }
+
+            Vector3 feet = actor.Motor.FeetPosition;
+            PhysicsScene world = scene.GetPhysicsScene();
+            if (!world.IsValid()) { return false; }
             EncounterJumpLink3D jump = route.jumpSteps[route.next];
-            if (jump.Takeoff == null) { return Horizontal(route.steps[route.next] - feet).normalized; }
+            if (jump.Takeoff == null)
+            {
+                Vector3 offset = route.steps[route.next] - feet;
+                float distance = offset.sqrMagnitude;
+                if (distance < route.bestDistance - 0.0025f) { route.ResetProgress(); route.bestDistance = distance; }
+                else { route.stalledTime += Time.fixedDeltaTime; }
+                Bounds body = actor.Body.bounds;
+                float radius = Mathf.Min(body.extents.x, body.extents.z);
+                float segmentLimit = route.next == 0 ? k_MaxDirectApproach : k_MaxSegment;
+                if (route.stalledTime >= k_StallTime || !CanWalk(world, feet, route.steps[route.next], radius,
+                    body.size.y, groundLayers, blockers, segmentLimit))
+                {
+                    route.next = -1;
+                    route.retryAt = 0f;
+                    return false;
+                }
+                direction = Horizontal(offset).normalized;
+                return true;
+            }
 
             // グラフ探索から踏切に着くまでに、床や頭上の遮蔽が変わることがある。
-            if (jumpLinks == null || !TryGetSupport(world, jump.Takeoff.position, groundLayers, out RaycastHit support)
+            if (!canJump || !TryGetSupport(world, jump.Takeoff.position, groundLayers, out RaycastHit support)
                 || actor.Motor.Ground.Surface != support.collider
                 || !TryGetJumpArc(actor, world, feet, jump, groundLayers, blockers, out route.arc))
             {
                 RejectJump(route, jump);
-                return Vector3.zero;
+                return false;
             }
             route.airborne = true;
             route.interrupted = false;
             route.flightDeadline = Time.fixedTime + route.arc.duration + k_RetryDelay;
             jumpPressed = true;
-            return actor.Motor.EncounterJumpDirection(route.arc.landing, route.arc.groundSpeed, Time.fixedDeltaTime);
+            direction = actor.Motor.EncounterJumpDirection(route.arc.landing, route.arc.groundSpeed, Time.fixedDeltaTime);
+            return true;
+        }
+
+        private static bool IsHostile(ActorRef owner, ActorRef target)
+        {
+            SoACharaDataDic data = GameManager.Data;
+            return AttackTargetRules.CanAffect(owner, data.GetFlags(owner.Hash).Belong, target,
+                data.GetFlags(target.Hash).Belong, AttackTargetRelation.Hostile);
         }
 
         internal bool TryContinueJump(CharacterActor3D actor, bool movementBlocked, out Vector3 direction)
@@ -308,10 +388,12 @@ namespace Game.Runtime
             if (goalNode < 0) { return; }
             route.steps[++route.next] = goal;
             route.jumpSteps[route.next] = default;
+            route.remainingCost[route.next] = 0f;
             for (int node = goalNode; node > 0; node = _previous[node])
             {
                 route.steps[++route.next] = _nodes[node];
                 route.jumpSteps[route.next] = _jumps[node];
+                route.remainingCost[route.next] = goalCost - _costs[node];
             }
         }
 

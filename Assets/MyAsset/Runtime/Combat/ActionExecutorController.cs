@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 
 namespace Game.Runtime
 {
-    public class ActionExecutorController : MonoBehaviour, IActionCommandBackend
+    public partial class ActionExecutorController : MonoBehaviour, IActionCommandBackend
     {
         [SerializeField] private AttackInfo[] _attackInfos;
         private string[] _definitionIds;
@@ -244,7 +244,20 @@ namespace Game.Runtime
             if (command.gimmick.requiresLure && (GameManager.Data.GetManaged(_ownerHash) is not BaseCharacter bait
                 || bait.HoldsFieldPosition || !(EffectiveMoveSpeed() > 0f))) { return Result(ActionDispatchStatus.Rejected); }
             if (!AISceneGimmickController.TryActivate(command, gameObject.scene.GetPhysicsScene2D(), _gimmickActors,
-                out AISceneGimmickController.LureReservation lure)) { return Result(ActionDispatchStatus.Rejected); }
+                allowApproach: true, out AISceneGimmickController.LureReservation lure,
+                out AISceneGimmickController.ApproachReservation approach, out AISceneGimmickController.ShotReservation shot,
+                allowProjectile: true)) { return Result(ActionDispatchStatus.Rejected); }
+            if (shot.IsAssigned)
+            {
+                if (GameManager.Actions.Execute(_ownerHash, shot.Attack, 0, shot.Direction,
+                    1f, ActionVariant.Default, out long shotInstance, out long shotGroup, replaceGroupId))
+                {
+                    return Result(ActionDispatchStatus.Accepted, shotInstance, shotGroup, target);
+                }
+                shot.Release();
+                return Result(ActionDispatchStatus.Rejected);
+            }
+            if (approach.IsAssigned) { return DispatchApproach(approach, target, replaceGroupId); }
             if (!lure.IsAssigned) { return Result(ActionDispatchStatus.Accepted, targetRef: target); }
 
             GameActionRuntime actions = GameManager.Actions;
@@ -278,8 +291,8 @@ namespace Game.Runtime
         public ActionDispatchResult ExecuteCommand(int ownerHash, int targetHash, in ActionCommand command)
         {
             if (ownerHash != _ownerHash) { return Result(ActionDispatchStatus.InvalidOwner); }
-            bool interruptsLure = _lure.IsAssigned && IsAIExecuting();
-            if (interruptsLure && command.kind != ActionCommandKind.Dodge && command.kind != ActionCommandKind.Flee)
+            bool interruptsGimmickTravel = (_lure.IsAssigned || _gimmickApproach.IsAssigned) && IsAIExecuting();
+            if (interruptsGimmickTravel && command.kind != ActionCommandKind.Dodge && command.kind != ActionCommandKind.Flee)
             {
                 return Result(ActionDispatchStatus.Rejected);
             }
@@ -289,7 +302,7 @@ namespace Game.Runtime
                 long replaceGroupId = IsAIExecuting() ? _aiGroupId : 0;
                 ActionDispatchResult result = Dispatch(command, targetHash, replaceGroupId);
                 if (!result.Accepted) { return result; }
-                if (interruptsLure) { ReleaseLure(); }
+                if (interruptsGimmickTravel) { ReleaseGimmickTravel(); }
                 if (command.kind == ActionCommandKind.InteractObject && result.GroupId == 0)
                 {
                     // The instant event owns no group. Its callbacks may have started another action.
@@ -300,7 +313,8 @@ namespace Game.Runtime
                 _aiGroupId = result.GroupId;
                 TrackAcceptedGroup(result.GroupId);
                 _aiAwaitingCompletion = true;
-                _aiMovementInstanceId = IsMovement(command.kind) || _lure.IsAssigned ? result.InstanceId : 0;
+                _aiMovementInstanceId = IsMovement(command.kind) || _lure.IsAssigned || _gimmickApproach.IsAssigned
+                    ? result.InstanceId : 0;
                 _aiMovementTarget = result.TargetRef;
                 _aiMovementKind = command.kind;
                 return result;
@@ -321,7 +335,7 @@ namespace Game.Runtime
             _aiGroupId = 0;
             _aiAwaitingCompletion = false;
             _aiMovementInstanceId = 0;
-            ReleaseLure();
+            ReleaseGimmickTravel();
             if (groupId != 0) { GameManager.Actions?.Execution.CancelGroup(groupId); }
         }
 
@@ -345,6 +359,11 @@ namespace Game.Runtime
             if (_lure.IsAssigned)
             {
                 RefreshLureMovement(execution, deltaTime);
+                return;
+            }
+            if (_gimmickApproach.IsAssigned)
+            {
+                RefreshGimmickApproach(execution, deltaTime);
                 return;
             }
             if (!_aiMovementTarget.IsValid || GameManager.Actors == null || !GameManager.Actors.IsCurrent(_aiMovementTarget)
@@ -389,7 +408,7 @@ namespace Game.Runtime
             _aiAwaitingCompletion = false;
             _aiMovementInstanceId = 0;
             _aiGroupId = 0;
-            ReleaseLure();
+            ReleaseGimmickTravel();
             OnActionCompleted?.Invoke();
         }
 

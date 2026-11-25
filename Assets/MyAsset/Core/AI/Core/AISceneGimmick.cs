@@ -7,6 +7,7 @@ namespace Game.Core
     {
         public const float k_LureHeightTolerance = 0.25f;
         public const float k_MaxLureRun = 12f;
+        public const float k_MaxApproachDistance = 12f;
 
         public int id;
         public int generation;
@@ -15,10 +16,12 @@ namespace Game.Core
         public Vector2 operationPosition;
         public Vector2 effectPosition;
         public float operationRadius;
+        public float approachDistance;
         public float effectRadius;
         public float effectDelay;
         public bool requiresClearOperation;
         public bool requiresLure;
+        public bool usesProjectile;
         public Vector2 lureExit;
         public float lurePlateX;
 
@@ -27,12 +30,29 @@ namespace Game.Core
             && IsFinite(operationPosition.x) && IsFinite(operationPosition.y)
             && IsFinite(effectPosition.x) && IsFinite(effectPosition.y)
             && IsFinite(operationRadius) && operationRadius >= 0f
+            && IsFinite(approachDistance) && approachDistance >= 0f && approachDistance <= k_MaxApproachDistance
             && IsFinite(effectRadius) && effectRadius >= 0f
             && IsFinite(effectDelay) && effectDelay >= 0f
             && (!requiresLure || effectDelay == 0f && IsFinite(lureExit.x) && IsFinite(lureExit.y) && IsFinite(lurePlateX));
 
         public readonly bool CanOperateFrom(Vector2 position) =>
             (position - operationPosition).sqrMagnitude <= operationRadius * operationRadius;
+
+        /// <summary>操作圏の少し内側にある、同じ高さの立ち位置を求める。床と遮蔽は観測側で確認する。</summary>
+        public readonly bool TryGetApproachDestination(Vector2 position, out Vector2 destination)
+        {
+            destination = default;
+            if (approachDistance <= 0f || requiresLure || CanOperateFrom(position)) { return false; }
+            float vertical = position.y - operationPosition.y;
+            float widthSquared = operationRadius * operationRadius - vertical * vertical;
+            if (!(widthSquared > 0f) || !IsFinite(widthSquared)) { return false; }
+            float width = Mathf.Sqrt(widthSquared);
+            float direction = Mathf.Sign(operationPosition.x - position.x);
+            float inset = Mathf.Min(width * 0.2f, 0.05f);
+            destination = new Vector2(operationPosition.x - direction * (width - inset), position.y);
+            float distance = Mathf.Abs(destination.x - position.x);
+            return distance > 0f && distance <= approachDistance;
+        }
 
         public readonly bool ContainsEffect(Vector2 position) =>
             (position - effectPosition).sqrMagnitude <= effectRadius * effectRadius;

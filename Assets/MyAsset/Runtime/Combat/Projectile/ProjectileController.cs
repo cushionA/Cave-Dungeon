@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Game.Core;
+using UnityEngine.SceneManagement;
 
 namespace Game.Runtime
 {
@@ -177,13 +178,14 @@ namespace Game.Runtime
             radius = Mathf.Max(radius, WorldRadius());
             Vector2 displacement = endCenter - startCenter;
             float distance = displacement.magnitude;
-            if (distance > 0.000001f && radius > 0f)
+            PhysicsScene2D world = gameObject.scene.GetPhysicsScene2D();
+            if (world.IsValid() && distance > 0.000001f && radius > 0f)
             {
                 ContactFilter2D filter = new ContactFilter2D();
                 filter.SetLayerMask(Physics2D.GetLayerCollisionMask(gameObject.layer));
                 filter.useTriggers = true;
                 _sweepHits.Clear();
-                Physics2D.CircleCast(startCenter, radius, displacement / distance, filter, _sweepHits, distance);
+                world.CircleCast(startCenter, radius, displacement / distance, distance, filter, _sweepHits);
                 for (int i = 0; i < _sweepHits.Count; i++)
                 {
                     if (!Matches(projectile, leaseId) || !projectile.IsAlive) { break; }
@@ -191,12 +193,18 @@ namespace Game.Runtime
                     // Subsequent casts begin inside an existing contact. OnTriggerEnter owns re-entry;
                     // treating that overlap as a fresh hit every tick would turn Stay into multihit.
                     if (_hasSimulated && hit.distance <= 0f) { continue; }
-                    if (!TryResolveTarget(hit.collider, out ActorRef target) || _sweptTargets.Contains(target)) { continue; }
                     Vector2 impact = Vector2.Lerp(startPosition, destination, hit.fraction);
-                    projectile.Position = impact;
-                    bool accepted = ProcessTarget(target, projectile, leaseId);
+                    if (TryResolveTarget(hit.collider, out ActorRef target))
+                    {
+                        if (_sweptTargets.Contains(target)) { continue; }
+                        projectile.Position = impact;
+                        bool accepted = ProcessTarget(target, projectile, leaseId);
+                        if (!Matches(projectile, leaseId)) { return; }
+                        if (accepted) { _sweptTargets.Add(target); }
+                    }
+                    else if (!ProcessProp(hit.collider, projectile, leaseId, world, impact)) { continue; }
+
                     if (!Matches(projectile, leaseId)) { return; }
-                    if (accepted) { _sweptTargets.Add(target); }
                     if (projectile.IsAlive) { projectile.Position = destination; }
                 }
             }
@@ -218,9 +226,33 @@ namespace Game.Runtime
         {
             Projectile projectile = _coreProjectile;
             ulong leaseId = _leaseId;
-            if (!_isActive || !_canCollide || projectile == null || projectile.IsSpawnDelayed || !projectile.IsAlive
-                || !TryResolveTarget(other, out ActorRef target) || _sweptTargets.Contains(target)) { return; }
-            ProcessTarget(target, projectile, leaseId);
+            if (!_isActive || !_canCollide || projectile == null || projectile.IsSpawnDelayed || !projectile.IsAlive) { return; }
+            if (TryResolveTarget(other, out ActorRef target))
+            {
+                if (!_sweptTargets.Contains(target)) { ProcessTarget(target, projectile, leaseId); }
+            }
+            else { ProcessProp(other, projectile, leaseId, gameObject.scene.GetPhysicsScene2D(), projectile.Position); }
+        }
+
+        private bool ProcessProp(Collider2D contact, Projectile projectile, ulong leaseId, PhysicsScene2D world, Vector2 impact)
+        {
+            MagicDefinition magic = _magic;
+            if (!_canCollide || magic.magicType != MagicType.Attack || !magic.attackContext.IsCaptured
+                || magic.attackContext.Owner != projectile.CasterRef || !world.IsValid()) { return false; }
+            ExplosiveProp2D prop = ExplosiveProp2D.FindLiveContact(contact);
+            ProjectileManager manager = _manager;
+            ActorRegistry actors = GameManager.Actors;
+            SoACharaDataDic data = GameManager.Data;
+            if (prop == null || contact.gameObject.scene.GetPhysicsScene2D() != world
+                || (Physics2D.GetLayerCollisionMask(gameObject.layer) & (1 << contact.gameObject.layer)) == 0
+                || actors == null || data == null || manager == null || !manager.IsCurrent(this, projectile, leaseId)
+                || !prop.TryGetBlast(out Vector2 center, out float radiusSquared) || !projectile.RegisterHit()) { return false; }
+
+            projectile.Position = impact;
+            bool shouldDespawn = !projectile.IsAlive;
+            prop.Detonate(magic.attackContext, world, actors, data, center, radiusSquared);
+            FinishHit(projectile, leaseId, manager, magic, shouldDespawn, world);
+            return true;
         }
 
         private bool ProcessTarget(ActorRef target, Projectile projectile, ulong leaseId)
@@ -233,18 +265,24 @@ namespace Game.Runtime
             ProjectileManager manager = _manager;
             ProjectileHitProcessor.ProcessHit(projectile, receiver,
                 GameManager.Data, magic, GameManager.Events, GameManager.StatusEffects, GameManager.Actors, target);
-            // ReceiveDamage dispatches synchronous events and can clear/reuse both pools.
-            if (!Matches(projectile, leaseId) || manager == null || !manager.IsCurrent(this, projectile, leaseId)) { return true; }
-            if (BulletFeatureProcessor.ShouldExplode(projectile.CapturedProfile.features)) { manager.ProcessExplosion(projectile, magic); }
-            if (!Matches(projectile, leaseId) || !manager.IsCurrent(this, projectile, leaseId)) { return true; }
+            FinishHit(projectile, leaseId, manager, magic, shouldDespawn);
+            return true;
+        }
+
+        private void FinishHit(Projectile projectile, ulong leaseId, ProjectileManager manager, MagicDefinition magic,
+            bool shouldDespawn, PhysicsScene2D? blastWorld = null)
+        {
+            // Contact effects dispatch synchronous events and can clear/reuse both pools.
+            if (manager == null || !manager.IsCurrent(this, projectile, leaseId)) { return; }
+            if (BulletFeatureProcessor.ShouldExplode(projectile.CapturedProfile.features)) { manager.ProcessExplosion(projectile, magic, blastWorld); }
+            if (!manager.IsCurrent(this, projectile, leaseId)) { return; }
             if (ChildBulletHelper.HasChildBullet(magic) && magic.childBullet.trigger == ChildBulletTrigger.OnHit)
             {
                 manager.SpawnChildProjectiles(projectile, magic);
             }
-            if (!Matches(projectile, leaseId) || !manager.IsCurrent(this, projectile, leaseId)) { return true; }
+            if (!manager.IsCurrent(this, projectile, leaseId)) { return; }
             if (shouldDespawn && projectile.IsAlive) { projectile.Kill(); }
             if (!projectile.IsAlive) { manager.ReturnProjectile(this); }
-            return true;
         }
 
         internal bool TryRegisterHit(int targetHash, out bool shouldDespawn)
