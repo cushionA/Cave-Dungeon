@@ -70,29 +70,128 @@ namespace Game.Tests.EditMode
         {
             using var core = new GameManagerCore();
             ExpeditionNextPlaythrough next = core.NextPlaythrough;
+            var story = new StorySave("native-story") { Value = 29 };
+            core.Saves.Register(story);
             core.Flags.SetGlobalFlag(k_StoryFlag, true);
             next.MarkCleared();
             SaveSlotData original = core.Saves.Save(0);
             Assert.IsTrue(_store.TryWriteToDisk(original));
+            Assert.IsTrue(core.Saves.Load(0));
+            story.Value = 31;
             string path = SlotFile(0);
             string originalFile = File.ReadAllText(path);
             string blockedTemporaryPath = path + SaveDataStore.k_TempExtension;
             Directory.CreateDirectory(blockedTemporaryPath);
 
             ulong revision = core.Saves.LoadRevision;
+            int notifications = 0;
+            core.Saves.Loaded += _ => notifications++;
             LogAssert.Expect(LogType.Error, new Regex(@"\[SaveDataStore\].+一時ファイル書き込みに失敗しました"));
             Assert.IsFalse(next.TryBeginNextPlaythrough(0, revision, 1, k_StartScene, _store));
             Assert.AreSame(original, core.Saves.GetSlotData(0));
+            Assert.AreSame(original, core.Saves.LastLoadedSlot);
             Assert.AreEqual(originalFile, File.ReadAllText(path));
             Assert.AreEqual(revision, core.Saves.LoadRevision);
             Assert.AreEqual(1, core.Playthrough.CycleNumber);
             Assert.IsTrue(core.Flags.GetGlobalFlag(k_StoryFlag));
             Assert.IsTrue(next.CanBeginNext);
+            Assert.IsNull(next.StartScenePath);
+            Assert.AreEqual(31, story.Value);
+            Assert.AreEqual(0, notifications);
 
             Directory.Delete(blockedTemporaryPath);
             Assert.IsTrue(next.TryBeginNextPlaythrough(0, revision, 1, k_StartScene, _store));
             Assert.AreEqual(2, core.Playthrough.CycleNumber);
+            Assert.AreEqual(0, story.Value);
+            Assert.AreEqual(1, notifications);
             Assert.AreEqual(originalFile, File.ReadAllText(path + SaveDataStore.k_BackupExtension));
+        }
+
+        [Test]
+        public void NextPlaythrough_WhenRestoringTheCandidateThrows_PreservesTheSaveAndOngoingEncounter()
+        {
+            using var core = new GameManagerCore();
+            ExpeditionNextPlaythrough next = core.NextPlaythrough;
+            Assert.IsTrue(core.Playthrough.TryBeginNextPlaythrough(1));
+            var story = new StorySave("native-story") { Value = 29, RejectReset = true };
+            core.Saves.Register(story);
+            core.Flags.SetGlobalFlag(k_StoryFlag, true);
+            next.MarkCleared();
+            SaveSlotData original = core.Saves.Save(0);
+            Assert.IsTrue(_store.TryWriteToDisk(original));
+            Assert.IsTrue(core.Saves.Load(0));
+            string path = SlotFile(0);
+            string originalFile = File.ReadAllText(path);
+            ulong revision = core.Saves.LoadRevision;
+            int notifications = 0;
+            core.Saves.Loaded += _ => notifications++;
+
+            const string bossId = "sentinel";
+            var boss = new BossControllerLogic(new[] { new BossPhaseData { phaseName = "Encounter" } }, bossId);
+            var rules = new[] { new ExpeditionAidUnlocks.BossRule(bossId, k_SpeciesId, 2, k_StoryFlag) };
+            using IDisposable watcher = core.ExpeditionAid.ObserveBossDefeats(boss, core.Playthrough, rules);
+            boss.StartEncounter();
+
+            LogAssert.Expect(LogType.Error, new Regex(@"\[SaveManager\].*スロットの復元に失敗しました"));
+            Assert.IsFalse(next.TryBeginNextPlaythrough(0, revision, 2, k_StartScene, _store));
+
+            Assert.AreSame(original, core.Saves.GetSlotData(0));
+            Assert.AreSame(original, core.Saves.LastLoadedSlot);
+            Assert.AreEqual(originalFile, File.ReadAllText(path));
+            Assert.IsFalse(File.Exists(path + SaveDataStore.k_BackupExtension));
+            Assert.AreEqual(0, core.Saves.ActiveSlotIndex);
+            Assert.AreEqual(revision, core.Saves.LoadRevision);
+            Assert.AreEqual(0, notifications);
+            Assert.AreEqual(2, core.Playthrough.CycleNumber);
+            Assert.AreEqual(29, story.Value);
+            Assert.IsTrue(core.Flags.GetGlobalFlag(k_StoryFlag));
+            Assert.IsTrue(next.CanBeginNext);
+            Assert.IsNull(next.StartScenePath);
+            boss.OnDefeated();
+            Assert.IsTrue(core.ExpeditionAid.IsUnlocked(k_SpeciesId));
+        }
+
+        [Test]
+        public void NextPlaythrough_WhenSavingToAnotherSlot_OnlyTheClearedSlotCanAdvance()
+        {
+            using var original = new GameManagerCore();
+            original.Saves.SetActiveSlot(1);
+            original.NextPlaythrough.MarkCleared();
+            Assert.IsTrue(_store.TryWriteToDisk(original.Saves.Save(0)));
+            original.Saves.SetActiveSlot(0);
+            Assert.IsFalse(original.NextPlaythrough.CanBeginNext);
+            Assert.IsTrue(_store.TryWriteToDisk(original.Saves.Save(1)));
+
+            using var restored = new GameManagerCore();
+            restored.Saves.SetSlotData(0, _store.ReadFromDisk(0));
+            restored.Saves.SetSlotData(1, _store.ReadFromDisk(1));
+            Assert.IsTrue(restored.Saves.Load(0));
+            Assert.IsFalse(restored.NextPlaythrough.CanBeginNext);
+            Assert.IsTrue(restored.Saves.Load(1));
+            Assert.IsTrue(restored.NextPlaythrough.CanBeginNext);
+            Assert.IsTrue(restored.Saves.Load(0));
+            Assert.IsFalse(restored.NextPlaythrough.CanBeginNext);
+        }
+
+        [Test]
+        public void NextPlaythrough_WhenOwningCoreIsDisposed_CannotMarkClearAdvanceOrRestore()
+        {
+            using var core = new GameManagerCore();
+            ExpeditionNextPlaythrough next = core.NextPlaythrough;
+            next.MarkCleared();
+            Assert.IsTrue(next.TryBeginNextPlaythrough(0, core.Saves.LoadRevision, 1, k_StartScene, _store));
+            next.MarkCleared();
+            Assert.IsTrue(next.CanBeginNext);
+            string committed = File.ReadAllText(SlotFile(0));
+
+            core.Dispose();
+            next.MarkCleared();
+
+            Assert.IsFalse(next.CanBeginNext);
+            Assert.IsFalse(next.TryBeginNextPlaythrough(0, core.Saves.LoadRevision, 2, k_StartScene, _store));
+            Assert.IsFalse(next.TryRestoreStartSlot(0, k_StartScene, _store));
+            Assert.IsFalse(core.Saves.HasSaveData(0));
+            Assert.AreEqual(committed, File.ReadAllText(SlotFile(0)));
         }
 
         [Test]
@@ -195,9 +294,15 @@ namespace Game.Tests.EditMode
 
         private sealed class StorySave : NumberSave, IResetOnNextPlaythrough
         {
+            public bool RejectReset { get; set; }
+
             public StorySave(string saveId) : base(saveId) { }
 
-            public void RestoreMissingEntry() { Value = 0; }
+            public void RestoreMissingEntry()
+            {
+                Value = 0;
+                if (RejectReset) { throw new InvalidOperationException("Rejected story reset"); }
+            }
         }
     }
 }

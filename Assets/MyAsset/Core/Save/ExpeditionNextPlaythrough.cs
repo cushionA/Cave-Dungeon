@@ -9,7 +9,8 @@ namespace Game.Core
     public interface IResetOnNextPlaythrough : ISaveableWithMissingEntry { }
 
     /// <summary>クリア記録を持ち、確定した次周回を保存してから現在のスロットへ反映する。</summary>
-    public sealed class ExpeditionNextPlaythrough : ISaveableWithMissingEntry
+    public sealed class ExpeditionNextPlaythrough : ISaveableWithMissingEntry, ISaveableForDestinationSlot,
+        ISaveableWithLoadRollback, IDisposable
     {
         public const string k_SaveId = "ExpeditionNextPlaythrough";
 
@@ -20,16 +21,31 @@ namespace Game.Core
             public string startScenePath;
         }
 
+        private readonly struct LiveProgress
+        {
+            public readonly int ClearedCycle;
+            public readonly int ClearedSlot;
+            public readonly string StartScenePath;
+
+            public LiveProgress(int clearedCycle, int clearedSlot, string startScenePath)
+            {
+                ClearedCycle = clearedCycle;
+                ClearedSlot = clearedSlot;
+                StartScenePath = startScenePath;
+            }
+        }
+
         private readonly SaveManager _saves;
         private readonly FlagManager _flags;
         private readonly ExpeditionPlaythrough _playthrough;
         private int _clearedCycle;
         private int _clearedSlot = -1;
         private bool _committing;
+        private bool _disposed;
 
         public string SaveId => k_SaveId;
         public string StartScenePath { get; private set; }
-        public bool CanBeginNext => !_committing && _clearedSlot == _saves.ActiveSlotIndex
+        public bool CanBeginNext => !_disposed && !_committing && _clearedSlot == _saves.ActiveSlotIndex
             && _clearedCycle == _playthrough.CycleNumber && _clearedCycle < int.MaxValue;
 
         internal ExpeditionNextPlaythrough(SaveManager saves, FlagManager flags, ExpeditionPlaythrough playthrough)
@@ -42,7 +58,7 @@ namespace Game.Core
 
         public void MarkCleared()
         {
-            if (_committing) { return; }
+            if (_disposed || _committing) { return; }
             _clearedSlot = _saves.ActiveSlotIndex;
             _clearedCycle = _playthrough.CycleNumber;
         }
@@ -50,8 +66,8 @@ namespace Game.Core
         public bool TryBeginNextPlaythrough(int expectedSlot, ulong expectedLoadRevision, int expectedCycle,
             string startScenePath, SaveDataStore store, IReadOnlyList<string> carryGlobalFlags = null)
         {
-            if (!CanBeginNext || expectedSlot != _saves.ActiveSlotIndex || expectedLoadRevision != _saves.LoadRevision
-                || expectedCycle != _playthrough.CycleNumber || string.IsNullOrWhiteSpace(startScenePath) || store == null)
+            if (!CanBeginNext || !MatchesConfirmation(expectedSlot, expectedLoadRevision, expectedCycle)
+                || string.IsNullOrWhiteSpace(startScenePath) || store == null)
             {
                 return false;
             }
@@ -60,21 +76,24 @@ namespace Game.Core
             try
             {
                 SaveSlotData nextSlot;
-                try { nextSlot = _saves.CaptureSlot(expectedSlot, forNextPlaythrough: true); }
+                try
+                {
+                    nextSlot = _saves.CaptureSlot(expectedSlot, forNextPlaythrough: true);
+                    if (nextSlot == null) { return false; }
+
+                    FlagSaveData flags = (FlagSaveData)nextSlot.entries[_flags.SaveId];
+                    nextSlot.entries[_flags.SaveId] = CreateStartingFlags(flags, carryGlobalFlags);
+                    nextSlot.entries[_playthrough.SaveId] = expectedCycle + 1;
+                    nextSlot.entries[SaveId] = new Progress { clearedCycle = expectedCycle, startScenePath = startScenePath };
+                }
                 catch (Exception exception)
                 {
                     Debug.LogError($"[ExpeditionNextPlaythrough] 周回開始の保存データを準備できませんでした: {exception.Message}");
                     return false;
                 }
 
-                FlagSaveData flags = (FlagSaveData)nextSlot.entries[_flags.SaveId];
-                nextSlot.entries[_flags.SaveId] = CreateStartingFlags(flags, carryGlobalFlags);
-                nextSlot.entries[_playthrough.SaveId] = expectedCycle + 1;
-                nextSlot.entries[SaveId] = new Progress { clearedCycle = expectedCycle, startScenePath = startScenePath };
-                if (!store.TryWriteToDisk(nextSlot)) { return false; }
-
-                _saves.SetSlotData(expectedSlot, nextSlot);
-                return _saves.Load(expectedSlot);
+                return !_disposed && MatchesConfirmation(expectedSlot, expectedLoadRevision, expectedCycle)
+                    && _saves.TryLoadSlot(expectedSlot, nextSlot, () => store.TryWriteToDisk(nextSlot));
             }
             finally { _committing = false; }
         }
@@ -82,26 +101,47 @@ namespace Game.Core
         /// <summary>この開始シーンに対応する保存済み周回をコールドスタートから再開する。</summary>
         public bool TryRestoreStartSlot(int slot, string expectedStartScenePath, SaveDataStore store)
         {
-            if (_committing || slot < 0 || slot >= SaveManager.k_MaxSlots || store == null
+            if (_disposed || _committing || slot < 0 || slot >= SaveManager.k_MaxSlots || store == null
                 || string.IsNullOrWhiteSpace(expectedStartScenePath)) { return false; }
 
-            SaveSlotData saved = store.ReadFromDisk(slot);
-            if (saved == null || saved.slotIndex != slot || !saved.entries.TryGetValue(SaveId, out object data)
-                || !string.Equals(ReadProgress(data)?.startScenePath, expectedStartScenePath, StringComparison.Ordinal)
-                || !saved.entries.TryGetValue(_playthrough.SaveId, out object cycle) || ExpeditionPlaythrough.ReadCycle(cycle) < 2)
+            _committing = true;
+            try
             {
-                return false;
-            }
+                SaveSlotData saved = store.ReadFromDisk(slot);
+                if (saved == null || saved.slotIndex != slot || !saved.entries.TryGetValue(SaveId, out object data)
+                    || !string.Equals(ReadProgress(data)?.startScenePath, expectedStartScenePath, StringComparison.Ordinal)
+                    || !saved.entries.TryGetValue(_playthrough.SaveId, out object cycle) || ExpeditionPlaythrough.ReadCycle(cycle) < 2)
+                {
+                    return false;
+                }
 
-            _saves.SetSlotData(slot, saved);
-            return _saves.Load(slot);
+                return !_disposed && _saves.TryLoadSlot(slot, saved);
+            }
+            finally { _committing = false; }
         }
 
-        object ISaveable.Serialize() => new Progress
+        private bool MatchesConfirmation(int slot, ulong loadRevision, int cycle) => slot == _saves.ActiveSlotIndex
+            && loadRevision == _saves.LoadRevision && cycle == _playthrough.CycleNumber;
+
+        object ISaveable.Serialize() => SerializeForSlot(_saves.ActiveSlotIndex);
+
+        object ISaveableForDestinationSlot.SerializeForSlot(int slotIndex) => SerializeForSlot(slotIndex);
+
+        private Progress SerializeForSlot(int slotIndex) => new Progress
         {
-            clearedCycle = _clearedSlot == _saves.ActiveSlotIndex ? _clearedCycle : 0,
+            clearedCycle = _clearedSlot == slotIndex ? _clearedCycle : 0,
             startScenePath = StartScenePath,
         };
+
+        object ISaveableWithLoadRollback.CaptureLoadRollback() => new LiveProgress(_clearedCycle, _clearedSlot, StartScenePath);
+
+        void ISaveableWithLoadRollback.RestoreLoadRollback(object snapshot)
+        {
+            LiveProgress live = (LiveProgress)snapshot;
+            _clearedCycle = live.ClearedCycle;
+            _clearedSlot = live.ClearedSlot;
+            StartScenePath = live.StartScenePath;
+        }
 
         void ISaveable.Deserialize(object data) => Restore(ReadProgress(data));
 
@@ -114,6 +154,13 @@ namespace Game.Core
         }
 
         private void OnSlotLoaded(int slot) => _clearedSlot = slot;
+
+        public void Dispose()
+        {
+            if (_disposed) { return; }
+            _disposed = true;
+            _saves.Loaded -= OnSlotLoaded;
+        }
 
         private static Progress ReadProgress(object data)
         {

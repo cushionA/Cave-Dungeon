@@ -4,7 +4,7 @@ using Newtonsoft.Json.Linq;
 namespace Game.Core
 {
     /// <summary>正式に開始した周回番号をセーブスロットごとに保持する。</summary>
-    public sealed class ExpeditionPlaythrough : ISaveableWithMissingEntry
+    public sealed class ExpeditionPlaythrough : ISaveableWithMissingEntry, ISaveableWithLoadRollback
     {
         private const int k_FirstCycle = 1;
         private CycleState _cycle = new CycleState(k_FirstCycle);
@@ -24,6 +24,10 @@ namespace Game.Core
         object ISaveable.Serialize() => CycleNumber;
 
         void ISaveable.Deserialize(object data) => Volatile.Write(ref _cycle, new CycleState(ReadCycle(data)));
+
+        object ISaveableWithLoadRollback.CaptureLoadRollback() => CurrentCycle;
+
+        void ISaveableWithLoadRollback.RestoreLoadRollback(object snapshot) => Volatile.Write(ref _cycle, (CycleState)snapshot);
 
         internal static int ReadCycle(object data)
         {

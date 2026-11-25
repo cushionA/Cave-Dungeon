@@ -3886,12 +3886,12 @@
       ],
       "notes": "3Dモーター付き個体を既存の能力値・行動・状態効果と同じGameManagerへ登録する。無効化で旧世代を解除し、再有効化で新世代を発行する。2DのAI観測・弾の対象検索は3D個体を除外する。Unity 6000.6.8f1のPlayMode 2件が成功。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/Character/CharacterActor3D.cs": "1fa4a7e8ce37958ab5f012fbefd7a94697a95cb547aad5ead44487714999ee9e",
-        "Assets/MyAsset/Runtime/GameManager.cs": "056c03b01026c9243821501b937b5b290f07f7b77b68cc6194a1f1389968ca4f",
-        "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "4fcc90e0d517faaa5f205163009904c4474deb9f7c9e28d1ba5fd9b28ac5d3d7",
-        "Assets/MyAsset/Core/GameManager/ActorRegistry.cs": "7a6f43444e76ff8ceb963bef0efe8578334152b3ae6b012a16bfdeb464ac46d2",
         "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs": "4038fc326cfee9fb16ae22bd6df39fff35b45c288b4db79df03d2ff9ea8be342",
         "Assets/MyAsset/Core/Combat/Projectile/ProjectileHitProcessor.cs": "ca6888228b0cb476bcb0fabadc05a092b7d6903104598d1de0710d66bc9a3d0e",
+        "Assets/MyAsset/Core/GameManager/ActorRegistry.cs": "7a6f43444e76ff8ceb963bef0efe8578334152b3ae6b012a16bfdeb464ac46d2",
+        "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "189cb73d9cb497c594c2c30f59ef57f41dcb0ac89542c5b2238109d42ec004e0",
+        "Assets/MyAsset/Runtime/Character/CharacterActor3D.cs": "1fa4a7e8ce37958ab5f012fbefd7a94697a95cb547aad5ead44487714999ee9e",
+        "Assets/MyAsset/Runtime/GameManager.cs": "056c03b01026c9243821501b937b5b290f07f7b77b68cc6194a1f1389968ca4f",
         "Assets/Tests/PlayMode/CharacterActor3DPlayTests.cs": "96a7c3dd73ff3e4c52b3e96bb5967d159f05888f2cb932c2cf26cc3f548063c4"
       }
     }
@@ -6553,8 +6553,8 @@
       "verification_hashes": {
         "Assets/Integration/QuestMachineBridge.cs": "4a6a0c8bf0552fc2c2c4a0fa8caeb74a6523867a5725babb06cf60fd34496a2c",
         "Assets/MyAsset/Core/AI/Summon/ExpeditionAidUnlocks.cs": "6e88b3981365e83f982a707affb16769e4451fc7e5dfdd70639421fa5516a544",
-        "Assets/MyAsset/Core/Save/FlagManager.cs": "37a22b8f7cfe49df4b7313b4225a243f0d68de701d9c735bfe9dbfff90463d6a",
-        "Assets/MyAsset/Core/Save/SaveManager.cs": "ccb5e459a9c8a6dff9b04b67d57e839e79db69cb32a8e09a2f2c595b4b4153af",
+        "Assets/MyAsset/Core/Save/FlagManager.cs": "ea9ba547f0d538d5cba08b4f504016249744c71eb32a752932598ad5ff316295",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "d02050f1e19ee79b2a8e22d0a2ed9cedca4b3bed913a1f03c943d4eb91be82a2",
         "Assets/Tests/EditMode/ExpeditionAidUnlockTests.cs": "e1426a8975f57e57f5e5e615c3b63844f57b6482fe41f207b9da3a9a29197746",
         "Assets/Tests/PlayMode/ExpeditionAidUnlockPlayTests.cs": "512955abd445599238d1da2886118683f39fd385b0279b86999ff5e927003f7a",
         "Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs": "9e737a10a86d0457831202128dab748b2c25327574ce6ce53974aab96a4e275b"
@@ -6737,16 +6737,16 @@
       ],
       "notes": "3D遭遇のボス戦と集団戦は独立した設定。集団戦の進行中に作者指定の追加人数とコストを照合して増援を出す。ボス戦単独、集団戦単独、両方を設定した遭遇を確認した。クリア、撤退、旧状態の再読込では臨時個体だけを解放する。増援用画面からプリセットを選べる。本編での遭遇とボスのフェーズへの接続は制作時に行う。 Unity 6000.6.8f1でExpeditionEncounterBudget3DPlayTests 4件、ExpeditionSummonDeployment3DPlayTests 5件、EncounterGoal3DPlayTests 3件、ExpeditionSquadPanelPlayTests 3件が成功。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/World/EncounterGoal3D.cs": "3f7b3ee5b087cb1e2d920af2a59c892d318442c15558c66ad1c8cc5b1b1cb4d6",
-        "Assets/MyAsset/Runtime/World/ExpeditionEncounterBudget3D.cs": "2ccee45db1772aa58caca3682fb637e55e376839a9b1a44562c886f6221d2caf",
         "Assets/MyAsset/Core/AI/Summon/ExpeditionSquad.cs": "caf061ce01c920367b375a2c9f88b0b1063f0d7eddf1f72e1a81c7a3b372108b",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "d02050f1e19ee79b2a8e22d0a2ed9cedca4b3bed913a1f03c943d4eb91be82a2",
         "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs": "a85dcac9d80b61b9b31941323899683e639b7e27abe5803e6ff370cbab1dd0b2",
-        "Assets/MyAsset/Core/Save/SaveManager.cs": "ccb5e459a9c8a6dff9b04b67d57e839e79db69cb32a8e09a2f2c595b4b4153af",
-        "Assets/Tests/PlayMode/ExpeditionEncounterBudget3DPlayTests.cs": "07e34820c14f65a227d65009a7c9579db2c2584500790476227cc5803044eae6",
-        "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "bcef191c373b815dfca27254790f3e5fd2533bddda185eab6fc98cf9557f63bb",
+        "Assets/MyAsset/Runtime/World/EncounterGoal3D.cs": "3f7b3ee5b087cb1e2d920af2a59c892d318442c15558c66ad1c8cc5b1b1cb4d6",
+        "Assets/MyAsset/Runtime/World/EncounterSession3D.cs": "d663fd2019ed396ff198b2dda383c462f98ee9a7c5b2fe6938830c6c9b8547cc",
+        "Assets/MyAsset/Runtime/World/ExpeditionEncounterBudget3D.cs": "2ccee45db1772aa58caca3682fb637e55e376839a9b1a44562c886f6221d2caf",
         "Assets/Tests/PlayMode/EncounterGoal3DPlayTests.cs": "c317ef80bdf81aae6ced10ac3afdf1fdca0c883ba32f4ee7b6d2bc5bc0975210",
+        "Assets/Tests/PlayMode/ExpeditionEncounterBudget3DPlayTests.cs": "07e34820c14f65a227d65009a7c9579db2c2584500790476227cc5803044eae6",
         "Assets/Tests/PlayMode/ExpeditionSquadPanelPlayTests.cs": "457ba552eb0c688c182d3e32bedc199e6c4e3073e353ff00040d0a8655449bf1",
-        "Assets/MyAsset/Runtime/World/EncounterSession3D.cs": "d663fd2019ed396ff198b2dda383c462f98ee9a7c5b2fe6938830c6c9b8547cc"
+        "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "bcef191c373b815dfca27254790f3e5fd2533bddda185eab6fc98cf9557f63bb"
       }
     }
   },
@@ -6806,18 +6806,18 @@
       ],
       "notes": "3Dボス遭遇が配置個体の撃破で完了し、作者指定のボスID、最低周回、前提フラグを確認して種解放へ渡す。初周と二周目の違い、別個体・再配置前・撤退後・ロード前の撃破通知と重複の除外、解放後の編成確定を検証した。本編の対象ボスとクリア後の周回開始箇所は制作時に指定する。 Unity 6000.6.8f1でExpeditionPlaythroughTests 5件、BossEncounter3DPlayTests 3件が成功。",
       "verification_hashes": {
-        "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "4fcc90e0d517faaa5f205163009904c4474deb9f7c9e28d1ba5fd9b28ac5d3d7",
-        "Assets/MyAsset/Core/Save/ExpeditionPlaythrough.cs": "1a6ca9ff2b169778efc9cfc764f4f272314bb7fd6bd96a6d274b1de311a4b97e",
         "Assets/MyAsset/Core/AI/Boss/BossControllerLogic.cs": "ceb175821bbd70050a0b3d8902ab19141b296694da4c700d04baf6ad36559895",
         "Assets/MyAsset/Core/AI/Summon/ExpeditionAidUnlocks.Bosses.cs": "ef2f64547bc5d781eec7c0466913d1aa3a078f3756ad4a5747002e2e7d47e23a",
         "Assets/MyAsset/Core/AI/Summon/ExpeditionAidUnlocks.cs": "6e88b3981365e83f982a707affb16769e4451fc7e5dfdd70639421fa5516a544",
         "Assets/MyAsset/Core/AI/Summon/ExpeditionSquad.cs": "caf061ce01c920367b375a2c9f88b0b1063f0d7eddf1f72e1a81c7a3b372108b",
-        "Assets/MyAsset/Core/Save/SaveManager.cs": "ccb5e459a9c8a6dff9b04b67d57e839e79db69cb32a8e09a2f2c595b4b4153af",
-        "Assets/Tests/EditMode/ExpeditionPlaythroughTests.cs": "431874c5d0033f467dc6d54fa0111a860336d68b9e68584c2ac6df22507d3308",
         "Assets/MyAsset/Core/GameManager/GameEvents.cs": "970d7710584e29e67cc3aea84dd9cbd75df2e20c9302cf482137d5b947f768a5",
+        "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "189cb73d9cb497c594c2c30f59ef57f41dcb0ac89542c5b2238109d42ec004e0",
+        "Assets/MyAsset/Core/Save/ExpeditionPlaythrough.cs": "4de09eef3da06435c01aa746be9166aedae2ec8a62880d3c612562e83b95275d",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "d02050f1e19ee79b2a8e22d0a2ed9cedca4b3bed913a1f03c943d4eb91be82a2",
         "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "5234e24e5d724eac8e5b1a13c1e174fefac4923589e84775dcef9aac0002b6d9",
         "Assets/MyAsset/Runtime/World/BossEncounter3D.cs": "e747af82ed060712f60694a33678f42fce837145773eb19e8145aacbd4cbdc9d",
         "Assets/MyAsset/Runtime/World/EncounterSession3D.cs": "d663fd2019ed396ff198b2dda383c462f98ee9a7c5b2fe6938830c6c9b8547cc",
+        "Assets/Tests/EditMode/ExpeditionPlaythroughTests.cs": "431874c5d0033f467dc6d54fa0111a860336d68b9e68584c2ac6df22507d3308",
         "Assets/Tests/PlayMode/BossEncounter3DPlayTests.cs": "38e835f8c47562b4c034471d8940620bfeff5a19ad49492a79f62080150a10c4"
       }
     }
@@ -6852,19 +6852,24 @@
           "kind": "read"
         },
         {
-          "file": "Assets/MyAsset/Core/Save/SaveDataStore.cs",
-          "symbol": "SaveDataStore.TryWriteToDisk",
-          "kind": "write"
-        },
-        {
           "file": "Assets/MyAsset/Core/Save/SaveManager.cs",
-          "symbol": "SaveManager.Load",
+          "symbol": "SaveManager.TryLoadSlot / TryApplySlot",
           "kind": "call"
         },
         {
           "file": "Assets/Integration/PixelCrushersSaveSlotBridge.cs",
           "symbol": "PixelCrushersSaveSlotBridge.RestoreMissingEntry",
           "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Save/SaveDataStore.cs",
+          "symbol": "SaveDataStore.TryWriteToDisk",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Save/SaveManager.cs",
+          "symbol": "SaveManager.NotifyLoaded",
+          "kind": "event"
         },
         {
           "file": "Assets/MyAsset/Runtime/UI/ExpeditionNextPlaythroughPanel.cs",
@@ -6884,25 +6889,26 @@
         "Assets/Tests/PlayMode/ExpeditionNextPlaythroughScenePlayTests.cs",
         "Assets/Tests/PlayMode/PixelCrushersStorySlotPlayTests.cs"
       ],
-      "notes": "試作のボス撃破で次周を選べる。確認時にスロット・ロード世代・周回を照合し、保存成功後に開始シーンへ移る。失敗後は同じ周回で再試行でき、別スロットは変わらない。召喚解放・通常編成・デッキを引き継ぎ、物語とマップの進行を再初期化する。本編のクリア通知と開始シーンは制作時に指定する。 Unity 6000.6.8f1でExpeditionNextPlaythroughTests 3件、SaveDataStoreAtomicWriteTests 10件、SaveManagerWiringTests 4件、ExpeditionNextPlaythroughScenePlayTests 1件、PixelCrushersStorySlotPlayTests 4件が成功。",
+      "notes": "試作のボス撃破で次周を選べる。確認時にスロット・ロード世代・周回を照合する。候補を復元してからディスクへ保存し、両方が成功して開始シーンへ移る。復元・書き込みに失敗すると、以前の周回やクリア記録が残って再試行できる。保存先を変えてもクリア記録が混ざらない。召喚解放・通常編成・デッキを引き継ぎ、マップと物語の進行を初期化する。 Unity 6000.6.8f1でExpeditionNextPlaythroughTests 6件、SaveDataStoreAtomicWriteTests 10件、SaveManagerWiringTests 4件、ExpeditionNextPlaythroughScenePlayTests 1件、PixelCrushersStorySlotPlayTests 6件が成功。",
       "verification_hashes": {
-        "Assets/Integration/PixelCrushersSaveSlotBridge.cs": "eda3624538d41a35a29315effef5f12c72f0e2992f29e0f0836087944f2033cf",
-        "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "4fcc90e0d517faaa5f205163009904c4474deb9f7c9e28d1ba5fd9b28ac5d3d7",
-        "Assets/MyAsset/Core/Save/ExpeditionNextPlaythrough.cs": "907dc72860c5bf0b6f5a1816f12ad89567780d4e6ce02548a9d1b1365e1dc1f8",
-        "Assets/MyAsset/Core/Save/ExpeditionPlaythrough.cs": "1a6ca9ff2b169778efc9cfc764f4f272314bb7fd6bd96a6d274b1de311a4b97e",
-        "Assets/MyAsset/Core/Save/FlagManager.cs": "37a22b8f7cfe49df4b7313b4225a243f0d68de701d9c735bfe9dbfff90463d6a",
+        "Assets/Integration/PixelCrushersSaveSlotBridge.cs": "cbec681b773b6e284726143f29417edd5608afbfc4e2613a0bd6e3b6c496666b",
+        "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "189cb73d9cb497c594c2c30f59ef57f41dcb0ac89542c5b2238109d42ec004e0",
+        "Assets/MyAsset/Core/Save/ExpeditionNextPlaythrough.cs": "a436cdf5b51d8c816815020eeb283e9be60c9c4cb669be7202654095d0258e6e",
+        "Assets/MyAsset/Core/Save/ExpeditionPlaythrough.cs": "4de09eef3da06435c01aa746be9166aedae2ec8a62880d3c612562e83b95275d",
+        "Assets/MyAsset/Core/Save/FlagManager.cs": "ea9ba547f0d538d5cba08b4f504016249744c71eb32a752932598ad5ff316295",
         "Assets/MyAsset/Core/Save/SaveDataStore.cs": "a8b3e4283f543fc0dc5330b4a918f76c4eabe21466467f6047194914fad7dd5c",
-        "Assets/MyAsset/Core/Save/SaveManager.cs": "ccb5e459a9c8a6dff9b04b67d57e839e79db69cb32a8e09a2f2c595b4b4153af",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "d02050f1e19ee79b2a8e22d0a2ed9cedca4b3bed913a1f03c943d4eb91be82a2",
         "Assets/MyAsset/Runtime/Character/BaseCharacter.cs": "ab5714d059f4dc8477ed363e93e027273d759e82cee6376fe0d6df91a7c4f9b1",
         "Assets/MyAsset/Runtime/GameManager.cs": "056c03b01026c9243821501b937b5b290f07f7b77b68cc6194a1f1389968ca4f",
         "Assets/MyAsset/Runtime/UI/ExpeditionNextPlaythroughPanel.cs": "d485515b73443ef1b08797d4db9fdce46aff6962bc0189185780c053330b6d5f",
         "Assets/Scenes/BossArena3DTestScene.unity": "8642b982c4cb96375a4696808a842161f4245e554de0675180055918bdf9ff6f",
-        "Assets/Tests/EditMode/ExpeditionNextPlaythroughTests.cs": "83736fe88dae8717ba3d3479f4bcb570e3b37d15bb72a2cc138f53fbf98dc31c",
+        "Assets/Tests/EditMode/ExpeditionNextPlaythroughTests.cs": "cc423580e892204839ea4d05f149abfb0dcbb3608bbfaed1c835f1f83ef96b39",
         "Assets/Tests/EditMode/SaveDataStoreAtomicWriteTests.cs": "c08a682cb2fb3d72d9b7609daaefb36cd461eadf05792c80e639ab2eb83d5a86",
         "Assets/Tests/EditMode/SaveManagerWiringTests.cs": "18bc703f387121b5c3cad36f6f4efa5055293bd40ac00a181561ea5137bd87cd",
         "Assets/Tests/PlayMode/ExpeditionNextPlaythroughScenePlayTests.cs": "e1a7bba600a309bec9239cf489e5f2721574821d0d5ec9ebabcc38f29333b199",
-        "Assets/Tests/PlayMode/PixelCrushersStorySlotPlayTests.cs": "17dc34af7d5bdcb4949c8783501c96822e19e11e362a82cab6059826f1cf6749",
-        "ProjectSettings/EditorBuildSettings.asset": "9414f7e09e4c8e696f190ed12691b4757421946de6b651bb48c0b66349e0d85f"
+        "Assets/Tests/PlayMode/PixelCrushersStorySlotPlayTests.cs": "096f10b4a74ae7677591726163212161f36c8c175d333e0f9313f7d100970183",
+        "ProjectSettings/EditorBuildSettings.asset": "9414f7e09e4c8e696f190ed12691b4757421946de6b651bb48c0b66349e0d85f",
+        "designs/systems/SaveSystem.md": "e71f826b90aa43bbf4b18d1b770438b4a8989022a64c51322f034cebcdec8a98"
       }
     }
   },
@@ -6998,6 +7004,11 @@
           "kind": "call"
         },
         {
+          "file": "Assets/MyAsset/Core/Save/SaveManager.cs",
+          "symbol": "SaveManager.TryApplySlot / RestoreOriginals",
+          "kind": "call"
+        },
+        {
           "file": "Assets/MyAsset/Core/Save/FlagManager.cs",
           "symbol": "FlagManager.Deserialize",
           "kind": "write"
@@ -7013,6 +7024,11 @@
           "kind": "write"
         },
         {
+          "file": "Assets/MyAsset/Core/Save/SaveManager.cs",
+          "symbol": "SaveManager.NotifyLoaded",
+          "kind": "event"
+        },
+        {
           "file": "Assets/MyAsset/Runtime/World/ExpeditionEncounterBudget3D.cs",
           "symbol": "ExpeditionEncounterBudget3D.Close",
           "kind": "output"
@@ -7024,23 +7040,28 @@
         "Assets/Tests/PlayMode/ExpeditionSquadPlayTests.cs",
         "Assets/Tests/EditMode/ExpeditionPlaythroughTests.cs",
         "Assets/Tests/PlayMode/ExpeditionEncounterBudget3DPlayTests.cs",
-        "Assets/Tests/PlayMode/PixelCrushersStorySlotPlayTests.cs"
+        "Assets/Tests/PlayMode/PixelCrushersStorySlotPlayTests.cs",
+        "Assets/Tests/EditMode/SaveSystemCoreTests.cs",
+        "Assets/Tests/EditMode/FlagManagerTests.cs"
       ],
-      "notes": "解放済みの種、通常編成の頭数、周回をディスクから復元する。旧セーブは空の通常編成と初周を使う。成功したロードは現在開いている遭遇の増援枠を閉じる。試作ではクリア後の確認から周回開始を呼ぶ。本編の探索再開と周回開始画面は制作時に接続する。 Unity 6000.6.8f1でExpeditionSquadSaveTests 1件、ExpeditionAidUnlockPlayTests 1件、ExpeditionSquadPlayTests 2件、ExpeditionPlaythroughTests 5件、ExpeditionEncounterBudget3DPlayTests 4件が成功。 複数デッキ・Quest Machineの進捗・会話の状態を同一スロットに保存。",
+      "notes": "解放済みの種、通常編成、デッキ、周回と物語を同一スロットから復元する。欠落した旧フラグを初期化し、不正なフラグデータで別スロットの状態を混ぜない。復元に失敗すると直前の状態を戻し、成功時には各購読先へ独立して通知する。成功したロードだけが開いている遭遇の増援枠を閉じる。 Unity 6000.6.8f1でExpeditionSquadSaveTests 1件、ExpeditionAidUnlockPlayTests 1件、ExpeditionSquadPlayTests 2件、ExpeditionPlaythroughTests 5件、ExpeditionEncounterBudget3DPlayTests 4件、PixelCrushersStorySlotPlayTests 6件、SaveSystemCoreTests 15件、FlagManagerTests 15件が成功。",
       "verification_hashes": {
-        "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "4fcc90e0d517faaa5f205163009904c4474deb9f7c9e28d1ba5fd9b28ac5d3d7",
-        "Assets/MyAsset/Core/Save/SaveManager.cs": "ccb5e459a9c8a6dff9b04b67d57e839e79db69cb32a8e09a2f2c595b4b4153af",
-        "Assets/MyAsset/Core/Save/FlagManager.cs": "37a22b8f7cfe49df4b7313b4225a243f0d68de701d9c735bfe9dbfff90463d6a",
         "Assets/MyAsset/Core/AI/Summon/ExpeditionSquad.cs": "caf061ce01c920367b375a2c9f88b0b1063f0d7eddf1f72e1a81c7a3b372108b",
-        "Assets/MyAsset/Core/Save/ExpeditionPlaythrough.cs": "1a6ca9ff2b169778efc9cfc764f4f272314bb7fd6bd96a6d274b1de311a4b97e",
+        "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "189cb73d9cb497c594c2c30f59ef57f41dcb0ac89542c5b2238109d42ec004e0",
+        "Assets/MyAsset/Core/Save/ExpeditionPlaythrough.cs": "4de09eef3da06435c01aa746be9166aedae2ec8a62880d3c612562e83b95275d",
+        "Assets/MyAsset/Core/Save/FlagManager.cs": "ea9ba547f0d538d5cba08b4f504016249744c71eb32a752932598ad5ff316295",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "d02050f1e19ee79b2a8e22d0a2ed9cedca4b3bed913a1f03c943d4eb91be82a2",
+        "Assets/MyAsset/Runtime/World/EncounterSession3D.cs": "d663fd2019ed396ff198b2dda383c462f98ee9a7c5b2fe6938830c6c9b8547cc",
         "Assets/MyAsset/Runtime/World/ExpeditionEncounterBudget3D.cs": "2ccee45db1772aa58caca3682fb637e55e376839a9b1a44562c886f6221d2caf",
-        "Assets/Tests/EditMode/ExpeditionSquadSaveTests.cs": "40202af78a6385e0e074089d9476945664f33926fea55a5f5ca4d6c638fd1e55",
-        "Assets/Tests/PlayMode/ExpeditionAidUnlockPlayTests.cs": "512955abd445599238d1da2886118683f39fd385b0279b86999ff5e927003f7a",
-        "Assets/Tests/PlayMode/ExpeditionSquadPlayTests.cs": "df4a165b6c14c601875a12d34ddea75f84d5a12a0affc0c14aac54655c36ad25",
         "Assets/Tests/EditMode/ExpeditionPlaythroughTests.cs": "431874c5d0033f467dc6d54fa0111a860336d68b9e68584c2ac6df22507d3308",
+        "Assets/Tests/EditMode/ExpeditionSquadSaveTests.cs": "40202af78a6385e0e074089d9476945664f33926fea55a5f5ca4d6c638fd1e55",
+        "Assets/Tests/EditMode/FlagManagerTests.cs": "8d508410019893916f146a89f8716e07decead838c72992a9d5f0c5960167410",
+        "Assets/Tests/EditMode/SaveSystemCoreTests.cs": "8cdb0ff1f89283507b32ee069fb17ff2171800641d6aa99b7a895ed3643c9724",
+        "Assets/Tests/PlayMode/ExpeditionAidUnlockPlayTests.cs": "512955abd445599238d1da2886118683f39fd385b0279b86999ff5e927003f7a",
         "Assets/Tests/PlayMode/ExpeditionEncounterBudget3DPlayTests.cs": "07e34820c14f65a227d65009a7c9579db2c2584500790476227cc5803044eae6",
-        "Assets/Tests/PlayMode/PixelCrushersStorySlotPlayTests.cs": "17dc34af7d5bdcb4949c8783501c96822e19e11e362a82cab6059826f1cf6749",
-        "Assets/MyAsset/Runtime/World/EncounterSession3D.cs": "d663fd2019ed396ff198b2dda383c462f98ee9a7c5b2fe6938830c6c9b8547cc"
+        "Assets/Tests/PlayMode/ExpeditionSquadPlayTests.cs": "df4a165b6c14c601875a12d34ddea75f84d5a12a0affc0c14aac54655c36ad25",
+        "Assets/Tests/PlayMode/PixelCrushersStorySlotPlayTests.cs": "096f10b4a74ae7677591726163212161f36c8c175d333e0f9313f7d100970183",
+        "designs/systems/SaveSystem.md": "e71f826b90aa43bbf4b18d1b770438b4a8989022a64c51322f034cebcdec8a98"
       }
     }
   },
@@ -8063,19 +8084,19 @@
       ],
       "notes": "指定した集団戦の増援枠が開く前にデッキを準備・保存し、出撃時に読み込んで確定する。通常探索と増援で人数・コスト上限が異なり、増援の出撃は通常探索の確定編成を変更しない。標準のプリセット枠数は三つで、作者が変更できる。 Unity 6000.6.8f1でExpeditionDeckPresetTests 3件、ExpeditionSquadPanelPlayTests 3件、ExpeditionEncounterBudget3DPlayTests 4件が成功。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/AI/ExpeditionSquadManager.cs": "90e5ff7eedd078988d7ef8a4e198833ca68bc752c1bd7e188440b6dd8f02fabc",
-        "Assets/MyAsset/Runtime/UI/ExpeditionSquadPanel.cs": "b44a5d9a22ccad211b84d9732ca54c9ae0c26f9715c2efc3e1160a5287cf0b46",
         "Assets/MyAsset/Core/AI/Summon/ExpeditionDeckPresets.cs": "9cb72e6515c452ca091f95b0c90a043cd624742c5a9d30546aecc581b1bb4930",
         "Assets/MyAsset/Core/AI/Summon/ExpeditionSquad.cs": "caf061ce01c920367b375a2c9f88b0b1063f0d7eddf1f72e1a81c7a3b372108b",
-        "Assets/MyAsset/Runtime/World/ExpeditionEncounterBudget3D.cs": "2ccee45db1772aa58caca3682fb637e55e376839a9b1a44562c886f6221d2caf",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "d02050f1e19ee79b2a8e22d0a2ed9cedca4b3bed913a1f03c943d4eb91be82a2",
+        "Assets/MyAsset/Runtime/AI/ExpeditionSquadManager.cs": "90e5ff7eedd078988d7ef8a4e198833ca68bc752c1bd7e188440b6dd8f02fabc",
         "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs": "a85dcac9d80b61b9b31941323899683e639b7e27abe5803e6ff370cbab1dd0b2",
-        "Assets/MyAsset/Core/Save/SaveManager.cs": "ccb5e459a9c8a6dff9b04b67d57e839e79db69cb32a8e09a2f2c595b4b4153af",
-        "Assets/Tests/EditMode/ExpeditionDeckPresetTests.cs": "8c17e681a818a626fe294fab7801a717f576099778a96b86ff113a763abb1f8f",
-        "Assets/Tests/PlayMode/ExpeditionSquadPanelPlayTests.cs": "457ba552eb0c688c182d3e32bedc199e6c4e3073e353ff00040d0a8655449bf1",
-        "Assets/Tests/PlayMode/ExpeditionEncounterBudget3DPlayTests.cs": "07e34820c14f65a227d65009a7c9579db2c2584500790476227cc5803044eae6",
-        "Assets/MyAsset/UI/ExpeditionSquad/ExpeditionSquadPanel.uxml": "ad35d5a721ed07e9a122ec54ea7e4bb7d63b17486e77665310c6a0b548592431",
+        "Assets/MyAsset/Runtime/UI/ExpeditionSquadPanel.cs": "b44a5d9a22ccad211b84d9732ca54c9ae0c26f9715c2efc3e1160a5287cf0b46",
+        "Assets/MyAsset/Runtime/World/EncounterSession3D.cs": "d663fd2019ed396ff198b2dda383c462f98ee9a7c5b2fe6938830c6c9b8547cc",
+        "Assets/MyAsset/Runtime/World/ExpeditionEncounterBudget3D.cs": "2ccee45db1772aa58caca3682fb637e55e376839a9b1a44562c886f6221d2caf",
         "Assets/MyAsset/UI/ExpeditionSquad/ExpeditionSquadPanel.uss": "00d47007312dbd01751f3fa923aa3273ec8d5cb3e545c9f93fe4e50d8c5fe187",
-        "Assets/MyAsset/Runtime/World/EncounterSession3D.cs": "d663fd2019ed396ff198b2dda383c462f98ee9a7c5b2fe6938830c6c9b8547cc"
+        "Assets/MyAsset/UI/ExpeditionSquad/ExpeditionSquadPanel.uxml": "ad35d5a721ed07e9a122ec54ea7e4bb7d63b17486e77665310c6a0b548592431",
+        "Assets/Tests/EditMode/ExpeditionDeckPresetTests.cs": "8c17e681a818a626fe294fab7801a717f576099778a96b86ff113a763abb1f8f",
+        "Assets/Tests/PlayMode/ExpeditionEncounterBudget3DPlayTests.cs": "07e34820c14f65a227d65009a7c9579db2c2584500790476227cc5803044eae6",
+        "Assets/Tests/PlayMode/ExpeditionSquadPanelPlayTests.cs": "457ba552eb0c688c182d3e32bedc199e6c4e3073e353ff00040d0a8655449bf1"
       }
     }
   },
@@ -8110,6 +8131,11 @@
         },
         {
           "file": "Assets/Integration/PixelCrushersSaveSlotBridge.cs",
+          "symbol": "PixelCrushersSaveSlotBridge.RememberLiveStory / Register",
+          "kind": "update"
+        },
+        {
+          "file": "Assets/Integration/PixelCrushersSaveSlotBridge.cs",
           "symbol": "PixelCrushersSaveSlotBridge.Restore",
           "kind": "output"
         },
@@ -8124,16 +8150,17 @@
         "Assets/Tests/EditMode/SaveManagerWiringTests.cs",
         "Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs"
       ],
-      "notes": "Quest JournalとDialogue Systemの各状態をゲーム本体の同じスロットへ保存する。旧データでの初期化、シーン初期化前の読込、復元時の報酬重複防止を実行経路で確認。 Unity 6000.6.8f1でPixelCrushersStorySlotPlayTests 3件、SaveManagerWiringTests 4件、ExpeditionQuest3DScenePlayTests 1件が成功。 次周開始では物語スナップショットを省略し、Quest Journal と Lua を初期化する。 Unity 6000.6.8f1でPixelCrushersStorySlotPlayTests 4件が成功。",
+      "notes": "Quest JournalとDialogue Systemの状態をゲーム本体のスロットに保存する。ブリッジや適用先を作り直しても、同じセーブ管理・スロット・ロード世代の未保存の進捗を引き継ぐ。コールドスタートはディスクの読み込み内容を使う。次周回はQuest JournalとLuaを初期化し、召喚解放を保持する。 Unity 6000.6.8f1でPixelCrushersStorySlotPlayTests 6件、SaveManagerWiringTests 4件、ExpeditionQuest3DScenePlayTests 1件が成功。",
       "verification_hashes": {
-        "Assets/Scenes/ExpeditionQuest3DTestScene.unity": "46b67f2e8ef83f56694e496d74be857543ef28f3fd0b18a918b3e208fffba74c",
-        "Assets/Integration/PixelCrushersSaveSlotBridge.cs": "eda3624538d41a35a29315effef5f12c72f0e2992f29e0f0836087944f2033cf",
-        "Assets/MyAsset/Core/Save/SaveManager.cs": "ccb5e459a9c8a6dff9b04b67d57e839e79db69cb32a8e09a2f2c595b4b4153af",
-        "Assets/MyAsset/Core/Save/SaveDataStore.cs": "a8b3e4283f543fc0dc5330b4a918f76c4eabe21466467f6047194914fad7dd5c",
+        "Assets/Integration/PixelCrushersSaveSlotBridge.cs": "cbec681b773b6e284726143f29417edd5608afbfc4e2613a0bd6e3b6c496666b",
         "Assets/Integration/QuestMachineBridge.cs": "4a6a0c8bf0552fc2c2c4a0fa8caeb74a6523867a5725babb06cf60fd34496a2c",
-        "Assets/Tests/PlayMode/PixelCrushersStorySlotPlayTests.cs": "17dc34af7d5bdcb4949c8783501c96822e19e11e362a82cab6059826f1cf6749",
+        "Assets/MyAsset/Core/Save/SaveDataStore.cs": "a8b3e4283f543fc0dc5330b4a918f76c4eabe21466467f6047194914fad7dd5c",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "d02050f1e19ee79b2a8e22d0a2ed9cedca4b3bed913a1f03c943d4eb91be82a2",
+        "Assets/Scenes/ExpeditionQuest3DTestScene.unity": "46b67f2e8ef83f56694e496d74be857543ef28f3fd0b18a918b3e208fffba74c",
         "Assets/Tests/EditMode/SaveManagerWiringTests.cs": "18bc703f387121b5c3cad36f6f4efa5055293bd40ac00a181561ea5137bd87cd",
-        "Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs": "9e737a10a86d0457831202128dab748b2c25327574ce6ce53974aab96a4e275b"
+        "Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs": "9e737a10a86d0457831202128dab748b2c25327574ce6ce53974aab96a4e275b",
+        "Assets/Tests/PlayMode/PixelCrushersStorySlotPlayTests.cs": "096f10b4a74ae7677591726163212161f36c8c175d333e0f9313f7d100970183",
+        "designs/systems/SaveSystem.md": "e71f826b90aa43bbf4b18d1b770438b4a8989022a64c51322f034cebcdec8a98"
       }
     }
   },
@@ -8653,10 +8680,11 @@
       "notes": "所持した消耗品を4枠に登録し、使い切った後も登録を保持して補充後に使える。所持品と選択をスロットごとに保存・復元する。MPの消費量を所持一覧と選択枠に表示する。試作マップで拾得イベントと実際のアイテムの使用を確認する。 Unity 6000.6.8f1でConsumableBeltPanel3DPlayTests 3件、InventoryUsageBeltTests 7件、ExpeditionConsumablesMockScenePlayTests 1件が成功。",
       "verification_hashes": {
         "Assets/InputSystem_Actions.inputactions": "31d199426d631b6c852e8830aad54e54f9336e2bcb46dae92a47578c20e9b92f",
-        "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "4fcc90e0d517faaa5f205163009904c4474deb9f7c9e28d1ba5fd9b28ac5d3d7",
+        "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "189cb73d9cb497c594c2c30f59ef57f41dcb0ac89542c5b2238109d42ec004e0",
         "Assets/MyAsset/Core/Inventory/ConsumableBelt.cs": "3f503035f85d45fb2d29820c9f4ead2ff714cecf72f5bfdd57bfbbe573f3588d",
+        "Assets/MyAsset/Core/Inventory/ConsumableDefinition.cs": "427596b62edc2c07dfae0d24753dbd2f152095aa12c39778a5b4efed2e3c6a2f",
         "Assets/MyAsset/Core/Inventory/InventoryManager.cs": "a9a23c4085b8b1d41406f12dc56fa3609f4c6073c90ce41e02c8c018a0478c8b",
-        "Assets/MyAsset/Core/Save/SaveManager.cs": "ccb5e459a9c8a6dff9b04b67d57e839e79db69cb32a8e09a2f2c595b4b4153af",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "d02050f1e19ee79b2a8e22d0a2ed9cedca4b3bed913a1f03c943d4eb91be82a2",
         "Assets/MyAsset/Data/PLACEHOLDER_ConsumableUseParticles3D.mat": "79557a66ae41d5c2f1f88b4aacbed6c5e9cecad9197ec5bb8e653896e9e31105",
         "Assets/MyAsset/Data/PLACEHOLDER_ConsumableUseParticles3D.mat.meta": "fe42b7d20822347fe5375863c9a39e4d56a3279b6570059682716d4b7118d93a",
         "Assets/MyAsset/Data/PLACEHOLDER_EmberFlask3D.asset": "fe9eea37e38622bede433c17794d429e24366d17c984e4e5de65f479e11770bb",
@@ -8682,8 +8710,7 @@
         "Assets/Tests/EditMode/InventoryUsageBeltTests.cs": "8db8840598641f001e44bd99407cd2f378f7a4e063409277a34a1a54c0404b2f",
         "Assets/Tests/PlayMode/ConsumableBeltPanel3DPlayTests.cs": "e024c23b7b26e2eec7b2feeea1530a044ec3b4ceb62f429136cb72e305fb0c00",
         "Assets/Tests/PlayMode/ExpeditionConsumablesMockScenePlayTests.cs": "f96e8e2c941e522b65f978d3b02e27000111702dc5819a720633cb5964f0785b",
-        "designs/systems/InventorySystem.md": "f289103b53f28fed93a818839a9e7da9fe170d63a272b9fd4c45fbcf11e4ccf9",
-        "Assets/MyAsset/Core/Inventory/ConsumableDefinition.cs": "427596b62edc2c07dfae0d24753dbd2f152095aa12c39778a5b4efed2e3c6a2f"
+        "designs/systems/InventorySystem.md": "f289103b53f28fed93a818839a9e7da9fe170d63a272b9fd4c45fbcf11e4ccf9"
       }
     }
   },
@@ -8737,8 +8764,8 @@
       ],
       "notes": "坑道の石碑からイベントシーンを加算ロードし、専用カメラとTimelineを再生する。終了とスキップで一度だけ完了を保存し、イベントシーンを解放して、元の3D騎士にカメラと操作を返す。 Unity 6000.6.8f1でExpeditionEvent3DScenePlayTests 2件が成功。",
       "verification_hashes": {
-        "Assets/MyAsset/Core/Save/FlagManager.cs": "37a22b8f7cfe49df4b7313b4225a243f0d68de701d9c735bfe9dbfff90463d6a",
-        "Assets/MyAsset/Core/Save/SaveManager.cs": "ccb5e459a9c8a6dff9b04b67d57e839e79db69cb32a8e09a2f2c595b4b4153af",
+        "Assets/MyAsset/Core/Save/FlagManager.cs": "ea9ba547f0d538d5cba08b4f504016249744c71eb32a752932598ad5ff316295",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "d02050f1e19ee79b2a8e22d0a2ed9cedca4b3bed913a1f03c943d4eb91be82a2",
         "Assets/MyAsset/Data/PLACEHOLDER_ExpeditionEvent3D.playable": "a05358d306718286a0f4cdce01c46dee28df37a92b10bb000eedc559a4e0404b",
         "Assets/MyAsset/Data/PLACEHOLDER_ExpeditionEvent3D.playable.meta": "524abb0acb936b707edb327d3ee6bec6259038e3cf92b9cf90081b452b590cd0",
         "Assets/MyAsset/Runtime/Character/NpcInteraction3D.cs": "ace4f5aa2997351402e2f487a5a0ebc68249c313f007ab436d5b2741ab392398",
@@ -8808,10 +8835,10 @@
       "verification_hashes": {
         "Assets/InputSystem_Actions.inputactions": "31d199426d631b6c852e8830aad54e54f9336e2bcb46dae92a47578c20e9b92f",
         "Assets/MyAsset/Core/Equipment/EquipmentStore.cs": "f452d4a4c89b9befaf0a34fe4790779024415b82de6240d563b9a106dde5a8b2",
-        "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "4fcc90e0d517faaa5f205163009904c4474deb9f7c9e28d1ba5fd9b28ac5d3d7",
+        "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "189cb73d9cb497c594c2c30f59ef57f41dcb0ac89542c5b2238109d42ec004e0",
         "Assets/MyAsset/Core/Inventory/InventoryManager.cs": "a9a23c4085b8b1d41406f12dc56fa3609f4c6073c90ce41e02c8c018a0478c8b",
         "Assets/MyAsset/Core/Inventory/PlayerCombatLoadoutSelection.cs": "09c833830ae92e74cf160be542765e8473d4548f2a526449e5c87af0b63ce2c7",
-        "Assets/MyAsset/Core/Save/SaveManager.cs": "ccb5e459a9c8a6dff9b04b67d57e839e79db69cb32a8e09a2f2c595b4b4153af",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "d02050f1e19ee79b2a8e22d0a2ed9cedca4b3bed913a1f03c943d4eb91be82a2",
         "Assets/MyAsset/Data/PLACEHOLDER_ExpeditionBowEquipment.asset": "ea9c460f799928e5c8c693a29c00a27d0a2876da0099aee907453ba6dfdea158",
         "Assets/MyAsset/Data/PLACEHOLDER_ExpeditionBowEquipment.asset.meta": "4b66a6c65c6d71f572a151e8a7858954c0cfa9d5e2c44a10e62327436ff77290",
         "Assets/MyAsset/Data/PLACEHOLDER_ExpeditionEmberCore.asset": "02fd6956cbd3538c81d2619ca44374dd1d71d00a23ef1134100745192d7c995c",
@@ -8885,10 +8912,10 @@
       ],
       "notes": "測量地点で発見報酬を、番人を倒すと撃破報酬を得る。重複発見と同じ敵の重複通知を防ぎ、レベルアップで得たポイントの配分を現在の騎士に適用する。経験値と配分を保存する。 Unity 6000.6.8f1でPlayerProgression3DPlayTests 2件、ExpeditionLoadoutPanel3DPlayTests 1件、ExpeditionMock3DScenePlayTests 2件が成功。",
       "verification_hashes": {
-        "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "4fcc90e0d517faaa5f205163009904c4474deb9f7c9e28d1ba5fd9b28ac5d3d7",
+        "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "189cb73d9cb497c594c2c30f59ef57f41dcb0ac89542c5b2238109d42ec004e0",
         "Assets/MyAsset/Core/LevelUp/LevelUpLogic.cs": "31d8f789d4dd966859b357315aee4250c4d16ac29bc68bb976f4fa291fbbd306",
-        "Assets/MyAsset/Core/Save/FlagManager.cs": "37a22b8f7cfe49df4b7313b4225a243f0d68de701d9c735bfe9dbfff90463d6a",
-        "Assets/MyAsset/Core/Save/SaveManager.cs": "ccb5e459a9c8a6dff9b04b67d57e839e79db69cb32a8e09a2f2c595b4b4153af",
+        "Assets/MyAsset/Core/Save/FlagManager.cs": "ea9ba547f0d538d5cba08b4f504016249744c71eb32a752932598ad5ff316295",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "d02050f1e19ee79b2a8e22d0a2ed9cedca4b3bed913a1f03c943d4eb91be82a2",
         "Assets/MyAsset/Runtime/Character/PlayerProgression3D.cs": "3d62ef67959f06f5a914e5d9539c25663f271b37e5d447c772766a3f63fa877d",
         "Assets/MyAsset/Runtime/GameManager.cs": "056c03b01026c9243821501b937b5b290f07f7b77b68cc6194a1f1389968ca4f",
         "Assets/MyAsset/Runtime/UI/ExpeditionLoadoutPanel3D.cs": "32f51715bed827a002cb1185c631c1653ee6e46842f13b4e3d5c0feb13647a5d",

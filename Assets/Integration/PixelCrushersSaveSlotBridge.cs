@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Runtime.CompilerServices;
 using Game.Core;
 using PixelCrushers;
 using PixelCrushers.DialogueSystem;
@@ -30,22 +31,41 @@ namespace Game.Runtime
             public string dialogue;
         }
 
+        private sealed class StoryHandoff
+        {
+            public readonly Snapshot snapshot = new Snapshot();
+            public ulong revision;
+            public int slot;
+            public WeakReference<QuestJournal> journal;
+            public WeakReference<DialogueSystemSaver> dialogue;
+        }
+
         private SaveManager _saves;
         private SaveManager _observedSaveManager;
         private ulong _observedLoadRevision;
+        private int _observedSlot;
         private Coroutine _initialization;
         private bool _started;
         private static int _restoreDepth;
         private static ulong _journalLoadRevision;
+        private static ConditionalWeakTable<SaveManager, StoryHandoff> _handoffs = new();
 
         public string SaveId => k_SaveId;
         internal static bool IsRestoring => _restoreDepth != 0;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetRuntimeState()
+        {
+            _restoreDepth = 0;
+            _journalLoadRevision = 0;
+            _handoffs = new ConditionalWeakTable<SaveManager, StoryHandoff>();
+        }
 
         private void OnEnable()
         {
             UseGameSlots(questJournal);
             UseGameSlots(dialogueSystemSaver);
-            if (_started) { Register(); }
+            if (_started && GameManager.Saves?.IsApplyingLoad != true) { Register(); }
             else { _initialization = StartCoroutine(RegisterAfterJournalStartup()); }
         }
 
@@ -61,20 +81,41 @@ namespace Game.Runtime
         private void Register()
         {
             SaveManager saves = GameManager.Saves;
-            if (saves == null || _saves == saves || (questJournal == null && dialogueSystemSaver == null)) { return; }
+            if (saves == null || _saves == saves || saves.IsApplyingLoad
+                || (questJournal == null && dialogueSystemSaver == null)) { return; }
 
             saves.Register(this);
             _saves = saves;
             saves.Loaded += ObserveLoad;
-            if (_observedSaveManager != saves || _observedLoadRevision != saves.LoadRevision)
+            bool restoreLoadedSlot = !ObservesStory(saves) && saves.LastLoadedSlot != null;
+            ObserveLoad(saves.ActiveSlotIndex);
+            if (_handoffs.TryGetValue(saves, out StoryHandoff handoff) && MatchesStory(handoff, saves))
             {
-                ObserveLoad(saves.ActiveSlotIndex);
-                if (saves.LastLoadedSlot != null)
+                bool restoreJournal = NeedsRestore(questJournal, handoff.journal, restoreLoadedSlot);
+                bool restoreDialogue = NeedsRestore(dialogueSystemSaver, handoff.dialogue, restoreLoadedSlot);
+                if (restoreJournal || restoreDialogue)
                 {
-                    saves.LastLoadedSlot.entries.TryGetValue(SaveId, out object data);
-                    Restore(ReadSnapshot(data));
+                    Snapshot loaded = restoreLoadedSlot ? ReadLoadedSnapshot(saves) : null;
+                    Restore(new Snapshot
+                    {
+                        questJournal = handoff.journal != null ? handoff.snapshot.questJournal : loaded?.questJournal,
+                        dialogue = handoff.dialogue != null ? handoff.snapshot.dialogue : loaded?.dialogue,
+                    }, restoreJournal, restoreDialogue);
                 }
             }
+            else if (restoreLoadedSlot) { Restore(ReadLoadedSnapshot(saves)); }
+        }
+
+        private static bool NeedsRestore<T>(T target, WeakReference<T> previous, bool restoreLoadedSlot) where T : UnityEngine.Object
+        {
+            return target != null && (previous == null ? restoreLoadedSlot
+                : !previous.TryGetTarget(out T prior) || !ReferenceEquals(target, prior));
+        }
+
+        private static Snapshot ReadLoadedSnapshot(SaveManager saves)
+        {
+            saves.LastLoadedSlot.entries.TryGetValue(k_SaveId, out object data);
+            return ReadSnapshot(data);
         }
 
         private void ObserveLoad(int _)
@@ -82,7 +123,17 @@ namespace Game.Runtime
             if (_saves == null) { return; }
             _observedSaveManager = _saves;
             _observedLoadRevision = _saves.LoadRevision;
+            _observedSlot = StorySlot(_saves);
         }
+
+        // 保存先だけの変更は、現在再生しているストーリーの読込とは異なる。
+        private static int StorySlot(SaveManager saves) => saves.LastLoadedSlot?.slotIndex ?? saves.ActiveSlotIndex;
+
+        private bool ObservesStory(SaveManager saves) => _observedSaveManager == saves
+            && _observedLoadRevision == saves.LoadRevision && _observedSlot == StorySlot(saves);
+
+        private static bool MatchesStory(StoryHandoff handoff, SaveManager saves) => handoff.revision == saves.LoadRevision
+            && handoff.slot == StorySlot(saves);
 
         private void OnDisable()
         {
@@ -92,9 +143,36 @@ namespace Game.Runtime
                 _initialization = null;
             }
             if (_saves == null) { return; }
-            _saves.Loaded -= ObserveLoad;
-            _saves.Unregister(this);
-            _saves = null;
+            SaveManager saves = _saves;
+            try { RememberLiveStory(saves); }
+            finally
+            {
+                saves.Loaded -= ObserveLoad;
+                saves.Unregister(this);
+                _saves = null;
+            }
+        }
+
+        private void RememberLiveStory(SaveManager saves)
+        {
+            if (GameManager.Saves != saves || IsRestoring || saves.IsApplyingLoad || !ObservesStory(saves)) { return; }
+            Snapshot live = CaptureSnapshot();
+            if (!_handoffs.TryGetValue(saves, out StoryHandoff handoff) || !MatchesStory(handoff, saves))
+            {
+                _handoffs.Remove(saves);
+                handoff = new StoryHandoff { revision = saves.LoadRevision, slot = StorySlot(saves) };
+                _handoffs.Add(saves, handoff);
+            }
+            if (questJournal != null)
+            {
+                handoff.snapshot.questJournal = live.questJournal;
+                handoff.journal = new WeakReference<QuestJournal>(questJournal);
+            }
+            if (dialogueSystemSaver != null)
+            {
+                handoff.snapshot.dialogue = live.dialogue;
+                handoff.dialogue = new WeakReference<DialogueSystemSaver>(dialogueSystemSaver);
+            }
         }
 
         private static void UseGameSlots(Saver saver)
@@ -104,12 +182,14 @@ namespace Game.Runtime
             SaveSystem.UnregisterSaver(saver);
         }
 
-        object ISaveable.Serialize() => JsonUtility.ToJson(new Snapshot
+        object ISaveable.Serialize() => JsonUtility.ToJson(CaptureSnapshot());
+
+        private Snapshot CaptureSnapshot() => new Snapshot
         {
             version = k_Version,
             questJournal = questJournal != null ? questJournal.RecordData() : null,
             dialogue = dialogueSystemSaver != null ? dialogueSystemSaver.RecordData() : null,
-        });
+        };
 
         void ISaveable.Deserialize(object data) => Restore(ReadSnapshot(data));
 
@@ -129,13 +209,13 @@ namespace Game.Runtime
             }
         }
 
-        private void Restore(Snapshot snapshot)
+        private void Restore(Snapshot snapshot, bool restoreJournal = true, bool restoreDialogue = true)
         {
             _restoreDepth++;
             try
             {
                 // クエストの条件や UI が復元中に参照する Lua 状態を先に戻す。
-                if (dialogueSystemSaver != null)
+                if (restoreDialogue && dialogueSystemSaver != null)
                 {
                     if (string.IsNullOrEmpty(snapshot?.dialogue)) { dialogueSystemSaver.OnRestartGame(); }
                     else
@@ -144,7 +224,7 @@ namespace Game.Runtime
                         dialogueSystemSaver.ApplyData(snapshot.dialogue);
                     }
                 }
-                if (questJournal == null) { return; }
+                if (!restoreJournal || questJournal == null) { return; }
                 if (string.IsNullOrEmpty(snapshot?.questJournal))
                 {
                     // ベンダーはフレーム末尾に実行する初期化にもこの状態を引き継ぐ。

@@ -147,7 +147,19 @@ namespace Game.Core
             }
             else
             {
-                return;
+                throw new ArgumentException("フラグの保存データの形式が不正です。", nameof(data));
+            }
+
+            if (saveData == null)
+            {
+                throw new ArgumentException("フラグの保存データを読み取れません。", nameof(data));
+            }
+            if (saveData.mapLocalFlags != null)
+            {
+                foreach (Dictionary<string, bool> flags in saveData.mapLocalFlags.Values)
+                {
+                    if (flags == null) { throw new ArgumentException("マップのフラグデータの形式が不正です。", nameof(data)); }
+                }
             }
 
             _globalFlags.Clear();
@@ -168,7 +180,8 @@ namespace Game.Core
                 }
             }
 
-            _currentMapId = saveData.currentMapId;
+            _currentMapId = null;
+            SwitchMap(saveData.currentMapId);
         }
     }
 }

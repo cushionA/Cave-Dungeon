@@ -165,6 +165,7 @@ namespace Game.Core
                 return;
             }
 
+            NextPlaythrough.Dispose();
             foreach (IGameSubManager mgr in _subManagers)
             {
                 mgr.Dispose();

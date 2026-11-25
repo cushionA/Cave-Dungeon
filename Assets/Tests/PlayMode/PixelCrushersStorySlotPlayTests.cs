@@ -26,6 +26,7 @@ namespace Game.Tests.PlayMode
         private ScriptableObject _messageAction;
         private ScriptableObject _dialogueDatabase;
         private Component _journal;
+        private Component _dialogueSaver;
         private Behaviour _bridge;
         private string _directory;
         private Scene _room;
@@ -161,6 +162,125 @@ namespace Game.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator VendorStory_WhenReplacingBridgeAfterLoad_PreservesLiveQuestAndLuaUntilAnotherLoad()
+        {
+            TestSceneHelper.Cleanup();
+            yield return null;
+            TestSceneHelper.CreateGameManager();
+            CreateVendorStory();
+            yield return null;
+            yield return null;
+
+            SaveManager saves = GameManager.Saves;
+            SetChoice("first slot checkpoint");
+            SaveSlotData checkpoint = saves.Save(0);
+            SetChoice("second slot checkpoint");
+            Assert.IsTrue(saves.Save(1).entries.ContainsKey(k_StoryKey));
+            Assert.IsTrue(saves.Load(0));
+            yield return null;
+            yield return null;
+            yield return null;
+            Assert.That(QuestState(), Is.EqualTo("WaitingToStart"));
+            Assert.That(Choice(), Is.EqualTo("first slot checkpoint"));
+
+            SetChoice("live progress after load");
+            ulong revision = saves.LoadRevision;
+            _bridge.enabled = false;
+            Object.Destroy(_bridge);
+            yield return null;
+            Assert.IsFalse(saves.Save(2).entries.ContainsKey(k_StoryKey));
+            CompleteQuest();
+            SetChoice("live progress while detached");
+
+            saves.SetActiveSlot(1);
+            GameObject replacement = new GameObject("Replacement story bridge");
+            replacement.SetActive(false);
+            replacement.transform.SetParent(_story.transform, false);
+            _bridge = CreateBridge(replacement);
+            replacement.SetActive(true);
+            yield return null;
+            yield return null;
+
+            Assert.AreEqual(1, saves.ActiveSlotIndex);
+            Assert.AreEqual(revision, saves.LoadRevision);
+            Assert.AreSame(checkpoint, saves.LastLoadedSlot);
+            Assert.IsTrue(saves.Save(2).entries.ContainsKey(k_StoryKey), "The replacement bridge registered with the existing save manager.");
+            Assert.That(QuestState(), Is.EqualTo("Successful"));
+            Assert.That(Choice(), Is.EqualTo("live progress while detached"));
+
+            Component originalJournal = _journal;
+            _bridge.enabled = false;
+            DestroyVendorStory();
+            yield return null;
+            yield return null;
+            Assert.IsTrue(originalJournal == null);
+            CreateVendorStory();
+            yield return null;
+            yield return null;
+            yield return null;
+            Assert.AreEqual(revision, saves.LoadRevision);
+            Assert.AreSame(checkpoint, saves.LastLoadedSlot);
+            Assert.That(QuestState(), Is.EqualTo("Successful"));
+            Assert.That(Choice(), Is.EqualTo("live progress while detached"));
+
+            Assert.IsTrue(saves.Load(1));
+            Assert.That(QuestState(), Is.EqualTo("WaitingToStart"));
+            Assert.That(Choice(), Is.EqualTo("second slot checkpoint"));
+            Assert.IsFalse(GameManager.ExpeditionAid.IsUnlocked(k_Species));
+        }
+
+        [UnityTest]
+        public IEnumerator VendorStory_WhenDiskSlotLoadsBeforeColdStartup_RestoresQuestAndLua()
+        {
+            TestSceneHelper.Cleanup();
+            yield return null;
+            TestSceneHelper.CreateGameManager();
+            CreateVendorStory();
+            yield return null;
+            yield return null;
+
+            SaveManager originalSaves = GameManager.Saves;
+            Assert.IsTrue(originalSaves.Save(1).entries.ContainsKey(k_StoryKey));
+            Assert.IsTrue(originalSaves.Load(1));
+            yield return null;
+            yield return null;
+            yield return null;
+            CompleteQuest();
+            SetChoice("disk progress");
+            _directory = Path.Combine(Path.GetTempPath(), "PixelCrushersStorySlot-" + Guid.NewGuid().ToString("N"));
+            SaveDataStore disk = new SaveDataStore(_directory);
+            Assert.IsTrue(disk.TryWriteToDisk(originalSaves.Save(1)));
+            ulong previousRevision = originalSaves.LoadRevision;
+            SetChoice("unsaved in the old world");
+            _bridge.enabled = false;
+            DestroyVendorStory();
+            TestSceneHelper.Cleanup();
+            yield return null;
+            yield return null;
+
+            TestSceneHelper.CreateGameManager();
+            SaveManager coldSaves = GameManager.Saves;
+            Assert.AreNotSame(originalSaves, coldSaves);
+            Assert.IsFalse(coldSaves.Save(0).entries.ContainsKey(k_StoryKey));
+            SaveSlotData saved = disk.ReadFromDisk(1);
+            Assert.IsNotNull(saved);
+            Assert.IsTrue(saved.entries.ContainsKey(k_StoryKey));
+            coldSaves.SetSlotData(1, saved);
+            Assert.IsTrue(coldSaves.Load(1));
+            Assert.AreEqual(previousRevision, coldSaves.LoadRevision);
+            Assert.AreSame(saved, coldSaves.LastLoadedSlot);
+
+            CreateVendorStory();
+            yield return null;
+            yield return null;
+            yield return null;
+            Assert.IsTrue(coldSaves.Save(2).entries.ContainsKey(k_StoryKey));
+            Assert.That(QuestState(), Is.EqualTo("Successful"));
+            Assert.That(Choice(), Is.EqualTo("disk progress"));
+            Assert.IsTrue(GameManager.ExpeditionAid.IsUnlocked(k_Species));
+        }
+
+        [UnityTest]
         public IEnumerator VendorStory_WhenUnloadingDuringJournalRestore_ReleasesVendorLoadingState()
         {
             TestSceneHelper.Cleanup();
@@ -233,12 +353,17 @@ namespace Game.Tests.PlayMode
             ((IList)databaseType.GetField("variables").GetValue(_dialogueDatabase)).Add(defaultChoice);
             controllerType.GetField("initialDatabase").SetValue(controller, _dialogueDatabase);
             controllerType.GetField("dontDestroyOnLoad").SetValue(controller, false);
-            Component dialogueSaver = _story.AddComponent(FindType("PixelCrushers.DialogueSystem.DialogueSystemSaver"));
-
-            _bridge = (Behaviour)_story.AddComponent(FindType("Game.Runtime.PixelCrushersSaveSlotBridge"));
-            SetPrivateField(_bridge, "questJournal", _journal);
-            SetPrivateField(_bridge, "dialogueSystemSaver", dialogueSaver);
+            _dialogueSaver = _story.AddComponent(FindType("PixelCrushers.DialogueSystem.DialogueSystemSaver"));
+            _bridge = CreateBridge(_story);
             _story.SetActive(true);
+        }
+
+        private Behaviour CreateBridge(GameObject host)
+        {
+            Behaviour bridge = (Behaviour)host.AddComponent(FindType("Game.Runtime.PixelCrushersSaveSlotBridge"));
+            SetPrivateField(bridge, "questJournal", _journal);
+            SetPrivateField(bridge, "dialogueSystemSaver", _dialogueSaver);
+            return bridge;
         }
 
         private object ReadQuest()
@@ -283,6 +408,15 @@ namespace Game.Tests.PlayMode
             throw new InvalidOperationException(name);
         }
 
+        private void DestroyVendorStory()
+        {
+            Object.Destroy(_story);
+            Object.Destroy(_serializer);
+            Object.Destroy(_questAsset);
+            Object.Destroy(_messageAction);
+            Object.Destroy(_dialogueDatabase);
+        }
+
         [UnityTearDown]
         public IEnumerator TearDown()
         {
@@ -291,11 +425,7 @@ namespace Game.Tests.PlayMode
             yield return null;
             yield return null;
             if (_room.isLoaded) { yield return SceneManager.UnloadSceneAsync(_room); }
-            Object.Destroy(_story);
-            Object.Destroy(_serializer);
-            Object.Destroy(_questAsset);
-            Object.Destroy(_messageAction);
-            Object.Destroy(_dialogueDatabase);
+            DestroyVendorStory();
             TestSceneHelper.Cleanup();
             yield return null;
             if (Directory.Exists(_directory)) { Directory.Delete(_directory, recursive: true); }
