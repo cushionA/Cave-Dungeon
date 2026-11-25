@@ -265,6 +265,46 @@ namespace Game.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator NormalDeployment_WhenFollowDistanceIsInvalid_WarnsOnceAndResumesAfterCorrection()
+        {
+            const string warning = "[ExpeditionSummonDeployment3D] 追従距離には0.1以上の有限値を設定してください。";
+            Assert.That(_squad.TryConfirm(new[] { new ExpeditionSquad.Selection("scout", 1) }), Is.True);
+            CharacterActor3D knight = CreateCharacter("Knight", new Vector3(-2.5f, 0.04f, 5f), CharacterFeature.Player);
+            knight.gameObject.SetActive(true);
+            Configure(leader: knight);
+            SetSerializedField(_deployment, "followDistance", 0f);
+            Assert.That(_deployment.TryDeployConfirmed(), Is.True);
+            _deployment.CopyActiveSummons(_summons);
+            ActorRef identity = _summons[0].Actor;
+            CharacterActor3D scout = GetUnit(identity);
+            float spawnZ = scout.transform.position.z;
+
+            int warnings = 0;
+            void CountWarning(string message, string stackTrace, LogType type)
+            {
+                if (type == LogType.Warning && message == warning) { warnings++; }
+            }
+
+            Application.logMessageReceived += CountWarning;
+            try
+            {
+                LogAssert.Expect(LogType.Warning, warning);
+                for (int i = 0; i < 5; i++) { yield return new WaitForFixedUpdate(); }
+                SetSerializedField(_deployment, "followDistance", float.NaN);
+                for (int i = 0; i < 5; i++) { yield return new WaitForFixedUpdate(); }
+
+                Assert.That(warnings, Is.EqualTo(1));
+                Assert.That(scout.transform.position.z, Is.EqualTo(spawnZ).Within(0.05f));
+
+                SetSerializedField(_deployment, "followDistance", 2.2f);
+                for (int i = 0; i < 18; i++) { yield return new WaitForFixedUpdate(); }
+                Assert.That(scout.transform.position.z, Is.GreaterThan(spawnZ + 0.5f));
+                Assert.That(scout.Actor, Is.EqualTo(identity));
+            }
+            finally { Application.logMessageReceived -= CountWarning; }
+        }
+
+        [UnityTest]
         public IEnumerator NormalDeployment_WhenEncounterStopsDriving_ResumesOnlyNormalFollow()
         {
             Assert.That(_squad.TryConfirm(new[] { new ExpeditionSquad.Selection("scout", 1) }), Is.True);

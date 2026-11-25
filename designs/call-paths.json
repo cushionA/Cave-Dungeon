@@ -6690,14 +6690,14 @@
         "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs",
         "Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs"
       ],
-      "notes": "作者が種ID、3Dプレハブ、出現位置と追従先を設定し、シスターから確定済み通常編成を呼ぶ。同種を別々の世代として登録し、配置不可や途中離脱では出撃全体を巻き戻す。会話から出撃した工兵が通常探索で騎士に追いつき、出撃時の登録世代を保つ。移動を妨げる状態では停止し、集団戦が移動を担当する間は戦闘側に従う。本編のシスターと出撃イベントは制作時に指定する。複雑な地形の迂回には経路探索の接続が残る。集団戦の開始・終了を両方の固定更新の間に起こし、呼び出し順を入れ替えても実際の移動量が1ステップ分になることを確認した。 Unity 6000.6.8f1でExpeditionSummonDeployment3DPlayTests 9件、ExpeditionQuest3DScenePlayTests 1件が成功。",
+      "notes": "作者が種ID、3Dプレハブ、出現位置と追従先を設定し、シスターから確定済み通常編成を呼ぶ。同種を別々の世代として登録し、配置不可や途中離脱では出撃全体を巻き戻す。会話から出撃した工兵が通常探索で騎士に追いつき、出撃時の登録世代を保つ。移動を妨げる状態では停止し、集団戦が移動を担当する間は戦闘側に従う。本編のシスターと出撃イベントは制作時に指定する。複雑な地形の迂回には経路探索の接続が残る。集団戦の開始・終了を両方の固定更新の間に起こし、呼び出し順を入れ替えても実際の移動量が1ステップ分になることを確認した。無効な追従距離は一度だけ警告し、設定を直すと同じ個体で追従を再開する。 Unity 6000.6.8f1でExpeditionSummonDeployment3DPlayTests 10件、ExpeditionQuest3DScenePlayTests 1件が成功。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs": "430290f3edbd001cf162d7b5a95e38b40164920d4efac503c90b9e8792bfa0c5",
+        "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs": "925a180de4d2ab5b1311e3c321174c75be81b3e136d7b8a128c95f534c9eca61",
         "Assets/MyAsset/Runtime/AI/ExpeditionSquadManager.cs": "90e5ff7eedd078988d7ef8a4e198833ca68bc752c1bd7e188440b6dd8f02fabc",
         "Assets/MyAsset/Core/AI/Summon/ExpeditionSquad.cs": "caf061ce01c920367b375a2c9f88b0b1063f0d7eddf1f72e1a81c7a3b372108b",
         "Assets/MyAsset/Runtime/Character/CharacterActor3D.cs": "1fa4a7e8ce37958ab5f012fbefd7a94697a95cb547aad5ead44487714999ee9e",
         "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "62aff5220af3abd0aaacf2438529b838423e3a271a14278cebbe6f66ff5661f3",
-        "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "fde1c441001ed2d6d273aff09e63487c449da35dcebb7c85e27749a10895f2a1",
+        "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "69ab03bb51b4c47ff36365d3b504658dfabd4b4724d679b8ff3ed74682e7d5d3",
         "Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs": "8e81abfc246fc09b6c15a0ad48a8d790cd00fda9689b75a3577ba935a0a00fb3",
         "Assets/MyAsset/Runtime/World/EncounterSession3D.cs": "d663fd2019ed396ff198b2dda383c462f98ee9a7c5b2fe6938830c6c9b8547cc",
         "Assets/MyAsset/Runtime/AI/CompanionTactics3D.cs": "d1475213988600ab17cf762b335713e6b383005715983ed30f5c75618e18923b",
@@ -6763,14 +6763,14 @@
       "verification_hashes": {
         "Assets/MyAsset/Core/AI/Summon/ExpeditionSquad.cs": "caf061ce01c920367b375a2c9f88b0b1063f0d7eddf1f72e1a81c7a3b372108b",
         "Assets/MyAsset/Core/Save/SaveManager.cs": "d2cf21fd6eb0896dff176adf62833676fd7768838f83dce74a4b51d5f3bf1fb1",
-        "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs": "430290f3edbd001cf162d7b5a95e38b40164920d4efac503c90b9e8792bfa0c5",
+        "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs": "925a180de4d2ab5b1311e3c321174c75be81b3e136d7b8a128c95f534c9eca61",
         "Assets/MyAsset/Runtime/World/EncounterGoal3D.cs": "3f7b3ee5b087cb1e2d920af2a59c892d318442c15558c66ad1c8cc5b1b1cb4d6",
         "Assets/MyAsset/Runtime/World/EncounterSession3D.cs": "d663fd2019ed396ff198b2dda383c462f98ee9a7c5b2fe6938830c6c9b8547cc",
         "Assets/MyAsset/Runtime/World/ExpeditionEncounterBudget3D.cs": "2ccee45db1772aa58caca3682fb637e55e376839a9b1a44562c886f6221d2caf",
         "Assets/Tests/PlayMode/EncounterGoal3DPlayTests.cs": "c317ef80bdf81aae6ced10ac3afdf1fdca0c883ba32f4ee7b6d2bc5bc0975210",
         "Assets/Tests/PlayMode/ExpeditionEncounterBudget3DPlayTests.cs": "07e34820c14f65a227d65009a7c9579db2c2584500790476227cc5803044eae6",
         "Assets/Tests/PlayMode/ExpeditionSquadPanelPlayTests.cs": "457ba552eb0c688c182d3e32bedc199e6c4e3073e353ff00040d0a8655449bf1",
-        "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "fde1c441001ed2d6d273aff09e63487c449da35dcebb7c85e27749a10895f2a1"
+        "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "69ab03bb51b4c47ff36365d3b504658dfabd4b4724d679b8ff3ed74682e7d5d3"
       }
     }
   },
@@ -8049,7 +8049,7 @@
         "Assets/Integration/QuestMachineBridge.cs": "4a6a0c8bf0552fc2c2c4a0fa8caeb74a6523867a5725babb06cf60fd34496a2c",
         "Assets/Integration/ExpeditionDialogueActions.cs": "fe961a583bcac3238a3ffaa8a71ee208fd937a5818ce8a168cd85b88cab2d1cc",
         "Assets/MyAsset/Runtime/UI/ExpeditionSquadPanel.cs": "b44a5d9a22ccad211b84d9732ca54c9ae0c26f9715c2efc3e1160a5287cf0b46",
-        "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs": "430290f3edbd001cf162d7b5a95e38b40164920d4efac503c90b9e8792bfa0c5",
+        "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs": "925a180de4d2ab5b1311e3c321174c75be81b3e136d7b8a128c95f534c9eca61",
         "Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs": "8e81abfc246fc09b6c15a0ad48a8d790cd00fda9689b75a3577ba935a0a00fb3",
         "Assets/Tests/PlayMode/PlayerInteractionInput3DPlayTests.cs": "89d6747b2a310f761852b268cde72cf641e95edfdedd5060b87b9ea09e40f473",
         "Assets/Tests/PlayMode/ExpeditionDialogueActionsPlayTests.cs": "b309c9c1faab414324a77a398dc62702cefae98ce2ea8ce1db31c53735d31625",
@@ -8125,7 +8125,7 @@
         "Assets/MyAsset/Core/AI/Summon/ExpeditionSquad.cs": "caf061ce01c920367b375a2c9f88b0b1063f0d7eddf1f72e1a81c7a3b372108b",
         "Assets/MyAsset/Core/Save/SaveManager.cs": "d2cf21fd6eb0896dff176adf62833676fd7768838f83dce74a4b51d5f3bf1fb1",
         "Assets/MyAsset/Runtime/AI/ExpeditionSquadManager.cs": "90e5ff7eedd078988d7ef8a4e198833ca68bc752c1bd7e188440b6dd8f02fabc",
-        "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs": "430290f3edbd001cf162d7b5a95e38b40164920d4efac503c90b9e8792bfa0c5",
+        "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs": "925a180de4d2ab5b1311e3c321174c75be81b3e136d7b8a128c95f534c9eca61",
         "Assets/MyAsset/Runtime/UI/ExpeditionSquadPanel.cs": "b44a5d9a22ccad211b84d9732ca54c9ae0c26f9715c2efc3e1160a5287cf0b46",
         "Assets/MyAsset/Runtime/World/EncounterSession3D.cs": "d663fd2019ed396ff198b2dda383c462f98ee9a7c5b2fe6938830c6c9b8547cc",
         "Assets/MyAsset/Runtime/World/ExpeditionEncounterBudget3D.cs": "2ccee45db1772aa58caca3682fb637e55e376839a9b1a44562c886f6221d2caf",
@@ -8588,7 +8588,7 @@
         "Assets/Tests/PlayMode/ExpeditionEvent3DScenePlayTests.cs": "e20e230070f2445105af43901bf8cbb00354f11b4e0bedd013028adf77f122b3",
         "Assets/Tests/PlayMode/ExpeditionLoadoutPanel3DPlayTests.cs": "6ac934499a8195931129a1d9ba028f26eb5caf0840ac21749bc6b20ccc5f945b",
         "Assets/Tests/PlayMode/PlayerProgression3DPlayTests.cs": "c36ff8b5e3014a89ec64fa841f0ae2cadffe08030dccb06b594efde9f2fc7107",
-        "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs": "430290f3edbd001cf162d7b5a95e38b40164920d4efac503c90b9e8792bfa0c5"
+        "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs": "925a180de4d2ab5b1311e3c321174c75be81b3e136d7b8a128c95f534c9eca61"
       }
     }
   },

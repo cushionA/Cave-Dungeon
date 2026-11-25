@@ -13,6 +13,8 @@ namespace Game.Runtime
     [RequireComponent(typeof(CharacterActor3D))]
     public sealed class ExpeditionSummonDeployment3D : MonoBehaviour
     {
+        private const float k_MinFollowDistance = 0.1f;
+
         [Serializable]
         public struct SpeciesPrefab
         {
@@ -66,7 +68,7 @@ namespace Game.Runtime
         [SerializeField] private LayerMask obstructionLayers = Physics.DefaultRaycastLayers;
         [SerializeField] private EncounterCombat3D encounter;
         [SerializeField] private CharacterActor3D explorationLeader;
-        [SerializeField, Min(0.1f)] private float followDistance = 2.2f;
+        [SerializeField, Min(k_MinFollowDistance)] private float followDistance = 2.2f;
 
         private readonly Collider[] _overlap = new Collider[1];
         private CharacterActor3D _sister;
@@ -74,6 +76,7 @@ namespace Game.Runtime
         private Deployment _reinforcements;
         private object _pendingReinforcementAttempt;
         private bool _changing;
+        private bool _warnedInvalidFollowDistance;
         private uint _revision;
 
         public int ActiveCount => CountLiveSummons(_normal) + CountLiveSummons(_reinforcements);
@@ -82,10 +85,11 @@ namespace Game.Runtime
 
         private void FixedUpdate()
         {
+            // 増援の移動は指定遭遇が担当し、通常編成が探索に同行する。
             Deployment group = _normal;
             GameActionRuntime actions = GameManager.Actions;
             if (_changing || group == null || explorationLeader == null || actions == null
-                || !float.IsFinite(followDistance) || followDistance < 0f) { return; }
+                || !HasValidFollowDistance()) { return; }
 
             CharacterActor3D leader = IsExplorationLeaderAvailable() ? explorationLeader : null;
             for (int i = 0; ReferenceEquals(group, _normal) && i < group.units.Count; i++)
@@ -101,6 +105,17 @@ namespace Game.Runtime
                 Vector3 direction = blocked ? Vector3.zero : CompanionTactics3D.FollowDirection(actor, leader, followDistance);
                 actor.Motor.SimulateFixedStep(direction, false, Time.fixedDeltaTime);
             }
+        }
+
+        private bool HasValidFollowDistance()
+        {
+            if (float.IsFinite(followDistance) && followDistance >= k_MinFollowDistance) { return true; }
+            if (!_warnedInvalidFollowDistance)
+            {
+                _warnedInvalidFollowDistance = true;
+                Debug.LogWarning("[ExpeditionSummonDeployment3D] 追従距離には0.1以上の有限値を設定してください。", this);
+            }
+            return false;
         }
 
         private bool IsExplorationLeaderAvailable()
