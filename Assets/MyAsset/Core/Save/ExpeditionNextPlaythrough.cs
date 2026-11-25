@@ -108,7 +108,8 @@ namespace Game.Core
             try
             {
                 SaveSlotData saved = store.ReadFromDisk(slot);
-                if (saved == null || saved.slotIndex != slot || !saved.entries.TryGetValue(SaveId, out object data)
+                if (saved == null || saved.slotIndex != slot || saved.entries.ContainsKey(ExpeditionCheckpoint.k_SaveId)
+                    || !saved.entries.TryGetValue(SaveId, out object data)
                     || !string.Equals(ReadProgress(data)?.startScenePath, expectedStartScenePath, StringComparison.Ordinal)
                     || !saved.entries.TryGetValue(_playthrough.SaveId, out object cycle))
                 {

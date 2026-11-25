@@ -121,6 +121,27 @@ namespace Game.Core
             return slotData;
         }
 
+        /// <summary>キャプチャ済みのデータをディスクへ書き込み、成功した時点でスロットに反映する。</summary>
+        internal bool TryWriteSlot(int slotIndex, SaveSlotData slotData, SaveDataStore store)
+        {
+            if (_operation != Operation.None || !IsValidSlot(slotIndex) || slotData?.entries == null
+                || slotData.slotIndex != slotIndex || store == null) { return false; }
+
+            _operation = Operation.Capturing;
+            try
+            {
+                if (!store.TryWriteToDisk(slotData)) { return false; }
+                _slots[slotIndex] = slotData;
+                return true;
+            }
+            catch (Exception exception)
+            {
+                LogFailure("セーブの書き込みに失敗しました", slotIndex, exception);
+                return false;
+            }
+            finally { _operation = Operation.None; }
+        }
+
         /// <summary>スロットを更新せずに状態を取得する。次周用では周回ごとの項目を除く。</summary>
         internal SaveSlotData CaptureSlot(int slotIndex, bool forNextPlaythrough = false)
         {
