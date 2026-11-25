@@ -110,12 +110,17 @@ namespace Game.Core
                 SaveSlotData saved = store.ReadFromDisk(slot);
                 if (saved == null || saved.slotIndex != slot || !saved.entries.TryGetValue(SaveId, out object data)
                     || !string.Equals(ReadProgress(data)?.startScenePath, expectedStartScenePath, StringComparison.Ordinal)
-                    || !saved.entries.TryGetValue(_playthrough.SaveId, out object cycle) || ExpeditionPlaythrough.ReadCycle(cycle) < 2)
+                    || !saved.entries.TryGetValue(_playthrough.SaveId, out object cycle))
                 {
                     return false;
                 }
+                if (!ExpeditionPlaythrough.TryReadCycle(cycle, out int cycleNumber))
+                {
+                    Debug.LogError($"[ExpeditionNextPlaythrough] 保存した周回番号が無効です (slot={slot})。");
+                    return false;
+                }
 
-                return !_disposed && _saves.TryLoadSlot(slot, saved);
+                return cycleNumber >= 2 && !_disposed && _saves.TryLoadSlot(slot, saved);
             }
             finally { _committing = false; }
         }

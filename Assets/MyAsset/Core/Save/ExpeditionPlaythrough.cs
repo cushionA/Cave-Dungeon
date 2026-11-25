@@ -1,10 +1,13 @@
+using System;
+using System.Globalization;
 using System.Threading;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Game.Core
 {
     /// <summary>正式に開始した周回番号をセーブスロットごとに保持する。</summary>
-    public sealed class ExpeditionPlaythrough : ISaveableWithMissingEntry, ISaveableWithLoadRollback
+    public sealed class ExpeditionPlaythrough : ISaveableWithMissingEntry, ISaveableWithLoadRollback, ISaveableLoadPreflight
     {
         private const int k_FirstCycle = 1;
         private CycleState _cycle = new CycleState(k_FirstCycle);
@@ -23,21 +26,31 @@ namespace Game.Core
 
         object ISaveable.Serialize() => CycleNumber;
 
-        void ISaveable.Deserialize(object data) => Volatile.Write(ref _cycle, new CycleState(ReadCycle(data)));
+        void ISaveable.Deserialize(object data) => Volatile.Write(ref _cycle, new CycleState(RequireCycle(data)));
+
+        void ISaveableLoadPreflight.ValidateLoad(object data) => RequireCycle(data);
 
         object ISaveableWithLoadRollback.CaptureLoadRollback() => CurrentCycle;
 
         void ISaveableWithLoadRollback.RestoreLoadRollback(object snapshot) => Volatile.Write(ref _cycle, (CycleState)snapshot);
 
-        internal static int ReadCycle(object data)
+        private static int RequireCycle(object data) => TryReadCycle(data, out int cycle)
+            ? cycle : throw new FormatException("ExpeditionPlaythrough の周回番号が無効です。");
+
+        internal static bool TryReadCycle(object data, out int cycle)
         {
-            if (data is JValue value && value.Type == JTokenType.Integer) { data = value.Value; }
-            return data switch
+            if (data is JValue value && value.Type == JTokenType.Integer)
+            {
+                return int.TryParse(value.ToString(Formatting.None), NumberStyles.None, CultureInfo.InvariantCulture, out cycle)
+                    && cycle >= k_FirstCycle;
+            }
+            cycle = data switch
             {
                 int number when number >= k_FirstCycle => number,
                 long number when number >= k_FirstCycle && number <= int.MaxValue => (int)number,
-                _ => k_FirstCycle,
+                _ => 0,
             };
+            return cycle >= k_FirstCycle;
         }
 
         void ISaveableWithMissingEntry.RestoreMissingEntry() => Volatile.Write(ref _cycle, new CycleState(k_FirstCycle));

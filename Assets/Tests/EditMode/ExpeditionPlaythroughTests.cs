@@ -1,13 +1,19 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Game.Core;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace Game.Tests.EditMode
 {
     public sealed class ExpeditionPlaythroughTests
     {
+        private const string k_InvalidCycleLogPattern = @"\[SaveManager\].*スロットの事前検証に失敗しました.*周回番号";
+
         [Test]
         public void Playthrough_AdvanceOnlyWhenTheExpectedCycleMatches_DoesNotRepeatStart()
         {
@@ -24,7 +30,7 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
-        public void Playthrough_DiskRestoreKeepsEligibleAidAndSquad_AndDefaultsOlderOrMalformedSlots()
+        public void Playthrough_DiskRestoreDefaultsMissingCycleAndRejectsMalformedCycle_WithoutLosingProgress()
         {
             string temporaryDirectory = Path.Combine(Path.GetTempPath(), "ExpeditionCycle-" + Guid.NewGuid().ToString("N"));
             try
@@ -57,23 +63,72 @@ namespace Game.Tests.EditMode
                     restored.Saves.SetSlotData(slot, saved);
                 }
 
+                SaveSlotData current = restored.Saves.GetSlotData(0);
+                SaveSlotData rejected = restored.Saves.GetSlotData(2);
                 Assert.IsTrue(restored.Saves.Load(0));
                 Assert.AreEqual(2, restored.Playthrough.CycleNumber);
                 Assert.IsTrue(restored.ExpeditionAid.IsUnlocked("sentinel.aid"));
                 Assert.AreEqual(2, restoredSquad.ConfirmedCount);
                 Assert.AreEqual(4, restoredSquad.ConfirmedCost);
+
+                ulong revision = restored.Saves.LoadRevision;
+                int notifications = 0;
+                restored.Saves.Loaded += _ => notifications++;
+                LogAssert.Expect(LogType.Error, new Regex(k_InvalidCycleLogPattern));
+                Assert.IsFalse(restored.Saves.Load(2));
+                Assert.AreEqual(2, restored.Playthrough.CycleNumber);
+                Assert.IsTrue(restored.ExpeditionAid.IsUnlocked("sentinel.aid"));
+                Assert.AreEqual(2, restoredSquad.ConfirmedCount);
+                Assert.AreEqual(4, restoredSquad.ConfirmedCost);
+                Assert.AreEqual(0, restored.Saves.ActiveSlotIndex);
+                Assert.AreSame(current, restored.Saves.LastLoadedSlot);
+                Assert.AreSame(rejected, restored.Saves.GetSlotData(2));
+                Assert.AreEqual(revision, restored.Saves.LoadRevision);
+                Assert.AreEqual(0, notifications);
+
                 Assert.IsTrue(restored.Saves.Load(1));
                 Assert.AreEqual(1, restored.Playthrough.CycleNumber);
                 Assert.IsFalse(restored.ExpeditionAid.IsUnlocked("sentinel.aid"));
                 Assert.IsEmpty(restoredSquad.Confirmed);
-                Assert.IsTrue(restored.Saves.Load(0));
-                Assert.IsTrue(restored.Saves.Load(2));
-                Assert.AreEqual(1, restored.Playthrough.CycleNumber);
+                Assert.AreEqual(1, notifications);
             }
             finally
             {
                 if (Directory.Exists(temporaryDirectory)) { Directory.Delete(temporaryDirectory, recursive: true); }
             }
+        }
+
+        [TestCase(null)]
+        [TestCase(0)]
+        [TestCase(-1)]
+        [TestCase((long)int.MaxValue + 1)]
+        [TestCase(2.0)]
+        public void Playthrough_Load_WhenAnInvalidCycleEntryIsPresent_RejectsTheSlot(object invalidCycle)
+        {
+            using var core = new GameManagerCore();
+            Assert.IsTrue(core.Playthrough.TryBeginNextPlaythrough(1));
+            var rejected = new SaveSlotData(1);
+            rejected.entries[core.Playthrough.SaveId] = invalidCycle;
+            core.Saves.SetSlotData(1, rejected);
+
+            LogAssert.Expect(LogType.Error, new Regex(k_InvalidCycleLogPattern));
+            Assert.IsFalse(core.Saves.Load(1));
+            Assert.AreEqual(2, core.Playthrough.CycleNumber);
+            Assert.IsNull(core.Saves.LastLoadedSlot);
+        }
+
+        [TestCase(1, 1, false)]
+        [TestCase(2L, 2, false)]
+        [TestCase((long)int.MaxValue, int.MaxValue, true)]
+        public void Playthrough_Load_WhenTheCycleIsAnInRangeInteger_RestoresExactValue(object value, int expected, bool asJson)
+        {
+            using var core = new GameManagerCore();
+            var slot = new SaveSlotData(1);
+            slot.entries[core.Playthrough.SaveId] = asJson ? new JValue(value) : value;
+            core.Saves.SetSlotData(1, slot);
+
+            Assert.IsTrue(core.Saves.Load(1));
+            Assert.AreEqual(expected, core.Playthrough.CycleNumber);
         }
 
         [Test]

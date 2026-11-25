@@ -21,6 +21,8 @@ Section: 1 — MVP
 
 古いセーブや空のスロットに `FlagManager` の項目がなければ、グローバル・マップローカルの両フラグを初期化する。これにより別スロットで進めた物語や探索のフラグが混ざらない。項目が存在して型が不正な場合はロードを中止する。保存時のクリア記録は対象スロットに対応するものを使う。[セーブ管理](../../Assets/MyAsset/Core/Save/SaveManager.cs)・[フラグ保存](../../Assets/MyAsset/Core/Save/FlagManager.cs)
 
+周回番号の保存項目がない旧セーブは初周として復元する。保存項目がある場合は、1以上かつ `int` の範囲内の整数を受け付ける。値が不正な場合は他の保存項目を復元する前にロードを中止し、現在の周回とスロットを保持する。[周回番号の復元](../../Assets/MyAsset/Core/Save/ExpeditionPlaythrough.cs)
+
 ## 次の周回を始める
 
 指定したクリアイベントを `ExpeditionNextPlaythroughPanel.MarkCampaignCleared` へつなぐ。遭遇を指定する場合は `Completed` でクリアを記録する。パネルで「次の周回へ」を選んで確認すると、次周回の状態を適用し、現在のスロットへディスク保存できた時点で確定してシーンを切り替える。適用または書き込みに失敗した場合は直前の周回とクリア状態に戻る。確認後にスロットやロード状態が変わった場合は、もう一度選び直す。[パネルの実装](../../Assets/MyAsset/Runtime/UI/ExpeditionNextPlaythroughPanel.cs)

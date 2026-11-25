@@ -195,6 +195,36 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
+        public void NextPlaythrough_ColdStartWithAMalformedCycle_DoesNotReplaceTheCurrentSlot()
+        {
+            using var original = new GameManagerCore();
+            original.NextPlaythrough.MarkCleared();
+            Assert.IsTrue(original.NextPlaythrough.TryBeginNextPlaythrough(0, original.Saves.LoadRevision, 1,
+                k_StartScene, _store));
+            SaveSlotData malformed = _store.ReadFromDisk(0);
+            Assert.IsNotNull(malformed);
+            malformed.entries[original.Playthrough.SaveId] = "2";
+            Assert.IsTrue(_store.TryWriteToDisk(malformed));
+
+            using var restored = new GameManagerCore();
+            SaveSlotData otherSlot = restored.Saves.Save(1);
+            Assert.IsTrue(restored.Saves.Load(1));
+            restored.NextPlaythrough.MarkCleared();
+            ulong revision = restored.Saves.LoadRevision;
+
+            LogAssert.Expect(LogType.Error, new Regex(@"\[ExpeditionNextPlaythrough\].*周回番号が無効です"));
+            Assert.IsFalse(restored.NextPlaythrough.TryRestoreStartSlot(0, k_StartScene, _store));
+
+            Assert.AreEqual(1, restored.Playthrough.CycleNumber);
+            Assert.IsTrue(restored.NextPlaythrough.CanBeginNext);
+            Assert.IsNull(restored.NextPlaythrough.StartScenePath);
+            Assert.IsFalse(restored.Saves.HasSaveData(0));
+            Assert.AreEqual(1, restored.Saves.ActiveSlotIndex);
+            Assert.AreSame(otherSlot, restored.Saves.LastLoadedSlot);
+            Assert.AreEqual(revision, restored.Saves.LoadRevision);
+        }
+
+        [Test]
         public void NextPlaythrough_RestoresTheAuthoredStartWithCarryover_AndKeepsAnotherSlotSeparate()
         {
             using var original = new GameManagerCore();
