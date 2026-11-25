@@ -74,6 +74,95 @@ namespace Game.Tests.PlayMode
             float beforeRepeat = GameManager.Data.GetVitals(sister.Actor.Hash).currentMp;
             Assert.IsTrue(companion.TryCooperate(knight));
             Assert.AreEqual(beforeRepeat - 12f, GameManager.Data.GetVitals(sister.Actor.Hash).currentMp, 0.001f);
+
+            for (int i = 0; i < 60 && companion.IsCooperating; i++) { yield return new WaitForFixedUpdate(); }
+            int hash = sister.Actor.Hash;
+            GameManager.Data.GetVitals(hash).currentMp = 12f;
+            Assert.IsTrue(companion.TryCooperate(knight));
+            Assert.AreEqual(0f, GameManager.Data.GetVitals(hash).currentMp);
+            yield return new WaitForFixedUpdate();
+            Assert.IsTrue(GameManager.Data.GetFlags(hash).IsVanished);
+            Assert.IsTrue(companion.IsCooperating, "The final paid cast was already accepted when Sister vanished.");
+            Assert.IsFalse(companion.TryCooperate(knight));
+            for (int i = 0; i < 60 && companion.IsCooperating; i++) { yield return new WaitForFixedUpdate(); }
+            Assert.IsFalse(companion.IsCooperating);
+            Assert.IsTrue(GameManager.Data.GetFlags(hash).IsVanished);
+        }
+
+        [UnityTest]
+        public IEnumerator SisterBarrier_RoutesGuardAdjustedDamageToMp_AndReturnsAtTheSamePosition()
+        {
+            CharacterActor3D knight = Actor("Knight", Vector3.back * 2f, CharacterBelong.Ally, CharacterFeature.Player);
+            CharacterActor3D sister = Actor("Sister", Vector3.zero, CharacterBelong.Ally, CharacterFeature.Companion);
+            CharacterActor3D enemy = Actor("Enemy", Vector3.forward * 3f, CharacterBelong.Enemy, CharacterFeature.Minion);
+            CharacterActor3D ally = Actor("Ordinary ally", Vector3.right * 3f, CharacterBelong.Ally, CharacterFeature.Companion);
+            CompanionController3D companion = sister.gameObject.AddComponent<CompanionController3D>();
+            companion.ConfigureForTest(knight);
+            typeof(CompanionController3D).GetField("mpSettings", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(companion, new CompanionMpSettings
+                {
+                    baseRecoveryRate = 75f, vanishRecoveryMultiplier = 2f, returnThresholdRatio = 0.5f, maxReserveMp = 60,
+                });
+            yield return new WaitForFixedUpdate();
+
+            int hash = sister.Actor.Hash;
+            int hp = GameManager.Data.GetVitals(hash).currentHp;
+            float mp = GameManager.Data.GetVitals(hash).currentMp;
+            GameManager.Data.GetCombatStats(hash).guardStats = new GuardStats
+            {
+                guardDirection = GuardDirection.Front, slashCut = 0.5f,
+            };
+            DamageReceiver receiver = sister.GetComponent<DamageReceiver>();
+            AttackContext context = AttackContext.Capture(enemy.Actor, new ElementalStatus { slash = 20 },
+                1f, CharacterBelong.Enemy, null);
+            DamageData incoming = new DamageData { motionValue = 1f, attackElement = Element.Slash };
+            context.ApplyTo(ref incoming, sister.Actor);
+            receiver.SetGuarding(true);
+            Assert.AreEqual(GuardResult.JustGuard, receiver.ReceiveDamage3D(incoming, enemy.transform.position).guardResult);
+            Assert.AreEqual(mp, GameManager.Data.GetVitals(hash).currentMp);
+
+            GameManager.Data.GetDefenseState(hash).guardElapsedTime = GuardJudgmentLogic.k_JustGuardWindow + 0.1f;
+            GameManager.Data.GetDefenseState(hash).continuousJustGuardUntil = -1f;
+            DamageResult guarded = receiver.ReceiveDamage3D(incoming, enemy.transform.position);
+            Assert.AreEqual(GuardResult.Guarded, guarded.guardResult);
+            Assert.That(guarded.totalDamage, Is.Positive);
+            Assert.AreEqual(mp - guarded.totalDamage, GameManager.Data.GetVitals(hash).currentMp);
+            Assert.AreEqual(hp, GameManager.Data.GetVitals(hash).currentHp);
+
+            int allyHash = ally.Actor.Hash;
+            CharacterVitals allyVitals = GameManager.Data.GetVitals(allyHash);
+            context.ApplyTo(ref incoming, ally.Actor);
+            DamageResult ordinary = ally.GetComponent<DamageReceiver>().ReceiveDamage3D(incoming, enemy.transform.position);
+            Assert.Greater(ordinary.totalDamage, guarded.totalDamage);
+            Assert.AreEqual(allyVitals.currentHp - ordinary.totalDamage, GameManager.Data.GetVitals(allyHash).currentHp);
+            Assert.AreEqual(allyVitals.currentMp, GameManager.Data.GetVitals(allyHash).currentMp);
+
+            receiver.SetGuarding(false);
+            context.ApplyTo(ref incoming, sister.Actor);
+            incoming.motionValue = 20f;
+            Vector3 beforeVanish = sister.transform.position;
+            int deaths = 0;
+            void CountDeath(int defender, int _) { if (defender == hash) { deaths++; } }
+            GameManager.Events.OnCharacterDeathEvent += CountDeath;
+            DamageResult depleted = receiver.ReceiveDamage3D(incoming, enemy.transform.position);
+            GameManager.Events.OnCharacterDeathEvent -= CountDeath;
+            Assert.Greater(depleted.totalDamage, hp);
+            Assert.IsFalse(depleted.isKill);
+            Assert.AreEqual(0, deaths);
+            Assert.AreEqual(hp, GameManager.Data.GetVitals(hash).currentHp);
+            Assert.AreEqual(0f, GameManager.Data.GetVitals(hash).currentMp);
+            Assert.IsTrue(GameManager.Data.GetFlags(hash).IsVanished);
+            Assert.IsFalse(sister.Body.enabled);
+            Assert.AreEqual(0, receiver.ReceiveDamage3D(incoming, enemy.transform.position).totalDamage);
+
+            for (int i = 0; i < 30 && GameManager.Data.GetFlags(hash).IsVanished; i++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+            Assert.IsFalse(GameManager.Data.GetFlags(hash).IsVanished);
+            Assert.IsTrue(sister.Body.enabled);
+            Assert.GreaterOrEqual(GameManager.Data.GetVitals(hash).currentMp, mp * 0.5f);
+            Assert.Less(Vector3.Distance(beforeVanish, sister.transform.position), 0.07f);
         }
 
         [UnityTest]

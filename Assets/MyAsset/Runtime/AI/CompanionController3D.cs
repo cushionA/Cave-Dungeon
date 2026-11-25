@@ -51,8 +51,16 @@ namespace Game.Runtime
         public float CooperationCooldownRemaining => _cooldown.GetRemaining(Time.fixedTime);
         public IReadOnlyList<AttackInfo> AvailableAttacks => attacks;
 
-        private void Awake() => _actor = GetComponent<CharacterActor3D>();
+        private void Awake()
+        {
+            _actor = GetComponent<CharacterActor3D>();
+            GetComponent<DamageReceiver>().BindCompanion(this);
+        }
+
         private void OnDisable() => ReleaseActor();
+
+        internal CompanionMpManager GetDamageBarrier(ActorRef target) =>
+            isActiveAndEnabled && _actor.Actor == target && BindActor() ? _mp : null;
 
         public CompanionAIConfig GetAIConfig() => AIConfigurationCopy.Clone(tactics);
 
@@ -152,8 +160,6 @@ namespace Game.Runtime
 
         private void OnVanish()
         {
-            _tactics.Stop();
-            CancelCast();
             _vanishPresentation = true;
             _bodyBeforeVanish = _actor.Body.enabled;
             _actor.Body.enabled = false;
@@ -162,6 +168,8 @@ namespace Game.Runtime
                 _presentationBeforeVanish = presentation.activeSelf;
                 presentation.SetActive(false);
             }
+            // 受理済みの魔法・連携は共有実行に任せ、保持入力だけを解除する。
+            _actions.ReleaseHeldInputs(_owner.Hash);
         }
 
         private void RestorePresentation()

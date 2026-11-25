@@ -151,15 +151,17 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(ActState.Neutral, flags.ActState);
         }
 
-        [Test]
-        public void HitResolver_ActionBlockingStatus_DisablesGuardWithoutConsumingStamina()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void HitResolver_ActionBlockingStatus_DisablesGuardWithoutConsumingStamina(bool guardPoint)
         {
             StatusEffectStore store = new StatusEffectStore();
             store.Apply(1, new StatusEffectInfo { effect = StatusEffectId.Stun, duration = 5f });
             CharacterVitals vitals = Vitals();
             CharacterFlags flags = default;
-            CharacterDefenseState defense = new CharacterDefenseState { isGuarding = true };
+            CharacterDefenseState defense = new CharacterDefenseState { isGuarding = !guardPoint };
             HitContext context = Context();
+            context.actionEffects.hasGuardPoint = guardPoint;
             context.targetEffects = store.GetSummary(1);
 
             HitResolution resolution = HitResolver.Resolve(Attack(30f), ref vitals,
@@ -170,20 +172,59 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(0f, resolution.result.guardDamage);
         }
 
-        [Test]
-        public void HitResolver_GuardPointWithoutGuardInput_PreservesExistingInactiveBehavior()
+        [TestCase(AttackFeature.None, true, 50f, GuardResult.Guarded, 20f)]
+        [TestCase(AttackFeature.JustGuardImmune, true, 50f, GuardResult.Guarded, 20f)]
+        [TestCase(AttackFeature.Unguardable, true, 50f, GuardResult.NoGuard, 0f)]
+        [TestCase(AttackFeature.None, false, 50f, GuardResult.NoGuard, 0f)]
+        [TestCase(AttackFeature.None, true, 5f, GuardResult.GuardBreak, 5f)]
+        public void HitResolver_GuardPoint_UsesOrdinaryGuardRules(AttackFeature feature, bool front,
+            float stamina, GuardResult expected, float drain)
         {
-            CharacterVitals vitals = Vitals();
+            CharacterVitals vitals = Vitals(stamina: stamina);
             CharacterFlags flags = default;
-            CharacterDefenseState defense = default;
+            CharacterDefenseState defense = new CharacterDefenseState { continuousJustGuardUntil = 12f };
+            HitContext context = Context();
+            context.actionEffects.hasGuardPoint = true;
+            context.isAttackFromFront = front;
+            DamageData attack = Attack(30f);
+            attack.feature = feature;
+            CombatStats combat = Combat(10f);
+            combat.guardStats.guardDirection = GuardDirection.Front;
+            combat.guardStats.slashCut = 0.5f;
+
+            HitResolution resolution = HitResolver.Resolve(attack, ref vitals,
+                combat, ref flags, ref defense, context);
+
+            Assert.AreEqual(expected, resolution.result.guardResult);
+            Assert.AreEqual(drain, resolution.result.guardDamage);
+            Assert.AreEqual(stamina - drain, vitals.currentStamina);
+            Assert.IsFalse(defense.isGuarding);
+            Assert.AreEqual(12f, defense.continuousJustGuardUntil);
+            if (expected == GuardResult.Guarded) { Assert.AreEqual(10, resolution.result.totalDamage); }
+        }
+
+        [TestCase(0f, -1f, GuardResult.JustGuard)]
+        [TestCase(1f, 12f, GuardResult.JustGuard)]
+        [TestCase(1f, -1f, GuardResult.Guarded)]
+        public void HitResolver_GuardPoint_PreservesManualJustGuardTiming(float elapsed,
+            float continuousUntil, GuardResult expected)
+        {
+            CharacterVitals vitals = Vitals(stamina: 50f);
+            CharacterFlags flags = default;
+            CharacterDefenseState defense = new CharacterDefenseState
+            {
+                isGuarding = true, guardElapsedTime = elapsed, continuousJustGuardUntil = continuousUntil,
+            };
             HitContext context = Context();
             context.actionEffects.hasGuardPoint = true;
 
-            HitResolution resolution = HitResolver.Resolve(Attack(), ref vitals,
+            HitResolution resolution = HitResolver.Resolve(Attack(30f), ref vitals,
                 Combat(), ref flags, ref defense, context);
 
-            Assert.AreEqual(GuardResult.NoGuard, resolution.result.guardResult);
-            Assert.Greater(resolution.result.totalDamage, 0);
+            Assert.AreEqual(expected, resolution.result.guardResult);
+            Assert.AreEqual(expected == GuardResult.JustGuard ? 65f : 20f, vitals.currentStamina);
+            Assert.AreEqual(elapsed, defense.guardElapsedTime);
+            Assert.IsTrue(defense.isGuarding);
         }
 
         [TestCase(ActState.Dead, false, 0)]

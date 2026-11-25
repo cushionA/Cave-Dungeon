@@ -9,6 +9,7 @@ namespace Game.Core
         public CharacterStatusEffects targetEffects;
         public float attackerAttackMultiplier;
         public bool isAttackFromFront;
+        public bool usesMpBarrier;
         public float currentTime;
         public SituationalBonusConfig bonusConfig;
     }
@@ -48,13 +49,15 @@ namespace Game.Core
                 vitals.currentArmor = 0f;
             }
 
+            bool canGuard = !context.targetEffects.BlocksActions;
             GuardEvaluation guard = GuardJudgmentLogic.Evaluate(
-                defense.isGuarding && !context.targetEffects.BlocksActions,
+                defense.isGuarding && canGuard,
                 defense.guardElapsedTime,
                 context.currentTime < defense.continuousJustGuardUntil,
                 attack.feature, combat.guardStats.guardDirection, context.isAttackFromFront,
                 effects.hasGuardAttackEffect, vitals.currentStamina,
-                combat.guardStats.guardStrength, attack.guardDamage);
+                combat.guardStats.guardStrength, attack.guardDamage,
+                hasGuardPoint: effects.hasGuardPoint && canGuard);
 
             if (guard.result == GuardResult.JustGuard)
             {
@@ -78,7 +81,8 @@ namespace Game.Core
             }
 
             (int actualDamage, bool isKill, bool _) = HpArmorLogic.ApplyDamage(
-                ref vitals.currentHp, ref vitals.currentArmor, damage, armorBreak, ref actionArmor);
+                ref vitals.currentHp, ref vitals.currentArmor, damage, armorBreak, ref actionArmor,
+                applyHpDamage: !context.usesMpBarrier);
             float actionArmorDamage = actionArmorBefore - actionArmor;
             defense.actionArmorConsumed += actionArmorDamage;
             bool interrupt = actionArmorBefore > 0f && actionArmorDamage > 0f && actionArmor <= 0f

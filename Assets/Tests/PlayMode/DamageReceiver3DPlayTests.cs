@@ -11,7 +11,7 @@ namespace Game.Tests.PlayMode
 {
     public sealed class DamageReceiver3DPlayTests
     {
-        private readonly List<Game.Core.CharacterInfo> _assets = new List<Game.Core.CharacterInfo>();
+        private readonly List<Object> _assets = new List<Object>();
         private Scene _room;
         private Scene _separateRoom;
 
@@ -32,7 +32,7 @@ namespace Game.Tests.PlayMode
         {
             if (_room.isLoaded) { yield return SceneManager.UnloadSceneAsync(_room); }
             if (_separateRoom.isLoaded) { yield return SceneManager.UnloadSceneAsync(_separateRoom); }
-            foreach (Game.Core.CharacterInfo asset in _assets)
+            foreach (Object asset in _assets)
             {
                 Object.Destroy(asset);
             }
@@ -63,6 +63,59 @@ namespace Game.Tests.PlayMode
             Assert.AreEqual(GuardResult.NoGuard, rearHit.guardResult);
             Assert.That(rearHit.totalDamage, Is.Positive);
             Assert.AreEqual(hp - rearHit.totalDamage, GameManager.Data.GetVitals(defender.ObjectHash).currentHp);
+        }
+
+        [UnityTest]
+        public IEnumerator Damage3D_GuardPoint_OnAnAuthoredAttackUsesWorldFrontAndExpires()
+        {
+            CharacterActor3D defender = CreateActor(_room, CharacterBelong.Ally, Vector3.zero, 90f);
+            CharacterActor3D front = CreateActor(_room, CharacterBelong.Enemy, Vector3.right * 2f);
+            CharacterActor3D rear = CreateActor(_room, CharacterBelong.Enemy, Vector3.left * 2f);
+            yield return null;
+
+            int hash = defender.Actor.Hash;
+            GameManager.Data.GetVitals(hash).currentArmor = 50f;
+            GameManager.Data.GetCombatStats(hash).guardStats = new GuardStats
+            {
+                guardDirection = GuardDirection.Front, guardStrength = 2f, slashCut = 0.5f,
+            };
+            MotionDefinition motion = ScriptableObject.CreateInstance<MotionDefinition>();
+            motion.info = new MotionInfo { preMotionDuration = 0.5f, activeMotionDuration = 0.25f };
+            _assets.Add(motion);
+            AttackInfo guardPointAttack = ScriptableObject.CreateInstance<AttackInfo>();
+            _assets.Add(guardPointAttack);
+            guardPointAttack.motion = motion;
+            guardPointAttack.attackElement = Element.Slash;
+            guardPointAttack.actionEffects = new[]
+            {
+                new ActionEffect { type = ActionEffectType.GuardPoint, startTime = 0.125f, duration = 0.125f },
+            };
+            guardPointAttack.attack3D = new AttackProfile3D
+            {
+                shape = AttackShape3D.Melee, localCenter = Vector3.forward, halfExtents = Vector3.one,
+                targetLayers = LayerMask.GetMask("Enemy"),
+            };
+
+            Assert.IsTrue(GameManager.Actions.Execute3D(defender, guardPointAttack, out long execution));
+            GameManager.Actions.Execution.Tick(0.125f);
+            DamageReceiver receiver = defender.GetComponent<DamageReceiver>();
+            DamageData incoming = Capture(front, defender);
+            incoming.guardDamage = 12f;
+            DamageResult frontHit = receiver.ReceiveDamage3D(incoming, front.transform.position);
+            Assert.AreEqual(GuardResult.Guarded, frontHit.guardResult);
+            Assert.AreEqual(10f, frontHit.guardDamage);
+            Assert.IsFalse(GameManager.Data.GetDefenseState(hash).isGuarding);
+
+            DamageResult rearHit = receiver.ReceiveDamage3D(Capture(rear, defender), rear.transform.position);
+            Assert.AreEqual(GuardResult.NoGuard, rearHit.guardResult);
+            Assert.Greater(rearHit.totalDamage, frontHit.totalDamage);
+
+            GameManager.Actions.Execution.Tick(0.125f);
+            Assert.IsTrue(GameManager.Actions.Execution.TryGetInstance(execution, out ActionExecution windup));
+            Assert.AreEqual(AnimationPhase.Anticipation, windup.phase);
+            DamageResult expired = receiver.ReceiveDamage3D(incoming, front.transform.position);
+            Assert.AreEqual(GuardResult.NoGuard, expired.guardResult);
+            Assert.Greater(expired.totalDamage, frontHit.totalDamage);
         }
 
         [UnityTest]

@@ -126,6 +126,51 @@ namespace Game.Tests.PlayMode
             Object.Destroy(targetObj);
         }
 
+        [UnityTest]
+        public IEnumerator DamageReceiver_GuardPoint_GuardsOnlyDuringTheEffectWindow()
+        {
+            CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo(CharacterBelong.Ally,
+                CharacterFeature.Minion, maxHp: 200);
+            info.maxArmor = 50f;
+            GameObject target = TestSceneHelper.CreateBaseCharacterObjectWithDamageReceiver(info, new Vector3(3f, 2f, 0f));
+            DamageReceiver receiver = target.GetComponent<DamageReceiver>();
+            yield return null;
+
+            int hash = target.GetComponent<BaseCharacter>().ObjectHash;
+            GameManager.Data.GetCombatStats(hash).guardStats = new GuardStats
+            {
+                guardDirection = GuardDirection.Both, guardStrength = 2f, slashCut = 0.5f,
+            };
+            receiver.SetActionEffects(new[]
+            {
+                new ActionEffect { type = ActionEffectType.GuardPoint, startTime = 0.25f, duration = 0.25f },
+            });
+            DamageData hit = new DamageData
+            {
+                defenderHash = hash, damage = new ElementalStatus { slash = 25 }, attackElement = Element.Slash,
+                motionValue = 1f, guardDamage = 12f,
+            };
+            ActionExecutionSystem actions = GameManager.Actions.Execution;
+            actions.Tick(0.125f);
+            DamageResult early = receiver.ReceiveDamage(hit);
+            Assert.AreEqual(GuardResult.NoGuard, early.guardResult);
+
+            actions.Tick(0.125f);
+            DamageResult active = receiver.ReceiveDamage(hit);
+            Assert.AreEqual(GuardResult.Guarded, active.guardResult);
+            Assert.AreEqual(10f, active.guardDamage);
+            Assert.Less(active.totalDamage, early.totalDamage);
+            Assert.IsFalse(GameManager.Data.GetDefenseState(hash).isGuarding);
+
+            actions.Tick(0.25f);
+            DamageResult ended = receiver.ReceiveDamage(hit);
+            Assert.AreEqual(GuardResult.NoGuard, ended.guardResult);
+            Assert.AreEqual(early.totalDamage, ended.totalDamage);
+
+            Object.Destroy(target);
+            Object.Destroy(info);
+        }
+
         // ===== 新仕様: 飛翔体JustGuard時アーマー削り0 =====
 
         /// <summary>ref locals はイテレータ内で使えないので外部ヘルパーで書き込む。</summary>

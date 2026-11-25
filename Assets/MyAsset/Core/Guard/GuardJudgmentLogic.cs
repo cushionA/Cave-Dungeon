@@ -81,8 +81,24 @@ namespace Game.Core
             float currentStamina,
             float guardStrength,
             float guardDamage)
+            => Evaluate(isGuarding, guardTimeSinceStart, inContinuousJustGuardWindow, attackFeature,
+                guardDirection, isAttackFromFront, hasGuardAttackEffect, currentStamina, guardStrength,
+                guardDamage, hasGuardPoint: false);
+
+        internal static GuardEvaluation Evaluate(
+            bool isGuarding,
+            float guardTimeSinceStart,
+            bool inContinuousJustGuardWindow,
+            AttackFeature attackFeature,
+            GuardDirection guardDirection,
+            bool isAttackFromFront,
+            bool hasGuardAttackEffect,
+            float currentStamina,
+            float guardStrength,
+            float guardDamage,
+            bool hasGuardPoint)
         {
-            if (!isGuarding)
+            if (!isGuarding && !hasGuardPoint)
             {
                 return default;
             }
@@ -95,8 +111,9 @@ namespace Game.Core
 
             bool isUnguardable = (attackFeature & AttackFeature.Unguardable) != 0;
             bool isJustGuardImmune = (attackFeature & AttackFeature.JustGuardImmune) != 0;
-            bool inJustGuardWindow = guardTimeSinceStart <= k_JustGuardWindow
-                || inContinuousJustGuardWindow;
+            // ガードポイント中も、ジャストガードには通常のガード行動が必要。
+            bool inJustGuardWindow = isGuarding && (guardTimeSinceStart <= k_JustGuardWindow
+                || inContinuousJustGuardWindow);
 
             // ジャスガタイミング窓内: ジャスガが成立できるなら最優先
             if (inJustGuardWindow && !isJustGuardImmune)
