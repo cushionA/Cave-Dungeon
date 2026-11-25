@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Game.Core;
 using UnityEngine;
@@ -27,15 +28,28 @@ namespace Game.Runtime
 
         private void OnEnable()
         {
+            UnregisterCollider();
             if (HasDetonated || hitCollider == null || hitCollider.gameObject != gameObject) { return; }
-            s_Props.Add(hitCollider, this);
+            if (s_Props.TryGetValue(hitCollider, out ExplosiveProp2D registered)
+                && registered != null && registered.isActiveAndEnabled && !ReferenceEquals(registered, this))
+            {
+                Debug.LogWarning("[ExplosiveProp2D] コライダーは別の爆発物に登録済みです。", this);
+                return;
+            }
+            s_Props[hitCollider] = this;
             _registeredCollider = hitCollider;
         }
 
-        private void OnDisable()
+        private void OnDisable() => UnregisterCollider();
+
+        private void UnregisterCollider()
         {
             if (ReferenceEquals(_registeredCollider, null)) { return; }
-            s_Props.Remove(_registeredCollider);
+            if (s_Props.TryGetValue(_registeredCollider, out ExplosiveProp2D registered)
+                && ReferenceEquals(registered, this))
+            {
+                s_Props.Remove(_registeredCollider);
+            }
             _registeredCollider = null;
         }
 
@@ -110,10 +124,13 @@ namespace Game.Runtime
                 if (!TryGetVictim(target, blast, world, center, radiusSquared, actors, data, out IDamageable receiver)) { continue; }
                 var damage = new DamageData { motionValue = 1f, attackElement = Element.Fire };
                 blast.ApplyTo(ref damage, target);
-                receiver.ReceiveDamage(damage);
+                try { receiver.ReceiveDamage(damage); }
+                catch (Exception exception) { Debug.LogException(exception, this); }
             }
 
-            if (this != null) { onDetonated.Invoke(); }
+            if (this == null) { return; }
+            try { onDetonated?.Invoke(); }
+            catch (Exception exception) { Debug.LogException(exception, this); }
         }
 
         private static bool TryGetVictim(ActorRef target, in AttackContext blast, PhysicsScene2D world,

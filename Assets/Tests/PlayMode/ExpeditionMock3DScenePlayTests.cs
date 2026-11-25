@@ -290,6 +290,55 @@ namespace Game.Tests.PlayMode
             }
         }
 
+        [UnityTest]
+        public IEnumerator AuthoredReinforcementDrill_WhenPanelIsDestroyed_TearsDownTheAttemptOnce()
+        {
+            const string species = "goblin-engineer";
+            const string questCompletion = "test.mine-survey.report";
+            TestSceneHelper.Cleanup();
+            yield return null;
+            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(k_Mock, new LoadSceneParameters(LoadSceneMode.Additive));
+            _mock = SceneManager.GetSceneByPath(k_Mock);
+            Assert.IsTrue(SceneManager.SetActiveScene(_mock));
+            yield return new WaitForFixedUpdate();
+
+            ExpeditionReinforcementDrill3D drill = Find<ExpeditionReinforcementDrill3D>("Reinforcement drill");
+            EncounterGoal3D encounter = drill.GetComponent<EncounterGoal3D>();
+            ExpeditionEncounterBudget3D budget = drill.GetComponent<ExpeditionEncounterBudget3D>();
+            ExpeditionSummonDeployment3D deployment = Find<ExpeditionSummonDeployment3D>("[PLACEHOLDER] Expedition sister");
+            ExpeditionSquadPanel panel = Find<ExpeditionSquadPanel>("Expedition squad panel");
+            GameObject opponent = Find<Transform>("[PLACEHOLDER] Drill opponent").gameObject;
+            List<ChallengeState> endings = new();
+            encounter.Ended += endings.Add;
+
+            Assert.IsTrue(GameManager.ExpeditionAid.TryComplete(questCompletion,
+                new[] { new ExpeditionAidUnlocks.Completion(questCompletion, species) }));
+            ExpeditionSquad squad = GameManager.GetSubManager<ExpeditionSquadManager>().Squad;
+            Assert.IsTrue(squad.TryConfirm(new[] { new ExpeditionSquad.Selection(species, 1) }));
+            Assert.IsTrue(deployment.TryDeployConfirmed());
+            drill.Open();
+            Assert.IsTrue(panel.isActiveAndEnabled);
+            Assert.IsTrue(opponent.activeSelf);
+            Assert.IsTrue(budget.TryDeployReinforcements(new[] { new ExpeditionSquad.Selection(species, 1) }));
+            var summons = new List<ExpeditionSummonDeployment3D.DeployedSummon>();
+            deployment.CopyActiveSummons(summons);
+            ActorRef normal = summons.Single(unit => !unit.IsReinforcement).Actor;
+            ActorRef reinforcement = summons.Single(unit => unit.IsReinforcement).Actor;
+
+            UnityEngine.Object.Destroy(panel.gameObject);
+            yield return null;
+            Assert.IsTrue(panel == null);
+            Assert.IsTrue(encounter.IsRunning);
+            drill.enabled = false;
+            Assert.IsFalse(opponent.activeSelf);
+            Assert.IsFalse(budget.IsOpen);
+            Assert.IsTrue(GameManager.Actors.IsCurrent(normal));
+            Assert.IsFalse(GameManager.Actors.IsCurrent(reinforcement));
+
+            yield return SceneManager.UnloadSceneAsync(_mock);
+            CollectionAssert.AreEqual(new[] { ChallengeState.Failed }, endings);
+        }
+
         private T Find<T>(string name) where T : Component => _mock.GetRootGameObjects()
             .SelectMany(root => root.GetComponentsInChildren<T>(true))
             .Single(item => item.name == name);

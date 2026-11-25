@@ -107,14 +107,15 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(0f, value, "距離5以内に味方がいない場合0");
         }
 
-        // --- ProjectileNear: SoA互換入口には固定tickの飛翔体観測がない ---
+        // --- SoA互換入口には固定tickの飛翔体観測がない ---
 
-        [Test]
-        public void ConditionEvaluator_ProjectileNearWithoutObservation_DoesNotMatchZero()
+        [TestCase(AIConditionType.ProjectileNear)]
+        [TestCase(AIConditionType.NearbyHostileProjectileCount)]
+        public void ConditionEvaluator_ProjectileConditionWithoutObservation_DoesNotMatchZero(AIConditionType type)
         {
             AICondition condition = new AICondition
             {
-                conditionType = AIConditionType.ProjectileNear,
+                conditionType = type,
                 compareOp = CompareOp.Equal,
                 operandA = 0,
             };

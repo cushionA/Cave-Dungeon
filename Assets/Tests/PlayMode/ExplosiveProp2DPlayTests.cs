@@ -1,5 +1,8 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Text.RegularExpressions;
 using Game.Core;
 using Game.Runtime;
 using NUnit.Framework;
@@ -7,6 +10,7 @@ using R3;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using Object = UnityEngine.Object;
 
 namespace Game.Tests.PlayMode
 {
@@ -181,6 +185,87 @@ namespace Game.Tests.PlayMode
             Assert.IsFalse(GameManager.Actors.IsCurrent(previous));
             Assert.AreEqual(fullHp, Hp(recycled));
             Assert.Less(Hp(recycled == knight ? companion : knight), fullHp);
+        }
+
+        [UnityTest]
+        public IEnumerator PropRegistration_RejectsALiveOwnerAndReclaimsADestroyedOwner()
+        {
+            ExplosiveProp2D prop = MakeProp(out BoxCollider2D hit);
+            ExplosiveProp2D former = MakeProp(out _);
+            var registrations = (Dictionary<Collider2D, ExplosiveProp2D>)typeof(ExplosiveProp2D)
+                .GetField("s_Props", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
+            try
+            {
+                // Model a stale registration that normal Unity disable ordering would clean up.
+                registrations[hit] = former;
+                prop.enabled = false;
+                Assert.AreSame(former, registrations[hit]);
+                LogAssert.Expect(LogType.Warning, new Regex(@"\[ExplosiveProp2D\].*別の爆発物に登録済み"));
+                prop.enabled = true;
+                Assert.AreSame(former, registrations[hit]);
+
+                Object.Destroy(former);
+                yield return null;
+                Assert.IsTrue(registrations[hit] == null);
+                prop.enabled = false;
+                prop.enabled = true;
+                Assert.AreSame(prop, registrations[hit]);
+                prop.enabled = false;
+                Assert.IsFalse(registrations.ContainsKey(hit));
+            }
+            finally { registrations.Remove(hit); }
+        }
+
+        [UnityTest]
+        public IEnumerator Detonation_WhenDamageAndCompletionCallbacksThrow_AppliesRemainingDamageAndCompletesOnce()
+        {
+            AttackInfo strike = MakeAttack();
+            GameObject body = MakeBody("Striker", Vector2.zero);
+            AddWeaponCollider<HitBox>(body);
+            body.AddComponent<ActionExecutorController>();
+            BaseCharacter striker = AddActor<BaseCharacter>(body, CharacterBelong.Ally, CharacterFeature.Minion);
+            body.SetActive(true);
+            BaseCharacter first = MakeVictim("First nearby hostile", new Vector2(2.05f, 0f), CharacterBelong.Enemy);
+            BaseCharacter second = MakeVictim("Second nearby hostile", new Vector2(2.2f, 1.05f), CharacterBelong.Enemy);
+            ExplosiveProp2D prop = MakeProp(out BoxCollider2D hit);
+            yield return null;
+            int firstHp = Hp(first);
+            int secondHp = Hp(second);
+            int notifiedDamage = 0;
+            int completions = 0;
+            prop.OnDetonated.AddListener(() =>
+            {
+                completions++;
+                throw new InvalidOperationException("Prop completion failure");
+            });
+            GameEvents events = GameManager.Events;
+            events.OnDamageDealtEvent += OnDamageDealt;
+            try
+            {
+                Assert.IsTrue(GameManager.Actions.Execute(striker.ObjectHash, strike, 0, Vector2.right, out _));
+                GameManager.Actions.Execution.Tick(0.12f);
+                LogAssert.Expect(LogType.Exception, new Regex("First prop damage listener failure"));
+                LogAssert.Expect(LogType.Exception, new Regex("Prop completion failure"));
+                StepPhysics();
+
+                Assert.IsTrue(prop.HasDetonated);
+                Assert.IsFalse(hit.enabled);
+                Assert.AreEqual(2, notifiedDamage);
+                Assert.Less(Hp(first), firstHp);
+                Assert.Less(Hp(second), secondHp);
+                Assert.AreEqual(1, completions);
+                StepPhysics();
+                Assert.AreEqual(1, completions);
+            }
+            finally { events.OnDamageDealtEvent -= OnDamageDealt; }
+
+            void OnDamageDealt(DamageResult damage, int attacker, int defender)
+            {
+                if (attacker == striker.ObjectHash && ++notifiedDamage == 1)
+                {
+                    throw new InvalidOperationException("First prop damage listener failure");
+                }
+            }
         }
 
         private static void StepPhysics()

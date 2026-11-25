@@ -88,7 +88,8 @@ namespace Game.Runtime
             // 増援の移動は指定遭遇が担当し、通常編成が探索に同行する。
             Deployment group = _normal;
             GameActionRuntime actions = GameManager.Actions;
-            if (_changing || group == null || explorationLeader == null || actions == null
+            // 未設定の編成だけ対象外とする。設定済みの同行先を失っても重力と接地は進める。
+            if (_changing || group == null || ReferenceEquals(explorationLeader, null) || actions == null
                 || !HasValidFollowDistance()) { return; }
 
             CharacterActor3D leader = IsExplorationLeaderAvailable() ? explorationLeader : null;

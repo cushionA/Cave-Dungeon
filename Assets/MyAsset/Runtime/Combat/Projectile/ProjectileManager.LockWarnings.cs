@@ -35,16 +35,19 @@ namespace Game.Runtime
 
             CharacterBelong faction = GameManager.Data.GetFlags(target.Hash).Belong;
             int count = 0;
-            foreach (ProjectileStep step in _nearbyFlights)
+            try
             {
-                if (!IsAvailableAttack(step, target)) { continue; }
-                AttackContext source = step.controller.CapturedMagic.attackContext;
-                if (AttackTargetRules.CanAffect(source.Owner, source.Belong, target, faction, AttackTargetRelation.Hostile))
+                foreach (ProjectileStep step in _nearbyFlights)
                 {
-                    count++;
+                    if (!IsAvailableAttack(step, target)) { continue; }
+                    AttackContext source = step.controller.CapturedMagic.attackContext;
+                    if (AttackTargetRules.CanAffect(source.Owner, source.Belong, target, faction, AttackTargetRelation.Hostile))
+                    {
+                        count++;
+                    }
                 }
             }
-            _nearbyFlights.Clear();
+            finally { _nearbyFlights.Clear(); }
             return count;
         }
 
@@ -53,18 +56,21 @@ namespace Game.Runtime
         {
             warnings.Clear();
             if (!TryCollectNearbyFlights(target, radius, out Vector2 targetPosition)) { return; }
-            foreach (ProjectileStep step in _nearbyFlights)
+            try
             {
-                Projectile projectile = step.core;
-                if (projectile == null || projectile.ExplicitTargetRef != target || !IsAvailableAttack(step, target)) { continue; }
-
-                Vector2 fromTarget = projectile.Position - targetPosition;
-                if (Vector2.Dot(fromTarget, projectile.Velocity) < 0f)
+                foreach (ProjectileStep step in _nearbyFlights)
                 {
-                    warnings.Add(new ProjectileLockWarning(step.lease, fromTarget));
+                    Projectile projectile = step.core;
+                    if (projectile == null || projectile.ExplicitTargetRef != target || !IsAvailableAttack(step, target)) { continue; }
+
+                    Vector2 fromTarget = projectile.Position - targetPosition;
+                    if (Vector2.Dot(fromTarget, projectile.Velocity) < 0f)
+                    {
+                        warnings.Add(new ProjectileLockWarning(step.lease, fromTarget));
+                    }
                 }
             }
-            _nearbyFlights.Clear();
+            finally { _nearbyFlights.Clear(); }
         }
 
         private bool TryCollectNearbyFlights(ActorRef target, float radius, out Vector2 position)

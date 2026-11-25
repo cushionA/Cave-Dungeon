@@ -126,6 +126,8 @@ namespace Game.Core
                     if (filter.distanceRange.y <= 0f) { filter.distanceRange.y = 10f; }
                     return TryCount(filter, nearbyOwner, true, ref world, out value);
                 case AIConditionType.ProjectileNear:
+                    return false;
+                case AIConditionType.NearbyHostileProjectileCount:
                     if (!world.TryGetActor(ownerHash, out AIActorObservation projectileObserver)
                         || !world.TryGetNearbyHostileProjectileCount(projectileObserver.actor, out int nearbyProjectiles)) { return false; }
                     value = nearbyProjectiles;

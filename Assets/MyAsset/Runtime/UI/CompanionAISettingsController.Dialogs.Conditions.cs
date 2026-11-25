@@ -232,12 +232,18 @@ namespace Game.Runtime
 
             // 条件タイプ（enum 値配列は static キャッシュを参照してアロケ回避）
             AIConditionType[] allTypes = s_CachedAIConditionTypes;
-            List<string> typeChoices = new List<string>(allTypes.Length);
+            bool legacy = current.conditionType == AIConditionType.ProjectileNear;
+            List<string> typeChoices = new List<string>(allTypes.Length + (legacy ? 1 : 0));
             for (int i = 0; i < allTypes.Length; i++)
             {
                 typeChoices.Add(ConditionTypeMetadata.GetLabel(allTypes[i]));
             }
             int initialTypeIndex = Array.IndexOf(allTypes, current.conditionType);
+            if (legacy)
+            {
+                initialTypeIndex = typeChoices.Count;
+                typeChoices.Add(ConditionTypeMetadata.GetLabel(AIConditionType.ProjectileNear));
+            }
             if (initialTypeIndex < 0) initialTypeIndex = 0;
 
             DropdownField typeDropdown = new DropdownField("種類", typeChoices, initialTypeIndex);
@@ -295,6 +301,7 @@ namespace Game.Runtime
                 current.operandB = 0;
                 // 種類に応じて CompareOp も初期化（例: SelfActState は Equal、Ratio/Integer は LessEqual）
                 current.compareOp = ConditionTypeMetadata.GetDefaultCompareOp(current.conditionType);
+                if (typeDropdown.choices.Count > allTypes.Length) { typeDropdown.choices.RemoveAt(allTypes.Length); }
                 typeDropdown.tooltip = ConditionTypeMetadata.GetDescription(current.conditionType);
                 onChanged?.Invoke(current);
                 rebuildInputs();
@@ -371,7 +378,9 @@ namespace Game.Runtime
 
             if (kind == ConditionTypeMetadata.WidgetKind.None)
             {
-                Label none = new Label("(追加入力なし)");
+                Label none = new Label(current.conditionType == AIConditionType.ProjectileNear
+                    ? $"旧距離設定 {current.operandA}m"
+                    : "(追加入力なし)");
                 none.AddToClassList("condition-row__none");
                 container.Add(none);
                 return;

@@ -95,6 +95,53 @@ namespace Game.Tests.EditMode
             Assert.IsTrue(_executor.IsExecuting);
         }
 
+        [TestCase(AIConditionType.TargetLineOfSight, false)]
+        [TestCase(AIConditionType.HpRatio, true)]
+        public void JudgmentLoop_EvaluateAction_SameActionRulesControlLineOfSightFallback(
+            AIConditionType secondRuleType, bool shouldUseFallback)
+        {
+            JudgmentLoop loop = new JudgmentLoop(_executor, _data, _ownerHash);
+            loop.SetMode(new AIMode
+            {
+                actionRules = new[]
+                {
+                    new AIRule
+                    {
+                        actionIndex = 0,
+                        conditions = new[]
+                        {
+                            new AICondition
+                            {
+                                conditionType = AIConditionType.TargetLineOfSight,
+                                compareOp = CompareOp.Equal,
+                                operandA = 1
+                            }
+                        }
+                    },
+                    new AIRule
+                    {
+                        actionIndex = 0,
+                        conditions = new[]
+                        {
+                            new AICondition
+                            {
+                                conditionType = secondRuleType,
+                                filter = new TargetFilter { includeSelf = true },
+                                compareOp = CompareOp.Greater,
+                                operandA = 100
+                            }
+                        }
+                    }
+                },
+                actions = new[] { new ActionSlot { execType = ActionExecType.Attack, paramId = 1 } },
+                defaultActionIndex = 0
+            });
+
+            loop.EvaluateAction(0f);
+
+            Assert.That(_executor.IsExecuting, Is.EqualTo(shouldUseFallback));
+        }
+
         [Test]
         public void JudgmentLoop_EvaluateTarget_SelectsFromRules()
         {

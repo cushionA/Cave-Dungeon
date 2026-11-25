@@ -147,7 +147,7 @@ namespace Game.Tests.PlayMode
                             new AIRule
                             {
                                 actionIndex = 0,
-                                conditions = new[] { new AICondition { conditionType = AIConditionType.ProjectileNear, compareOp = CompareOp.GreaterEqual, operandA = 1 } },
+                                conditions = new[] { new AICondition { conditionType = AIConditionType.NearbyHostileProjectileCount, compareOp = CompareOp.GreaterEqual, operandA = 1 } },
                             },
                         },
                         defaultActionIndex = -1,

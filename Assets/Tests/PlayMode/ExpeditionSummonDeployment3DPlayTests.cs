@@ -265,6 +265,43 @@ namespace Game.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator NormalDeployment_WhenLeaderIsLost_StopsFollowingAndStillFalls()
+        {
+            Assert.That(_squad.TryConfirm(new[] { new ExpeditionSquad.Selection("scout", 1) }), Is.True);
+            CharacterActor3D knight = CreateCharacter("Knight", new Vector3(-2.5f, 0.04f, 5f), CharacterFeature.Player);
+            knight.gameObject.SetActive(true);
+            ActorRef originalLeader = knight.Actor;
+            Configure(leader: knight);
+            Assert.That(_deployment.TryDeployConfirmed(), Is.True);
+            _deployment.CopyActiveSummons(_summons);
+            ActorRef identity = _summons[0].Actor;
+            CharacterActor3D scout = GetUnit(identity);
+
+            for (int i = 0; i < 6; i++) { yield return new WaitForFixedUpdate(); }
+            float stoppedZ = scout.Motor.FeetPosition.z;
+            Assert.That(stoppedZ, Is.GreaterThan(_positions[0].position.z + 0.2f));
+
+            knight.gameObject.SetActive(false);
+            for (int i = 0; i < 6; i++) { yield return new WaitForFixedUpdate(); }
+            Assert.That(scout.Motor.FeetPosition.z, Is.EqualTo(stoppedZ).Within(0.01f));
+
+            knight.gameObject.SetActive(true);
+            Assert.That(knight.Actor, Is.Not.EqualTo(originalLeader));
+            for (int i = 0; i < 6; i++) { yield return new WaitForFixedUpdate(); }
+            Assert.That(scout.Motor.FeetPosition.z, Is.GreaterThan(stoppedZ + 0.2f));
+
+            Object.Destroy(knight.gameObject);
+            yield return null;
+            Assert.That(knight == null, Is.True);
+            scout.Body.Move(Vector3.up * 1.5f);
+            Vector3 raised = scout.Motor.FeetPosition;
+            for (int i = 0; i < 12; i++) { yield return new WaitForFixedUpdate(); }
+            Assert.That(scout.Motor.FeetPosition.y, Is.LessThan(raised.y - 0.2f));
+            Assert.That(scout.Motor.FeetPosition.z, Is.EqualTo(raised.z).Within(0.01f));
+            Assert.That(scout.Actor, Is.EqualTo(identity));
+        }
+
+        [UnityTest]
         public IEnumerator NormalDeployment_WhenFollowDistanceIsInvalid_WarnsOnceAndResumesAfterCorrection()
         {
             const string warning = "[ExpeditionSummonDeployment3D] 追従距離には0.1以上の有限値を設定してください。";

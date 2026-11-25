@@ -309,7 +309,7 @@ namespace Game.Tests.EditMode
             }
         }
 
-        [TestCase(AIConditionType.ProjectileNear)]
+        [TestCase(AIConditionType.NearbyHostileProjectileCount)]
         [TestCase(AIConditionType.ObjectNearby)]
         [TestCase(AIConditionType.EventFired)]
         public void AIDecisionSystem_UnknownCondition_DoesNotMatchZero(AIConditionType conditionType)
@@ -521,12 +521,12 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
-        public void ProjectileNear_WhenSnapshotChanges_ManagedAndBurstDistinguishUnknownZeroAndHostileCount()
+        public void NearbyHostileProjectileCount_WhenSnapshotChanges_ManagedAndBurstDistinguishUnknownZeroAndHostileCount()
         {
             AIMode mode = CreateMode();
             AICondition condition = new AICondition
             {
-                conditionType = AIConditionType.ProjectileNear,
+                conditionType = AIConditionType.NearbyHostileProjectileCount,
                 compareOp = CompareOp.GreaterEqual,
                 operandA = 1,
             };
@@ -570,7 +570,38 @@ namespace Game.Tests.EditMode
         }
 
         [Test]
-        public void ProjectileNear_WhenUsedInAModeTransition_RequestsObservationEvenWithoutAnActionRule()
+        public void LegacyProjectileNear_WhenDeserializedAsDistance_DoesNotReuseTheProjectileCount()
+        {
+            const string legacySave = "{\"conditionType\":8,\"compareOp\":1,\"operandA\":3}";
+            AICondition condition = JsonUtility.FromJson<AICondition>(legacySave);
+            Assert.AreEqual(AIConditionType.ProjectileNear, condition.conditionType);
+            Assert.AreEqual(CompareOp.LessEqual, condition.compareOp);
+            Assert.AreEqual(3, condition.operandA);
+            StringAssert.Contains("\"conditionType\":8", JsonUtility.ToJson(condition));
+            Assert.AreEqual(13, (int)AIConditionType.TargetLineOfSight);
+            Assert.AreEqual(14, (int)AIConditionType.NearbyHostileProjectileCount);
+
+            AIMode mode = CreateMode();
+            mode.actionRules[0].conditions = new[] { condition };
+            mode.actions = new[] { mode.actions[0], new ActionSlot { execType = ActionExecType.Attack, paramId = 55 } };
+            mode.defaultActionIndex = 1;
+            using JudgmentLoop judge = CreateLoop(1, new RecordingBackend());
+            judge.SetMode(mode);
+            Assert.IsFalse(judge.RequiresNearbyHostileProjectileCount);
+
+            _observations.Capture(++_tick, 0f);
+            AIObservationContext observation = _observations.Observation;
+            Assert.IsTrue(_core.Actors.TryGet(1, out ActorRef owner));
+            observation.SetNearbyHostileProjectileCount(owner, 1);
+            Assert.IsFalse(ConditionEvaluator.Evaluate(condition, owner.Hash, 10, observation));
+            DecideFromCurrentObservation(mode, false, out int managed);
+            DecideFromCurrentObservation(mode, true, out int burst);
+            Assert.AreEqual(55, managed);
+            Assert.AreEqual(55, burst);
+        }
+
+        [Test]
+        public void NearbyHostileProjectileCount_WhenUsedInAModeTransition_RequestsObservationEvenWithoutAnActionRule()
         {
             using JudgmentLoop judge = CreateLoop(1, new RecordingBackend());
             ModeController controller = new ModeController(judge);
@@ -583,7 +614,7 @@ namespace Game.Tests.EditMode
                 targetModeIndex = 1,
                 conditions = new[] { new AICondition
                 {
-                    conditionType = AIConditionType.ProjectileNear,
+                    conditionType = AIConditionType.NearbyHostileProjectileCount,
                     compareOp = CompareOp.GreaterEqual,
                     operandA = 1,
                 } },

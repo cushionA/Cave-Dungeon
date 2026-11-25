@@ -218,8 +218,10 @@ namespace Game.Runtime
                 || !observation.Contains(command.gimmickOwner) || !observation.Contains(command.gimmickTarget)
                 || !GameManager.Actors.IsCurrent(command.gimmickOwner) || !GameManager.Actors.IsCurrent(command.gimmickTarget)
                 || !registry.TryGetValue(command.gimmick.id, out AISceneGimmickController source)
-                || !source.IsAvailable || source.generation != command.gimmick.generation
+                || source == null || source.generation != command.gimmick.generation
                 || source.gameObject.scene.GetPhysicsScene2D() != world) { return false; }
+            if (source.IsContactArmed) { source.TryGetArmedContact(out _, out _); }
+            if (!source.IsAvailable) { return false; }
 
             if (source.HasLureExit) { Physics2D.SyncTransforms(); }
             AISceneGimmick current = source.Snapshot;
@@ -290,8 +292,9 @@ namespace Game.Runtime
 
             Vector2 origin = new Vector2(targetBounds.center.x, floorY + floorMargin);
             float dx = exit.x - origin.x;
-            int samples = Mathf.CeilToInt(Mathf.Abs(dx) / floorProbeSpacing);
-            if (samples < 1 || samples > 50) { return false; }
+            float runDistance = Mathf.Abs(dx);
+            if (!(runDistance > 0f) || runDistance > AISceneGimmick.k_MaxLureRun) { return false; }
+            int samples = Mathf.CeilToInt(runDistance / floorProbeSpacing);
             for (int i = 0; i <= samples; i++)
             {
                 Vector2 probe = origin + Vector2.right * (dx * i / samples);
@@ -304,7 +307,7 @@ namespace Game.Runtime
             Vector2 center = origin + Vector2.up * (size.y * 0.5f);
             ContactFilter2D blockers = new ContactFilter2D { useTriggers = false };
             blockers.SetLayerMask(owner.GroundLayers.value | target.GroundLayers.value | operationBlockers.value);
-            bool isClear = world.BoxCast(center, size, 0f, Vector2.right * Mathf.Sign(dx), Mathf.Abs(dx), blockers, _lureCast) == 0;
+            bool isClear = world.BoxCast(center, size, 0f, Vector2.right * Mathf.Sign(dx), runDistance, blockers, _lureCast) == 0;
             _lureCast[0] = default;
             return isClear;
         }

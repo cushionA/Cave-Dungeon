@@ -109,7 +109,7 @@ namespace Game.Runtime
             bool groupDriving = groupCombat != null && groupCombat.Drives(_actor);
             if (groupDriving && !_groupWasDriving) { _tactics.Stop(); }
             _groupWasDriving = groupDriving;
-            if (groupDriving || _mp.IsVanished) { return; }
+            if (groupDriving || _mp.IsVanished || _actor.Motor.IsFinishingEncounterJump) { return; }
 
             if (IsCooperating || _actions.IsMovementBlocked(_owner.Hash)
                 || GameManager.Data.GetStatusEffects(_owner.Hash).BlocksActions)
