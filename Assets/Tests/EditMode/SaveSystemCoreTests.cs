@@ -181,6 +181,47 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(42, observed.value);
         }
 
+        [Test]
+        public void SaveManager_Load_WhenListenerReenters_RejectsSlotMutationsUntilNotificationEnds()
+        {
+            var saveable = new MockSaveable { SaveId = "test", Value = 10 };
+            _saveManager.Register(saveable);
+            SaveSlotData other = _saveManager.Save(0);
+            saveable.Value = 42;
+            SaveSlotData current = _saveManager.Save(1);
+            saveable.Value = 0;
+            ulong revision = _saveManager.LoadRevision;
+
+            (SaveSlotData save, bool load, bool delete) nested = default;
+            (int slot, int activeSlot, SaveSlotData loaded, ulong revision, int value) observed = default;
+            _saveManager.Loaded += slot =>
+            {
+                if (slot != 1) { return; }
+
+                nested.save = _saveManager.Save(0);
+                nested.load = _saveManager.Load(0);
+                _saveManager.SetActiveSlot(0);
+                _saveManager.SetSlotData(0, new SaveSlotData(0));
+                nested.delete = _saveManager.DeleteSaveData(0);
+            };
+            _saveManager.Loaded += slot => observed = (slot, _saveManager.ActiveSlotIndex,
+                _saveManager.LastLoadedSlot, _saveManager.LoadRevision, saveable.Value);
+
+            Assert.IsTrue(_saveManager.Load(1));
+
+            Assert.IsNull(nested.save);
+            Assert.IsFalse(nested.load);
+            Assert.IsFalse(nested.delete);
+            Assert.AreEqual(1, observed.slot);
+            Assert.AreEqual(1, observed.activeSlot);
+            Assert.AreSame(current, observed.loaded);
+            Assert.AreEqual(revision + 1, observed.revision);
+            Assert.AreEqual(42, observed.value);
+            Assert.AreSame(other, _saveManager.GetSlotData(0));
+            Assert.AreSame(current, _saveManager.GetSlotData(1));
+            Assert.IsNotNull(_saveManager.Save(0));
+        }
+
         // ===== Step 1: Unregister, 重複防止, IGameSubManager =====
 
         [Test]

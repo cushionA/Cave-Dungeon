@@ -56,6 +56,7 @@ namespace Game.Core
         public ulong LoadRevision { get; private set; }
 
         /// <summary>登録済みのデータをすべて復元し、アクティブスロットを確定した後に通知する。</summary>
+        /// <remarks>保存、ロード、スロット変更は通知終了後に実行する。</remarks>
         public event Action<int> Loaded;
 
         public SaveManager()
@@ -112,6 +113,7 @@ namespace Game.Core
 
         /// <summary>全ISaveableをシリアライズしてスロットに保存（インメモリのみ）。
         /// ディスク永続化が必要な呼び出し側は、返却された SaveSlotData を SaveDataStore に渡す。</summary>
+        /// <returns>保存したスロットデータ。スロット番号が範囲外の場合や、保存、ロード、<see cref="Loaded"/> 通知の処理中は <see langword="null"/>。</returns>
         public SaveSlotData Save(int slotIndex)
         {
             SaveSlotData slotData = CaptureSlot(slotIndex);

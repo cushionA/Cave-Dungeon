@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
-using NUnit.Framework;
+using System.Text.RegularExpressions;
 using Game.Core;
+using Newtonsoft.Json.Linq;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace Game.Tests.EditMode
 {
@@ -199,6 +203,62 @@ namespace Game.Tests.EditMode
             Assert.IsTrue(_flagManager.GetLocalFlag("reward_claimed"));
         }
 
+        [Test]
+        public void FlagManager_Load_WithMalformedJson_RejectsBeforeEarlierSaveablesApply()
+        {
+            var saves = new SaveManager();
+            var earlier = new TrackingSaveable { Value = 12 };
+            saves.Register(earlier);
+            saves.Register(_flagManager);
+            _flagManager.SwitchMap("mine");
+            _flagManager.SetGlobalFlag("boss_defeated", true);
+            _flagManager.SetLocalFlag("reward_claimed", true);
+            SaveSlotData current = saves.Save(0);
+            Assert.IsTrue(saves.Load(0));
+            ulong revision = saves.LoadRevision;
+            int applied = earlier.ApplyCount;
+            earlier.Value = 13;
+
+            var rejected = new SaveSlotData(1);
+            rejected.entries[earlier.SaveId] = 34;
+            rejected.entries[_flagManager.SaveId] = JObject.Parse(@"{""mapLocalFlags"":{""mine"":null}}");
+            saves.SetSlotData(1, rejected);
+            int notifications = 0;
+            saves.Loaded += _ => notifications++;
+
+            LogAssert.Expect(LogType.Error,
+                new Regex(@"\[SaveManager\].*スロットの事前検証に失敗しました.*マップのフラグデータ"));
+            Assert.IsFalse(saves.Load(1));
+
+            Assert.AreEqual(applied, earlier.ApplyCount);
+            Assert.AreEqual(13, earlier.Value);
+            Assert.AreEqual("mine", _flagManager.CurrentMapId);
+            Assert.IsTrue(_flagManager.GetGlobalFlag("boss_defeated"));
+            Assert.IsTrue(_flagManager.GetLocalFlag("reward_claimed"));
+            Assert.AreEqual(0, saves.ActiveSlotIndex);
+            Assert.AreSame(current, saves.LastLoadedSlot);
+            Assert.AreEqual(revision, saves.LoadRevision);
+            Assert.AreEqual(0, notifications);
+        }
+
+        [Test]
+        public void FlagManager_Load_WithLegacyJsonMissingLocalFlags_RestoresAndAllowsWritesInCurrentMap()
+        {
+            var saves = new SaveManager();
+            saves.Register(_flagManager);
+            var legacy = new SaveSlotData(1);
+            legacy.entries[_flagManager.SaveId] = JObject.Parse(
+                @"{""globalFlags"":{""boss_defeated"":true},""currentMapId"":""mine""}");
+            saves.SetSlotData(1, legacy);
+
+            Assert.IsTrue(saves.Load(1));
+            Assert.AreEqual("mine", _flagManager.CurrentMapId);
+            Assert.IsTrue(_flagManager.GetGlobalFlag("boss_defeated"));
+            Assert.IsFalse(_flagManager.GetLocalFlag("reward_claimed"));
+            _flagManager.SetLocalFlag("reward_claimed", true);
+            Assert.IsTrue(_flagManager.GetLocalFlag("reward_claimed"));
+        }
+
         // ===== CurrentMapId =====
 
         [Test]
@@ -208,6 +268,21 @@ namespace Game.Tests.EditMode
 
             _flagManager.SwitchMap("map_forest");
             Assert.AreEqual("map_forest", _flagManager.CurrentMapId);
+        }
+
+        private sealed class TrackingSaveable : ISaveable
+        {
+            public string SaveId => "earlier";
+            public int Value { get; set; }
+            public int ApplyCount { get; private set; }
+
+            public object Serialize() => Value;
+
+            public void Deserialize(object data)
+            {
+                ApplyCount++;
+                Value = (int)data;
+            }
         }
     }
 }
