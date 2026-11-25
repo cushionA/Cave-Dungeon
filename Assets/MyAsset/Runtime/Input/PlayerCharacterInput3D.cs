@@ -89,6 +89,7 @@ namespace Game.Runtime
             BindInteraction(_gameplayMap?.FindAction("Interact"));
             BindCooperation(_gameplayMap?.FindAction("Cooperation"));
             BindItems(_gameplayMap);
+            BindDodge(_gameplayMap?.FindAction("Sprint"));
             if (_move != null)
             {
                 _move.performed += CaptureMove;
@@ -223,6 +224,7 @@ namespace Game.Runtime
             {
                 if (ReferenceEquals(changed, _jump)) { ClearJump(); }
                 if (ReferenceEquals(changed, _guard)) { ClearGuardInput(); }
+                if (ReferenceEquals(changed, _sprint)) { ClearDodgeInput(); }
                 if (ReferenceEquals(changed, _fieldOrderAction)) { CancelFieldOrderPress(); }
                 if (ReferenceEquals(changed, _interactAction)) { ClearInteraction(); }
                 if (ReferenceEquals(changed, _cooperationAction)) { _pendingCooperation = default; }
@@ -239,6 +241,7 @@ namespace Game.Runtime
             CancelMultiLock();
             ClearJump();
             ClearGuardInput();
+            ClearDodgeInput();
             CancelFieldOrderPress();
             ClearInteraction();
             _pendingCooperation = default;
@@ -268,6 +271,7 @@ namespace Game.Runtime
                 ClearPendingAttack();
                 CancelMultiLock();
                 ClearGuardInput();
+                ClearDodgeInput();
                 CancelFieldOrderPress();
                 ClearInteraction();
                 _pendingCooperation = default;
@@ -278,6 +282,7 @@ namespace Game.Runtime
             if (ConsumeInteraction()) { return; }
             GameActionRuntime actionsRuntime = GameManager.Actions;
             ApplyGuardInput(actionsRuntime);
+            TryStartDodge(actionsRuntime);
             if (_multiLockAction != null && !IsMultiLockInputActive()) { CancelMultiLock(); }
             if (_pendingAttack != null || _multiLockReleasePending)
             {
@@ -320,7 +325,11 @@ namespace Game.Runtime
                 if (jumpPressed || _jumpBufferRemaining <= 0f) { ClearJump(); }
             }
 
-            _motor.Simulate(moveDirection, jumpPressed, deltaTime);
+            if (TryGetDodgeMovement(actionsRuntime, out Vector3 dodgeVelocity))
+            {
+                _motor.SimulateVelocityStep(dodgeVelocity, deltaTime);
+            }
+            else { _motor.Simulate(moveDirection, jumpPressed, deltaTime); }
             ConsumeCooperation();
             ConsumeItemInput();
         }

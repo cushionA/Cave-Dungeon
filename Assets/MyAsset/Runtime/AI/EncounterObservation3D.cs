@@ -87,7 +87,7 @@ namespace Game.Runtime
                         continue;
                     }
 
-                    sightings.Add(new EncounterSighting3D(observer.actor, target.actor, target.position));
+                    sightings.Add(new EncounterSighting3D(observer.actor, target.actor, target.position, target.bodyCenter));
                     _visiblePairs.Add((observer.actor, target.actor));
                 }
             }

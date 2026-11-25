@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Game.Core;
 
 namespace Game.Runtime
@@ -37,11 +38,13 @@ namespace Game.Runtime
             public readonly ProjectileController controller;
             public readonly Projectile core;
             public readonly ulong lease;
-            public ProjectileStep(ProjectileController controller, Projectile core, ulong lease)
+            public readonly PhysicsScene2D world;
+            public ProjectileStep(ProjectileController controller, Projectile core, ulong lease, PhysicsScene2D world)
             {
                 this.controller = controller;
                 this.core = core;
                 this.lease = lease;
+                this.world = world;
             }
         }
 
@@ -182,7 +185,9 @@ namespace Game.Runtime
                 return null;
             }
             controller.ActiveIndex = _activeProjectiles.Count;
-            _activeProjectiles.Add(new ProjectileStep(controller, core, lease));
+            ProjectileStep step = new ProjectileStep(controller, core, lease, controller.gameObject.scene.GetPhysicsScene2D());
+            _activeProjectiles.Add(step);
+            _flightIndex.Invalidate();
             try
             {
                 if (groundImpact.HasValue) { _groundImpactShots.Add(lease, groundImpact.Value); }
@@ -348,7 +353,9 @@ namespace Game.Runtime
 
         public void SimulationTick(float deltaTime)
         {
-            if (_isTicking || _isClearing || _activeProjectiles == null || _activeProjectiles.Count == 0) { return; }
+            if (_isTicking || _isClearing || _activeProjectiles == null) { return; }
+            _flightIndex.BeginTick();
+            if (_activeProjectiles.Count == 0) { return; }
             _isTicking = true;
             _tickSnapshot.Clear();
             for (int i = 0; i < _activeProjectiles.Count; i++)
@@ -403,6 +410,7 @@ namespace Game.Runtime
             Projectile core = controller.CoreProjectile;
             if (core == null || !IsCurrent(controller, core, controller.LeaseId)) { return; }
             core.Kill();
+            _flightIndex.Invalidate();
             RemoveGroundImpact(controller.LeaseId);
             controller.StopCollision();
         }
@@ -473,6 +481,7 @@ namespace Game.Runtime
         {
             if (_activeProjectiles == null || _isClearing) { return; }
             _isClearing = true;
+            _flightIndex.Invalidate();
             _clearVersion++;
             try
             {
@@ -483,7 +492,11 @@ namespace Game.Runtime
                 }
                 _corePool.Clear();
             }
-            finally { _isClearing = false; }
+            finally
+            {
+                _nearbyFlights.Clear();
+                _isClearing = false;
+            }
         }
 
         /// <summary>
@@ -634,6 +647,7 @@ namespace Game.Runtime
                 if (!ReferenceEquals(last.controller, null)) { last.controller.ActiveIndex = index; }
             }
             _activeProjectiles.RemoveAt(lastIndex);
+            _flightIndex.Invalidate();
             RemoveGroundImpact(lease);
             if (!ReferenceEquals(controller, null)) { controller.ActiveIndex = -1; }
             _corePool.TryReturn(core, lease);

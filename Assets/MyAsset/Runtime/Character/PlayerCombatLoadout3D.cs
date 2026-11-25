@@ -17,12 +17,15 @@ namespace Game.Runtime
             [SerializeField] private string displayName;
             [SerializeField] private EquipmentDefinition equipment;
             [SerializeField] private AttackInfo attack;
+            [SerializeField, Tooltip("騎士の表示リグに置く武器の子オブジェクト。")]
+            private GameObject visual;
             [SerializeField] private bool startingOwned;
 
             public int ItemId => itemId;
             public string DisplayName => string.IsNullOrWhiteSpace(displayName) ? attack?.attackName : displayName;
             internal EquipmentDefinition Equipment => equipment;
             internal AttackInfo Attack => attack;
+            internal GameObject Visual => visual;
             internal bool StartingOwned => startingOwned;
         }
 
@@ -65,6 +68,9 @@ namespace Game.Runtime
         private PlayerCharacterInput3D _input;
         private SaveManager _saves;
         private ActorRef _equipmentOwner;
+        private ActorRef _weaponVisualOwner;
+        private WeaponOption _shownWeapon;
+        private long _weaponVisualDeferredBy;
         private EquipmentDefinition _appliedWeapon;
         private EquipmentDefinition _appliedCore;
 
@@ -95,6 +101,9 @@ namespace Game.Runtime
             _saves = null;
             ActorRef equipmentOwner = _equipmentOwner;
             _equipmentOwner = default;
+            _weaponVisualOwner = default;
+            _shownWeapon = null;
+            _weaponVisualDeferredBy = 0;
             ApplyEquipment(equipmentOwner, null, ref _appliedWeapon, EquipSlot.Weapon);
             ApplyEquipment(equipmentOwner, null, ref _appliedCore, EquipSlot.Core);
         }
@@ -165,13 +174,46 @@ namespace Game.Runtime
                 _appliedCore = null;
             }
             int weaponId = selection.WeaponId;
-            EquipmentDefinition weapon = Owns(weaponId, ItemCategory.Weapon) ? FindWeapon(weaponId)?.Equipment : null;
-            ApplyEquipment(owner, weapon, ref _appliedWeapon, EquipSlot.Weapon);
+            WeaponOption weapon = Owns(weaponId, ItemCategory.Weapon) ? FindWeapon(weaponId) : null;
+            ApplyEquipment(owner, weapon?.Equipment, ref _appliedWeapon, EquipSlot.Weapon);
+            if (!isActiveAndEnabled || _actor.Actor != owner) { return false; }
+            SynchronizeWeaponVisual(owner, weapon);
             if (!isActiveAndEnabled || _actor.Actor != owner) { return false; }
             int coreId = selection.CoreId;
             EquipmentDefinition core = Owns(coreId, ItemCategory.Core) ? FindCore(coreId)?.Equipment : null;
             ApplyEquipment(owner, core, ref _appliedCore, EquipSlot.Core);
             return isActiveAndEnabled && _actor.Actor == owner;
+        }
+
+        private void SynchronizeWeaponVisual(ActorRef owner, WeaponOption weapon)
+        {
+            if (_weaponVisualOwner == owner)
+            {
+                if (ReferenceEquals(_shownWeapon, weapon))
+                {
+                    _weaponVisualDeferredBy = 0;
+                    return;
+                }
+                // 持ち替え時の技が完了するか、新しい技に切り替わるまで旧武器を残す。
+                if (GameManager.Actions?.Execution.GetPrimary(owner.Hash, out ActionExecution action) == true
+                    && (action.definition.gameplay & (ActionGameplayFlags.Attack | ActionGameplayFlags.Cast)) != 0)
+                {
+                    if (_weaponVisualDeferredBy == 0) { _weaponVisualDeferredBy = action.instanceId; }
+                    if (_weaponVisualDeferredBy == action.instanceId) { return; }
+                }
+            }
+
+            _weaponVisualOwner = owner;
+            _shownWeapon = weapon;
+            _weaponVisualDeferredBy = 0;
+            GameObject selected = weapon?.Visual;
+            foreach (WeaponOption option in weapons)
+            {
+                GameObject visual = option?.Visual;
+                if (visual == null || visual == gameObject || !visual.transform.IsChildOf(transform)) { continue; }
+                bool visible = visual == selected;
+                if (visual.activeSelf != visible) { visual.SetActive(visible); }
+            }
         }
 
         private static void ApplyEquipment(ActorRef owner, EquipmentDefinition desired, ref EquipmentDefinition applied, EquipSlot slot)

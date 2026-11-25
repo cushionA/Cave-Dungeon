@@ -7,10 +7,14 @@ using UnityEngine.SceneManagement;
 namespace Game.Runtime
 {
     /// <summary>シスターが編成した召喚種を、この3D区画の出現地点へ転送する。</summary>
+    // 遭遇がそのステップの移動を確定してから、通常探索の追従を試す。
+    [DefaultExecutionOrder(50)]
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CharacterActor3D))]
     public sealed class ExpeditionSummonDeployment3D : MonoBehaviour
     {
+        private const float k_MinFollowDistance = 0.1f;
+
         [Serializable]
         public struct SpeciesPrefab
         {
@@ -63,6 +67,8 @@ namespace Game.Runtime
         [SerializeField] private Transform[] deploymentPoints = Array.Empty<Transform>();
         [SerializeField] private LayerMask obstructionLayers = Physics.DefaultRaycastLayers;
         [SerializeField] private EncounterCombat3D encounter;
+        [SerializeField] private CharacterActor3D explorationLeader;
+        [SerializeField, Min(k_MinFollowDistance)] private float followDistance = 2.2f;
 
         private readonly Collider[] _overlap = new Collider[1];
         private CharacterActor3D _sister;
@@ -70,11 +76,58 @@ namespace Game.Runtime
         private Deployment _reinforcements;
         private object _pendingReinforcementAttempt;
         private bool _changing;
+        private bool _warnedInvalidFollowDistance;
         private uint _revision;
 
         public int ActiveCount => CountLiveSummons(_normal) + CountLiveSummons(_reinforcements);
 
         private void Awake() => _sister = GetComponent<CharacterActor3D>();
+
+        private void FixedUpdate()
+        {
+            // 増援の移動は指定遭遇が担当し、通常編成が探索に同行する。
+            Deployment group = _normal;
+            GameActionRuntime actions = GameManager.Actions;
+            // 未設定の編成だけ対象外とする。設定済みの同行先を失っても重力と接地は進める。
+            if (_changing || group == null || ReferenceEquals(explorationLeader, null) || actions == null
+                || !HasValidFollowDistance()) { return; }
+
+            CharacterActor3D leader = IsExplorationLeaderAvailable() ? explorationLeader : null;
+            for (int i = 0; ReferenceEquals(group, _normal) && i < group.units.Count; i++)
+            {
+                CharacterActor3D actor = group.units[i].actor;
+                if (!IsLive(actor) || !actor.Body.enabled) { continue; }
+
+                int hash = actor.Actor.Hash;
+                ref readonly CharacterFlags flags = ref GameManager.Data.GetFlags(hash);
+                if (flags.IsVanished || flags.ActState == ActState.Dead || flags.Belong != CharacterBelong.Ally) { continue; }
+
+                bool blocked = actions.IsMovementBlocked(hash) || GameManager.Data.GetStatusEffects(hash).BlocksMovement;
+                Vector3 direction = blocked ? Vector3.zero : CompanionTactics3D.FollowDirection(actor, leader, followDistance);
+                actor.Motor.SimulateFixedStep(direction, false, Time.fixedDeltaTime);
+            }
+        }
+
+        private bool HasValidFollowDistance()
+        {
+            if (float.IsFinite(followDistance) && followDistance >= k_MinFollowDistance) { return true; }
+            if (!_warnedInvalidFollowDistance)
+            {
+                _warnedInvalidFollowDistance = true;
+                Debug.LogWarning("[ExpeditionSummonDeployment3D] 追従距離には0.1以上の有限値を設定してください。", this);
+            }
+            return false;
+        }
+
+        private bool IsExplorationLeaderAvailable()
+        {
+            if (!IsLive(explorationLeader) || !explorationLeader.Body.enabled
+                || explorationLeader.gameObject.scene.GetPhysicsScene() != gameObject.scene.GetPhysicsScene()) { return false; }
+
+            ref readonly CharacterFlags flags = ref GameManager.Data.GetFlags(explorationLeader.Actor.Hash);
+            return flags.Belong == CharacterBelong.Ally && (flags.Feature & CharacterFeature.Player) != 0
+                && flags.ActState != ActState.Dead && !flags.IsVanished;
+        }
 
         private void LateUpdate()
         {
@@ -400,12 +453,14 @@ namespace Game.Runtime
         private static bool Finite(Vector3 value) => float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
 
 #if UNITY_INCLUDE_TESTS
-        internal void ConfigureForTest(SpeciesPrefab[] prefabs, Transform[] points, LayerMask blockers, EncounterCombat3D coordinator = null)
+        internal void ConfigureForTest(SpeciesPrefab[] prefabs, Transform[] points, LayerMask blockers,
+            EncounterCombat3D coordinator = null, CharacterActor3D leader = null)
         {
             speciesPrefabs = prefabs;
             deploymentPoints = points;
             obstructionLayers = blockers;
             encounter = coordinator;
+            explorationLeader = leader;
         }
 #endif
     }

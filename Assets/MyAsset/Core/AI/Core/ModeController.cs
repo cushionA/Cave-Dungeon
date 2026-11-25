@@ -50,6 +50,9 @@ namespace Game.Core
             _compiledModes = new AICompiledMode[_modes == null ? 0 : _modes.Length];
             for (int i = 0; i < _compiledModes.Length; i++) { _compiledModes[i] = new AICompiledMode(_modes[i]); }
             _transitionRules = AIConfigurationCopy.CloneTransitions(transitionRules);
+            _judgmentLoop.TransitionsRequireNearbyHostileProjectileCount = _transitionRules != null
+                && Array.Exists(_transitionRules, rule => rule.conditions != null
+                    && Array.Exists(rule.conditions, AICompiledMode.IsNearbyHostileProjectileCountCondition));
             if (_modes != null && _modes.Length > 0)
             {
                 SwitchMode(0);

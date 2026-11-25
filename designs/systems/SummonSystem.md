@@ -12,9 +12,13 @@ Section: 3 — 世界の広がり
 - 通常探索は少人数で進める。魔物溜まりや指定ボス戦では一時的に人数とコストの上限を増やし、戦闘終了・撤退・退出時に探索編成へ戻す。二周目以降は、条件を満たした一部のボスも召喚候補に加わる。
 - 個体ごとのコスト、通常時と増援時の上限、戦闘中に呼び直せるタイミングや補充方法は試作で決める。
 
-## 現行の実装とセクション3の設計
+## 3D遠征での同行
 
-現行の `SummonManager` は同時召喚2体、`PartyManager` はパーティ上限4人を定義する。満員時は `TrySummon` が失敗し、`TrySummonWithReplace` では残り時間が最も短い1体を解除して入れ替える。以下はこの固定枠を前提にしたセクション3の設計。NPCイベントによる解禁、個体ごとのコスト、戦闘・周回に応じた召喚条件は今後の実装範囲。[SummonManager](../../Assets/MyAsset/Core/AI/Summon/SummonManager.cs) · [PartyManager](../../Assets/MyAsset/Core/Common/Section3Utilities.cs) · [SummonMagicBridge](../../Assets/MyAsset/Core/AI/Summon/SummonMagicBridge.cs)
+`ExpeditionSummonDeployment3D` の `Exploration Leader` に騎士を設定すると、通常編成で出撃した魔物が同じ物理空間で騎士に歩いて追従する。停止距離は `Follow Distance` で設定する。集団戦の固定更新で移動した個体は、そのステップの追従を省く。遭遇が固定ステップの途中で始まるか終わる場合も、移動と重力はモーターで一度だけ適用する。戦闘専用の増援は遭遇側で管理する。[遠征の出撃と同行](../../Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs)・[3D移動](../../Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs)
+
+## 召喚魔法の固定枠
+
+`SummonManager` は同時召喚2体、`PartyManager` はパーティ上限4人を定義する。満員時は `TrySummon` が失敗し、`TrySummonWithReplace` では残り時間が最も短い1体を解除して入れ替える。以下はこの固定枠を前提にしたセクション3の設計。[SummonManager](../../Assets/MyAsset/Core/AI/Summon/SummonManager.cs) · [PartyManager](../../Assets/MyAsset/Core/Common/Section3Utilities.cs) · [SummonMagicBridge](../../Assets/MyAsset/Core/AI/Summon/SummonMagicBridge.cs)
 
 ## 依存
 - 入力: MagicSystem（MagicCaster, MagicDefinition）、CompanionAI_Basic（FollowBehavior再利用）、AICore（AIBrain）、PartyManager

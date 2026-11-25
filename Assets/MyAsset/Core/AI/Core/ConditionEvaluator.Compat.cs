@@ -58,6 +58,9 @@ namespace Game.Core
                 && condition.filter.RequiresObservedTargetFacts) { return float.NaN; }
             switch (condition.conditionType)
             {
+                case AIConditionType.TargetLineOfSight:
+                    return float.NaN;
+
                 case AIConditionType.HpRatio:
                 {
                     int hash = ResolveTargetHash(condition.filter, ownerHash, targetHash);
@@ -192,11 +195,8 @@ namespace Game.Core
                 }
 
                 case AIConditionType.ProjectileNear:
-                {
-                    // 弾丸検出はランタイム物理システム依存のため、SoAからは取得不可
-                    // operandAを閾値距離として、将来的にProjectileManager連携予定
-                    return 0f;
-                }
+                case AIConditionType.NearbyHostileProjectileCount:
+                    return float.NaN;
 
                 case AIConditionType.ObjectNearby:
                 {

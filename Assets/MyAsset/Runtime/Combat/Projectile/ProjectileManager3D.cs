@@ -43,6 +43,8 @@ namespace Game.Runtime
 
         private readonly List<Shot> _active = new List<Shot>(16);
         private readonly List<Shot> _tick = new List<Shot>(16);
+        private readonly ProjectileSpatialIndex<Shot, PhysicsScene> _spatial = new ProjectileSpatialIndex<Shot, PhysicsScene>(SampleFlight);
+        private readonly List<Shot> _nearby = new List<Shot>(16);
         private RaycastHit[] _sweepHits = new RaycastHit[16];
         private Collider[] _overlaps = new Collider[16];
         private SoACharaDataDic _data;
@@ -130,6 +132,7 @@ namespace Game.Runtime
             warning = null;
             shot.active = true;
             _active.Add(shot);
+            _spatial.Invalidate();
             try
             {
                 if (shot.delay == 0f) { shot.visual.SetActive(true); }
@@ -154,28 +157,66 @@ namespace Game.Runtime
             return false;
         }
 
-        internal void CollectLockWarnings(ActorRef target, List<ProjectileLockWarning> warnings)
+        /// <summary>同じ3D物理空間で、観測者に作用し得る近くの敵対弾を数える。</summary>
+        public int CountNearbyHostileProjectiles(CharacterActor3D observer, float radius)
         {
-            warnings.Clear();
-            foreach (Shot shot in _active)
-            {
-                if (shot.explicitTarget != target || !CanSimulate(shot) || shot.delay > 0f || shot.Speed <= 0f) { continue; }
-                CharacterActor3D defender = GetTarget(shot, target);
-                if (defender == null) { continue; }
+            if (_data == null || observer == null || !PositiveFinite(radius)) { return 0; }
+            ActorRef target = observer.Actor;
+            if (!MultiLockTargeting3D.TryGetActor(target, out CharacterActor3D current) || current != observer) { return 0; }
 
-                Vector3 fromTarget = shot.position - defender.Body.bounds.center;
-                if (Vector3.Dot(fromTarget, shot.direction) < 0f)
+            CharacterBelong faction = _data.GetFlags(target.Hash).Belong;
+            _spatial.Collect(_active, observer.gameObject.scene.GetPhysicsScene(), observer.Body.bounds.center, radius,
+                _nearby, canCache: !_isTicking);
+            int count = 0;
+            try
+            {
+                foreach (Shot shot in _nearby)
                 {
-                    warnings.Add(new ProjectileLockWarning(shot.leaseId, fromTarget));
+                    if (!CanSimulate(shot) || shot.delay > 0f
+                        || !AttackTargetRules.CanAffect(shot.context.Owner, shot.context.Belong,
+                            target, faction, AttackTargetRelation.Hostile)) { continue; }
+                    CharacterActor3D eligible = shot.groundImpact.HasValue ? GetEligibleActor(shot, target) : GetTarget(shot, target);
+                    if (eligible == observer) { count++; }
                 }
             }
+            finally { _nearby.Clear(); }
+            return count;
+        }
+
+        internal void CollectLockWarnings(ActorRef target, List<ProjectileLockWarning> warnings,
+            float radius = ProjectileSpatialIndex.DefaultQueryRadius)
+        {
+            warnings.Clear();
+            if (_data == null || !PositiveFinite(radius)
+                || !MultiLockTargeting3D.TryGetActor(target, out CharacterActor3D defender)) { return; }
+
+            Vector3 center = defender.Body.bounds.center;
+            _spatial.Collect(_active, defender.gameObject.scene.GetPhysicsScene(), center, radius,
+                _nearby, canCache: !_isTicking);
+            try
+            {
+                foreach (Shot shot in _nearby)
+                {
+                    if (shot.explicitTarget != target || !CanSimulate(shot) || shot.delay > 0f || shot.Speed <= 0f) { continue; }
+                    if (GetTarget(shot, target) != defender) { continue; }
+
+                    Vector3 fromTarget = shot.position - center;
+                    if (Vector3.Dot(fromTarget, shot.direction) < 0f)
+                    {
+                        warnings.Add(new ProjectileLockWarning(shot.leaseId, fromTarget));
+                    }
+                }
+            }
+            finally { _nearby.Clear(); }
         }
 
         internal void SimulationTick(float deltaTime)
         {
-            if (_active.Count == 0 || _data == null || !isActiveAndEnabled || _isTicking || _isClearing
+            if (_data == null || !isActiveAndEnabled || _isTicking || _isClearing
                 || !PositiveFinite(deltaTime)) { return; }
 
+            _spatial.BeginTick();
+            if (_active.Count == 0) { return; }
             _isTicking = true;
             _tick.AddRange(_active);
             try
@@ -212,6 +253,7 @@ namespace Game.Runtime
         {
             if (_isClearing) { return; }
             _isClearing = true;
+            _spatial.Invalidate();
             try
             {
                 while (_active.Count != 0) { Retire(_active[_active.Count - 1]); }
@@ -269,6 +311,9 @@ namespace Game.Runtime
             shot.context.ApplyTo(ref damage, actor);
             receiver.ReceiveProjectileDamage3D(damage, origin, shot.world);
         }
+
+        private static ProjectileSpatialSample<PhysicsScene> SampleFlight(Shot shot)
+            => shot.active && shot.delay <= 0f ? new ProjectileSpatialSample<PhysicsScene>(shot.world, shot.position) : default;
 
         private static void MoveShot(Shot shot, Vector3 position)
         {
@@ -372,6 +417,7 @@ namespace Game.Runtime
             if (!shot.active) { return; }
             shot.active = false;
             _active.Remove(shot);
+            _spatial.Invalidate();
             GameObject warning = shot.warning;
             shot.warning = null;
             AttackWarningPresentation.HideGroundImpact(warning);

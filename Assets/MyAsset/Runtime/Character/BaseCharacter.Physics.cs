@@ -18,6 +18,7 @@ namespace Game.Runtime
         public int PhysicsCollisionLayer => _physicsBackend != null ? _physicsBackend.CollisionLayer : _pendingPhysicsLayer;
         public bool PhysicsBodySuspended => _physicsBackend != null && _physicsBackend.IsSuspended;
         public bool PhysicsBodyColliderEnabled => _physicsBackend != null && _physicsBackend.BodyColliderEnabled;
+        internal LayerMask GroundLayers => _groundLayer;
         internal Vector2 TargetingCenter => _collider != null && _collider.enabled
             ? (Vector2)_collider.bounds.center : PhysicsPosition;
 

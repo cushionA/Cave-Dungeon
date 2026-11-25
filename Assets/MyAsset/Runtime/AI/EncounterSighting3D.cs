@@ -9,12 +9,14 @@ namespace Game.Runtime
         public ActorRef Observer { get; }
         public ActorRef Target { get; }
         public Vector3 Position { get; }
+        public Vector3 TargetCenter { get; }
 
-        public EncounterSighting3D(ActorRef observer, ActorRef target, Vector3 position)
+        public EncounterSighting3D(ActorRef observer, ActorRef target, Vector3 position, Vector3 targetCenter)
         {
             Observer = observer;
             Target = target;
             Position = position;
+            TargetCenter = targetCenter;
         }
     }
 }

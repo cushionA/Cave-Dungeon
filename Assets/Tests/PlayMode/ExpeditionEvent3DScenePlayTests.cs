@@ -198,7 +198,7 @@ namespace Game.Tests.PlayMode
             yield return WaitForJournalRestore();
         }
 
-        private static IEnumerator WaitForJournalRestore()
+        internal static IEnumerator WaitForJournalRestore()
         {
             PropertyInfo loading = VendorType("PixelCrushers.QuestMachine.QuestMachine").GetProperty("isLoadingGame");
             PropertyInfo receivesNewMessages = VendorType("PixelCrushers.MessageSystem").GetProperty("allowReceiveSameFrameAdded");

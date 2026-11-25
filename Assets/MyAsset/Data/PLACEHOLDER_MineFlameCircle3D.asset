@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: PLACEHOLDER_MineFlameCircle3D
   m_EditorClassIdentifier: Game.Core::Game.Core.AttackInfo
   persistentId: 96e1580345fe13c91983b00a6662ccd2
-  motion: {fileID: 11400000, guid: 79734be8a0f547758b105582fac75bcb, type: 2}
+  motion: {fileID: 11400000, guid: 32b2d09b6f3d58c8487e7b5ef698598c, type: 2}
   staminaCost: 0
   mpCost: 4
   staminaPerSecond: 0

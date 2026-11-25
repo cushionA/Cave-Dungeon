@@ -392,15 +392,34 @@ namespace Game.Runtime
             for (int i = 0; i < _ownerBuffer.Count; i++)
             {
                 int owner = _ownerBuffer[i];
-                if (!GameManager.IsCharacterValid(owner) || !(_data.GetManaged(owner) is BaseCharacter actor)
-                    || actor.AnimationController == null) { continue; }
+                if (!GameManager.IsCharacterValid(owner)) { continue; }
+                ManagedCharacter actor = _data.GetManaged(owner);
+                CharacterAnimationController animator = actor switch
+                {
+                    BaseCharacter legacy => legacy.AnimationController,
+                    CharacterActor3D spatial => spatial.AnimationController,
+                    _ => null,
+                };
+                if (animator == null) { continue; }
+                ActorRef spatialActor = actor is CharacterActor3D spatialOwner ? spatialOwner.Actor : default;
+                if (actor is CharacterActor3D && !spatialActor.IsValid) { continue; }
+
                 Execution.CopyActive(owner, _active);
                 for (int j = 0; j < _active.Count; j++)
                 {
                     ActionExecution current = _active[j];
-                    if (_catalog.TryGet(current.definitionId, out ActionCatalog.Entry entry))
+                    if (!_catalog.TryGet(current.definitionId, out ActionCatalog.Entry entry)) { continue; }
+                    if (!spatialActor.IsValid)
                     {
-                        actor.AnimationController.Present(current, entry.presentation);
+                        animator.Present(current, entry.presentation);
+                    }
+                    else if (current.ownerRef == spatialActor && CanPresentSharedMotion(current))
+                    {
+                        animator.Present3D(current, entry.presentation);
+                    }
+                    else
+                    {
+                        animator.EndExecution(current.instanceId);
                     }
                 }
                 AnimationStateData animation = default;
@@ -412,7 +431,7 @@ namespace Game.Runtime
                     animation.isCommitted = !primary.canCancel;
                     animation.currentMoveId = (byte)(primary.definitionId % 256);
                 }
-                actor.AnimationController.SetExecutionState(animation);
+                animator.SetExecutionState(animation);
             }
         }
 
@@ -421,15 +440,21 @@ namespace Game.Runtime
             ref readonly ActionExecution current = ref notification.execution;
             TrackConsumableExecution(notification);
             int owner = current.ownerHash;
+            CharacterActor3D spatial = _data.TryGetValue(owner, out _) ? _data.GetManaged(owner) as CharacterActor3D : null;
+            if (spatial != null && spatial.AnimationController != null
+                && (notification.kind == ActionSignalKind.Completed || notification.kind == ActionSignalKind.Interrupted))
+            {
+                spatial.AnimationController.EndExecution(current.instanceId);
+            }
             if (current.ownerRef.IsValid && (GameManager.Actors == null || !GameManager.Actors.IsCurrent(current.ownerRef)))
             {
                 RemoveCombat(current.instanceId);
                 _movementOutputs.Remove(current.instanceId);
                 return;
             }
-            if (_data.TryGetValue(owner, out _) && _data.GetManaged(owner) is CharacterActor3D actor3D)
+            if (spatial != null)
             {
-                HandleSpatialExecution(notification, actor3D);
+                HandleSpatialExecution(notification, spatial);
                 SyncDefense(owner);
                 _events.FireActionExecution(notification);
                 return;
@@ -729,6 +754,10 @@ namespace Game.Runtime
         {
             _registered.Dispose(); _removed.Dispose(); _damage.Dispose(); _requested.Dispose(); _death.Dispose();
             Execution.Changed -= HandleExecution;
+            foreach (int owner in _owners)
+            {
+                if (_data.GetManaged(owner) is CharacterActor3D actor && actor != null) { actor.ReleaseAnimation(); }
+            }
             foreach (CombatExecution combat in _combat.Values)
             {
                 AttackWarningPresentation.HideGroundImpact(combat.groundImpactWarning);

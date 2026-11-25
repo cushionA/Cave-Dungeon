@@ -172,6 +172,87 @@ namespace Game.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator MotionPresentation_3DAttack_RetimesPhaseAndClearsVisualWhenPhaseOrOwnerEnds()
+        {
+            TestSceneHelper.Cleanup();
+            yield return null;
+            _actors.Add(TestSceneHelper.CreateGameManager());
+            GameManager.Instance.enabled = false;
+
+            GameObject actorObject = new GameObject("3D motion owner");
+            _actors.Add(actorObject);
+            actorObject.SetActive(false);
+            CharacterActor3D actor = actorObject.AddComponent<CharacterActor3D>();
+            Game.Core.CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo(CharacterBelong.Ally,
+                CharacterFeature.Minion);
+            _assets.Add(info);
+            actor.SetCharacterInfoForTest(info);
+            GameObject rig = new GameObject("Rig");
+            rig.transform.SetParent(actorObject.transform, false);
+            rig.SetActive(false);
+            GameObject visual = new GameObject("Visual");
+            visual.transform.SetParent(rig.transform, false);
+            CharacterAnimationController controller = rig.AddComponent<CharacterAnimationController>();
+            SerializedObject actorSettings = new SerializedObject(actor);
+            actorSettings.FindProperty("animationController").objectReferenceValue = controller;
+            actorSettings.ApplyModifiedPropertiesWithoutUndo();
+            actorObject.SetActive(true);
+            Assert.IsTrue(actor.Actor.IsValid);
+            GameActionRuntime actions = GameManager.Actions;
+            Assert.DoesNotThrow(actions.Present, "A bound rig can be inactive while its actor is displayed later.");
+            rig.SetActive(true);
+
+            MotionDefinition motion = CreateMotion();
+            motion.info = new MotionInfo
+            {
+                preMotionDuration = 0.5f, activeMotionDuration = 0.25f, recoveryDuration = 0.5f,
+                preMotionClip = motion.info.activeClip, recoveryClip = motion.info.activeClip,
+            };
+            AttackInfo attack = ScriptableObject.CreateInstance<AttackInfo>();
+            _assets.Add(attack);
+            attack.motion = motion;
+            attack.damageMultiplier = 1f;
+            attack.attackElement = Element.Slash;
+            attack.attack3D = new AttackProfile3D
+            {
+                shape = AttackShape3D.Melee, localCenter = Vector3.forward, halfExtents = Vector3.one,
+                targetLayers = LayerMask.GetMask("Enemy"),
+            };
+            Assert.IsTrue(actions.Execute3D(actor, attack, out long instance));
+            actions.Execution.Tick(0.25f);
+            actions.Present();
+            yield return null;
+            yield return null;
+            Assert.IsTrue(controller.HasMotion(instance));
+            Assert.AreEqual(0.5f, visual.transform.localPosition.x, 0.01f);
+            Assert.AreEqual(AnimationPhase.Anticipation, controller.Bridge.CurrentState.currentPhase);
+
+            actions.Execution.Tick(0.25f);
+            actions.Present();
+            Assert.AreEqual(AnimationPhase.Active, controller.Bridge.CurrentState.currentPhase);
+            Assert.IsFalse(controller.HasActiveGraph, "An unassigned phase clears the previous motion.");
+
+            actions.Execution.Tick(0.5f);
+            actions.Present();
+            Assert.AreEqual(AnimationPhase.Recovery, controller.Bridge.CurrentState.currentPhase);
+            Assert.IsTrue(controller.HasMotion(instance));
+            actions.Execution.Tick(0.25f);
+            Assert.IsFalse(controller.HasMotion(instance));
+
+            Assert.IsTrue(actions.Execute3D(actor, attack, out long interrupted));
+            actions.Present();
+            Assert.IsTrue(controller.HasMotion(interrupted));
+            ActorRef previousActor = actor.Actor;
+            actor.enabled = false;
+            Assert.IsFalse(controller.HasActiveGraph);
+            actor.enabled = true;
+            Assert.AreNotEqual(previousActor, actor.Actor);
+            actions.Present();
+            Assert.AreEqual(AnimationPhase.Neutral, controller.Bridge.CurrentState.currentPhase);
+            Assert.IsFalse(controller.HasMotion(interrupted));
+        }
+
+        [UnityTest]
         public IEnumerator MotionPresentation_Update_DoesNotAdvanceSharedPhaseClock()
         {
             CharacterAnimationController controller = CreateController();

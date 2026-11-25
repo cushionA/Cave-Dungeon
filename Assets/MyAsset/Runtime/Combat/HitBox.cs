@@ -101,7 +101,12 @@ namespace Game.Runtime
             {
                 found = GameManager.Actors.TryGet(other.attachedRigidbody.gameObject.GetHashCode(), out target);
             }
-            if (!found || GameManager.Data.Uses3DPhysics(target.Hash) || _currentMotion.selectedTargets?.Contains(target) == false
+            if (!found)
+            {
+                if (isActiveAndEnabled) { ExplosiveProp2D.TryDetonate(_triggerCollider, other, _attackContext, _currentMotion.actionInstanceId); }
+                return;
+            }
+            if (GameManager.Data.Uses3DPhysics(target.Hash) || _currentMotion.selectedTargets?.Contains(target) == false
                 || !CombatDataHelper.CanAffectTarget(_attackContext, target,
                 GameManager.Data, GameManager.Actors)) { return; }
             int targetHash = target.Hash;

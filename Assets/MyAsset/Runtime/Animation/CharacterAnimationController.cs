@@ -28,6 +28,8 @@ namespace Game.Runtime
         private Animator _animator;
         private AnimationBridge _bridge;
         private int _ownerHash;
+        private ActorRef _spatialActor;
+        private CharacterActor3D _spatialOwner;
         private bool _isInitialized;
         private bool _started;
         private PlayableGraph _graph;
@@ -74,8 +76,31 @@ namespace Game.Runtime
             _isInitialized = true;
         }
 
+        internal void Initialize3D(CharacterActor3D owner, ActorRef actor)
+        {
+            if (_spatialActor.IsValid && (_spatialOwner != owner || _spatialActor != actor))
+            {
+                Release3D(_spatialOwner, _spatialActor);
+            }
+            _spatialOwner = owner;
+            _spatialActor = actor;
+            Initialize(actor.Hash);
+        }
+
+        internal void Release3D(CharacterActor3D owner, ActorRef actor)
+        {
+            if (_spatialOwner != owner || _spatialActor != actor) { return; }
+            ReleaseGraph();
+            _bridge?.ApplyExecutionState(default);
+            _spatialOwner = null;
+            _spatialActor = default;
+            _isInitialized = false;
+            _ownerHash = 0;
+        }
+
         public void SetExecutionState(AnimationStateData state)
         {
+            if (_bridge == null) { return; }
             _bridge.ApplyExecutionState(state);
             SyncToSoA();
         }
@@ -89,13 +114,19 @@ namespace Game.Runtime
         }
 
         public void Present(in ActionExecution execution, in MotionPresentationData presentation)
+            => Present(execution, presentation, retimeToPhase: false);
+
+        internal void Present3D(in ActionExecution execution, in MotionPresentationData presentation)
+            => Present(execution, presentation, retimeToPhase: true);
+
+        private void Present(in ActionExecution execution, in MotionPresentationData presentation, bool retimeToPhase)
         {
             if (!isActiveAndEnabled)
             {
                 return;
             }
             AnimationClip clip = SelectClip(execution.phase, presentation.Motion);
-            if (clip == null)
+            if (clip == null || (retimeToPhase && !_animator.isActiveAndEnabled))
             {
                 EndExecution(execution.instanceId);
                 return;
@@ -105,7 +136,11 @@ namespace Game.Runtime
             bool rebuild = false;
             if (!_layers.TryGetValue(execution.instanceId, out MotionLayer layer))
             {
-                layer = new MotionLayer { instanceId = execution.instanceId };
+                layer = new MotionLayer
+                {
+                    instanceId = execution.instanceId,
+                    blendStartElapsed = execution.elapsed - execution.phaseElapsed,
+                };
                 _layers.Add(execution.instanceId, layer);
                 rebuild = true;
             }
@@ -126,7 +161,7 @@ namespace Game.Runtime
                 layer.playable = AnimationClipPlayable.Create(_graph, clip);
                 layer.playable.SetSpeed(0d);
                 layer.playable.SetDuration(double.MaxValue);
-                layer.blendStartElapsed = execution.elapsed - execution.phaseElapsed;
+                if (!retimeToPhase) { layer.blendStartElapsed = execution.elapsed - execution.phaseElapsed; }
                 layer.blendDuration = presentation.BlendDuration;
                 rebuild = true;
             }
@@ -134,9 +169,13 @@ namespace Game.Runtime
             bool loop = execution.phase == AnimationPhase.Active
                 && (presentation.Loop || execution.definition.endMode == ActionEndMode.Held);
             double phaseTime = System.Math.Max(0d, execution.phaseElapsed);
-            double clipTime = clip.length > 0f && loop ? phaseTime % clip.length : System.Math.Min(phaseTime, clip.length);
+            double clipTime = loop && clip.length > 0f ? phaseTime % clip.length
+                : retimeToPhase ? execution.normalizedTime * clip.length
+                : System.Math.Min(phaseTime, clip.length);
             layer.playable.SetTime(clipTime);
-            layer.weight = layer.blendDuration > 0f
+            // 3Dでは命中・発射・消費のポーズが始まる有効区間から、復帰までウェイトを保つ。
+            bool blendIn = layer.blendDuration > 0f && (!retimeToPhase || execution.phase == AnimationPhase.Anticipation);
+            layer.weight = blendIn
                 ? Mathf.Clamp01((execution.elapsed - layer.blendStartElapsed) / layer.blendDuration) : 1f;
 
             if (rebuild)
@@ -166,6 +205,10 @@ namespace Game.Runtime
 
         public void TickFrame()
         {
+            if (_spatialOwner != null && _spatialOwner.Actor == _spatialActor)
+            {
+                _spatialOwner.UpdateMotionParameters(this, _animator);
+            }
             if (_bridge.IsDirty)
             {
                 ApplyParameters();
@@ -261,6 +304,10 @@ namespace Game.Runtime
             if (_graph.IsValid())
             {
                 _graph.Destroy();
+                if (_spatialActor.IsValid && _animator != null && _animator.isActiveAndEnabled)
+                {
+                    _animator.Rebind();
+                }
             }
             _layers.Clear();
             _orderedLayers.Clear();
@@ -335,7 +382,8 @@ namespace Game.Runtime
 
         private void SyncToSoA()
         {
-            if (_isInitialized && GameManager.IsCharacterValid(_ownerHash))
+            if (_isInitialized && GameManager.IsCharacterValid(_ownerHash)
+                && (!_spatialActor.IsValid || (_spatialOwner != null && _spatialOwner.Actor == _spatialActor)))
             {
                 GameManager.Data.GetAnimationState(_ownerHash) = _bridge.CurrentState;
             }

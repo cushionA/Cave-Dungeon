@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: PLACEHOLDER_KnightSword3D
   m_EditorClassIdentifier: Game.Core::Game.Core.AttackInfo
   persistentId: 7295114ea564084dfb3c47f8085f9841
-  motion: {fileID: 11400000, guid: dfe5114fd6f64a47ad43b99922d3e1ed, type: 2}
+  motion: {fileID: 11400000, guid: e55df46b8bfc59927b64e5a39f817efb, type: 2}
   staminaCost: 5
   mpCost: 0
   staminaPerSecond: 0

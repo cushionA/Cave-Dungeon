@@ -25,7 +25,7 @@ namespace Game.Tests.PlayMode
         private float _previousTimeScale;
 
         [UnityTest]
-        public IEnumerator AuthoredNPCQuest_OffersAndReportsOnlyAfterReachingThe3DObjective_UnlocksAndDeploysAid()
+        public IEnumerator AuthoredNPCQuest_ReportsOnlyAfterReachingThe3DObjective_DeploysAidThatFollowsKnight()
         {
             _previousTimeScale = Time.timeScale;
             Time.timeScale = 1f;
@@ -118,7 +118,17 @@ namespace Game.Tests.PlayMode
             deployment.CopyActiveSummons(summons);
             Assert.That(summons.Count, Is.EqualTo(1));
             Assert.AreEqual(k_SpeciesId, summons[0].SpeciesId);
-            Assert.IsTrue(GameManager.Actors.IsCurrent(summons[0].Actor));
+            ActorRef deployedActor = summons[0].Actor;
+            Assert.IsTrue(GameManager.Actors.IsCurrent(deployedActor));
+            CharacterActor3D summon = GameManager.Data.GetManaged(deployedActor.Hash) as CharacterActor3D;
+            Assert.IsNotNull(summon);
+
+            yield return VerifySummonFollowsKnight(knight, summon);
+
+            deployment.CopyActiveSummons(summons);
+            Assert.That(summons.Single().Actor, Is.EqualTo(deployedActor));
+            Assert.IsTrue(GameManager.Actors.IsCurrent(deployedActor));
+            Assert.That(summon.gameObject.scene, Is.EqualTo(_scene));
         }
 
         [UnityTearDown]
@@ -145,6 +155,31 @@ namespace Game.Tests.PlayMode
             knight.transform.position = position;
             knight.Body.enabled = true;
             Physics.SyncTransforms();
+        }
+
+        private static IEnumerator VerifySummonFollowsKnight(CharacterActor3D knight, CharacterActor3D summon)
+        {
+            const float arrivalTolerance = 0.15f;
+            const float followDistanceTolerance = 2.5f;
+            Vector3 summonStart = summon.Motor.FeetPosition;
+            // The southwest side of the mine is open floor behind the Sister interaction point.
+            Vector3 destination = new Vector3(1.4f, 0f, -6.4f);
+            for (int step = 0; step < 120; step++)
+            {
+                Vector3 offset = destination - knight.Motor.FeetPosition;
+                offset.y = 0f;
+                if (offset.sqrMagnitude <= arrivalTolerance * arrivalTolerance) { break; }
+                knight.Motor.Simulate(offset.normalized, false, Time.fixedDeltaTime);
+                yield return new WaitForFixedUpdate();
+            }
+            Assert.That(Vector3.Distance(knight.Motor.FeetPosition, destination), Is.LessThan(0.25f));
+
+            for (int step = 0; step < 90 && Vector3.Distance(knight.Motor.FeetPosition, summon.Motor.FeetPosition) > followDistanceTolerance; step++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+            Assert.That(Vector3.Distance(summon.Motor.FeetPosition, summonStart), Is.GreaterThan(2f));
+            Assert.That(Vector3.Distance(knight.Motor.FeetPosition, summon.Motor.FeetPosition), Is.LessThanOrEqualTo(followDistanceTolerance));
         }
 
         private IEnumerator ChooseResponse(string script)

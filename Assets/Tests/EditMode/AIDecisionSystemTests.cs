@@ -309,7 +309,7 @@ namespace Game.Tests.EditMode
             }
         }
 
-        [TestCase(AIConditionType.ProjectileNear)]
+        [TestCase(AIConditionType.NearbyHostileProjectileCount)]
         [TestCase(AIConditionType.ObjectNearby)]
         [TestCase(AIConditionType.EventFired)]
         public void AIDecisionSystem_UnknownCondition_DoesNotMatchZero(AIConditionType conditionType)
@@ -466,6 +466,170 @@ namespace Game.Tests.EditMode
             observation.SetStunRemaining(far, 2f);
             DecideFromCurrentObservation(mode, scheduled, out action);
             Assert.AreEqual(55, action); // One match.
+        }
+
+        [Test]
+        public void TargetLineOfSight_UsesTheSameSelectedPairAndFallbackInManagedAndBurstDecisions()
+        {
+            AIMode mode = CreateMode();
+            mode.actionRules[0].conditions = new[] { new AICondition
+            {
+                conditionType = AIConditionType.TargetLineOfSight,
+                compareOp = CompareOp.Equal,
+                operandA = 1,
+            } };
+            mode.actions = new[] { mode.actions[0], new ActionSlot { execType = ActionExecType.Attack, paramId = 55 } };
+            mode.defaultActionIndex = 1;
+
+            _observations.Capture(++_tick, 0f);
+            AIObservationContext observation = _observations.Observation;
+            Assert.IsTrue(_core.Actors.TryGet(1, out ActorRef owner));
+            Assert.IsTrue(_core.Actors.TryGet(10, out ActorRef near));
+            Assert.IsTrue(_core.Actors.TryGet(20, out ActorRef far));
+            observation.SetTargetLineOfSight(owner, far, true);
+
+            AICondition blockedRule = mode.actionRules[0].conditions[0];
+            blockedRule.operandA = 0;
+            Assert.IsFalse(ConditionEvaluator.Evaluate(blockedRule, owner.Hash, near.Hash, _data, 0f));
+            Assert.IsFalse(ConditionEvaluator.Evaluate(blockedRule, owner.Hash, near.Hash, observation));
+            CheckDecision(near.Hash, 55);
+            observation.SetTargetLineOfSight(owner, near, false);
+            Assert.IsTrue(observation.TryGetTargetLineOfSight(owner, near, out bool blocked));
+            Assert.IsFalse(blocked);
+            Assert.IsTrue(ConditionEvaluator.Evaluate(blockedRule, owner.Hash, near.Hash, observation));
+            CheckDecision(near.Hash, 55);
+            mode.defaultActionIndex = 0;
+            CheckDecision(near.Hash, 0); // A condition cannot be bypassed through the configured default.
+            mode.defaultActionIndex = 1;
+            observation.SetTargetLineOfSight(owner, near, true);
+            CheckDecision(near.Hash, 7);
+
+            _data.GetVitals(near.Hash).position = new Vector2(12f, 0f);
+            _observations.Capture(++_tick, 0.02f);
+            Assert.IsFalse(observation.TryGetTargetLineOfSight(owner, far, out _));
+            CheckDecision(far.Hash, 55);
+            observation.SetTargetLineOfSight(owner, far, true);
+            CheckDecision(far.Hash, 7);
+
+            void CheckDecision(int target, int action)
+            {
+                Assert.AreEqual(target, DecideFromCurrentObservation(mode, false, out int managed));
+                Assert.AreEqual(target, DecideFromCurrentObservation(mode, true, out int burst));
+                Assert.AreEqual(action, managed);
+                Assert.AreEqual(managed, burst);
+            }
+        }
+
+        [Test]
+        public void NearbyHostileProjectileCount_WhenSnapshotChanges_ManagedAndBurstDistinguishUnknownZeroAndHostileCount()
+        {
+            AIMode mode = CreateMode();
+            AICondition condition = new AICondition
+            {
+                conditionType = AIConditionType.NearbyHostileProjectileCount,
+                compareOp = CompareOp.GreaterEqual,
+                operandA = 1,
+            };
+            mode.actionRules[0].conditions = new[] { condition };
+            mode.actions = new[] { mode.actions[0], new ActionSlot { execType = ActionExecType.Attack, paramId = 55 } };
+            mode.defaultActionIndex = 1;
+
+            _observations.Capture(++_tick, 0f);
+            AIObservationContext observation = _observations.Observation;
+            Assert.IsTrue(_core.Actors.TryGet(1, out ActorRef owner));
+            Assert.IsTrue(_core.Actors.TryGet(10, out ActorRef target));
+            condition.compareOp = CompareOp.Equal;
+            condition.operandA = 0;
+            mode.actionRules[0].conditions[0] = condition;
+            Assert.IsFalse(ConditionEvaluator.Evaluate(condition, owner.Hash, target.Hash, observation));
+            VerifyBoth(55);
+
+            observation.SetNearbyHostileProjectileCount(owner, 0);
+            observation.SetNearbyHostileProjectileCount(target, 2);
+            Assert.IsTrue(ConditionEvaluator.Evaluate(condition, owner.Hash, target.Hash, observation));
+            VerifyBoth(7);
+            condition.compareOp = CompareOp.GreaterEqual;
+            condition.operandA = 1;
+            mode.actionRules[0].conditions[0] = condition;
+            VerifyBoth(55);
+
+            observation.SetNearbyHostileProjectileCount(owner, 2);
+            VerifyBoth(7);
+
+            _observations.Capture(++_tick, 0.02f);
+            Assert.IsFalse(observation.TryGetNearbyHostileProjectileCount(owner, out _));
+            VerifyBoth(55);
+
+            void VerifyBoth(int action)
+            {
+                Assert.AreEqual(target.Hash, DecideFromCurrentObservation(mode, false, out int managed));
+                Assert.AreEqual(target.Hash, DecideFromCurrentObservation(mode, true, out int burst));
+                Assert.AreEqual(action, managed);
+                Assert.AreEqual(action, burst);
+            }
+        }
+
+        [Test]
+        public void LegacyProjectileNear_WhenDeserializedAsDistance_DoesNotReuseTheProjectileCount()
+        {
+            const string legacySave = "{\"conditionType\":8,\"compareOp\":1,\"operandA\":3}";
+            AICondition condition = JsonUtility.FromJson<AICondition>(legacySave);
+            Assert.AreEqual(AIConditionType.ProjectileNear, condition.conditionType);
+            Assert.AreEqual(CompareOp.LessEqual, condition.compareOp);
+            Assert.AreEqual(3, condition.operandA);
+            StringAssert.Contains("\"conditionType\":8", JsonUtility.ToJson(condition));
+            Assert.AreEqual(13, (int)AIConditionType.TargetLineOfSight);
+            Assert.AreEqual(14, (int)AIConditionType.NearbyHostileProjectileCount);
+
+            AIMode mode = CreateMode();
+            mode.actionRules[0].conditions = new[] { condition };
+            mode.actions = new[] { mode.actions[0], new ActionSlot { execType = ActionExecType.Attack, paramId = 55 } };
+            mode.defaultActionIndex = 1;
+            using JudgmentLoop judge = CreateLoop(1, new RecordingBackend());
+            judge.SetMode(mode);
+            Assert.IsFalse(judge.RequiresNearbyHostileProjectileCount);
+
+            _observations.Capture(++_tick, 0f);
+            AIObservationContext observation = _observations.Observation;
+            Assert.IsTrue(_core.Actors.TryGet(1, out ActorRef owner));
+            observation.SetNearbyHostileProjectileCount(owner, 1);
+            Assert.IsFalse(ConditionEvaluator.Evaluate(condition, owner.Hash, 10, observation));
+            DecideFromCurrentObservation(mode, false, out int managed);
+            DecideFromCurrentObservation(mode, true, out int burst);
+            Assert.AreEqual(55, managed);
+            Assert.AreEqual(55, burst);
+        }
+
+        [Test]
+        public void NearbyHostileProjectileCount_WhenUsedInAModeTransition_RequestsObservationEvenWithoutAnActionRule()
+        {
+            using JudgmentLoop judge = CreateLoop(1, new RecordingBackend());
+            ModeController controller = new ModeController(judge);
+            AIMode mode = CreateMode();
+            AIMode[] modes = { mode, mode };
+            Assert.IsFalse(judge.RequiresNearbyHostileProjectileCount);
+            controller.SetModes(modes, new[] { new ModeTransitionRule
+            {
+                sourceModeIndex = 0,
+                targetModeIndex = 1,
+                conditions = new[] { new AICondition
+                {
+                    conditionType = AIConditionType.NearbyHostileProjectileCount,
+                    compareOp = CompareOp.GreaterEqual,
+                    operandA = 1,
+                } },
+            } });
+            Assert.IsTrue(judge.RequiresNearbyHostileProjectileCount);
+            _observations.Capture(++_tick, 0f);
+            AIObservationContext snapshot = _observations.Observation;
+            Assert.IsTrue(_core.Actors.TryGet(1, out ActorRef observer));
+            controller.EvaluateTransitions(observer.Hash, 0, snapshot);
+            Assert.AreEqual(0, controller.CurrentModeIndex);
+            snapshot.SetNearbyHostileProjectileCount(observer, 1);
+            controller.EvaluateTransitions(observer.Hash, 0, snapshot);
+            Assert.AreEqual(1, controller.CurrentModeIndex);
+            controller.SetModes(modes, null);
+            Assert.IsFalse(judge.RequiresNearbyHostileProjectileCount);
         }
 
         private int SelectFromCurrentObservation(TargetFilter filter, bool scheduled)

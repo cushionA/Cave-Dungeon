@@ -72,14 +72,15 @@ namespace Game.Tests.PlayMode
             Assert.IsTrue(execution.TryGetInstance(action, out ActionExecution anticipation));
             Assert.AreEqual(AnimationPhase.Anticipation, anticipation.phase);
 
-            float deadline = Time.realtimeSinceStartup + 2f;
-            while ((prop.localPosition - rest).sqrMagnitude < 0.0025f && Time.realtimeSinceStartup < deadline) { yield return null; }
+            execution.Tick(motion.preMotionDuration * 0.5f);
+            GameManager.Actions.Present();
+            yield return null;
             Assert.That(prop.localPosition.y, Is.GreaterThan(rest.y + 0.04f), "The configured anticipation clip moves the hand prop.");
             Assert.AreEqual(hpBefore, GameManager.Data.GetVitals(knightHash).currentHp);
             Assert.AreEqual(3, GameManager.Inventory.GetConsumableCount(k_HealingDraught));
             Assert.IsNull(FindEffect(draught));
 
-            execution.Tick(motion.preMotionDuration);
+            execution.Tick(motion.preMotionDuration * 0.5f);
             Assert.AreEqual(hpBefore + 25, GameManager.Data.GetVitals(knightHash).currentHp);
             Assert.AreEqual(2, GameManager.Inventory.GetConsumableCount(k_HealingDraught));
             Assert.AreEqual(2, GameManager.Inventory.GetConsumableCount(k_EmberFlask));

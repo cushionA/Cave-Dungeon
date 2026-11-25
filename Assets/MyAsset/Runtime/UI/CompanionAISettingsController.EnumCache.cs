@@ -14,9 +14,10 @@ namespace Game.Runtime
     /// </summary>
     public partial class CompanionAISettingsController
     {
-        /// <summary>AIConditionType の全値（条件タイプドロップダウン用）。</summary>
+        /// <summary>新たに選べる条件タイプ。</summary>
         private static readonly AIConditionType[] s_CachedAIConditionTypes =
-            (AIConditionType[])Enum.GetValues(typeof(AIConditionType));
+            Array.FindAll((AIConditionType[])Enum.GetValues(typeof(AIConditionType)),
+                type => type != AIConditionType.ProjectileNear);
 
         /// <summary>CharacterBelong の全値（ゼロ値を含む、呼び出し側でスキップ）。</summary>
         private static readonly CharacterBelong[] s_CachedCharacterBelongValues =

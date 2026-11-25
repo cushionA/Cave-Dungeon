@@ -21,7 +21,7 @@ namespace Game.Core
     /// マップローカル: イベント再生済み、宝箱開封等（mapId単位で切替）。
     /// ISaveable対応で永続化可能。
     /// </summary>
-    public class FlagManager : ISaveableWithMissingEntry
+    public class FlagManager : ISaveableWithMissingEntry, ISaveableLoadPreflight
     {
         private readonly Dictionary<string, bool> _globalFlags;
         private readonly Dictionary<string, Dictionary<string, bool>> _mapLocalFlags;
@@ -134,34 +134,11 @@ namespace Game.Core
             return saveData;
         }
 
+        void ISaveableLoadPreflight.ValidateLoad(object data) => ReadSaveData(data);
+
         void ISaveable.Deserialize(object data)
         {
-            FlagSaveData saveData;
-            if (data is FlagSaveData direct)
-            {
-                saveData = direct;
-            }
-            else if (data is JObject jObj)
-            {
-                saveData = jObj.ToObject<FlagSaveData>();
-            }
-            else
-            {
-                throw new ArgumentException("フラグの保存データの形式が不正です。", nameof(data));
-            }
-
-            if (saveData == null)
-            {
-                throw new ArgumentException("フラグの保存データを読み取れません。", nameof(data));
-            }
-            if (saveData.mapLocalFlags != null)
-            {
-                foreach (Dictionary<string, bool> flags in saveData.mapLocalFlags.Values)
-                {
-                    if (flags == null) { throw new ArgumentException("マップのフラグデータの形式が不正です。", nameof(data)); }
-                }
-            }
-
+            FlagSaveData saveData = ReadSaveData(data);
             _globalFlags.Clear();
             if (saveData.globalFlags != null)
             {
@@ -182,6 +159,30 @@ namespace Game.Core
 
             _currentMapId = null;
             SwitchMap(saveData.currentMapId);
+        }
+
+        private static FlagSaveData ReadSaveData(object data)
+        {
+            FlagSaveData saveData = data switch
+            {
+                FlagSaveData direct => direct,
+                JObject json => json.ToObject<FlagSaveData>(),
+                _ => throw new ArgumentException("フラグの保存データの形式が不正です。", nameof(data)),
+            };
+
+            if (saveData == null)
+            {
+                throw new ArgumentException("フラグの保存データを読み取れません。", nameof(data));
+            }
+            if (saveData.mapLocalFlags != null)
+            {
+                foreach (Dictionary<string, bool> flags in saveData.mapLocalFlags.Values)
+                {
+                    if (flags == null) { throw new ArgumentException("マップのフラグデータの形式が不正です。", nameof(data)); }
+                }
+            }
+
+            return saveData;
         }
     }
 }

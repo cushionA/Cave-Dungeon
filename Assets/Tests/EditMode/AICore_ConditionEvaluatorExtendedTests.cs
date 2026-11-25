@@ -107,22 +107,24 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(0f, value, "距離5以内に味方がいない場合0");
         }
 
-        // --- ProjectileNear: 現時点ではスタブ(0を返す) ---
+        // --- SoA互換入口には固定tickの飛翔体観測がない ---
 
-        [Test]
-        public void ConditionEvaluator_ProjectileNear_ReturnsZero_WhenNotImplemented()
+        [TestCase(AIConditionType.ProjectileNear)]
+        [TestCase(AIConditionType.NearbyHostileProjectileCount)]
+        public void ConditionEvaluator_ProjectileConditionWithoutObservation_DoesNotMatchZero(AIConditionType type)
         {
             AICondition condition = new AICondition
             {
-                conditionType = AIConditionType.ProjectileNear,
-                compareOp = CompareOp.Greater,
+                conditionType = type,
+                compareOp = CompareOp.Equal,
                 operandA = 0,
             };
 
             float value = ConditionEvaluator.GetConditionValue(
                 condition, _ownerHash, _enemyHash, _data, 0f);
 
-            Assert.AreEqual(0f, value, "ProjectileNear: ランタイム依存のためスタブ値0");
+            Assert.IsTrue(float.IsNaN(value));
+            Assert.IsFalse(ConditionEvaluator.Evaluate(condition, _ownerHash, _enemyHash, _data, 0f));
         }
 
         // --- ObjectNearby: 現時点ではスタブ(0を返す) ---

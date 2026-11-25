@@ -11,6 +11,7 @@ namespace Game.Runtime
     public sealed class ProjectileLockWarningHud3D : MonoBehaviour
     {
         [SerializeField] private CharacterActor3D character;
+        [SerializeField, Min(0f)] private float projectileWarningRadius = ProjectileSpatialIndex.DefaultQueryRadius;
 
         private readonly List<ProjectileLockWarning> _warnings = new List<ProjectileLockWarning>(4);
         private UIDocument _document;
@@ -48,7 +49,7 @@ namespace Game.Runtime
             ProjectileManager3D projectiles = GameManager.Projectiles3D;
             if (target.IsValid && camera != null && projectiles != null)
             {
-                projectiles.CollectLockWarnings(target, _warnings);
+                projectiles.CollectLockWarnings(target, _warnings, projectileWarningRadius);
             }
             else
             {

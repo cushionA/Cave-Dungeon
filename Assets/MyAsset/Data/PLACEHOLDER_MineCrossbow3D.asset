@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: PLACEHOLDER_MineCrossbow3D
   m_EditorClassIdentifier: Game.Core::Game.Core.AttackInfo
   persistentId: 86861e91998492be19ccdd63ddd161b7
-  motion: {fileID: 11400000, guid: 1cdb1f6142f2d08eeb5d7f9546699e83, type: 2}
+  motion: {fileID: 11400000, guid: 95815a980dadbda45b84d3b4617bf482, type: 2}
   staminaCost: 0
   mpCost: 0
   staminaPerSecond: 0

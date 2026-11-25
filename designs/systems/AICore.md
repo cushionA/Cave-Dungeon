@@ -186,7 +186,7 @@ public struct ReactionTrigger
 reactionTriggerの使用例:
 - **カウンター攻撃**: Guard中（Sustained） + 被弾条件 → Attack（反撃）
 - **カウンターワープ**: Guard中 + 被弾条件 → Instant(WarpBehind)
-- **カウンター回避**: Guard中 + ProjectileNear条件 → Instant(Dodge)
+- **カウンター回避**: Guard中 + NearbyHostileProjectileCount条件 → Instant(Dodge)
 
 ---
 
@@ -423,7 +423,7 @@ AICondition[] + ActionSlot でカウンター系を実現。Sustained行動中�
 |-------------|--------------|-------------------|---------------|
 | カウンター攻撃 | Guard | 被弾（SelfActState == HitStun等） | Attack(paramId=反撃モーション) |
 | カウンターワープ | Guard | 被弾 | Instant(WarpBehind) |
-| カウンター回避 | Guard | ProjectileNear | Instant(Dodge) |
+| カウンター回避 | Guard | NearbyHostileProjectileCount | Instant(Dodge) |
 
 ### Broadcast（自分は何もしない、他キャラのAI状態を操作）
 paramIdでBroadcastAction enum値を引く。
@@ -513,7 +513,7 @@ AIMode "カウンター特化":
     [0] Distance < 5 → ActionSlot(Sustained, paramId=Guard)
                         reactionTrigger:
                           [0] SelfActState == HitStun → ActionSlot(Instant, paramId=WarpBehind)
-                          [1] ProjectileNear          → ActionSlot(Instant, paramId=Dodge)
+                          [1] NearbyHostileProjectileCount → ActionSlot(Instant, paramId=Dodge)
     [1] Distance 5-10 → ActionSlot(Cast, paramId=挑発弾ID)
   default: ActionSlot(Sustained, paramId=MoveToTarget)
 ```
@@ -553,7 +553,7 @@ bool EvaluateAll(AICondition[] conditions, int selfHash, int targetHash)
 }
 ```
 
-AIConditionType(12種): None, Count, HpRatio, MpRatio, StaminaRatio, ArmorRatio, Distance, NearbyFaction, ProjectileNear, ObjectNearby, DamageScore, EventFired, SelfActState
+AIConditionType: None, Count, HpRatio, MpRatio, StaminaRatio, ArmorRatio, Distance, NearbyFaction, ObjectNearby, DamageScore, EventFired, SelfActState, TargetLineOfSight, NearbyHostileProjectileCount
 
 CompareOp(9種): Less, LessEqual, Equal, GreaterEqual, Greater, NotEqual, InRange, HasFlag, HasAny
 
@@ -563,6 +563,14 @@ CompareOp(9種): Less, LessEqual, Equal, GreaterEqual, Greater, NotEqual, InRang
 2. `On Activated` に扉を開く、落下物を解放するなどのシーン側の処理を割り当てる。イベントは起動時に一度発火する。演出や物理効果が遅れる場合は、その秒数を `Effect Delay` に設定する。再有効化すると新しい使用世代になる。
 3. 敵・仲間の `AIInfo` で、使わせたいモードの行動に `ActType.InteractObject` を追加する。ルールからは `InstantAction.InteractObject` を使う。`ObjectNearby` は観測者が操作圏内にいて操作点まで遮られていない未使用装置の種類ビットを返す。共通観測に装置の照会元を接続していない場合は未取得となる。
 4. AIは同じ2D物理ワールドにある装置から、そのtickの戦闘標的に効果が届くものを選ぶ。遅延がある場合は現在速度から標的の到達位置を推定し、自分・味方が効果範囲を横切る候補を除く。どれも使えない場合に備え、ガードや接近などの行動を同じモードに設定できる。実行直前にも位置、速度、遮蔽物、行動制限、標的・装置の世代を確かめる。
+
+2Dの接触罠では `Require Target Contact` を有効にし、同じオブジェクトに置いたトリガーの `Collider2D` を `Contact Trigger` に設定する。操作点と効果範囲を設定し、効果遅延は0秒にする。AIの装置操作は `Contact Timeout` の間だけ罠を作動準備状態にする。選んだ敵が板に触れた時点で効果範囲の味方を再確認し、安全に作動できるときだけ `On Activated` が一度発火する。たとえばこのイベントに通路を開く処理を割り当てられる。[シーン装置](../../Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs)
+
+敵を罠に誘導する場合は、接触板の先にある同じ高さの床へ `Lure Exit Anchor` を置く。誘導役が、後ろから自分を追っている敵を戦闘標的として選んでいる場合に使える。誘導役は既存の歩行アクションで板の先まで進み、敵自身の歩行が安全な接触を成立させる。退避地点は効果範囲の外に置く。敵の追跡が途切れた場合や時間切れでは予約を解除する。[罠の予約と発動](../../Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs)・[誘導中の移動](../../Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs)
+
+接触罠を予約できるのは同時に一人で、予約ごとに一体の敵を指定する。回避や逃走が実行可能になった場合や、被弾によって行動が中断された場合に予約を解除する。期限が切れた予約を解除する処理は、新しい予約へ作用しない。[予約の照合](../../Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs)
+
+2Dの爆発物には `ExplosiveProp2D` を付け、同じオブジェクトの `Hit Collider` を指定する。コライダーは使う近接攻撃と接触するレイヤーへ置く。攻撃の有効区間に接触すると `Blast Origin` から `Blast Radius` 内にいる攻撃者の敵へ火属性ダメージを適用し、`On Detonated` を一度だけ実行する。爆発の中心を省略した場合は着弾用コライダーの中心を使う。[爆発物](../../Assets/MyAsset/Runtime/Combat/ExplosiveProp2D.cs)
 
 ## ターゲット選択（TargetSelector）
 1. TargetFilter で候補を絞り込み（CharacterFlags のビット演算で高速フィルタ）
@@ -580,6 +588,24 @@ CompareOp(9種): Less, LessEqual, Equal, GreaterEqual, Greater, NotEqual, InRang
 同期評価とBurstの評価は同じ選定処理を使う。実行側は選択した個体の世代と判定版を照合する。スケジュール後に別の処理が実行者の標的を変更した場合は、その新しい命令を優先して古い判断を破棄する。装置の操作時は、移動した味方・遮蔽物などの物理状態も再確認する。
 
 `AIInfo` の行動トリガー `CoolTimeReady` と `TargetStatusEffect` は変換に未対応。これらを指定した行動はスロットに残り、自動選択と既定行動の候補から外れる。ほかに使える行動がないモードでは、行動を開始しない。
+
+### 2Dの攻撃に射線条件を付ける
+
+2Dの `AIInfo` で行動の `Require Line Of Sight` を有効にすると、選んだ標的までの射線が通る場合にだけ、その行動を候補にできる。観測を確定するときに同じ物理シーンの相手を照会し、観測者が使用する Ground レイヤーで遮蔽を判定する。同期とBurstは同じ世代付き観測を読み、遮蔽されている場合や観測が取得できない場合は、待機など次に使える行動を選ぶ。[AI設定の変換](../../Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs)・[射線の観測](../../Assets/MyAsset/Runtime/GameManager.cs)
+
+同じ既定行動を選択するルールがすべて射線を要求する場合は、その行動を既定として実行しない。射線を要求しないルールも同じ行動を選ぶ設定では、指定された既定行動が有効になる。[ルールの変換](../../Assets/MyAsset/Core/AI/Core/AICompiledMode.cs)
+
+### 周囲の敵対飛翔体数で判断する
+
+「周囲の敵対飛翔体数」は、自分の周囲8ユニットの敵対弾を数える。以前の距離条件 `ProjectileNear` は保存値と設定値を読み込める。設定画面では旧条件として無効と表示する。[条件の種類](../../Assets/MyAsset/Core/AI/RuleBuilder/ConditionTypeMetadata.cs)
+
+### 3D集団戦で障害を迂回する
+
+`EncounterCombat3D` の `Approach Waypoints` に、同じ部屋の床をつなぐ中継点を最大12個設定する。`Approach Ground Layers` には通行を支える床を、`Obstruction Layers` には通行や射線を遮る壁を指定する。通常の接近や集中攻撃では、同じ陣営が目撃した標的へ向けて、射程内の到達可能な地点を選ぶ。中継点と終点の間は個体の幅と床を照会し、通行可能な候補のうち短い経路を使う。攻撃は個体自身の射線が通ってから始める。標的の変化や通路の閉塞があれば次の経路を選び直す。[遭遇の移動](../../Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs)・[接近経路](../../Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs)
+
+溝を越えるジャンプには `Approach Jump Links` で、同じシーンの中継点から踏切・着地を一方向で結び、着地先のコライダーを指定する。`Can Use Jump Links` を有効にした戦闘個体は、自分の移動速度とジャンプ設定で届き、上空と着地先が空いている場合に候補として使う。予定した足場に接地してから攻撃位置へ向かう。ジャンプを使えない個体や着地先が塞がっている場合は、通行可能な歩行経路を選ぶ。[ジャンプリンク](../../Assets/MyAsset/Runtime/AI/EncounterJumpLink3D.cs)・[3D移動](../../Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs)
+
+離陸後に遭遇が止まったり、個体が遭遇から外れたりした場合は、キャラクターモーターが着地まで駆動を引き継ぐ。空中で障害物に当たるか移動が封じられた場合は、水平方向の誘導を止めて重力を適用する。[空中移動の引き継ぎ](../../Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs)
 
 ## DamageScoreTracker
 - DamageScoreEntry[4-8] per character（SoAコンテナ管理）

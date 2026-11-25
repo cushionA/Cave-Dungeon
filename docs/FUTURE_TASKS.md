@@ -864,10 +864,10 @@ main に取り込まれた「仕様確定版」は新仕様 (perTargetHitLimit �
   - **対象ファイル**: 新規 `Assets/AddressableAssetsData/` / 既存 Runtime 内アセットロード経路 (Audio/VFX 実装時)
   - 優先度: 🟡 Medium (Audio/VFX 着手時に必須化、現状ランタイム需要なしのため待機)
 
-- [ ] **セーブ機能のランタイム配線（包括レビュー 2026-04-18）** — `SaveManager` + `SaveDataStore` は実装済み・結合テスト済みだが、ランタイムコード（GameManager/シーン遷移/UI）からの呼び出し0件
-  - チェックポイント・タイトル画面・シーン遷移で `SaveManager.Save()` → `SaveDataStore.WriteToDisk()` を呼ぶ経路を追加
-  - 新規ゲーム/スロット選択/ロードのUIフロー配線
-  - オートセーブのトリガー（マップ遷移、ボス撃破等）
+- [ ] 🟡✓ **本編のセーブ開始・再開を配線する** — 遠征の試作では入口の保存地点と、次周回の開始を接続済み
+  - **背景**: 試作では現在のスロットへの手動保存、休息での回復、起動時の指定地点からの再開を確認できる。
+  - **仕様**: 本編の保存地点を配置し、タイトル画面の新規ゲーム・スロット選択・ロードにつなぐ。マップ遷移やボス撃破からのオートセーブはトリガーを設定する。
+  - **対象ファイル**: `Assets/MyAsset/Runtime/World/ExpeditionSavePoint3D.cs` / `Assets/Scenes/ExpeditionMock3DScene.unity` / 本編のタイトル画面とステージ
 
 - [x] **`FlagManager.SwitchMap` がストリーミング経路から自動呼び出しされない** — `LevelStreamingOrchestrator.AttachFlagManager(FlagManager)` を新設。`NotifyLoadComplete` で接続済みなら自動 SwitchMap(sceneName)。加えて `OnAreaLoadCompleted` / `OnAreaUnloadCompleted` イベントを公開
 

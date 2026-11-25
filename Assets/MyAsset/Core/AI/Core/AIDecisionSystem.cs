@@ -10,6 +10,7 @@ namespace Game.Core
 {
     public sealed class AIDecisionSystem : IDisposable
     {
+        private static readonly ProfilerMarker s_CopyTargetLineOfSightMarker = new ProfilerMarker("AI.Decision.CopyTargetLineOfSight");
         private static readonly ProfilerMarker s_CompleteMarker = new ProfilerMarker("AI.Decision.Complete");
         private static readonly ProfilerMarker s_ApplyMarker = new ProfilerMarker("AI.Decision.Apply");
         private sealed class ProgramEntry
@@ -79,6 +80,7 @@ namespace Game.Core
         private readonly List<KeyValuePair<(ActorRef owner, ActorRef source), float>> _scoreSamples
             = new List<KeyValuePair<(ActorRef owner, ActorRef source), float>>();
         private readonly List<(int observerHash, int gimmickId)> _visibleGimmickSamples = new List<(int, int)>();
+        private readonly List<KeyValuePair<(ActorRef owner, ActorRef target), bool>> _targetSightSamples = new();
         private readonly Dictionary<JudgmentLoop, ProgramEntry> _programs = new Dictionary<JudgmentLoop, ProgramEntry>();
         private readonly List<ProgramEntry> _entries = new List<ProgramEntry>();
         private readonly List<PendingDecision> _pending = new List<PendingDecision>();
@@ -87,11 +89,13 @@ namespace Game.Core
         private NativeParallelHashMap<int, int> _indices;
         private NativeArray<int> _snapshotHashes;
         private NativeArray<ActorRef> _actorRefs;
+        private NativeArray<int> _nearbyHostileProjectileCounts;
         private NativeArray<ActorRef> _lastAttackers;
         private NativeArray<CandidateTargetFacts> _candidateFacts;
         private bool _usesCandidateFacts;
         private NativeArray<int> _targetCounts;
         private NativeParallelHashMap<ulong, float> _scores;
+        private NativeParallelHashMap<ulong, byte> _targetSight;
         private NativeArray<Vector2> _positions;
         private NativeArray<Ratios> _ratios;
         private NativeArray<int> _hp;
@@ -119,6 +123,7 @@ namespace Game.Core
             _actors = actors;
             _indices = new NativeParallelHashMap<int, int>(16, Allocator.Persistent);
             _scores = new NativeParallelHashMap<ulong, float>(16, Allocator.Persistent);
+            _targetSight = new NativeParallelHashMap<ulong, byte>(16, Allocator.Persistent);
             _visibleGimmicks = new NativeParallelHashSet<ulong>(16, Allocator.Persistent);
         }
 
@@ -229,11 +234,13 @@ namespace Game.Core
                 indices = _indices,
                 hashes = _snapshotHashes,
                 actors = _actorRefs,
+                nearbyHostileProjectileCounts = _nearbyHostileProjectileCounts,
                 lastAttackers = _lastAttackers,
                 candidateFacts = _candidateFacts,
                 protectedPlayer = _observation.ProtectedPlayer,
                 targetCounts = _targetCounts,
                 scores = _scores,
+                targetSight = _targetSight.AsReadOnly(),
                 scoresAvailable = _observation.DamageScoresAvailable,
                 targetsAvailable = _observation.TargetRelationsAvailable,
                 actorCount = _snapshotCount,
@@ -339,8 +346,8 @@ namespace Game.Core
             _snapshotCount = count;
             EnsureCapacity(ref _snapshotHashes, count);
             EnsureCapacity(ref _actorRefs, count);
+            EnsureCapacity(ref _nearbyHostileProjectileCounts, count);
             EnsureCapacity(ref _lastAttackers, count);
-            EnsureCapacity(ref _candidateFacts, _usesCandidateFacts ? count : 0);
             EnsureCapacity(ref _targetCounts, count);
             EnsureCapacity(ref _positions, count);
             EnsureCapacity(ref _ratios, count);
@@ -349,18 +356,31 @@ namespace Game.Core
             EnsureCapacity(ref _combat, count);
             EnsureCapacity(ref _gimmicks, _observation.GimmickCount);
             bool needsMotion = false;
+            bool needsCandidateFacts = _usesCandidateFacts;
             for (int i = 0; i < _observation.GimmickCount; i++)
             {
                 AISceneGimmick gimmick = _observation.GimmickAt(i);
                 _gimmicks[i] = gimmick;
                 needsMotion |= gimmick.effectDelay > 0f;
+                needsCandidateFacts |= gimmick.requiresLure;
             }
+            EnsureCapacity(ref _candidateFacts, needsCandidateFacts ? count : 0);
             _observation.CopyVisibleGimmicks(_visibleGimmickSamples);
             _visibleGimmicks.Clear();
             if (_visibleGimmicks.Capacity < _visibleGimmickSamples.Count) { _visibleGimmicks.Capacity = _visibleGimmickSamples.Count; }
             foreach (var pair in _visibleGimmickSamples)
             {
                 _visibleGimmicks.Add(PairKey(pair.observerHash, pair.gimmickId));
+            }
+            using (s_CopyTargetLineOfSightMarker.Auto())
+            {
+                _observation.CopyTargetLineOfSight(_targetSightSamples);
+                _targetSight.Clear();
+                if (_targetSight.Capacity < _targetSightSamples.Count) { _targetSight.Capacity = _targetSightSamples.Count; }
+                foreach (var pair in _targetSightSamples)
+                {
+                    _targetSight.Add(PairKey(pair.Key.owner.Hash, pair.Key.target.Hash), pair.Value ? (byte)1 : (byte)0);
+                }
             }
             EnsureCapacity(ref _gimmickMotion, needsMotion ? count : 0);
             _indices.Clear();
@@ -372,7 +392,9 @@ namespace Game.Core
                 _indices.Add(hash, i);
                 _snapshotHashes[i] = hash;
                 _actorRefs[i] = actor.actor;
-                if (_usesCandidateFacts)
+                _nearbyHostileProjectileCounts[i] = _observation.TryGetNearbyHostileProjectileCount(actor.actor, out int projectileCount)
+                    ? projectileCount : -1;
+                if (needsCandidateFacts)
                 {
                     CandidateTargetFacts facts = default;
                     facts.targetKnown = _observation.TryGetTargetOf(actor.actor, out facts.target);
@@ -538,8 +560,10 @@ namespace Game.Core
                 _disposed = true;
                 _indices.Dispose();
                 _scores.Dispose();
+                _targetSight.Dispose();
                 _visibleGimmicks.Dispose();
                 DisposeArray(ref _actorRefs);
+                DisposeArray(ref _nearbyHostileProjectileCounts);
                 DisposeArray(ref _lastAttackers);
                 DisposeArray(ref _candidateFacts);
                 DisposeArray(ref _targetCounts);
@@ -567,6 +591,7 @@ namespace Game.Core
                 _pending.Clear();
                 _candidateHashes.Clear();
                 _scoreSamples.Clear();
+                _targetSightSamples.Clear();
                 _visibleGimmickSamples.Clear();
                 _invalidatedHashes.Clear();
             }
@@ -576,7 +601,9 @@ namespace Game.Core
         {
             public NativeParallelHashMap<int, int> indices;
             public NativeParallelHashMap<ulong, float> scores;
+            public NativeParallelHashMap<ulong, byte>.ReadOnly targetSight;
             public NativeArray<ActorRef> actors;
+            public NativeArray<int> nearbyHostileProjectileCounts;
             public NativeArray<ActorRef> lastAttackers;
             public NativeArray<CandidateTargetFacts> candidateFacts;
             public ActorRef protectedPlayer;
@@ -633,6 +660,26 @@ namespace Game.Core
                 seconds = facts.stunRemaining;
                 return facts.stunKnown;
             }
+
+            public bool TryGetNearbyHostileProjectileCount(ActorRef observer, out int count)
+            {
+                count = 0;
+                if (!TryGetIndex(observer.Hash, out int index) || actors[index] != observer
+                    || nearbyHostileProjectileCounts[index] < 0) { return false; }
+                count = nearbyHostileProjectileCounts[index];
+                return true;
+            }
+
+            public bool TryGetTargetLineOfSight(ActorRef owner, ActorRef target, out bool visible)
+            {
+                visible = false;
+                if (!TryGetIndex(owner.Hash, out int ownerIndex) || actors[ownerIndex] != owner
+                    || !TryGetIndex(target.Hash, out int targetIndex) || actors[targetIndex] != target
+                    || !targetSight.TryGetValue(PairKey(owner.Hash, target.Hash), out byte sample)) { return false; }
+                visible = sample != 0;
+                return true;
+            }
+
             public int GimmickCount => gimmickCount;
             public AISceneGimmick GimmickAt(int index) => gimmicks[index];
             public bool IsGimmickOperationVisible(ActorRef observer, in AISceneGimmick gimmick) =>
@@ -719,11 +766,13 @@ namespace Game.Core
             [ReadOnly] public NativeParallelHashMap<int, int> indices;
             [ReadOnly] public NativeArray<int> hashes;
             [ReadOnly] public NativeArray<ActorRef> actors;
+            [ReadOnly] public NativeArray<int> nearbyHostileProjectileCounts;
             [ReadOnly] public NativeArray<ActorRef> lastAttackers;
             [ReadOnly] public NativeArray<CandidateTargetFacts> candidateFacts;
             public ActorRef protectedPlayer;
             [ReadOnly] public NativeArray<int> targetCounts;
             [ReadOnly] public NativeParallelHashMap<ulong, float> scores;
+            [ReadOnly] public NativeParallelHashMap<ulong, byte>.ReadOnly targetSight;
             public bool gimmicksAvailable;
             public int gimmickCount;
             public bool scoresAvailable;
@@ -752,6 +801,8 @@ namespace Game.Core
                 {
                     indices = indices, positions = positions, ratios = ratios, hp = hp,
                     scores = scores, actors = actors, lastAttackers = lastAttackers, hashes = hashes,
+                    nearbyHostileProjectileCounts = nearbyHostileProjectileCounts,
+                    targetSight = targetSight,
                     candidateFacts = candidateFacts, protectedPlayer = protectedPlayer,
                     targetCounts = targetCounts, scoresAvailable = scoresAvailable,
                     targetsAvailable = targetsAvailable, actorCount = actorCount,

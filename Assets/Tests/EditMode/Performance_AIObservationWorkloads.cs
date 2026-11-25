@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Game.Core;
 using NUnit.Framework;
 using Unity.PerformanceTesting;
+using Unity.PerformanceTesting.Measurements;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace Game.Tests.EditMode
@@ -16,6 +18,10 @@ namespace Game.Tests.EditMode
         private const int FirstEnemy = 1001;
         private const int Hazard = 1 << 4;
         private const float DeltaTime = 0.02f;
+        private const string BatchPreparation = "AI.Workload.Burst.Prepare";
+        private const string BatchSchedule = "AI.Workload.Burst.CopyAndSchedule";
+        private static readonly ProfilerMarker s_BatchPreparation = new ProfilerMarker(BatchPreparation);
+        private static readonly ProfilerMarker s_BatchSchedule = new ProfilerMarker(BatchSchedule);
 
         [Performance]
         [TestCase(Workload.Distance, Traversal.Ordered, 100)]
@@ -44,6 +50,162 @@ namespace Game.Tests.EditMode
                     .WarmupCount(3).MeasurementCount(12).IterationsPerMeasurement(3).GC().Run();
                 world.AssertOutcomes();
             }
+        }
+
+        [Performance, Category("AITerrainProfile")]
+        [TestCase(8, 32, 1)]
+        [TestCase(32, 64, 4)]
+        [TestCase(100, 100, 8)]
+        public void CompareSharedSnapshot(int ownerCount, int candidateCount, int actionRuleCount)
+        {
+            using GameManagerCore core = new GameManagerCore();
+            core.Initialize(ownerCount + candidateCount);
+            using AIObservationCoordinator observations = new AIObservationCoordinator(core.Data, core.Actors, core.Events,
+                statusEffects: core.StatusEffects.Store);
+            AIDecisionSystem decisions = core.AIDecisions;
+            AITargetRelations syncTargets = new AITargetRelations();
+            AITargetRelations burstTargets = new AITargetRelations();
+            List<int> candidates = new List<int>(candidateCount);
+            ActorRef[] enemies = new ActorRef[candidateCount];
+            ActorRef[] owners = new ActorRef[ownerCount];
+            JudgmentLoop[] sync = new JudgmentLoop[ownerCount];
+            JudgmentLoop[] batch = new JudgmentLoop[ownerCount];
+            CommandRecorder[] syncCommands = new CommandRecorder[ownerCount];
+            CommandRecorder[] batchCommands = new CommandRecorder[ownerCount];
+            AIMode mode = CreateMultiRuleMode(actionRuleCount);
+
+            try
+            {
+                for (int i = 0; i < candidateCount; i++)
+                {
+                    int hash = FirstEnemy + i;
+                    enemies[i] = Register(hash, CharacterBelong.Enemy, new Vector2(i, 4f), 100, 100);
+                    candidates.Add(hash);
+                }
+                for (int i = 0; i < ownerCount; i++)
+                {
+                    int hash = i + 1;
+                    owners[i] = Register(hash, CharacterBelong.Ally, new Vector2(i, 0f), actionRuleCount - i % actionRuleCount, actionRuleCount);
+                    sync[i] = CreateLoop(core.Data, hash, mode, out syncCommands[i]);
+                    batch[i] = CreateLoop(core.Data, hash, mode, out batchCommands[i]);
+                }
+
+                long tick = 0;
+                PrepareMeasurement(CaptureObservation, "ObservationCapture").Run();
+                CaptureObservation();
+                AIObservationContext snapshot = observations.Observation;
+                RunSync();
+                RunBatch();
+                AssertOutcomes(minimumCommands: 1);
+
+                bool jobFirst = Environment.GetEnvironmentVariable("AI_BENCHMARK_BURST_FIRST") == "1";
+                if (jobFirst) { MeasureBatch(); }
+                PrepareMeasurement(RunSync, "SynchronousDecision").Run();
+                if (!jobFirst) { MeasureBatch(); }
+                AssertOutcomes(minimumCommands: 2);
+
+                void CaptureObservation() => observations.Capture(++tick, tick * DeltaTime);
+
+                void RunSync()
+                {
+                    foreach (JudgmentLoop loop in sync)
+                    {
+                        loop.UseObservation(snapshot, syncTargets);
+                        loop.Tick(DeltaTime, candidates, snapshot.Time);
+                    }
+                }
+
+                void RunBatch()
+                {
+                    using (s_BatchPreparation.Auto())
+                    {
+                        decisions.BeginTick(snapshot);
+                        foreach (JudgmentLoop loop in batch)
+                        {
+                            loop.UseObservation(snapshot, burstTargets);
+                            loop.PrepareTick(DeltaTime, candidates, snapshot.Time, decisions);
+                        }
+                    }
+                    using (s_BatchSchedule.Auto()) { decisions.Schedule(); }
+                    decisions.CompleteAndApply();
+                }
+
+                void MeasureBatch() => PrepareMeasurement(RunBatch, "BurstDecision")
+                    .ProfilerMarkers(BatchPreparation, BatchSchedule, "AI.Decision.Complete", "AI.Decision.Apply").Run();
+
+                void AssertOutcomes(int minimumCommands)
+                {
+                    for (int i = 0; i < ownerCount; i++)
+                    {
+                        ActorRef expected = enemies[i];
+                        Assert.IsTrue(syncTargets.TryGetTarget(owners[i], out ActorRef syncTarget));
+                        Assert.IsTrue(burstTargets.TryGetTarget(owners[i], out ActorRef burstTarget));
+                        Assert.AreEqual(expected, syncTarget);
+                        Assert.AreEqual(syncTarget, burstTarget);
+                        Assert.AreEqual(snapshot.Tick, sync[i].ObservationTick);
+                        Assert.AreEqual(snapshot.Tick, batch[i].ObservationTick);
+                        Assert.AreEqual(syncCommands[i].Count, batchCommands[i].Count);
+                        AssertCommand(syncCommands[i], owners[i].Hash, expected.Hash, i % actionRuleCount, minimumCommands);
+                        AssertCommand(batchCommands[i], owners[i].Hash, expected.Hash, i % actionRuleCount, minimumCommands);
+                    }
+                }
+            }
+            finally
+            {
+                foreach (JudgmentLoop loop in sync) { loop?.Dispose(); }
+                foreach (JudgmentLoop loop in batch) { loop?.Dispose(); }
+            }
+
+            ActorRef Register(int hash, CharacterBelong belong, Vector2 position, int hp, int maxHp)
+            {
+                core.RegisterCharacter(hash, new CharacterVitals { position = position, currentHp = hp, maxHp = maxHp },
+                    default, CharacterFlags.Pack(belong, default, ActState.Neutral, default), default);
+                Assert.IsTrue(core.Actors.TryGet(hash, out ActorRef actor));
+                // 両経路は同じ観測を読み、実行後の標的関係は個別に保持する。
+                syncTargets.Register(actor);
+                burstTargets.Register(actor);
+                return actor;
+            }
+        }
+
+        private static MethodMeasurement PrepareMeasurement(Action action, string sample)
+            => Measure.Method(action).SampleGroup(sample).WarmupCount(2).MeasurementCount(8).IterationsPerMeasurement(1).GC();
+
+        private static JudgmentLoop CreateLoop(SoACharaDataDic data, int hash, AIMode mode, out CommandRecorder recorder)
+        {
+            recorder = new CommandRecorder();
+            ActionExecutor executor = new ActionExecutor();
+            executor.SetExecutionBackend(recorder);
+            JudgmentLoop loop = new JudgmentLoop(executor, data, hash);
+            loop.SetMode(mode);
+            return loop;
+        }
+
+        private static AIMode CreateMultiRuleMode(int ruleCount)
+        {
+            AIMode mode = CreateMode(Workload.Distance);
+            mode.actionRules = new AIRule[ruleCount];
+            mode.actions = new ActionSlot[ruleCount];
+            for (int i = 0; i < ruleCount; i++)
+            {
+                mode.actionRules[i] = new AIRule { actionIndex = i, conditions = new[] { new AICondition
+                {
+                    conditionType = AIConditionType.HpRatio, compareOp = CompareOp.Greater,
+                    filter = new TargetFilter { includeSelf = true },
+                    operandA = (100 * (ruleCount - i) - 50) / ruleCount,
+                } } };
+                mode.actions[i] = new ActionSlot { execType = ActionExecType.Attack, paramId = i };
+            }
+            return mode;
+        }
+
+        private static void AssertCommand(CommandRecorder record, int owner, int target, int action, int minimumCommands)
+        {
+            Assert.GreaterOrEqual(record.Count, minimumCommands);
+            Assert.AreEqual(owner, record.Owner);
+            Assert.AreEqual(target, record.Target);
+            Assert.AreEqual(ActionCommandKind.Attack, record.Command.kind);
+            Assert.AreEqual(action, record.Command.attack.legacyIndex);
         }
 
         private sealed class BenchmarkWorld : IDisposable

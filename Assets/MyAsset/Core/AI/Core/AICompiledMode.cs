@@ -44,6 +44,8 @@ namespace Game.Core
         public readonly AITargetSelect[] selects;
         public readonly ActionSlot[] actions;
         public readonly AIProgramRanges ranges;
+        public readonly bool requiresTargetLineOfSight;
+        public readonly bool requiresNearbyHostileProjectileCount;
 
         public AICompiledMode(AIMode mode)
         {
@@ -54,8 +56,16 @@ namespace Game.Core
             AppendRules(mode.actionRules, mode.actions, flatRules, flatConditions);
             rules = flatRules.ToArray();
             conditions = flatConditions.ToArray();
+            requiresTargetLineOfSight = Array.Exists(conditions, IsLineOfSightCondition);
+            requiresNearbyHostileProjectileCount = Array.Exists(conditions, IsNearbyHostileProjectileCountCondition);
             selects = mode.targetSelects == null ? Array.Empty<AITargetSelect>() : (AITargetSelect[])mode.targetSelects.Clone();
             actions = mode.actions == null ? Array.Empty<ActionSlot>() : (ActionSlot[])mode.actions.Clone();
+            int fallback = mode.defaultActionIndex;
+            if (requiresTargetLineOfSight && mode.actionRules != null
+                && IsOnlyLineOfSightGated(mode.actionRules, fallback))
+            {
+                fallback = -1;
+            }
             ranges = new AIProgramRanges
             {
                 targetRuleStart = 0,
@@ -64,11 +74,35 @@ namespace Game.Core
                 actionRuleCount = flatRules.Count - targetCount,
                 selectCount = selects.Length,
                 actionCount = actions.Length,
-                defaultActionIndex = mode.defaultActionIndex,
-                defaultInteractsWithGimmick = IsInteraction(mode.actions, mode.defaultActionIndex),
+                defaultActionIndex = fallback,
+                defaultInteractsWithGimmick = IsInteraction(mode.actions, fallback),
                 hasTargetRules = mode.targetRules != null && mode.targetSelects != null,
                 hasActionRules = mode.actionRules != null && mode.actions != null
             };
+        }
+
+        internal static bool IsLineOfSightCondition(AICondition condition) =>
+            condition.conditionType == AIConditionType.TargetLineOfSight;
+
+        internal static bool IsNearbyHostileProjectileCountCondition(AICondition condition) =>
+            condition.conditionType == AIConditionType.NearbyHostileProjectileCount;
+
+        private static bool IsOnlyLineOfSightGated(AIRule[] rules, int actionIndex)
+        {
+            bool hasMatchingRule = false;
+            foreach (AIRule rule in rules)
+            {
+                if (rule.actionIndex != actionIndex)
+                {
+                    continue;
+                }
+                if (rule.conditions == null || !Array.Exists(rule.conditions, IsLineOfSightCondition))
+                {
+                    return false;
+                }
+                hasMatchingRule = true;
+            }
+            return hasMatchingRule;
         }
 
         private static bool IsInteraction(ActionSlot[] actions, int index)
