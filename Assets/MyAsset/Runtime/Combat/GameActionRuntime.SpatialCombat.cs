@@ -128,7 +128,7 @@ namespace Game.Runtime
             _combat.TryGetValue(current.instanceId, out CombatExecution combat);
             if (current.phase != AnimationPhase.Active)
             {
-                PresentConsumablePhase(consumable, current);
+                PresentLegacyConsumablePhase(consumable, current);
                 if (current.phase == AnimationPhase.Recovery && combat?.repeat3D != null)
                 {
                     EndSpatialRepeat(current.instanceId, combat);
@@ -144,7 +144,7 @@ namespace Game.Runtime
                     if (combat != null) { ClearGroundWarning(combat); }
                     return;
                 }
-                PresentConsumablePhase(consumable, current);
+                PresentLegacyConsumablePhase(consumable, current);
                 if (combat == null)
                 {
                     ShowConsumableEffect(consumable, owner, null);

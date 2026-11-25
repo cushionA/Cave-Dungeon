@@ -27,6 +27,12 @@ Section: 1 — MVP
 
 Tab／LT で戦闘準備を開き、所持品の武器・コアと習得済みの魔法から選択する。武器を交換すると通常攻撃の定義が変わり、コアは共通の装備処理から能力値に反映する。魔法は3枠に登録でき、選択した枠を Q／RB で使う。装備品IDと各枠の登録・選択は同じセーブスロットに保存する。[装備と魔法枠](../../Assets/MyAsset/Runtime/Character/PlayerCombatLoadout3D.cs)・[戦闘準備](../../Assets/MyAsset/Runtime/UI/ExpeditionLoadoutPanel3D.cs)
 
+## 3Dのモーション再生
+
+キャラクターの `Animation Controller` に表示用の `CharacterAnimationController` を設定する。そのAnimatorで基本姿勢と技のクリップを混ぜる。試作の騎士は `Speed`、`Grounded`、`Guarding`、`Dodging` をAnimatorに渡して待機・歩行・空中・ガード・回避を表示する。座標と接地は3Dモーターが確定する。[3Dキャラクター](../../Assets/MyAsset/Runtime/Character/CharacterActor3D.cs) [再生処理](../../Assets/MyAsset/Runtime/Animation/CharacterAnimationController.cs)
+
+武器は技と表示用の子オブジェクトを指定する。魔法とアイテムはそれぞれの行動定義からモーションを取る。3Dの非ループクリップは共通実行器のフェーズ進捗に合わせて再生する。予備動作・有効時間・硬直、命中・発射・アイテム消費は共通実行器と各効果処理で進む。実行中の技は選択済みのクリップと武器表示を保ち、完了や中断で姿勢レイヤーを片付ける。[装備と武器表示](../../Assets/MyAsset/Runtime/Character/PlayerCombatLoadout3D.cs) [共有実行](../../Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs)
+
 ## コンポーネント構成
 
 | コンポーネント | 責務 | MonoBehaviour? |

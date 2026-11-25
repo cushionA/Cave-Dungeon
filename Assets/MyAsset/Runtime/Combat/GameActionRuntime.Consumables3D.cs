@@ -25,13 +25,15 @@ namespace Game.Runtime
             public readonly StatType scalingStat;
             public readonly float statScale;
             public readonly MotionInfo motion;
+            public readonly bool usesLegacyPresentation;
             public readonly GameObject effect;
             public readonly Vector3 effectOffset;
             public readonly float effectLifetime;
             public bool resolved;
+            public bool committed;
 
             public ConsumableUse(PlayerItemUse3D presenter, ActorRef owner, ActionCatalog.Entry action,
-                InventoryManager inventory, SaveManager saves, ConsumableDefinition item)
+                InventoryManager inventory, SaveManager saves, ConsumableDefinition item, bool usesLegacyPresentation)
             {
                 this.presenter = presenter;
                 this.owner = owner;
@@ -48,6 +50,7 @@ namespace Game.Runtime
                 scalingStat = item.ScalingStat;
                 statScale = item.StatScale;
                 motion = action.presentation.Motion;
+                this.usesLegacyPresentation = usesLegacyPresentation;
                 effect = item.EffectPrefab;
                 effectOffset = item.EffectOffset;
                 effectLifetime = item.EffectLifetime;
@@ -86,7 +89,8 @@ namespace Game.Runtime
                 return false;
             }
 
-            _startingConsumable = new ConsumableUse(presenter, actor, entry, inventory, saves, item);
+            _startingConsumable = new ConsumableUse(presenter, actor, entry, inventory, saves, item,
+                usesLegacyPresentation: owner.AnimationController == null);
             try
             {
                 return Execution.TryStart(new ActionRequest
@@ -156,6 +160,7 @@ namespace Game.Runtime
                 attackContext = AttackContext.Capture(use.owner, ItemAttackStats(combat.attack.attackElement, power), 1f,
                     _data.GetFlags(use.owner.Hash).Belong, null, combat.attack.statusEffects, combat.attack.targetPolicy.Resolve());
             }
+            use.committed = true;
             return true;
         }
 
@@ -171,11 +176,15 @@ namespace Game.Runtime
             _ => default,
         };
 
-        private static void PresentConsumablePhase(ConsumableUse use, in ActionExecution current)
+        private bool CanPresentSharedMotion(in ActionExecution current)
+            => !_consumableUses.TryGetValue(current.instanceId, out ConsumableUse use)
+            || (!use.usesLegacyPresentation && (current.phase != AnimationPhase.Active || use.committed));
+
+        private static void PresentLegacyConsumablePhase(ConsumableUse use, in ActionExecution current)
         {
-            if (use != null && use.presenter != null && use.presenter.isActiveAndEnabled)
+            if (use != null && use.usesLegacyPresentation && use.presenter != null && use.presenter.isActiveAndEnabled)
             {
-                use.presenter.PresentPhase(current.instanceId, use.motion, current.phase, current.phaseElapsed);
+                use.presenter.PresentLegacyPhase(current.instanceId, use.motion, current.phase, current.phaseElapsed);
             }
         }
 

@@ -141,7 +141,10 @@ namespace Game.Runtime
         internal void SimulateFixedStep(Vector3 moveDirection, bool jumpPressed, float deltaTime)
             => Simulate(moveDirection, jumpPressed, deltaTime, oncePerFixedStep: true);
 
-        private void Simulate(Vector3 moveDirection, bool jumpPressed, float deltaTime, bool oncePerFixedStep)
+        internal void SimulateVelocityStep(Vector3 planarVelocity, float deltaTime)
+            => Simulate(planarVelocity, false, deltaTime, oncePerFixedStep: true, useVelocity: true);
+
+        private void Simulate(Vector3 movement, bool jumpPressed, float deltaTime, bool oncePerFixedStep, bool useVelocity = false)
         {
             if (!isActiveAndEnabled || !_controller.enabled || deltaTime <= 0f
                 || float.IsNaN(deltaTime) || float.IsInfinity(deltaTime))
@@ -164,10 +167,11 @@ namespace Game.Runtime
                         || (Collisions & (CollisionFlags.Above | CollisionFlags.Sides)) != 0
                         || (actions != null && (actions.IsMovementBlocked(_detachedJump.actor.Hash)
                             || GameManager.Data.GetStatusEffects(_detachedJump.actor.Hash).BlocksActions));
-                    moveDirection = _detachedJump.interrupted ? Vector3.zero
+                    movement = _detachedJump.interrupted ? Vector3.zero
                         : EncounterJumpDirection(_detachedJump.landing, _detachedJump.groundSpeed, deltaTime);
                     jumpPressed = false;
                     oncePerFixedStep = true;
+                    useVelocity = false;
                 }
             }
 
@@ -178,14 +182,15 @@ namespace Game.Runtime
                 _lastSimulatedFixedTime = fixedTime;
             }
 
-            Vector3 move = Vector3.ClampMagnitude(new Vector3(moveDirection.x, 0f, moveDirection.z), 1f);
+            Vector3 move = new Vector3(movement.x, 0f, movement.z);
+            if (!useVelocity) { move = Vector3.ClampMagnitude(move, 1f); }
             if (move.sqrMagnitude > 0f)
             {
                 transform.rotation = Quaternion.LookRotation(move, Vector3.up);
             }
 
             float verticalDistance = CalculateVerticalDistance(jumpPressed, deltaTime);
-            Vector3 displacement = move * (moveSpeed * deltaTime) + Vector3.up * verticalDistance;
+            Vector3 displacement = move * ((useVelocity ? 1f : moveSpeed) * deltaTime) + Vector3.up * verticalDistance;
             _groundFromMove = default;
             _minimumGroundNormalY = Mathf.Max(0.01f, Mathf.Cos(_controller.slopeLimit * Mathf.Deg2Rad));
 

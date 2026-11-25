@@ -13,7 +13,7 @@ namespace Game.Runtime
     public sealed class PlayerItemUse3D : MonoBehaviour
     {
         [SerializeField] private ConsumableDefinition[] items = Array.Empty<ConsumableDefinition>();
-        [SerializeField, Tooltip("アイテムの演出専用Animator。プレイヤー操作用Transformを動かさない。")]
+        [SerializeField, Tooltip("共通アニメーション制御が未設定の場合だけ使うアイテム演出用Animator。")]
         private Animator itemAnimator;
 
         private CharacterActor3D _actor;
@@ -65,7 +65,7 @@ namespace Game.Runtime
 
         private void OnSlotLoaded(int _) => GameManager.Actions?.CancelConsumableUses(this);
 
-        internal void PresentPhase(long instance, in MotionInfo info, AnimationPhase phase, float elapsed)
+        internal void PresentLegacyPhase(long instance, in MotionInfo info, AnimationPhase phase, float elapsed)
         {
             if (itemAnimator == null || !itemAnimator.isActiveAndEnabled) { return; }
             AnimationClip clip = phase switch
@@ -75,7 +75,11 @@ namespace Game.Runtime
                 AnimationPhase.Recovery => info.recoveryClip,
                 _ => null,
             };
-            if (clip == null) { return; }
+            if (clip == null)
+            {
+                EndPresentation(instance);
+                return;
+            }
 
             if (_motion.IsValid()) { _motion.Destroy(); }
             float duration = phase switch

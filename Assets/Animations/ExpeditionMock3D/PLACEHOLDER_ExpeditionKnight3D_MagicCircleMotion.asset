@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2554a79d83444ff98808deb3c54e7261, type: 3}
+  m_Name: PLACEHOLDER_ExpeditionKnight3D_MagicCircleMotion
+  m_EditorClassIdentifier: Game.Core::Game.Core.MotionDefinition
+  info:
+    preMotionDuration: 0.85
+    activeMotionDuration: 0.15
+    recoveryDuration: 0.45
+    preMotionClip: {fileID: 7400000, guid: eecb3d4c771de160e8344d7d4baf85e7, type: 2}
+    activeClip: {fileID: 7400000, guid: b1670fd86c5d8462690d29cafbe20245, type: 2}
+    chargeLoopClip: {fileID: 0}
+    recoveryClip: {fileID: 7400000, guid: 6552d20739db76cbf9065aec99bb8e15, type: 2}
+  animatorLayer: 0
+  blendDuration: 0.035
+  resources: 48
+  loop: 0
+  mask: {fileID: 0}
