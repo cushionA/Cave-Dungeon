@@ -44,6 +44,19 @@ namespace Game.Core
         void RestoreMissingEntry();
     }
 
+    /// <summary>状態を変えずに保存項目を検証し、復元できない場合は例外を送出する。</summary>
+    public interface ISaveableLoadPreflight : ISaveable
+    {
+        void ValidateLoad(object data);
+    }
+
+    /// <summary>ディスクに保存する値と区別して、ロード失敗時に必要な実行状態を保持する。</summary>
+    public interface ISaveableWithLoadRollback : ISaveable
+    {
+        object CaptureLoadRollback();
+        void RestoreLoadRollback(object snapshot);
+    }
+
     public interface IEquippable
     {
         EquipSlot Slot { get; }

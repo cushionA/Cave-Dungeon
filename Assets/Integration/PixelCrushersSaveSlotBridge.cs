@@ -2,6 +2,8 @@ using System;
 using System.Collections;
 using System.Runtime.CompilerServices;
 using Game.Core;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using PixelCrushers;
 using PixelCrushers.DialogueSystem;
 using PixelCrushers.QuestMachine;
@@ -12,7 +14,8 @@ namespace Game.Runtime
     /// <summary>Quest Machine と Dialogue System のスナップショットをゲーム本体のスロットへ保存する。</summary>
     [DefaultExecutionOrder(100)]
     [DisallowMultipleComponent]
-    public sealed class PixelCrushersSaveSlotBridge : MonoBehaviour, IResetOnNextPlaythrough
+    public sealed class PixelCrushersSaveSlotBridge : MonoBehaviour, IResetOnNextPlaythrough,
+        ISaveableLoadPreflight, ISaveableWithLoadRollback
     {
         public const string k_SaveId = "PixelCrushers.Story";
         private const int k_Version = 1;
@@ -88,14 +91,28 @@ namespace Game.Runtime
             _saves = saves;
             saves.Loaded += ObserveLoad;
             bool restoreLoadedSlot = !ObservesStory(saves) && saves.LastLoadedSlot != null;
-            ObserveLoad(saves.ActiveSlotIndex);
+            try
+            {
+                RestoreRegisteredStory(saves, restoreLoadedSlot);
+                ObserveLoad(saves.ActiveSlotIndex);
+            }
+            catch (Exception exception) when (exception is FormatException or InvalidOperationException)
+            {
+                Debug.LogError($"{k_SaveId} の起動時復元に失敗しました (slot={StorySlot(saves)}): {exception.Message}", this);
+            }
+        }
+
+        private void RestoreRegisteredStory(SaveManager saves, bool restoreLoadedSlot)
+        {
             if (_handoffs.TryGetValue(saves, out StoryHandoff handoff) && MatchesStory(handoff, saves))
             {
                 bool restoreJournal = NeedsRestore(questJournal, handoff.journal, restoreLoadedSlot);
                 bool restoreDialogue = NeedsRestore(dialogueSystemSaver, handoff.dialogue, restoreLoadedSlot);
                 if (restoreJournal || restoreDialogue)
                 {
-                    Snapshot loaded = restoreLoadedSlot ? ReadLoadedSnapshot(saves) : null;
+                    bool needsLoadedSnapshot = restoreJournal && handoff.journal == null
+                        || restoreDialogue && handoff.dialogue == null;
+                    Snapshot loaded = needsLoadedSnapshot ? ReadLoadedSnapshot(saves) : null;
                     Restore(new Snapshot
                     {
                         questJournal = handoff.journal != null ? handoff.snapshot.questJournal : loaded?.questJournal,
@@ -114,8 +131,7 @@ namespace Game.Runtime
 
         private static Snapshot ReadLoadedSnapshot(SaveManager saves)
         {
-            saves.LastLoadedSlot.entries.TryGetValue(k_SaveId, out object data);
-            return ReadSnapshot(data);
+            return saves.LastLoadedSlot.entries.TryGetValue(k_SaveId, out object data) ? ReadSnapshot(data) : null;
         }
 
         private void ObserveLoad(int _)
@@ -182,7 +198,16 @@ namespace Game.Runtime
             SaveSystem.UnregisterSaver(saver);
         }
 
-        object ISaveable.Serialize() => JsonUtility.ToJson(CaptureSnapshot());
+        object ISaveable.Serialize()
+        {
+            // 起動時の復元に失敗した場合は、その後の保存で未復元の物語データを失わないようにする。
+            if (_saves != null && !ObservesStory(_saves) && _saves.LastLoadedSlot != null
+                && _saves.LastLoadedSlot.entries.TryGetValue(k_SaveId, out object unresolved))
+            {
+                return unresolved;
+            }
+            return JsonUtility.ToJson(CaptureSnapshot());
+        }
 
         private Snapshot CaptureSnapshot() => new Snapshot
         {
@@ -195,22 +220,63 @@ namespace Game.Runtime
 
         void ISaveableWithMissingEntry.RestoreMissingEntry() => Restore(null);
 
+        void ISaveableLoadPreflight.ValidateLoad(object data) => RequireJournalConfiguration(ReadSnapshot(data), true);
+
+        object ISaveableWithLoadRollback.CaptureLoadRollback() => CaptureSnapshot();
+
+        void ISaveableWithLoadRollback.RestoreLoadRollback(object snapshot) => Restore((Snapshot)snapshot);
+
         private static Snapshot ReadSnapshot(object data)
         {
-            if (data is not string text || string.IsNullOrWhiteSpace(text)) { return null; }
+            if (data is not string text || string.IsNullOrWhiteSpace(text))
+            {
+                throw new FormatException($"{k_SaveId} の JSON が無効です。");
+            }
+            JObject json;
             try
             {
-                Snapshot snapshot = JsonUtility.FromJson<Snapshot>(text);
-                return snapshot?.version == k_Version ? snapshot : null;
+                json = JObject.Parse(text, new JsonLoadSettings { DuplicatePropertyNameHandling = DuplicatePropertyNameHandling.Error });
             }
-            catch (ArgumentException)
+            catch (JsonException exception)
             {
-                return null;
+                throw new FormatException($"{k_SaveId} の JSON が無効です。", exception);
             }
+            if (!JToken.DeepEquals(json[nameof(Snapshot.version)], new JValue(k_Version)))
+            {
+                throw new FormatException($"{k_SaveId} の保存バージョンは未対応です。");
+            }
+            return new Snapshot
+            {
+                version = k_Version,
+                questJournal = ReadSnapshotField(json, nameof(Snapshot.questJournal)),
+                dialogue = ReadSnapshotField(json, nameof(Snapshot.dialogue)),
+            };
+        }
+
+        private static string ReadSnapshotField(JObject json, string fieldName)
+        {
+            JToken field = json[fieldName];
+            if (field?.Type is not (JTokenType.String or JTokenType.Null))
+            {
+                throw new FormatException($"{k_SaveId} の JSON 項目 {fieldName} が無効です。");
+            }
+            return (string)field;
+        }
+
+        private QuestMachineConfiguration RequireJournalConfiguration(Snapshot snapshot, bool restoreJournal)
+        {
+            if (!restoreJournal || questJournal == null || string.IsNullOrEmpty(snapshot?.questJournal)) { return null; }
+            QuestMachineConfiguration configuration = QuestMachineConfiguration.instance;
+            if (configuration == null || !configuration.isActiveAndEnabled)
+            {
+                throw new InvalidOperationException($"{k_SaveId} の Quest Journal の復元には有効な Quest Machine Configuration が必要です。");
+            }
+            return configuration;
         }
 
         private void Restore(Snapshot snapshot, bool restoreJournal = true, bool restoreDialogue = true)
         {
+            QuestMachineConfiguration configuration = RequireJournalConfiguration(snapshot, restoreJournal);
             _restoreDepth++;
             try
             {
@@ -237,20 +303,13 @@ namespace Game.Runtime
                     }
                     finally { QuestMachine.isLoadingGame = wasLoading; }
                 }
-                else { ApplyJournal(snapshot.questJournal); }
+                else { ApplyJournal(snapshot.questJournal, configuration); }
             }
             finally { _restoreDepth--; }
         }
 
-        private void ApplyJournal(string data)
+        private void ApplyJournal(string data, QuestMachineConfiguration configuration)
         {
-            QuestMachineConfiguration configuration = QuestMachineConfiguration.instance;
-            if (configuration == null || !configuration.gameObject.activeInHierarchy)
-            {
-                Debug.LogWarning("Quest Journal の復元には有効な Quest Machine Configuration が必要です。", this);
-                return;
-            }
-
             ulong revision = ++_journalLoadRevision;
             try { questJournal.ApplyData(data); }
             finally

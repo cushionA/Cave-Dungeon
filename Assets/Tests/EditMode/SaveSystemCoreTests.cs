@@ -14,11 +14,26 @@ namespace Game.Tests.EditMode
             public string SaveId { get; set; }
             public int Value { get; set; }
             public int? RejectedValue { get; set; }
+            public MockSaveable Dependency { get; set; }
+            public int DeserializationCount { get; private set; }
             public object Serialize() => Value;
             public void Deserialize(object data)
             {
+                DeserializationCount++;
+                if (Dependency != null && Dependency.Value != (int)data)
+                {
+                    throw new InvalidOperationException("Dependency must be restored first");
+                }
                 Value = (int)data;
                 if (Value == RejectedValue) { throw new InvalidOperationException("Rejected saved value"); }
+            }
+        }
+
+        private sealed class ValidatingSaveable : MockSaveable, ISaveableLoadPreflight
+        {
+            public void ValidateLoad(object data)
+            {
+                if ((int)data == RejectedValue) { throw new InvalidOperationException("Rejected before restore"); }
             }
         }
 
@@ -91,17 +106,21 @@ namespace Game.Tests.EditMode
         public void SaveManager_Load_WhenSaveableThrowsAfterMutating_RollsBackAllChanges()
         {
             var first = new MockSaveable { SaveId = "first", Value = 10 };
+            var dependent = new MockSaveable { SaveId = "dependent", Value = 10, Dependency = first };
             var last = new MockSaveable { SaveId = "last", Value = 20, RejectedValue = 99 };
             _saveManager.Register(first);
+            _saveManager.Register(dependent);
             _saveManager.Register(last);
             SaveSlotData prior = _saveManager.Save(0);
             Assert.IsTrue(_saveManager.Load(0));
             ulong revision = _saveManager.LoadRevision;
 
             first.Value = 50;
+            dependent.Value = 50;
             last.Value = 99;
             SaveSlotData rejected = _saveManager.Save(1);
             first.Value = 11;
+            dependent.Value = 11;
             last.Value = 21;
             int notifications = 0;
             _saveManager.Loaded += _ => notifications++;
@@ -110,12 +129,33 @@ namespace Game.Tests.EditMode
             Assert.IsFalse(_saveManager.Load(1));
 
             Assert.AreEqual(11, first.Value);
+            Assert.AreEqual(11, dependent.Value);
             Assert.AreEqual(21, last.Value);
             Assert.AreEqual(0, _saveManager.ActiveSlotIndex);
             Assert.AreSame(prior, _saveManager.LastLoadedSlot);
             Assert.AreEqual(revision, _saveManager.LoadRevision);
             Assert.AreEqual(0, notifications);
             Assert.AreSame(rejected, _saveManager.GetSlotData(1));
+        }
+
+        [Test]
+        public void SaveManager_Load_WhenPreflightRejectsAnEntry_DoesNotRestoreAnyParticipant()
+        {
+            var first = new MockSaveable { SaveId = "first", Value = 10 };
+            var rejected = new ValidatingSaveable { SaveId = "rejected", Value = 99, RejectedValue = 99 };
+            _saveManager.Register(first);
+            _saveManager.Register(rejected);
+            _saveManager.Save(1);
+            first.Value = 11;
+
+            LogAssert.Expect(LogType.Error, new Regex(@"\[SaveManager\].*Rejected before restore"));
+            Assert.IsFalse(_saveManager.Load(1));
+
+            Assert.AreEqual(11, first.Value);
+            Assert.AreEqual(0, first.DeserializationCount);
+            Assert.AreEqual(0, rejected.DeserializationCount);
+            Assert.AreEqual(0, _saveManager.ActiveSlotIndex);
+            Assert.AreEqual(0UL, _saveManager.LoadRevision);
         }
 
         [Test]

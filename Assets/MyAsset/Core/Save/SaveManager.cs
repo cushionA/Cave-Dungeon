@@ -10,13 +10,6 @@ namespace Game.Core
         object SerializeForSlot(int slotIndex);
     }
 
-    /// <summary>通常の保存形式では保持できない実行中の識別子も、ロード失敗時に戻す。</summary>
-    internal interface ISaveableWithLoadRollback : ISaveable
-    {
-        object CaptureLoadRollback();
-        void RestoreLoadRollback(object snapshot);
-    }
-
     /// <summary>
     /// セーブデータ管理（スロット制）。
     /// ISaveableを登録し、スロット単位でシリアライズ/デシリアライズを行う。
@@ -181,6 +174,15 @@ namespace Game.Core
                 {
                     bool hasEntry = slotData.entries.TryGetValue(saveable.SaveId, out object candidate);
                     if (!hasEntry && saveable is not ISaveableWithMissingEntry) { continue; }
+                    if (hasEntry && saveable is ISaveableLoadPreflight preflight)
+                    {
+                        try { preflight.ValidateLoad(candidate); }
+                        catch (Exception exception)
+                        {
+                            LogFailure("スロットの事前検証に失敗しました", slotIndex, exception);
+                            return false;
+                        }
+                    }
                     object original = saveable is ISaveableWithLoadRollback live
                         ? live.CaptureLoadRollback() : saveable.Serialize();
                     participants.Add(new LoadParticipant(saveable, original, candidate, !hasEntry));

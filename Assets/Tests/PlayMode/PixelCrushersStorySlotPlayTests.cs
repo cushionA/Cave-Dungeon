@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.IO;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Game.Core;
 using Game.Runtime;
 using NUnit.Framework;
@@ -278,6 +279,132 @@ namespace Game.Tests.PlayMode
             Assert.That(QuestState(), Is.EqualTo("Successful"));
             Assert.That(Choice(), Is.EqualTo("disk progress"));
             Assert.IsTrue(GameManager.ExpeditionAid.IsUnlocked(k_Species));
+        }
+
+        [UnityTest]
+        public IEnumerator VendorStory_WhenPresentBadSlotPrecedesBridge_KeepsRawUntilAValidLoadRecovers()
+        {
+            TestSceneHelper.Cleanup();
+            yield return null;
+            TestSceneHelper.CreateGameManager();
+            CreateVendorStory();
+            yield return null;
+            yield return null;
+            CompleteQuest();
+            SetChoice("recoverable checkpoint");
+            SaveSlotData valid = GameManager.Saves.Save(1);
+            Assert.That(valid.entries[k_StoryKey], Is.TypeOf<string>());
+            DestroyVendorStory();
+            TestSceneHelper.Cleanup();
+            yield return null;
+            yield return null;
+
+            TestSceneHelper.CreateGameManager();
+            SaveManager saves = GameManager.Saves;
+            const string malformed = "unrecognized story archive";
+            SaveSlotData corrupt = new SaveSlotData(0);
+            corrupt.entries[k_StoryKey] = malformed;
+            saves.SetSlotData(0, corrupt);
+            Assert.IsTrue(saves.Load(0));
+
+            LogAssert.Expect(LogType.Error, new Regex(@"PixelCrushers\.Story.*起動時復元に失敗しました"));
+            CreateVendorStory();
+            yield return null;
+            yield return null;
+            Assert.That(QuestState(), Is.EqualTo("WaitingToStart"));
+            Assert.That(Choice(), Is.EqualTo("unanswered"));
+            Assert.AreEqual(malformed, saves.Save(2).entries[k_StoryKey]);
+
+            saves.SetSlotData(1, valid);
+            Assert.IsTrue(saves.Load(1));
+            Assert.That(QuestState(), Is.EqualTo("Successful"));
+            Assert.That(Choice(), Is.EqualTo("recoverable checkpoint"));
+            Assert.AreNotEqual(malformed, saves.Save(2).entries[k_StoryKey]);
+        }
+
+        [UnityTest]
+        public IEnumerator VendorStory_WhenSnapshotIsMalformedOrUnsupported_RejectsLoadAndPreservesLiveProgress()
+        {
+            yield return PrepareStoryLoadValidation();
+            SaveManager saves = GameManager.Saves;
+            SaveSlotData candidate = saves.GetSlotData(1);
+            string validSnapshot = (string)candidate.entries[k_StoryKey];
+            const string supportedVersion = "\"version\":1";
+            Assert.That(validSnapshot, Does.Contain(supportedVersion));
+
+            candidate.entries[k_StoryKey] = "not a story snapshot";
+            AssertStoryLoadRejected(saves, 1, "JSON");
+
+            candidate.entries[k_StoryKey] = validSnapshot.Replace(supportedVersion, "\"version\":999");
+            AssertStoryLoadRejected(saves, 1, "バージョン");
+        }
+
+        [UnityTest]
+        public IEnumerator VendorStory_WhenJournalConfigurationIsMissing_RejectsLoadBeforeApplyingAnyState()
+        {
+            yield return PrepareStoryLoadValidation();
+            Type configurationType = FindType("PixelCrushers.QuestMachine.QuestMachineConfiguration");
+            Component configuration = _story.GetComponent(configurationType);
+            Assert.IsNotNull(configuration);
+            Object.Destroy(configuration);
+            yield return null;
+
+            Assert.IsTrue((Component)configurationType.GetProperty("instance").GetValue(null) == null);
+            Assert.IsTrue(_bridge.isActiveAndEnabled);
+            AssertStoryLoadRejected(GameManager.Saves, 1, "Quest Machine Configuration");
+        }
+
+        private IEnumerator PrepareStoryLoadValidation()
+        {
+            TestSceneHelper.Cleanup();
+            yield return null;
+            TestSceneHelper.CreateGameManager();
+            CreateVendorStory();
+            yield return null;
+            yield return null;
+
+            SaveManager saves = GameManager.Saves;
+            Assert.That(saves.Save(0).entries[k_StoryKey], Is.TypeOf<string>());
+            SetChoice("other slot");
+            Assert.That(saves.Save(1).entries[k_StoryKey], Is.TypeOf<string>());
+            Assert.IsTrue(saves.Load(0));
+            yield return null;
+            yield return null;
+            yield return null;
+
+            CompleteQuest();
+            SetChoice("current live progress");
+            Assert.That(QuestState(), Is.EqualTo("Successful"));
+            Assert.IsTrue(GameManager.ExpeditionAid.IsUnlocked(k_Species));
+        }
+
+        private void AssertStoryLoadRejected(SaveManager saves, int candidateSlot, string reason)
+        {
+            int activeSlot = saves.ActiveSlotIndex;
+            ulong revision = saves.LoadRevision;
+            SaveSlotData checkpoint = saves.LastLoadedSlot;
+            object quest = ReadQuest();
+            int loadEvents = 0;
+            void CountLoad(int _) => loadEvents++;
+
+            saves.Loaded += CountLoad;
+            try
+            {
+                LogAssert.Expect(LogType.Error, new Regex($@"\[SaveManager\].*スロットの事前検証に失敗しました.*PixelCrushers\.Story.*{Regex.Escape(reason)}"));
+                Assert.IsFalse(saves.Load(candidateSlot));
+                Assert.AreEqual(activeSlot, saves.ActiveSlotIndex);
+                Assert.AreEqual(revision, saves.LoadRevision);
+                Assert.AreSame(checkpoint, saves.LastLoadedSlot);
+                Assert.That(loadEvents, Is.Zero);
+                Assert.AreSame(quest, ReadQuest());
+                Assert.That(QuestState(), Is.EqualTo("Successful"));
+                Assert.That(Choice(), Is.EqualTo("current live progress"));
+                Assert.IsTrue(GameManager.ExpeditionAid.IsUnlocked(k_Species));
+            }
+            finally
+            {
+                saves.Loaded -= CountLoad;
+            }
         }
 
         [UnityTest]
