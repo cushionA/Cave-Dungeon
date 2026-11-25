@@ -195,11 +195,7 @@ namespace Game.Core
                 }
 
                 case AIConditionType.ProjectileNear:
-                {
-                    // 弾丸検出はランタイム物理システム依存のため、SoAからは取得不可
-                    // operandAを閾値距離として、将来的にProjectileManager連携予定
-                    return 0f;
-                }
+                    return float.NaN;
 
                 case AIConditionType.ObjectNearby:
                 {

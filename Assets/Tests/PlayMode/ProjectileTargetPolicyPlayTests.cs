@@ -105,6 +105,71 @@ namespace Game.Tests.PlayMode
         private static int Hp(BaseCharacter actor) => GameManager.Data.GetVitals(actor.ObjectHash).currentHp;
 
         [UnityTest]
+        public IEnumerator ProjectileNear_WhenLiveHostileFlightIsObserved_GuardsAndFreezesCountUntilNextTick()
+        {
+            CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo(CharacterBelong.Enemy, CharacterFeature.Minion);
+            _infos.Add(info);
+            GameObject actor = new GameObject("2D projectile observer");
+            _actors.Add(actor);
+            actor.AddComponent<Rigidbody2D>().gravityScale = 0f;
+            actor.AddComponent<BoxCollider2D>();
+            actor.AddComponent<ActionExecutorController>();
+            EnemyCharacter enemy = actor.AddComponent<EnemyCharacter>();
+            enemy.SetCharacterInfoForTest(info);
+            AIInfo setup = ScriptableObject.CreateInstance<AIInfo>();
+            setup.actDataList = new[] { new ActData { actType = ActType.Wait, weight = 1f } };
+            setup.modes = new[] { new CharacterModeData
+            {
+                mode = CharacterMode.Combat, detectionRange = 20f, availableActIndices = new[] { 0 },
+            } };
+            enemy.SetAIInfo(setup);
+
+            try
+            {
+                yield return null;
+                AICondition projectileNear = new AICondition
+                {
+                    conditionType = AIConditionType.ProjectileNear,
+                    compareOp = CompareOp.GreaterEqual,
+                    operandA = 1,
+                };
+                enemy.FieldOrderJudgment.SetMode(new AIMode
+                {
+                    actionRules = new[] { new AIRule { actionIndex = 0, conditions = new[] { projectileNear } } },
+                    actions = new[] { new ActionSlot
+                    {
+                        execType = ActionExecType.Sustained, paramId = (int)SustainedAction.Guard, paramValue = 0.1f,
+                    } },
+                    defaultActionIndex = -1,
+                    judgeInterval = Vector2.zero,
+                });
+                Assert.IsTrue(GameManager.Actors.TryGet(enemy.ObjectHash, out ActorRef observer));
+                GameManager.Instance.SimulationTick(0.02f, 1f);
+                Assert.IsTrue(GameManager.Observation.TryGetNearbyHostileProjectileCount(observer, out int initialCount));
+                Assert.AreEqual(0, initialCount);
+                Assert.IsFalse(GameManager.Data.GetDefenseState(observer.Hash).isGuarding);
+
+                Spawn(Magic(AttackTargetRelation.Hostile), new Vector2(2f, 2f));
+                GameManager.Instance.SimulationTick(0.02f, 1.02f);
+                Assert.IsTrue(GameManager.Observation.TryGetNearbyHostileProjectileCount(observer, out int seen));
+                Assert.AreEqual(1, seen);
+                Assert.IsTrue(GameManager.Data.GetDefenseState(observer.Hash).isGuarding);
+
+                _projectiles.ClearAll();
+                Assert.IsTrue(GameManager.Observation.TryGetNearbyHostileProjectileCount(observer, out int frozen));
+                Assert.AreEqual(1, frozen);
+                GameManager.Instance.SimulationTick(0.2f, 1.22f);
+                Assert.IsTrue(GameManager.Observation.TryGetNearbyHostileProjectileCount(observer, out int refreshed));
+                Assert.AreEqual(0, refreshed);
+                Assert.IsFalse(GameManager.Data.GetDefenseState(observer.Hash).isGuarding);
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(setup);
+            }
+        }
+
+        [UnityTest]
         public IEnumerator ProjectilePolicy_RejectedDirectAndSweptFriend_PreservesBudgetAndEffectsUntilEnemy()
         {
             BaseCharacter friend = CreateActor(CharacterBelong.Ally, new Vector2(2f, 0f));

@@ -212,16 +212,16 @@ namespace Game.Tests.EditMode
         [Test]
         public void ConditionTypeMetadata_GetWidgetKind_ProjectileNear_ReturnsInteger()
         {
-            // ConditionEvaluator のコメント通り、operandA は閾値距離として使う（Integer）。
-            // ビットマスク扱いは実装と食い違うので Integer に矯正されている。
             Assert.AreEqual(ConditionTypeMetadata.WidgetKind.Integer,
                 ConditionTypeMetadata.GetWidgetKind(AIConditionType.ProjectileNear));
         }
 
         [Test]
-        public void ConditionTypeMetadata_GetDefaultOperandA_ProjectileNear_Returns3m()
+        public void ConditionTypeMetadata_ProjectileNear_DefaultsToAtLeastOneHostileProjectile()
         {
-            Assert.AreEqual(3, ConditionTypeMetadata.GetDefaultOperandA(AIConditionType.ProjectileNear));
+            Assert.AreEqual(1, ConditionTypeMetadata.GetDefaultOperandA(AIConditionType.ProjectileNear));
+            Assert.AreEqual(CompareOp.GreaterEqual, ConditionTypeMetadata.GetDefaultCompareOp(AIConditionType.ProjectileNear));
+            StringAssert.Contains("8m", ConditionTypeMetadata.GetDescription(AIConditionType.ProjectileNear));
         }
 
         [Test]

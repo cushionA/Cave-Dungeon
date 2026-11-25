@@ -18,6 +18,7 @@ namespace Game.Tests.PlayMode
         private readonly List<ScriptableObject> _assets = new List<ScriptableObject>();
         private readonly List<ProjectileLockWarning> _warnings = new List<ProjectileLockWarning>();
         private Scene _room;
+        private Scene _otherRoom;
         private Camera _camera;
         private CharacterActor3D _knight;
         private CharacterActor3D _caster;
@@ -69,10 +70,67 @@ namespace Game.Tests.PlayMode
         public IEnumerator TearDown()
         {
             if (_room.isLoaded) { yield return SceneManager.UnloadSceneAsync(_room); }
+            if (_otherRoom.isLoaded) { yield return SceneManager.UnloadSceneAsync(_otherRoom); }
             foreach (ScriptableObject asset in _assets) { Object.Destroy(asset); }
             _assets.Clear();
             TestSceneHelper.Cleanup();
             yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator ProjectileIndex3D_CountsReleasedHostileShotsWithinExactRadiusAndPhysicsWorld()
+        {
+            _otherRoom = SceneManager.CreateScene("3D projectile index other world", new CreateSceneParameters(LocalPhysicsMode.Physics3D));
+            CharacterActor3D otherWorld = CreateEnemy("Other world caster", Vector3.forward * 5f);
+            SceneManager.MoveGameObjectToScene(otherWorld.gameObject, _otherRoom);
+            CharacterActor3D friendly = CreateActor("Friendly caster", Vector3.left * 5f, CharacterBelong.Ally);
+            Physics.SyncTransforms();
+            Vector3 center = _knight.Body.bounds.center;
+
+            SpawnAt(_caster, center + Vector3.right * 2f, Vector3.right);
+            SpawnAt(_caster, center + Vector3.up * 3.5f, Vector3.right);
+            SpawnAt(otherWorld, center + Vector3.forward * 0.5f, Vector3.forward);
+            SpawnAt(friendly, center + Vector3.forward * 1f, Vector3.forward);
+            SpawnAt(_otherCaster, center + Vector3.forward * 1f, Vector3.forward, delay: 0.2f);
+
+            ProjectileManager3D manager = GameManager.Projectiles3D;
+            Assert.That(manager.CountNearbyHostileProjectiles(_knight, 1.99f), Is.Zero);
+            Assert.That(manager.CountNearbyHostileProjectiles(_knight, 2f), Is.EqualTo(1));
+            Assert.That(manager.CountNearbyHostileProjectiles(_knight, 4f), Is.EqualTo(2));
+            Step(0.1f);
+            Assert.That(manager.CountNearbyHostileProjectiles(_knight, 2f), Is.Zero);
+            Step(0.15f);
+            Assert.That(manager.CountNearbyHostileProjectiles(_knight, 2f), Is.EqualTo(1));
+
+            manager.ClearAll();
+            Assert.That(manager.CountNearbyHostileProjectiles(_knight, 8f), Is.Zero);
+            Assert.That(manager.ActiveCount, Is.Zero);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator WarningHud3D_WhenMarkedHostileShotEntersRange_ShowsOnlyItsApproachingLease()
+        {
+            Vector3 center = _knight.Body.bounds.center;
+            SpawnAt(_caster, center + Vector3.forward * 9f, Vector3.back, _knight.Actor);
+
+            ProjectileManager3D manager = GameManager.Projectiles3D;
+            manager.CollectLockWarnings(_knight.Actor, _warnings);
+            Assert.That(_warnings, Is.Empty);
+            manager.CollectLockWarnings(_knight.Actor, _warnings, 9.1f);
+            Assert.That(_warnings, Has.Count.EqualTo(1));
+            ulong lease = _warnings[0].LeaseId;
+            yield return null;
+            Assert.That(Overlay.Directions, Is.Empty);
+
+            Step(0.15f);
+            yield return null;
+            Assert.That(Overlay.Directions, Has.Count.EqualTo(1));
+            Assert.That(GetWarningLease(_knight.Actor), Is.EqualTo(lease));
+
+            manager.ClearAll();
+            yield return null;
+            Assert.That(Overlay.Directions, Is.Empty);
         }
 
         [UnityTest]
@@ -163,6 +221,25 @@ namespace Game.Tests.PlayMode
             _room.GetPhysicsScene().Simulate(0.02f);
             _time += deltaTime;
             GameManager.Instance.SimulationTick(deltaTime, _time);
+        }
+
+        private static void SpawnAt(CharacterActor3D owner, Vector3 position, Vector3 direction,
+            ActorRef target = default, float delay = 0f)
+        {
+            AttackContext context = AttackContext.Capture(owner.Actor, default, 1f,
+                GameManager.Data.GetFlags(owner.Actor.Hash).Belong, null, targetRelations: AttackTargetRelation.All);
+            AttackProfile3D shape = new AttackProfile3D
+            {
+                shape = AttackShape3D.Projectile,
+                projectileRadius = 0.12f,
+                targetLayers = LayerMask.GetMask("Player", "Enemy"),
+            };
+            MagicDefinition magic = new MagicDefinition
+            {
+                magicType = MagicType.Attack,
+                bulletProfile = new BulletProfile { moveType = BulletMoveType.Straight, speed = 10f, lifeTime = 3f, spawnDelay = delay },
+            };
+            Assert.IsTrue(GameManager.Projectiles3D.Spawn(owner.gameObject.scene, position, direction, shape, magic, default, context, target));
         }
 
         private ulong GetWarningLease(ActorRef target)

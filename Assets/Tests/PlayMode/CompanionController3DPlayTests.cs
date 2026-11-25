@@ -22,7 +22,11 @@ namespace Game.Tests.PlayMode
         {
             TestSceneHelper.Cleanup();
             yield return null;
-            TestSceneHelper.CreateGameManager();
+            GameObject world = new GameObject("Companion tactics world");
+            world.SetActive(false);
+            world.AddComponent<ProjectileManager3D>();
+            world.AddComponent<GameManager>();
+            world.SetActive(true);
             _previous = SceneManager.GetActiveScene();
             _room = SceneManager.CreateScene(nameof(CompanionController3DPlayTests), new CreateSceneParameters(LocalPhysicsMode.Physics3D));
             SceneManager.SetActiveScene(_room);
@@ -121,6 +125,69 @@ namespace Game.Tests.PlayMode
             }
             Assert.AreEqual(1, companion.ActiveModeIndex);
             Assert.Less(GameManager.Data.GetVitals(enemy.Actor.Hash).currentHp, health);
+        }
+
+        [UnityTest]
+        public IEnumerator AppliedTactic_NearbyHostileProjectileStartsGuard_AndClearLetsGuardExpire()
+        {
+            CharacterActor3D knight = Actor("Knight", Vector3.left, CharacterBelong.Ally, CharacterFeature.Player);
+            CharacterActor3D sister = Actor("Sister", Vector3.zero, CharacterBelong.Ally, CharacterFeature.Companion);
+            CharacterActor3D enemy = Actor("Enemy", Vector3.forward * 5f, CharacterBelong.Enemy, CharacterFeature.Minion);
+            CompanionController3D companion = sister.gameObject.AddComponent<CompanionController3D>();
+            companion.ConfigureForTest(knight);
+            companion.SetAIConfig(new CompanionAIConfig
+            {
+                modes = new[]
+                {
+                    new AIMode
+                    {
+                        actions = new[] { new ActionSlot { execType = ActionExecType.Sustained, paramId = (int)SustainedAction.Guard, paramValue = 0.15f } },
+                        actionRules = new[]
+                        {
+                            new AIRule
+                            {
+                                actionIndex = 0,
+                                conditions = new[] { new AICondition { conditionType = AIConditionType.ProjectileNear, compareOp = CompareOp.GreaterEqual, operandA = 1 } },
+                            },
+                        },
+                        defaultActionIndex = -1,
+                    },
+                },
+            });
+
+            ProjectileManager3D projectiles = GameManager.Projectiles3D;
+            Assert.IsNotNull(projectiles);
+            Assert.IsTrue(Spawn(knight, knight.Body.bounds.center + Vector3.forward * 4f, AttackTargetRelation.Friendly));
+            for (int i = 0; i < 5; i++) { yield return new WaitForFixedUpdate(); }
+            Assert.IsFalse(GameManager.Data.GetDefenseState(sister.Actor.Hash).isGuarding);
+
+            Assert.IsTrue(Spawn(enemy, enemy.Body.bounds.center, AttackTargetRelation.Hostile));
+            for (int i = 0; i < 15 && !GameManager.Data.GetDefenseState(sister.Actor.Hash).isGuarding; i++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+            Assert.IsTrue(GameManager.Data.GetDefenseState(sister.Actor.Hash).isGuarding);
+
+            projectiles.ClearAll();
+            for (int i = 0; i < 20 && GameManager.Data.GetDefenseState(sister.Actor.Hash).isGuarding; i++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+            Assert.IsFalse(GameManager.Data.GetDefenseState(sister.Actor.Hash).isGuarding);
+
+            bool Spawn(CharacterActor3D source, Vector3 position, AttackTargetRelation targets)
+            {
+                AttackProfile3D shape = new AttackProfile3D { shape = AttackShape3D.Projectile, projectileRadius = 0.1f,
+                    targetLayers = LayerMask.GetMask("Player") };
+                MagicDefinition magic = new MagicDefinition
+                {
+                    magicType = MagicType.Attack,
+                    bulletProfile = new BulletProfile { moveType = BulletMoveType.Straight, speed = 1f, lifeTime = 5f },
+                };
+                AttackContext context = AttackContext.Capture(source.Actor, default, 1f, GameManager.Data.GetFlags(source.Actor.Hash).Belong,
+                    null, targetRelations: targets);
+                return projectiles.Spawn(_room, position, Vector3.back, shape, magic, default, context, default);
+            }
         }
 
         private AttackInfo MakeAttack()

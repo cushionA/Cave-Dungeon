@@ -520,6 +520,87 @@ namespace Game.Tests.EditMode
             }
         }
 
+        [Test]
+        public void ProjectileNear_WhenSnapshotChanges_ManagedAndBurstDistinguishUnknownZeroAndHostileCount()
+        {
+            AIMode mode = CreateMode();
+            AICondition condition = new AICondition
+            {
+                conditionType = AIConditionType.ProjectileNear,
+                compareOp = CompareOp.GreaterEqual,
+                operandA = 1,
+            };
+            mode.actionRules[0].conditions = new[] { condition };
+            mode.actions = new[] { mode.actions[0], new ActionSlot { execType = ActionExecType.Attack, paramId = 55 } };
+            mode.defaultActionIndex = 1;
+
+            _observations.Capture(++_tick, 0f);
+            AIObservationContext observation = _observations.Observation;
+            Assert.IsTrue(_core.Actors.TryGet(1, out ActorRef owner));
+            Assert.IsTrue(_core.Actors.TryGet(10, out ActorRef target));
+            condition.compareOp = CompareOp.Equal;
+            condition.operandA = 0;
+            mode.actionRules[0].conditions[0] = condition;
+            Assert.IsFalse(ConditionEvaluator.Evaluate(condition, owner.Hash, target.Hash, observation));
+            VerifyBoth(55);
+
+            observation.SetNearbyHostileProjectileCount(owner, 0);
+            observation.SetNearbyHostileProjectileCount(target, 2);
+            Assert.IsTrue(ConditionEvaluator.Evaluate(condition, owner.Hash, target.Hash, observation));
+            VerifyBoth(7);
+            condition.compareOp = CompareOp.GreaterEqual;
+            condition.operandA = 1;
+            mode.actionRules[0].conditions[0] = condition;
+            VerifyBoth(55);
+
+            observation.SetNearbyHostileProjectileCount(owner, 2);
+            VerifyBoth(7);
+
+            _observations.Capture(++_tick, 0.02f);
+            Assert.IsFalse(observation.TryGetNearbyHostileProjectileCount(owner, out _));
+            VerifyBoth(55);
+
+            void VerifyBoth(int action)
+            {
+                Assert.AreEqual(target.Hash, DecideFromCurrentObservation(mode, false, out int managed));
+                Assert.AreEqual(target.Hash, DecideFromCurrentObservation(mode, true, out int burst));
+                Assert.AreEqual(action, managed);
+                Assert.AreEqual(action, burst);
+            }
+        }
+
+        [Test]
+        public void ProjectileNear_WhenUsedInAModeTransition_RequestsObservationEvenWithoutAnActionRule()
+        {
+            using JudgmentLoop judge = CreateLoop(1, new RecordingBackend());
+            ModeController controller = new ModeController(judge);
+            AIMode mode = CreateMode();
+            AIMode[] modes = { mode, mode };
+            Assert.IsFalse(judge.RequiresNearbyHostileProjectileCount);
+            controller.SetModes(modes, new[] { new ModeTransitionRule
+            {
+                sourceModeIndex = 0,
+                targetModeIndex = 1,
+                conditions = new[] { new AICondition
+                {
+                    conditionType = AIConditionType.ProjectileNear,
+                    compareOp = CompareOp.GreaterEqual,
+                    operandA = 1,
+                } },
+            } });
+            Assert.IsTrue(judge.RequiresNearbyHostileProjectileCount);
+            _observations.Capture(++_tick, 0f);
+            AIObservationContext snapshot = _observations.Observation;
+            Assert.IsTrue(_core.Actors.TryGet(1, out ActorRef observer));
+            controller.EvaluateTransitions(observer.Hash, 0, snapshot);
+            Assert.AreEqual(0, controller.CurrentModeIndex);
+            snapshot.SetNearbyHostileProjectileCount(observer, 1);
+            controller.EvaluateTransitions(observer.Hash, 0, snapshot);
+            Assert.AreEqual(1, controller.CurrentModeIndex);
+            controller.SetModes(modes, null);
+            Assert.IsFalse(judge.RequiresNearbyHostileProjectileCount);
+        }
+
         private int SelectFromCurrentObservation(TargetFilter filter, bool scheduled)
         {
             AIMode mode = CreateMode();

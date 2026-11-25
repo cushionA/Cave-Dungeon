@@ -45,6 +45,7 @@ namespace Game.Core
         public readonly ActionSlot[] actions;
         public readonly AIProgramRanges ranges;
         public readonly bool requiresTargetLineOfSight;
+        public readonly bool requiresNearbyHostileProjectileCount;
 
         public AICompiledMode(AIMode mode)
         {
@@ -56,6 +57,7 @@ namespace Game.Core
             rules = flatRules.ToArray();
             conditions = flatConditions.ToArray();
             requiresTargetLineOfSight = Array.Exists(conditions, IsLineOfSightCondition);
+            requiresNearbyHostileProjectileCount = Array.Exists(conditions, IsProjectileNearCondition);
             selects = mode.targetSelects == null ? Array.Empty<AITargetSelect>() : (AITargetSelect[])mode.targetSelects.Clone();
             actions = mode.actions == null ? Array.Empty<ActionSlot>() : (ActionSlot[])mode.actions.Clone();
             int fallback = mode.defaultActionIndex;
@@ -82,6 +84,9 @@ namespace Game.Core
 
         internal static bool IsLineOfSightCondition(AICondition condition) =>
             condition.conditionType == AIConditionType.TargetLineOfSight;
+
+        internal static bool IsProjectileNearCondition(AICondition condition) =>
+            condition.conditionType == AIConditionType.ProjectileNear;
 
         private static bool IsInteraction(ActionSlot[] actions, int index)
         {

@@ -9,6 +9,7 @@ namespace Game.Core
         ActorRef ProtectedPlayer { get; }
         bool TryGetTargetOf(ActorRef actor, out ActorRef target);
         bool TryGetStunRemaining(ActorRef actor, out float seconds);
+        bool TryGetNearbyHostileProjectileCount(ActorRef observer, out int count);
         bool TryGetTargetLineOfSight(ActorRef owner, ActorRef target, out bool visible);
         int ActorCount { get; }
         int HashAt(int index);
@@ -50,6 +51,8 @@ namespace Game.Core
         public ActorRef ProtectedPlayer => observation.ProtectedPlayer;
         public bool TryGetTargetOf(ActorRef actor, out ActorRef target) => observation.TryGetTargetOf(actor, out target);
         public bool TryGetStunRemaining(ActorRef actor, out float seconds) => observation.TryGetStunRemaining(actor, out seconds);
+        public bool TryGetNearbyHostileProjectileCount(ActorRef observer, out int count) =>
+            observation.TryGetNearbyHostileProjectileCount(observer, out count);
         public bool TryGetTargetLineOfSight(ActorRef owner, ActorRef target, out bool visible) =>
             observation.TryGetTargetLineOfSight(owner, target, out visible);
         public int ActorCount => observation.ActorHashes.Count;
@@ -122,6 +125,11 @@ namespace Game.Core
                     if (filter.belong == 0) { filter.belong = nearbyOwner.flags.Belong; }
                     if (filter.distanceRange.y <= 0f) { filter.distanceRange.y = 10f; }
                     return TryCount(filter, nearbyOwner, true, ref world, out value);
+                case AIConditionType.ProjectileNear:
+                    if (!world.TryGetActor(ownerHash, out AIActorObservation projectileObserver)
+                        || !world.TryGetNearbyHostileProjectileCount(projectileObserver.actor, out int nearbyProjectiles)) { return false; }
+                    value = nearbyProjectiles;
+                    return true;
                 case AIConditionType.ObjectNearby:
                     if (!world.GimmicksAvailable || !world.TryGetActor(ownerHash, out AIActorObservation observer))
                     {
