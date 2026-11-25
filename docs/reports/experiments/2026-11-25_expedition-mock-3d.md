@@ -13,7 +13,7 @@ Tab／LT または `GEAR & GROWTH` 台で「戦闘準備」を開く。武器は
 
 開始地点の近くに回復薬（`HEALING DRAUGHT`）3個と火炎瓶（`EMBER FLASK`）2個を配置した。E／パッド上ボタンを長押しして拾い、「消耗品」ボタンまたは Esc／Start で登録画面を開く。所持品を4枠のベルトに登録し、1・2／十字キー左右で切り替え、R／パッド右ボタンで使用する。回復薬はHPを最大25回復し、火炎瓶は周囲に火属性の攻撃判定を出す。火炎瓶の基礎威力は `22 + 知力 × 0.65` を四捨五入した値で、命中時は属性防御を適用する。[所持品とベルトの仕様](../../../designs/systems/InventorySystem.md)
 
-工兵は確定編成から所定の地点に出現する。召喚した魔物が通常探索で騎士についてくる経路は接続が残る。[召喚の出撃処理](../../../Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs)
+工兵は確定編成から所定の地点に出現し、通常探索では騎士について歩く。凍結や移動を占有する行動が終わると追従を再開する。騎士と工兵の間に迂回が必要な障害がある場合の経路探索は残る。[召喚の出撃と同行](../../../Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs)
 
 ## 操作と機能の境界
 
@@ -35,3 +35,5 @@ Unity 6000.6.8f1 で EditMode 全2,326件、PlayMode 全400件が通過した。
 統合モックの試験では、配置したシスターが騎士に防御支援をかけて追従し、騎士が二区画を通過すると後方区画が解除されることを確認した。二人の登録世代は通過前後で同じだった。騎士に設定した剣で番人を倒すと遭遇が完了し、「次の周回へ」ボタンが表示された。依頼と編成・出撃、物語の保存、次周の確定・シーン遷移・復元はそれぞれの専用試験で確認した。モック全体の手動操作、音声の試聴と表示の目視確認は未実施。[統合モック試験](../../../Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs)・[依頼のシーン試験](../../../Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs)・[物語の保存](../../../Assets/Tests/PlayMode/PixelCrushersStorySlotPlayTests.cs)・[次周開始](../../../Assets/Tests/PlayMode/ExpeditionNextPlaythroughScenePlayTests.cs)
 
 消耗品の試験ではモックに配置した両方の品を拾い、回復薬で手元のモーションと回復を確認した。火炎瓶は同じ床の範囲内の敵に命中し、両方の品で専用のパーティクルが発生した。効果発揮前の中断・ロード・個体の再登録では消費されず、所持品とベルトは同じセーブスロットで復元できることを専用試験で確認した。[モックの消耗品試験](../../../Assets/Tests/PlayMode/ExpeditionConsumablesMockScenePlayTests.cs)・[使用と中断](../../../Assets/Tests/PlayMode/PlayerItemUse3DPlayTests.cs)・[ベルトの操作](../../../Assets/Tests/PlayMode/ConsumableBeltPanel3DPlayTests.cs)
+
+依頼の専用シーンでは、会話から出撃した工兵が、歩いて移動した騎士に追いつき、同じ登録世代とシーンを保った。通常編成は凍結解除後と集団戦の移動担当が外れた後に追従を再開し、戦闘専用の増援は通常の追従に加わらないことを個別に確認した。[依頼からの出撃試験](../../../Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs)・[同行と移動の切替試験](../../../Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs)

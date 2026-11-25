@@ -2640,6 +2640,8 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 704
   encounter: {fileID: 0}
+  explorationLeader: {fileID: 1606096591}
+  followDistance: 2.2
 --- !u!114 &663687369
 MonoBehaviour:
   m_ObjectHideFlags: 0

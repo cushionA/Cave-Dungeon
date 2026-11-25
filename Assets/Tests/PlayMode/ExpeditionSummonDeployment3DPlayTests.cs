@@ -230,6 +230,70 @@ namespace Game.Tests.PlayMode
             yield return null;
         }
 
+        [UnityTest]
+        public IEnumerator NormalDeployment_WhenKnightWalks_FollowsAndHonorsMovementStatus()
+        {
+            Assert.That(_squad.TryConfirm(new[] { new ExpeditionSquad.Selection("scout", 1) }), Is.True);
+            CharacterActor3D knight = CreateCharacter("Knight", new Vector3(-2.5f, 0.04f, 2.4f), CharacterFeature.Player);
+            knight.gameObject.SetActive(true);
+            Configure(leader: knight);
+            Assert.That(_deployment.TryDeployConfirmed(), Is.True);
+            _deployment.CopyActiveSummons(_summons);
+            ActorRef identity = _summons[0].Actor;
+            CharacterActor3D scout = GetUnit(identity);
+
+            for (int i = 0; i < 5; i++) { yield return new WaitForFixedUpdate(); }
+            Assert.That(scout.transform.position.z, Is.EqualTo(_positions[0].position.z).Within(0.05f));
+
+            Assert.That(GameManager.StatusEffects.Apply(identity.Hash, new StatusEffectInfo
+            {
+                effect = StatusEffectId.Freeze, duration = 10f, maxStack = 1,
+            }), Is.True);
+            for (int i = 0; i < 36; i++)
+            {
+                knight.Motor.Simulate(Vector3.forward, false, Time.fixedDeltaTime);
+                yield return new WaitForFixedUpdate();
+            }
+            Assert.That(scout.transform.position.z, Is.EqualTo(_positions[0].position.z).Within(0.05f));
+            Assert.That(GameManager.StatusEffects.Remove(identity.Hash, StatusEffectId.Freeze), Is.True);
+
+            for (int i = 0; i < 50; i++) { yield return new WaitForFixedUpdate(); }
+            Assert.That(scout.transform.position.z, Is.GreaterThan(_positions[0].position.z + 2f));
+            Assert.That(knight.transform.position.z - scout.transform.position.z, Is.InRange(2.05f, 2.22f));
+            Assert.That(scout.Motor.IsGrounded, Is.True);
+            Assert.That(scout.Actor, Is.EqualTo(identity));
+        }
+
+        [UnityTest]
+        public IEnumerator NormalDeployment_WhenEncounterStopsDriving_ResumesOnlyNormalFollow()
+        {
+            Assert.That(_squad.TryConfirm(new[] { new ExpeditionSquad.Selection("scout", 1) }), Is.True);
+            CharacterActor3D knight = CreateCharacter("Knight", new Vector3(-2.5f, 0.04f, 5f), CharacterFeature.Player);
+            knight.gameObject.SetActive(true);
+            EncounterCombat3D encounter = NewObject("Encounter", Vector3.zero).AddComponent<EncounterCombat3D>();
+            _scoutPrefab.gameObject.AddComponent<EncounterCombatant3D>();
+            _guardPrefab.gameObject.AddComponent<EncounterCombatant3D>();
+            Configure(encounter, knight);
+            Assert.That(_deployment.TryDeployConfirmed(), Is.True);
+            object attempt = new object();
+            Assert.That(_deployment.TryDeployReinforcements(attempt, new[] { new ExpeditionSquad.Selection("guard", 1) }), Is.True);
+            _deployment.CopyActiveSummons(_summons);
+            CharacterActor3D scout = GetUnit(_summons[0].Actor);
+            CharacterActor3D reinforcement = GetUnit(_summons[1].Actor);
+            float reinforcementStart = reinforcement.transform.position.z;
+
+            for (int i = 0; i < 20; i++) { yield return new WaitForFixedUpdate(); }
+            Assert.That(scout.transform.position.z, Is.EqualTo(_positions[0].position.z).Within(0.05f));
+
+            encounter.enabled = false;
+            for (int i = 0; i < 30; i++) { yield return new WaitForFixedUpdate(); }
+            Assert.That(scout.transform.position.z, Is.GreaterThan(_positions[0].position.z + 1f));
+            Assert.That(reinforcement.transform.position.z, Is.EqualTo(reinforcementStart).Within(0.05f));
+            _deployment.DismissReinforcements(attempt);
+            Assert.That(reinforcement.Actor.IsValid, Is.False);
+            Assert.That(scout.Actor, Is.EqualTo(_summons[0].Actor));
+        }
+
         private CharacterActor3D CreateCharacter(string name, Vector3 position, CharacterFeature feature)
         {
             GameObject gameObject = NewObject(name, position);
@@ -270,12 +334,12 @@ namespace Game.Tests.PlayMode
             return unit;
         }
 
-        private void Configure(EncounterCombat3D encounter = null)
+        private void Configure(EncounterCombat3D encounter = null, CharacterActor3D leader = null)
             => _deployment.ConfigureForTest(new[]
             {
                 new ExpeditionSummonDeployment3D.SpeciesPrefab("scout", _scoutPrefab),
                 new ExpeditionSummonDeployment3D.SpeciesPrefab("guard", _guardPrefab)
-            }, _positions, Physics.DefaultRaycastLayers, encounter);
+            }, _positions, Physics.DefaultRaycastLayers, encounter, leader);
 
         private static void Unlock(string species)
         {
