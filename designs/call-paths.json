@@ -7329,7 +7329,7 @@
         "Assets/Tests/EditMode/SaveManagerWiringTests.cs": "18bc703f387121b5c3cad36f6f4efa5055293bd40ac00a181561ea5137bd87cd",
         "Assets/Tests/PlayMode/ExpeditionNextPlaythroughScenePlayTests.cs": "e1a7bba600a309bec9239cf489e5f2721574821d0d5ec9ebabcc38f29333b199",
         "Assets/Tests/PlayMode/PixelCrushersStorySlotPlayTests.cs": "3039a64410a9810f99648b7185a26f40c314f234c407381be1dc529d0511aa79",
-        "ProjectSettings/EditorBuildSettings.asset": "357121410d93947b6d892164f1928c828da4c386327ddbe35ce74a2b7f5fbe0f",
+        "ProjectSettings/EditorBuildSettings.asset": "9414f7e09e4c8e696f190ed12691b4757421946de6b651bb48c0b66349e0d85f",
         "designs/systems/SaveSystem.md": "ae0f84704974d7eef5b55a35ea537454a49f9c5efc78ae786915476c73410cd1"
       }
     }
@@ -8750,7 +8750,7 @@
         "Assets/Scenes/StreamingAreaB3DTestScene.unity": "695b7c4f077a0ae030da8c8b8b0bcca8597fe559a3e63d6d702b7121fdb43e46",
         "Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs": "fec2358fd603bbfff413eeb3ef5ee66428e7754807fe163c8dd9c26b35213412",
         "Assets/Tests/PlayMode/LevelStreaming3DPlayTests.cs": "fd8faad4d2a1459dccb60c88f19bc06c135a657987c3fbbc3ef1408580b7bb08",
-        "ProjectSettings/EditorBuildSettings.asset": "357121410d93947b6d892164f1928c828da4c386327ddbe35ce74a2b7f5fbe0f"
+        "ProjectSettings/EditorBuildSettings.asset": "9414f7e09e4c8e696f190ed12691b4757421946de6b651bb48c0b66349e0d85f"
       }
     }
   },
@@ -8944,7 +8944,7 @@
         "Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs": "fec2358fd603bbfff413eeb3ef5ee66428e7754807fe163c8dd9c26b35213412",
         "Assets/Tests/PlayMode/ExpeditionNextPlaythroughScenePlayTests.cs": "e1a7bba600a309bec9239cf489e5f2721574821d0d5ec9ebabcc38f29333b199",
         "Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs": "8e81abfc246fc09b6c15a0ad48a8d790cd00fda9689b75a3577ba935a0a00fb3",
-        "ProjectSettings/EditorBuildSettings.asset": "357121410d93947b6d892164f1928c828da4c386327ddbe35ce74a2b7f5fbe0f",
+        "ProjectSettings/EditorBuildSettings.asset": "9414f7e09e4c8e696f190ed12691b4757421946de6b651bb48c0b66349e0d85f",
         "docs/reports/experiments/2026-11-25_expedition-mock-3d.md": "4d63a678464e84f1a4e2449d849ac69ba96c325aeeef61080e3abe89e56f889b",
         "Assets/MyAsset/Data/PLACEHOLDER_ConsumableUseParticles3D.mat": "79557a66ae41d5c2f1f88b4aacbed6c5e9cecad9197ec5bb8e653896e9e31105",
         "Assets/MyAsset/Data/PLACEHOLDER_ConsumableUseParticles3D.mat.meta": "fe42b7d20822347fe5375863c9a39e4d56a3279b6570059682716d4b7118d93a",
@@ -9227,7 +9227,7 @@
         "Assets/Scenes/ExpeditionEvent3DScene.unity.meta": "8301bf9b3007a5e8a161f677cce0de6c78345d925cc65530fefa4c9c611e9299",
         "Assets/Scenes/ExpeditionMock3DScene.unity": "7a9cf703e2844ad74df7154a56edcfbef0105f709500ec0a940cb9ae4a772ebd",
         "Assets/Tests/PlayMode/ExpeditionEvent3DScenePlayTests.cs": "5f53d51ebf3e43ec80c976cf050adf9b287171d8b0b01c260da46f6467e2bb40",
-        "ProjectSettings/EditorBuildSettings.asset": "357121410d93947b6d892164f1928c828da4c386327ddbe35ce74a2b7f5fbe0f"
+        "ProjectSettings/EditorBuildSettings.asset": "9414f7e09e4c8e696f190ed12691b4757421946de6b651bb48c0b66349e0d85f"
       }
     }
   },
