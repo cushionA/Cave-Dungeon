@@ -109,6 +109,24 @@ namespace Game.Tests.PlayMode
             return gimmick;
         }
 
+        private AISceneGimmickController CreateContactPlate(out BoxCollider2D trigger)
+        {
+            GameObject plate = CreateObject("Pressure plate", new Vector2(4f, 0f));
+            trigger = plate.AddComponent<BoxCollider2D>();
+            trigger.isTrigger = true;
+            trigger.size = new Vector2(0.24f, 0.45f);
+            AISceneGimmickController gimmick = plate.AddComponent<AISceneGimmickController>();
+            gimmick.Configure(1 << 4, _operator.transform, 0.75f, plate.transform, 2f);
+            gimmick.SetContactTriggerForTest(trigger);
+            return gimmick;
+        }
+
+        private void StepContactPhysics()
+        {
+            Physics2D.SyncTransforms();
+            Assert.IsTrue(_testScene.GetPhysicsScene2D().Simulate(0.02f));
+        }
+
         [Test]
         public void ObjectNearby_ReportsKnownZeroBeforeRegistrationAndAfterLastSwitchIsDisabled()
         {
@@ -298,6 +316,85 @@ namespace Game.Tests.PlayMode
             Assert.AreEqual(1, activations);
             Assert.IsFalse(trap.IsAvailable);
             GameManager.Instance.SimulationTick(interval, 4f * interval);
+            Assert.AreEqual(1, activations);
+        }
+
+        [UnityTest]
+        public IEnumerator ContactPlate_WhenAiArmsIt_RequiresTheSelectedHostilesSafePhysicalContact()
+        {
+            AISceneGimmickController plate = CreateContactPlate(out BoxCollider2D trigger);
+            var sideTrigger = trigger.gameObject.AddComponent<BoxCollider2D>();
+            sideTrigger.isTrigger = true;
+            sideTrigger.size = trigger.size;
+            sideTrigger.offset = Vector2.up;
+            BoxCollider2D door = CreateObject("Trapped door", new Vector2(12f, 0f)).AddComponent<BoxCollider2D>();
+            door.enabled = false;
+            int activations = 0;
+            plate.OnActivated.AddListener(() => { door.enabled = true; activations++; });
+            BaseCharacter unrelated = CreatePassiveActor(CharacterBelong.Ally, -8f);
+            yield return null;
+
+            _target.SetPhysicsPosition(new Vector2(4f, 0f));
+            StepContactPhysics();
+            Assert.IsFalse(door.enabled, "An unarmed plate ignores physical contact.");
+            _target.SetPhysicsPosition(new Vector2(3f, 0f));
+            StepContactPhysics();
+            GameManager.Instance.SimulationTick(DecisionInterval, 1f);
+            Assert.IsTrue(plate.IsContactArmed);
+            Assert.IsFalse(plate.IsAvailable);
+            Assert.IsFalse(door.enabled, "Arming selects the plate without moving the door.");
+
+            unrelated.SetPhysicsPosition(new Vector2(4f, 0f));
+            StepContactPhysics();
+            Assert.IsFalse(door.enabled, "Another hostile cannot spend the reservation.");
+            unrelated.SetPhysicsPosition(new Vector2(-8f, 0f));
+            _target.SetPhysicsPosition(new Vector2(4f, 1f));
+            StepContactPhysics();
+            Assert.IsFalse(door.enabled, "Contact with the nearby sensor is not contact with the configured plate.");
+
+            _teammate.SetPhysicsPosition(new Vector2(4.8f, 1.2f));
+            _target.SetPhysicsPosition(new Vector2(4f, 0f));
+            StepContactPhysics();
+            Assert.IsTrue(plate.IsContactArmed);
+            Assert.IsFalse(door.enabled, "Friendly occupancy vetoes a genuine contact.");
+
+            _teammate.SetPhysicsPosition(new Vector2(8f, 0f));
+            StepContactPhysics();
+            Assert.IsTrue(door.enabled);
+            Assert.IsFalse(plate.IsContactArmed);
+            Assert.IsFalse(plate.IsAvailable);
+            Assert.AreEqual(1, activations);
+
+            _target.SetPhysicsPosition(new Vector2(3f, 0f));
+            StepContactPhysics();
+            _target.SetPhysicsPosition(new Vector2(4f, 0f));
+            StepContactPhysics();
+            Assert.AreEqual(1, activations);
+        }
+
+        [Test]
+        public void ContactPlate_WhenTheSelectedActorIsRecycled_RequiresANewObservedArm()
+        {
+            AISceneGimmickController plate = CreateContactPlate(out _);
+            int activations = 0;
+            plate.OnActivated.AddListener(() => activations++);
+            GameManager.Instance.SimulationTick(DecisionInterval, 1f);
+            Assert.IsTrue(plate.IsContactArmed);
+            Assert.IsTrue(GameManager.Actors.TryGet(_target.ObjectHash, out ActorRef oldTarget));
+
+            _target.OnPoolReturn();
+            _target.OnPoolAcquire();
+            CharacterRegistry.RegisterPlayer(_target.ObjectHash);
+            Assert.IsFalse(GameManager.Actors.IsCurrent(oldTarget));
+            _target.SetPhysicsPosition(new Vector2(4f, 0f));
+            StepContactPhysics();
+            Assert.AreEqual(0, activations);
+            Assert.IsFalse(plate.IsContactArmed);
+            Assert.IsTrue(plate.IsAvailable);
+
+            GameManager.Instance.SimulationTick(DecisionInterval, 1f + DecisionInterval);
+            Assert.IsTrue(plate.IsContactArmed);
+            StepContactPhysics();
             Assert.AreEqual(1, activations);
         }
 

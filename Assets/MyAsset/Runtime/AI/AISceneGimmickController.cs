@@ -22,7 +22,21 @@ namespace Game.Runtime
         [Min(0f)] [SerializeField] private float effectRadius = 1f;
         [Tooltip("起動イベントから効果が発生するまでの秒数")]
         [Min(0f)] [SerializeField] private float effectDelay;
+        [Tooltip("有効にすると即時起動の代わりに、選んだ敵が板に触れるまで待つ。効果遅延は0にする。")]
+        [SerializeField] private bool requireTargetContact;
+        [Tooltip("このオブジェクト上の接触板。Collider2Dを有効にし、Is Triggerを設定する。")]
+        [SerializeField] private Collider2D contactTrigger;
+        [Min(0.02f)] [SerializeField] private float contactTimeout = 3f;
         [SerializeField] private UnityEvent onActivated = new UnityEvent();
+
+        private struct ContactArm
+        {
+            public ActorRef owner;
+            public ActorRef target;
+            public PhysicsScene2D world;
+            public int generation;
+            public double expiresAt;
+        }
 
         private static readonly Dictionary<int, AISceneGimmickController> registry =
             new Dictionary<int, AISceneGimmickController>();
@@ -30,8 +44,12 @@ namespace Game.Runtime
         private int id;
         private int generation;
         private bool consumed;
+        private ContactArm _contactArm;
+        private readonly List<int> _contactActors = new();
 
-        public bool IsAvailable => isActiveAndEnabled && !consumed;
+        public bool IsAvailable => isActiveAndEnabled && !consumed
+            && (!requireTargetContact || (HasUsableContactTrigger && !IsContactArmed));
+        public bool IsContactArmed => _contactArm.target.IsValid;
         public UnityEvent OnActivated => onActivated;
         public AISceneGimmick Snapshot => new AISceneGimmick
         {
@@ -53,7 +71,23 @@ namespace Game.Runtime
             effectRadius = hitRadius;
             effectDelay = delay;
             generation = checked(generation + 1);
+            _contactArm = default;
         }
+
+#if UNITY_INCLUDE_TESTS
+        public void SetContactTriggerForTest(Collider2D trigger, float timeout = 3f)
+        {
+            requireTargetContact = true;
+            contactTrigger = trigger;
+            contactTimeout = timeout;
+            generation = checked(generation + 1);
+            _contactArm = default;
+        }
+#endif
+
+        private bool HasUsableContactTrigger => requireTargetContact && effectDelay == 0f
+            && float.IsFinite(contactTimeout) && contactTimeout > 0f && contactTrigger != null
+            && contactTrigger.gameObject == gameObject && contactTrigger.isActiveAndEnabled && contactTrigger.isTrigger;
 
         private void OnEnable()
         {
@@ -63,7 +97,11 @@ namespace Game.Runtime
             registry.Add(id, this);
         }
 
-        private void OnDisable() => registry.Remove(id);
+        private void OnDisable()
+        {
+            registry.Remove(id);
+            _contactArm = default;
+        }
 
         internal static bool Capture(AIObservationContext observation)
         {
@@ -72,6 +110,7 @@ namespace Game.Runtime
             bool needsVelocity = false;
             foreach (AISceneGimmickController source in registry.Values)
             {
+                if (source.IsContactArmed) { source.TryGetArmedContact(out _, out _); }
                 if (!source.IsAvailable) { continue; }
                 AISceneGimmick value = source.Snapshot;
                 if (!value.IsValid || !value.physicsScene.IsValid()) { continue; }
@@ -135,38 +174,114 @@ namespace Game.Runtime
 
             // An earlier activation callback in this tick may have moved a blocker.
             if (current.requiresClearOperation) { Physics2D.SyncTransforms(); }
-            SoACharaDataDic data = GameManager.Data;
-            CharacterBelong ownerBelong = data.GetFlags(command.gimmickOwner.Hash).Belong;
-            CharacterBelong targetBelong = data.GetFlags(command.gimmickTarget.Hash).Belong;
-            if (!AttackTargetRules.CanAffect(command.gimmickOwner, ownerBelong, command.gimmickTarget, targetBelong,
-                    AttackTargetRelation.Hostile)
+            if (!IsHostile(command.gimmickOwner, command.gimmickTarget, out CharacterBelong ownerBelong)
                 || !TryGetPosition(command.gimmickOwner.Hash, owner, out Vector2 ownerPosition)
                 || !current.CanOperateFrom(ownerPosition)
                 || !source.HasClearOperation(world, ownerPosition, current.operationPosition)
                 || !TryGetPosition(command.gimmickTarget.Hash, target, out Vector2 targetPosition)
                 || !TryGetVelocity(current.effectDelay, target, out Vector2 targetVelocity)
-                || !current.WillAffectTarget(targetPosition, targetVelocity))
+                || !current.WillAffectTarget(targetPosition, targetVelocity)
+                || !HasSafeEffect(current, command.gimmickOwner, ownerBelong, liveActors))
             {
                 return false;
             }
 
+            if (source.requireTargetContact)
+            {
+                if (target == null || owner == null) { return false; }
+                source._contactArm = new ContactArm
+                {
+                    owner = command.gimmickOwner,
+                    target = command.gimmickTarget,
+                    world = world,
+                    generation = current.generation,
+                    expiresAt = Time.fixedTimeAsDouble + source.contactTimeout,
+                };
+            }
+            else { source.Activate(); }
+            return true;
+        }
+
+        private void OnTriggerEnter2D(Collider2D other) => TryTargetContact(other);
+
+        private void OnTriggerStay2D(Collider2D other) => TryTargetContact(other);
+
+        private void TryTargetContact(Collider2D other)
+        {
+            if (other == null || other.isTrigger
+                || !TryGetArmedContact(out BaseCharacter target, out CharacterBelong ownerBelong)
+                || (other.gameObject != target.gameObject
+                    && (other.attachedRigidbody == null || other.attachedRigidbody != target.Rigidbody)))
+            {
+                return;
+            }
+
+            ColliderDistance2D distance = contactTrigger.Distance(other);
+            AISceneGimmick current = Snapshot;
+            if (!distance.isValid || !(distance.distance <= 0f) || !current.IsValid
+                || !TryGetPosition(_contactArm.target.Hash, target, out Vector2 position) || !current.ContainsEffect(position)
+                || !HasSafeEffect(current, _contactArm.owner, ownerBelong, _contactActors))
+            {
+                return;
+            }
+
+            Activate();
+        }
+
+        private bool TryGetArmedContact(out BaseCharacter target, out CharacterBelong ownerBelong)
+        {
+            target = null;
+            ownerBelong = default;
+            if (!IsContactArmed) { return false; }
+            if (isActiveAndEnabled && !consumed && HasUsableContactTrigger && _contactArm.generation == generation
+                && Time.fixedTimeAsDouble < _contactArm.expiresAt
+                && _contactArm.world.IsValid() && gameObject.scene.GetPhysicsScene2D() == _contactArm.world
+                && GameManager.Actors is ActorRegistry actors && actors.IsCurrent(_contactArm.owner)
+                && actors.IsCurrent(_contactArm.target)
+                && TryActor(_contactArm.owner.Hash, _contactArm.world, out BaseCharacter owner) && owner != null
+                && TryActor(_contactArm.target.Hash, _contactArm.world, out target) && target != null
+                && IsHostile(_contactArm.owner, _contactArm.target, out ownerBelong))
+            {
+                return true;
+            }
+
+            _contactArm = default;
+            return false;
+        }
+
+        private void Activate()
+        {
+            // Mark consumed before callbacks. A listener can dispatch again or replace the scene.
+            consumed = true;
+            _contactArm = default;
+            onActivated.Invoke();
+        }
+
+        private static bool IsHostile(ActorRef owner, ActorRef target, out CharacterBelong ownerBelong)
+        {
+            SoACharaDataDic data = GameManager.Data;
+            ownerBelong = data.GetFlags(owner.Hash).Belong;
+            return AttackTargetRules.CanAffect(owner, ownerBelong, target, data.GetFlags(target.Hash).Belong,
+                AttackTargetRelation.Hostile);
+        }
+
+        private static bool HasSafeEffect(in AISceneGimmick gimmick, ActorRef owner, CharacterBelong ownerBelong,
+            List<int> liveActors)
+        {
+            SoACharaDataDic data = GameManager.Data;
             liveActors.Clear();
             data.GetAllHashes(liveActors);
             for (int i = 0; i < liveActors.Count; i++)
             {
                 int hash = liveActors[i];
                 AttackTargetRelation relation = AttackTargetRules.GetRelation(ownerBelong, data.GetFlags(hash).Belong,
-                    hash == command.gimmickOwner.Hash);
+                    hash == owner.Hash);
                 if (relation != AttackTargetRelation.Self && relation != AttackTargetRelation.Friendly) { continue; }
-                if (TryActor(hash, world, out BaseCharacter other)
+                if (TryActor(hash, gimmick.physicsScene, out BaseCharacter other)
                     && (!TryGetPosition(hash, other, out Vector2 position)
-                        || !TryGetVelocity(current.effectDelay, other, out Vector2 velocity)
-                        || current.ThreatensFriendly(position, velocity))) { return false; }
+                        || !TryGetVelocity(gimmick.effectDelay, other, out Vector2 velocity)
+                        || gimmick.ThreatensFriendly(position, velocity))) { return false; }
             }
-
-            // Mark consumed before callbacks. A listener can dispatch again or replace the scene.
-            source.consumed = true;
-            source.onActivated.Invoke();
             return true;
         }
 
