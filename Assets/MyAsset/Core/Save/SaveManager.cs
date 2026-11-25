@@ -108,10 +108,13 @@ namespace Game.Core
             for (int i = 0; i < _saveables.Count; i++)
             {
                 ISaveable saveable = _saveables[i];
-                if (slotData.entries.TryGetValue(saveable.SaveId, out object data))
+                // Issue #80 L2: entry が無い場合も Deserialize(null) を呼んで初期状態にリセットさせる。
+                // ISaveable コントラクトにより data == null は「reset to default」を意味する。
+                if (!slotData.entries.TryGetValue(saveable.SaveId, out object data))
                 {
-                    saveable.Deserialize(data);
+                    data = null;
                 }
+                saveable.Deserialize(data);
             }
 
             _activeSlotIndex = slotIndex;

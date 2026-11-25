@@ -35,6 +35,13 @@ namespace Game.Core
     {
         string SaveId { get; }
         object Serialize();
+
+        /// <summary>
+        /// セーブデータからインスタンス状態を復元する。
+        /// 契約 (Issue #80 L2): <paramref name="data"/> が null の場合は「対象スロットに entry が無い」を意味し、
+        /// 内部状態を**初期状態にリセット**しなければならない。これにより SaveManager.Load 時にスロット切替で
+        /// 前 state を引きずらないことを保証する。
+        /// </summary>
         void Deserialize(object data);
     }
 
