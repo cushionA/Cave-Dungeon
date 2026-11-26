@@ -398,7 +398,7 @@ namespace Game.Runtime
             if ((shot.shape.targetLayers.value & layer) != 0 && ExplosiveProp3D.FindLiveContact(collider) != null)
             {
                 if (tie && (contact.propCollider == null
-                    || collider.GetHashCode() >= contact.propCollider.GetHashCode())) { return; }
+                    || ExplosiveProp3D.CompareContactOrder(collider, contact.propCollider) >= 0)) { return; }
                 propCollider = collider;
             }
             else

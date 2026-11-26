@@ -61,6 +61,82 @@ namespace Game.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator ExplosiveMelee3D_CoverStopsTheAttackButNotTheBlast()
+        {
+            CharacterActor3D attacker = CreateActor(_room, "Knight", new Vector3(0f, 0.1f, 0f), CharacterBelong.Ally);
+            CharacterActor3D victim = CreateActor(_room, "Hostile behind blast cover", new Vector3(1.65f, 0.1f, 1.8f));
+            ExplosiveProp3D prop = CreateExplosiveProp(new Vector3(0f, 1f, 1.8f), out _);
+            ExplosiveProp3D nearerProp = CreateExplosiveProp(new Vector3(0f, 1f, 1.3f), out BoxCollider nearerHit);
+            nearerProp.gameObject.layer = LayerMask.NameToLayer("Ground");
+            BoxCollider frontWall = CreateSurface("Near wall", new Vector3(0f, 1f, 0.6f), new Vector3(2f, 2f, 0.15f));
+            BoxCollider blastCover = CreateSurface("Wall between prop and victim", new Vector3(0.85f, 1f, 1.8f),
+                new Vector3(0.2f, 2f, 1.2f));
+            yield return null;
+
+            AttackInfo melee = CreateAttack(AttackShape3D.Melee);
+            melee.attack3D.targetLayers |= LayerMask.GetMask("Default");
+            melee.attack3D.obstructionLayers |= LayerMask.GetMask("Default");
+            SynchronizeWorld(_room);
+            Assert.That(GameManager.Actions.Execute3D(attacker, melee, out _), Is.True);
+            Step(0.25f);
+            Assert.That(prop.HasDetonated, Is.False, "The wall intercepts the melee line.");
+            Assert.That(_hits, Is.Empty);
+            Step(0.45f);
+
+            frontWall.enabled = false;
+            SynchronizeWorld(_room);
+            Assert.That(GameManager.Actions.Execute3D(attacker, melee, out _), Is.True);
+            Step(0.25f);
+            Assert.That(prop.HasDetonated, Is.False, "A nearer obstruction-only prop also intercepts the line.");
+            Assert.That(nearerProp.HasDetonated, Is.False);
+            Assert.That(_hits, Is.Empty);
+            Step(0.45f);
+
+            nearerHit.enabled = false;
+            SynchronizeWorld(_room);
+            Assert.That(GameManager.Actions.Execute3D(attacker, melee, out _), Is.True);
+            Step(0.25f);
+            Assert.That(prop.HasDetonated, Is.True, "The selected prop can be the hit at the end of the melee ray.");
+            Assert.That(blastCover.enabled, Is.True);
+            AssertSingleBlastHit(attacker, victim);
+        }
+
+        [UnityTest]
+        public IEnumerator ExplosiveMelee3D_EqualDistanceUsesAuthoredHierarchyOrder()
+            => DetonateTiedProp(projectile: false);
+
+        [UnityTest]
+        public IEnumerator ExplosiveProjectile3D_EqualDistanceUsesAuthoredHierarchyOrder()
+            => DetonateTiedProp(projectile: true);
+
+        private IEnumerator DetonateTiedProp(bool projectile)
+        {
+            CharacterActor3D attacker = CreateActor(_room, "Knight", new Vector3(0f, 0.1f, 0f), CharacterBelong.Ally);
+            var layout = new GameObject("Explosion layout");
+            SceneManager.MoveGameObjectToScene(layout, _room);
+            var earlierBranch = new GameObject("Earlier branch");
+            earlierBranch.transform.SetParent(layout.transform, false);
+            var laterBranch = new GameObject("Later branch");
+            laterBranch.transform.SetParent(layout.transform, false);
+
+            ExplosiveProp3D createdFirst = CreateExplosiveProp(new Vector3(0.125f, 1f, 1.8f), out _);
+            createdFirst.transform.SetParent(laterBranch.transform, true);
+            ExplosiveProp3D createdSecond = CreateExplosiveProp(new Vector3(-0.125f, 1f, 1.8f), out _);
+            createdSecond.transform.SetParent(earlierBranch.transform, true);
+            yield return null;
+            SynchronizeWorld(_room);
+
+            AttackInfo attack = projectile ? CreateProjectile(BulletMoveType.Straight) : CreateAttack(AttackShape3D.Melee);
+            attack.attack3D.targetLayers |= LayerMask.GetMask("Default");
+            Assert.That(GameManager.Actions.Execute3D(attacker, attack, out _), Is.True);
+            Step(0.25f);
+            if (projectile) { Step(0.25f); }
+
+            Assert.That(createdSecond.HasDetonated, Is.True, "The earlier hierarchy branch wins the equal contact.");
+            Assert.That(createdFirst.HasDetonated, Is.False);
+        }
+
+        [UnityTest]
         public IEnumerator ExplosiveProjectile3D_AWallInterceptsWhileAClearSweepDetonatesTheProp()
         {
             CharacterActor3D caster = CreateActor(_room, "Caster", new Vector3(0f, 0.1f, 0f), CharacterBelong.Ally);

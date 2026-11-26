@@ -30,6 +30,59 @@ namespace Game.Runtime
             && contact.TryGetComponent(out ExplosiveProp3D prop) && prop.HitCollider == contact
             && prop.TryGetBlast(out _, out _) ? prop : null;
 
+        // 同距離の接触は、シーンとHierarchyの上から順に選ぶ。
+        internal static int CompareContactOrder(Collider first, Collider second)
+        {
+            Scene firstScene = first.gameObject.scene;
+            Scene secondScene = second.gameObject.scene;
+            bool sameScene = firstScene == secondScene;
+            if (!sameScene)
+            {
+                int sceneOrder = string.CompareOrdinal(firstScene.path, secondScene.path);
+                if (sceneOrder == 0) { sceneOrder = string.CompareOrdinal(firstScene.name, secondScene.name); }
+                if (sceneOrder != 0) { return sceneOrder; }
+            }
+
+            int hierarchyOrder = CompareHierarchy(first.transform, second.transform);
+            if (hierarchyOrder != 0 || sameScene) { return hierarchyOrder; }
+
+            // 同じシーンを複数回ロードした場合、同じ階層のオブジェクトはロード順で決める。
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                Scene scene = SceneManager.GetSceneAt(i);
+                if (scene == firstScene) { return -1; }
+                if (scene == secondScene) { return 1; }
+            }
+            return 0;
+        }
+
+        private static int CompareHierarchy(Transform first, Transform second)
+        {
+            int firstDepth = Depth(first);
+            int secondDepth = Depth(second);
+            for (int depth = firstDepth; depth > secondDepth; depth--) { first = first.parent; }
+            for (int depth = secondDepth; depth > firstDepth; depth--) { second = second.parent; }
+            if (first == second) { return firstDepth.CompareTo(secondDepth); }
+
+            while (first.parent != second.parent)
+            {
+                first = first.parent;
+                second = second.parent;
+            }
+            return first.GetSiblingIndex().CompareTo(second.GetSiblingIndex());
+        }
+
+        private static int Depth(Transform node)
+        {
+            int depth = 0;
+            while (node.parent != null)
+            {
+                depth++;
+                node = node.parent;
+            }
+            return depth;
+        }
+
         internal bool TryDetonate(in AttackContext strike, PhysicsScene world)
         {
             ActorRegistry actors = GameManager.Actors;
@@ -72,6 +125,7 @@ namespace Game.Runtime
         private void DamageVictims(in AttackContext blast, PhysicsScene world, Vector3 center, float radiusSquared,
             ActorRegistry actors, SoACharaDataDic data)
         {
+            // 爆風は同じ物理シーンの球範囲に届く。壁の先も範囲内なら対象になる。
             List<int> hashes = new List<int>();
             List<ActorRef> victims = new List<ActorRef>();
             data.GetAllHashes(hashes);

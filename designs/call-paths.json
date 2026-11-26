@@ -2907,7 +2907,7 @@
         "Assets/Scenes/CharacterMotor3DTestScene.unity": "49be52846ae97da61a84f4d080ada428cea164b8817b04c6f1d37db5cb9017a8",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.cs": "51dbe300b4ffb75417862df9483470855a7814d11eeff80f6e741db1c875c076",
         "Assets/MyAsset/Runtime/Combat/ProximityAttack3D.cs": "ff6048b72ca8617801f4f3629282c328dc523da8da50b8bd94832bd9190b79a6",
-        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "92dfb1b79993538e6499c0ebf05be589cc286cf2b34aada413df91e5000997bd",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "d63b0218c6e1e5e64616e34e6c6344e72fd863f6f06c70711959e4553d29ed19",
         "Assets/MyAsset/Runtime/Combat/ActionCatalog.cs": "623b1a5ad74c7922c92c43b1c585875e6cf80874b047929683e06782912fc212",
         "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "906affd99f13b1d343389f12e8cf59e9e9f396eebcc43cb2b44d9427016616c8",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "63b816b95a795397bdb6c899aa26ecb00d7dc498e189b3bd0c3287656f0b8b24",
@@ -3013,10 +3013,10 @@
       "verification_hashes": {
         "Assets/Scenes/CharacterMotor3DTestScene.unity": "49be52846ae97da61a84f4d080ada428cea164b8817b04c6f1d37db5cb9017a8",
         "Assets/MyAsset/Runtime/Combat/ProximityAttack3D.cs": "ff6048b72ca8617801f4f3629282c328dc523da8da50b8bd94832bd9190b79a6",
-        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "92dfb1b79993538e6499c0ebf05be589cc286cf2b34aada413df91e5000997bd",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "d63b0218c6e1e5e64616e34e6c6344e72fd863f6f06c70711959e4553d29ed19",
         "Assets/MyAsset/Runtime/Combat/ActionCatalog.cs": "623b1a5ad74c7922c92c43b1c585875e6cf80874b047929683e06782912fc212",
         "Assets/MyAsset/Runtime/Combat/MultiLockTargeting3D.cs": "2fca5951625196ddd2b073c3877d1eb819063f421c8f5bdc162dda00d793be49",
-        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "9f3c16e938272500c0ea408dc6c5718c94b9e8ceb9cec0f88c8192817f72eee9",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "7d4b15fec4e5d56d26b23649261fdcb62e7055b07ce1da74d3816b30d1242258",
         "Assets/MyAsset/Runtime/GameManager.cs": "606684ce62e8fb27c13b49074a891a562bd9c0b9a0df8d294e51625eb3b19d17",
         "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "3d29d7835bcca15680cb8972a2539c5e8ec2344937f10b99a1c14840626796cb",
         "Assets/Tests/EditMode/ActionCatalogSnapshotTests.cs": "3bbd719b65a177fbd16966799cc4c0d30dc32f6783c692824e7d60162b23ca24",
@@ -3150,12 +3150,12 @@
       "verification_hashes": {
         "Assets/Scenes/CharacterMotor3DTestScene.unity": "49be52846ae97da61a84f4d080ada428cea164b8817b04c6f1d37db5cb9017a8",
         "Assets/MyAsset/Runtime/Combat/ProximityAttack3D.cs": "ff6048b72ca8617801f4f3629282c328dc523da8da50b8bd94832bd9190b79a6",
-        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "92dfb1b79993538e6499c0ebf05be589cc286cf2b34aada413df91e5000997bd",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "d63b0218c6e1e5e64616e34e6c6344e72fd863f6f06c70711959e4553d29ed19",
         "Assets/MyAsset/Runtime/Combat/ActionCatalog.cs": "623b1a5ad74c7922c92c43b1c585875e6cf80874b047929683e06782912fc212",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.GroundProjectiles3D.cs": "d334e318319470b5440ab235194523a7d07e3e37ec8e6f4838c047fc93e5db21",
         "Assets/MyAsset/Runtime/Combat/GroundAttack3D.cs": "ee949b26e8c87c27379efa29d13d767915911c4529991f6dde5f755533e20ff7",
         "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.GroundImpact.cs": "722cd5ff7894660b6b0a0992de5ebda690046c34fca5f3647e2616dd10ce1d67",
-        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "9f3c16e938272500c0ea408dc6c5718c94b9e8ceb9cec0f88c8192817f72eee9",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "7d4b15fec4e5d56d26b23649261fdcb62e7055b07ce1da74d3816b30d1242258",
         "Assets/MyAsset/Runtime/UI/ProjectileLockWarningHud3D.cs": "a1f5f33f3113b587d516df9b73fdadbfaca8ca4d411a45d7871b46e369a87f81",
         "Assets/MyAsset/Runtime/GameManager.cs": "606684ce62e8fb27c13b49074a891a562bd9c0b9a0df8d294e51625eb3b19d17",
         "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "3d29d7835bcca15680cb8972a2539c5e8ec2344937f10b99a1c14840626796cb",
@@ -3282,7 +3282,7 @@
       "verification_hashes": {
         "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "154b4982a336554f7aea509e50f9259bb39a445eb110439a2bf702a18fa1b9eb",
         "Assets/MyAsset/Runtime/AI/MissionAttackSlots3D.cs": "ab20b795ed46fd4152e49b689472de664512a0b01e4c17c329dfc9136d3fa581",
-        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "92dfb1b79993538e6499c0ebf05be589cc286cf2b34aada413df91e5000997bd",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "d63b0218c6e1e5e64616e34e6c6344e72fd863f6f06c70711959e4553d29ed19",
         "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "906affd99f13b1d343389f12e8cf59e9e9f396eebcc43cb2b44d9427016616c8",
         "Assets/Tests/PlayMode/MissionAttackSlots3DPlayTests.cs": "e9cc532cf9a65b2e8bd6ff6823f8bfe8cc0fd9cd371e4b3749ec68920408fbae",
         "Assets/Tests/PlayMode/GroupBattle3DScenePlayTests.cs": "cacbaa923d1536e04591d338955628664f6bf41a6eaa3cf48db5faf6805dd095",
@@ -3380,7 +3380,7 @@
         "Assets/MyAsset/Runtime/Combat/HitBox.cs": "21d935ac4c134a333d4f9405ac7fda35bd36ff9ebd48b10bfa4246e0ad54895b",
         "Assets/MyAsset/Runtime/Combat/DamageDealer.cs": "8c655fb23d0dbd48bfe4b5b546b2b2b8b7c9591269433b146b8af7e909057f3b",
         "Assets/MyAsset/Core/Weapon/HitboxLogic.cs": "9c6b23c8b1cc41b8879067a9528329d92d4e95728ac43c46529869134cb7aea2",
-        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "92dfb1b79993538e6499c0ebf05be589cc286cf2b34aada413df91e5000997bd",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "d63b0218c6e1e5e64616e34e6c6344e72fd863f6f06c70711959e4553d29ed19",
         "Assets/MyAsset/Runtime/GameManager.cs": "606684ce62e8fb27c13b49074a891a562bd9c0b9a0df8d294e51625eb3b19d17",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "63b816b95a795397bdb6c899aa26ecb00d7dc498e189b3bd0c3287656f0b8b24",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialRepeat.cs": "39a20dc281bfb09b8b1ca1cc94b72333b9315a8e5a4a9d246a4deb3b55cdaaf2",
@@ -6291,7 +6291,7 @@
       ],
       "notes": "経路を同じ観測時点の実行者・標的の世代と結び付ける。壁・橋の迂回と命中、標的変更、世代交代、同じ時点の閉塞と旧経路の拒否を確認した。 移動直前の拒否判定は選んだ観測の位置を基準とし、経路再計画は前回の計画位置を基準とする。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs": "b01cdcb6fdb1dcdc9a8c9888d8502c311f7307f23bcf169c8ee5f8e460d7d1e6",
+        "Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs": "e8a01a52f97a411c7f0a3219a89b4b729c8b1075dfb2b88f5ccf9479e753ab1c",
         "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "154b4982a336554f7aea509e50f9259bb39a445eb110439a2bf702a18fa1b9eb",
         "Assets/MyAsset/Runtime/AI/EncounterObservation3D.cs": "d99912d3fbec7609a8fe2b8f3318251b9118126552a7a2d30e9adba86435ba3b",
         "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs": "3cfb7bdff9f602cd48d135a3d8fa415193ad464e68ae6672d9cdb9414da9fd89",
@@ -6399,13 +6399,13 @@
       ],
       "notes": "同じ物理シーンの踏切、着地点と床を作者が指定する。ジャンプ能力と実モーターの距離、上空と着地先の空きを照合する。溝を越えて着地後に命中し、能力なしと着地先の閉塞では橋を渡る。遭遇が飛行中に終了した場合も着地し、古い接近行動はそこで終了する。 Unity 6000.6.8f1でEncounterCombat3DPlayTests 9件、ExpeditionSummonDeployment3DPlayTests 10件が成功。 遭遇の終了・無効化・破棄と参加解除で飛行中のモーターを引き継ぎ、着地後に旧経路を再開しないことを確認した。 下段へのジャンプはリンクごとに最大落差を指定する。実床で0.625m低い指定面への着地と命中、落差上限超過と着地点の閉塞時にジャンプを選ばないことを確認した。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs": "b01cdcb6fdb1dcdc9a8c9888d8502c311f7307f23bcf169c8ee5f8e460d7d1e6",
+        "Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs": "e8a01a52f97a411c7f0a3219a89b4b729c8b1075dfb2b88f5ccf9479e753ab1c",
         "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "154b4982a336554f7aea509e50f9259bb39a445eb110439a2bf702a18fa1b9eb",
         "Assets/MyAsset/Runtime/AI/EncounterCombatant3D.cs": "834791e50c6eb46c81b70015d9a5e25d081ebc5509aa4efc3e6d96469ff5e610",
         "Assets/MyAsset/Runtime/AI/EncounterJumpLink3D.cs": "a97a4d0acf53b5d64a7ec021cac6c74392ed73ff7cc8c3e8217a065c1b347a8d",
         "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs": "3cfb7bdff9f602cd48d135a3d8fa415193ad464e68ae6672d9cdb9414da9fd89",
         "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs": "07d9631035018fe6d1fc5aabb7b1c1b2f0058fd1471a526f72ca5a86dadcb035",
-        "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "3dfebc4e6811b16758ad573c2409b388bd6dd82eb84f6ff1852492a71b43086c",
+        "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "108c05dabd1a36bc30b08ecde1a6c05eb532f079e6e747e3d4f9f93a09c1e491",
         "designs/systems/AICore.md": "546759de1f279bc1c686bb1c184e5497645493aba66eff82644f7ae169f1f8b7"
       }
     }
@@ -7138,7 +7138,7 @@
         "Assets/MyAsset/Core/AI/Summon/ExpeditionSquad.cs": "caf061ce01c920367b375a2c9f88b0b1063f0d7eddf1f72e1a81c7a3b372108b",
         "Assets/MyAsset/Runtime/Character/CharacterActor3D.cs": "6d980fe371d4bc5d554a4840b6cade59fe9dcb58d297f9c85a10a38417e6fb8b",
         "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "154b4982a336554f7aea509e50f9259bb39a445eb110439a2bf702a18fa1b9eb",
-        "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "3dfebc4e6811b16758ad573c2409b388bd6dd82eb84f6ff1852492a71b43086c",
+        "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "108c05dabd1a36bc30b08ecde1a6c05eb532f079e6e747e3d4f9f93a09c1e491",
         "Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs": "f394b1cbd61177ce4f59e0469bdc3bd1dcb688761360fe1f52eb61a447a33b7c",
         "Assets/MyAsset/Runtime/World/EncounterSession3D.cs": "d663fd2019ed396ff198b2dda383c462f98ee9a7c5b2fe6938830c6c9b8547cc",
         "Assets/MyAsset/Runtime/AI/CompanionTactics3D.cs": "20b10306db375277be736cfcd764695a6ee78f2453e9025904cb0efde06ef22d",
@@ -7217,7 +7217,7 @@
         "Assets/Tests/PlayMode/EncounterGoal3DPlayTests.cs": "c317ef80bdf81aae6ced10ac3afdf1fdca0c883ba32f4ee7b6d2bc5bc0975210",
         "Assets/Tests/PlayMode/ExpeditionEncounterBudget3DPlayTests.cs": "07e34820c14f65a227d65009a7c9579db2c2584500790476227cc5803044eae6",
         "Assets/Tests/PlayMode/ExpeditionSquadPanelPlayTests.cs": "457ba552eb0c688c182d3e32bedc199e6c4e3073e353ff00040d0a8655449bf1",
-        "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "3dfebc4e6811b16758ad573c2409b388bd6dd82eb84f6ff1852492a71b43086c",
+        "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "108c05dabd1a36bc30b08ecde1a6c05eb532f079e6e747e3d4f9f93a09c1e491",
         "Assets/MyAsset/Runtime/World/ExpeditionReinforcementDrill3D.cs": "17cb4c4475f16894295be34f4ae4afbac309ad6962d9c9516ed5b0c790c6f769",
         "Assets/Scenes/ExpeditionMock3DScene.unity": "b7dc9b22cf61f1297bc04ee46a43eb3f4e4d89029393d8f354d90d4d8033cbbd",
         "Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs": "7dae47130a464d1807441ca5c9a20eae7846c094c23d36c2438f0bf37d023603",
@@ -8030,14 +8030,14 @@
         "Assets/Tests/PlayMode/GroundAndMeleeWarningPlayTests.cs": "3248883cff8b4003d8f5ff9fb0bbc604b09ff00a66e90f10be39d42cee696eaa",
         "Assets/Tests/PlayMode/CoreAttackPrototypePlayTests.cs": "9870eddcb4c89d57c2b1e4aea3617ed668ec31695932ff3f5840ae96ccaeb974",
         "Assets/MyAsset/Runtime/Combat/GroundAttack3D.cs": "ee949b26e8c87c27379efa29d13d767915911c4529991f6dde5f755533e20ff7",
-        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "92dfb1b79993538e6499c0ebf05be589cc286cf2b34aada413df91e5000997bd",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "d63b0218c6e1e5e64616e34e6c6344e72fd863f6f06c70711959e4553d29ed19",
         "Assets/Tests/PlayMode/GroundAttack3DPlayTests.cs": "3cfd26c6b535c391dc61dfa996d83e6417f9bebf88078b7862bb85aa9be04a64",
         "Assets/Tests/PlayMode/SpatialCombat3DPlayTests.cs": "6d06bad29dd5adff2b1fcf685f360f9d57b4e53a479df0a5d30f3804111c5ff8",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.GroundProjectiles3D.cs": "d334e318319470b5440ab235194523a7d07e3e37ec8e6f4838c047fc93e5db21",
         "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.GroundImpact.cs": "722cd5ff7894660b6b0a0992de5ebda690046c34fca5f3647e2616dd10ce1d67",
         "Assets/Scenes/CharacterMotor3DTestScene.unity": "49be52846ae97da61a84f4d080ada428cea164b8817b04c6f1d37db5cb9017a8",
         "Assets/Tests/PlayMode/SpatialCombat3DPlayTests.MeleeWarning.cs": "c1447cd659b8af217873d719d3c67cd901593353399c737ef08799f34d49bbb3",
-        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "9f3c16e938272500c0ea408dc6c5718c94b9e8ceb9cec0f88c8192817f72eee9",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "7d4b15fec4e5d56d26b23649261fdcb62e7055b07ce1da74d3816b30d1242258",
         "Assets/MyAsset/Runtime/UI/ProjectileLockWarningHud3D.cs": "a1f5f33f3113b587d516df9b73fdadbfaca8ca4d411a45d7871b46e369a87f81",
         "Assets/Tests/PlayMode/CharacterMotor3DScenePlayTests.cs": "7b7c05c5110915b28be5cb4c8856dfbfc8b070c802a2431032f2b00de5d58851",
         "Assets/Tests/PlayMode/ProjectileLockWarning3DPlayTests.cs": "00d95a0e961c5e1c298cc64b168ea44d383123f88f7058fc6ac4d9814d4fa74e"
@@ -8115,7 +8115,7 @@
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.cs": "51dbe300b4ffb75417862df9483470855a7814d11eeff80f6e741db1c875c076",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.MultiLock.cs": "5b7ab74e28265acb63652843fcf264396db0495bc763982ef6cac5124de2d94e",
         "Assets/MyAsset/Runtime/UI/MultiLockMarkerHud3D.cs": "946153088d0e95f163f03b26a7453f16fff7e6a3d6ecb66df368a6f9045c5d9f",
-        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "92dfb1b79993538e6499c0ebf05be589cc286cf2b34aada413df91e5000997bd",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "d63b0218c6e1e5e64616e34e6c6344e72fd863f6f06c70711959e4553d29ed19",
         "Assets/Tests/PlayMode/PlayerMultiLockInput3DPlayTests.cs": "080ef2200a1319f282b7cec95cacc414899a8881c567901066768060fab43add",
         "Assets/Tests/PlayMode/SpatialCombat3DPlayTests.cs": "6d06bad29dd5adff2b1fcf685f360f9d57b4e53a479df0a5d30f3804111c5ff8",
         "Assets/Tests/PlayMode/CharacterMotor3DScenePlayTests.cs": "7b7c05c5110915b28be5cb4c8856dfbfc8b070c802a2431032f2b00de5d58851"
@@ -8169,7 +8169,7 @@
       "notes": "騎士の現行世代への明示ロックと、接近する弾の貸出ID・3D方向を照合する。未割当、他の個体への割当、通過、解除、消滅では弧が出ない。操作カメラを回すと弧の位置が更新される。 Unity 6000.6.8f1でProjectileLockWarning3DPlayTests 3件、CharacterMotor3DScenePlayTests 7件が成功。",
       "verification_hashes": {
         "Assets/Scenes/CharacterMotor3DTestScene.unity": "49be52846ae97da61a84f4d080ada428cea164b8817b04c6f1d37db5cb9017a8",
-        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "9f3c16e938272500c0ea408dc6c5718c94b9e8ceb9cec0f88c8192817f72eee9",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "7d4b15fec4e5d56d26b23649261fdcb62e7055b07ce1da74d3816b30d1242258",
         "Assets/MyAsset/Runtime/UI/ProjectileLockWarningHud3D.cs": "a1f5f33f3113b587d516df9b73fdadbfaca8ca4d411a45d7871b46e369a87f81",
         "Assets/MyAsset/Runtime/UI/HudController.ProjectileWarnings.cs": "21f86a8ac441a907167dce9e934ea1f0a86cb655e93847f85daf5930c8f98cd8",
         "Assets/Tests/PlayMode/ProjectileLockWarning3DPlayTests.cs": "00d95a0e961c5e1c298cc64b168ea44d383123f88f7058fc6ac4d9814d4fa74e",
@@ -8225,7 +8225,7 @@
       "verification_hashes": {
         "Assets/Scenes/CharacterMotor3DTestScene.unity": "49be52846ae97da61a84f4d080ada428cea164b8817b04c6f1d37db5cb9017a8",
         "Assets/MyAsset/Runtime/Combat/ProximityAttack3D.cs": "ff6048b72ca8617801f4f3629282c328dc523da8da50b8bd94832bd9190b79a6",
-        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "92dfb1b79993538e6499c0ebf05be589cc286cf2b34aada413df91e5000997bd",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "d63b0218c6e1e5e64616e34e6c6344e72fd863f6f06c70711959e4553d29ed19",
         "Assets/MyAsset/Runtime/Combat/AttackWarningPresentation.cs": "084db86e82b91ede6738e417f7472c1514b1ad77df0c9e560bfb17c64f169b91",
         "Assets/Tests/PlayMode/SpatialCombat3DPlayTests.cs": "6d06bad29dd5adff2b1fcf685f360f9d57b4e53a479df0a5d30f3804111c5ff8",
         "Assets/Tests/PlayMode/CharacterMotor3DScenePlayTests.cs": "7b7c05c5110915b28be5cb4c8856dfbfc8b070c802a2431032f2b00de5d58851",
@@ -8753,7 +8753,7 @@
         "Assets/MyAsset/Core/AI/Core/ModeController.cs": "80e57eefa69c82ce61dec1feef230dabddab6bf5fa256dd8df64410f51572bcd",
         "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "22ec560f1986acf4603f0a5f49dd9d842c869d4ec3e64ad41fa9993f0fd691c8",
         "Assets/MyAsset/Runtime/AI/CompanionTactics3D.cs": "20b10306db375277be736cfcd764695a6ee78f2453e9025904cb0efde06ef22d",
-        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "92dfb1b79993538e6499c0ebf05be589cc286cf2b34aada413df91e5000997bd",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "d63b0218c6e1e5e64616e34e6c6344e72fd863f6f06c70711959e4553d29ed19",
         "Assets/MyAsset/Runtime/UI/CompanionAISettingsController.Dialogs.ActionPicker.cs": "9a5f9d4fcd141904ef8ba086e85c373c81b902be5745c8f8ad66ca42c2c4e72c",
         "Assets/MyAsset/Runtime/UI/CompanionAISettingsController.cs": "a2b10b9b17c6de99086358016fdf2a3437db51a73636721ea027ffbbd42a30c1",
         "Assets/Scenes/ExpeditionMock3DScene.unity": "b7dc9b22cf61f1297bc04ee46a43eb3f4e4d89029393d8f354d90d4d8033cbbd",
@@ -8846,7 +8846,7 @@
       "notes": "設定済みの武器と魔法を実入力で発動する。武器・コア交換を次弾へ反映し、飛翔中の弾は発射時の能力で命中する。成長APIを3D個体へ反映する。選択画面と経験値の経路は関連する機能DBの経路に記録する。 Unity 6000.6.8f1でPlayerCombatLoadout3DPlayTests 4件、CharacterStatRegistrationFlowTests 3件が成功。",
       "verification_hashes": {
         "Assets/MyAsset/Core/LevelUp/LevelUpLogic.cs": "31d8f789d4dd966859b357315aee4250c4d16ac29bc68bb976f4fa291fbbd306",
-        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "92dfb1b79993538e6499c0ebf05be589cc286cf2b34aada413df91e5000997bd",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "d63b0218c6e1e5e64616e34e6c6344e72fd863f6f06c70711959e4553d29ed19",
         "Assets/MyAsset/Runtime/GameManager.cs": "606684ce62e8fb27c13b49074a891a562bd9c0b9a0df8d294e51625eb3b19d17",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.cs": "51dbe300b4ffb75417862df9483470855a7814d11eeff80f6e741db1c875c076",
         "Assets/Tests/PlayMode/CharacterStatRegistrationFlowTests.cs": "9985df71ab4f63aa544d8445c139d825de89e7adde83a39a9064045fb18ecb7a",
@@ -8899,8 +8899,8 @@
         "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs": "07736920ccf4c9614a9ad6b9ed6693748b20694b3873574e9bc92fb94d2f3dad",
         "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "154b4982a336554f7aea509e50f9259bb39a445eb110439a2bf702a18fa1b9eb",
         "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "3d29d7835bcca15680cb8972a2539c5e8ec2344937f10b99a1c14840626796cb",
-        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "92dfb1b79993538e6499c0ebf05be589cc286cf2b34aada413df91e5000997bd",
-        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "9f3c16e938272500c0ea408dc6c5718c94b9e8ceb9cec0f88c8192817f72eee9",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "d63b0218c6e1e5e64616e34e6c6344e72fd863f6f06c70711959e4553d29ed19",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "7d4b15fec4e5d56d26b23649261fdcb62e7055b07ce1da74d3816b30d1242258",
         "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs": "07d9631035018fe6d1fc5aabb7b1c1b2f0058fd1471a526f72ca5a86dadcb035",
         "Assets/Tests/PlayMode/SpatialCombat3DPlayTests.StatusEffects.cs": "e936cac2f97ac8b03c4bf9f5ed1d7791d1a5355a99bbe3a28548c2315a550dcc",
         "Assets/Tests/PlayMode/SpatialCombat3DPlayTests.cs": "6d06bad29dd5adff2b1fcf685f360f9d57b4e53a479df0a5d30f3804111c5ff8"
@@ -9128,7 +9128,7 @@
         "Assets/MyAsset/Runtime/Character/PlayerItemUse3D.cs": "00d0603650ca341ff3276e994e195fb389b68b4acf6fde3887b7195a9ff15313",
         "Assets/MyAsset/Runtime/Combat/ActionCatalog.cs": "623b1a5ad74c7922c92c43b1c585875e6cf80874b047929683e06782912fc212",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.Consumables3D.cs": "ff703ab5f5da164c557711352d5c5520d2fc5c0178905389451046ee60b20960",
-        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "92dfb1b79993538e6499c0ebf05be589cc286cf2b34aada413df91e5000997bd",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "d63b0218c6e1e5e64616e34e6c6344e72fd863f6f06c70711959e4553d29ed19",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "63b816b95a795397bdb6c899aa26ecb00d7dc498e189b3bd0c3287656f0b8b24",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.Items.cs": "fa0ff8f54de98b92d3cf65a77690499875fc6e53802bf6da17d56ab28bf253d5",
         "Assets/Scenes/ExpeditionMock3DScene.unity": "b7dc9b22cf61f1297bc04ee46a43eb3f4e4d89029393d8f354d90d4d8033cbbd",
@@ -9358,7 +9358,7 @@
         "Assets/MyAsset/Data/PLACEHOLDER_MineFlameCircle3D.asset": "88449e971e69ac9e767a7e2f4a36c636cb81afb16fd586a07808fbfb3c735e9e",
         "Assets/MyAsset/Data/PLACEHOLDER_MineFlameCircle3D.asset.meta": "25785df65f3ced39e6737e72cf19bbb78f52a998b5c2d692c69a67c80b11ea0b",
         "Assets/MyAsset/Runtime/Character/PlayerCombatLoadout3D.cs": "8915e9407520b0e23495a210317a8037113a7124291a623a3499c40fc0d4fe9e",
-        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "92dfb1b79993538e6499c0ebf05be589cc286cf2b34aada413df91e5000997bd",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "d63b0218c6e1e5e64616e34e6c6344e72fd863f6f06c70711959e4553d29ed19",
         "Assets/MyAsset/Runtime/GameManager.cs": "606684ce62e8fb27c13b49074a891a562bd9c0b9a0df8d294e51625eb3b19d17",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.cs": "51dbe300b4ffb75417862df9483470855a7814d11eeff80f6e741db1c875c076",
         "Assets/MyAsset/Runtime/UI/ExpeditionLoadoutPanel3D.cs": "32f51715bed827a002cb1185c631c1653ee6e46842f13b4e3d5c0feb13647a5d",
@@ -9539,7 +9539,7 @@
         "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": "b1a9d42549ebcf7572f72b0723c42a24e9a6647f3ca9b19689f9a9eb5910d06e",
         "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "b333e2aadf452130ec3aea273f62e7dce56f96eced210c9ef2b2343f36493193",
         "Assets/MyAsset/Runtime/AI/CompanionTactics3D.cs": "20b10306db375277be736cfcd764695a6ee78f2453e9025904cb0efde06ef22d",
-        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "9f3c16e938272500c0ea408dc6c5718c94b9e8ceb9cec0f88c8192817f72eee9",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "7d4b15fec4e5d56d26b23649261fdcb62e7055b07ce1da74d3816b30d1242258",
         "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileSpatialIndex.cs": "54067e8bc38861b2baf4f3a1d154282cbd1175661240ce26d852ca5b5c550d97",
         "Assets/Tests/EditMode/ProjectileSpatialIndexTests.cs": "508e2c9d7985b56248173b4bb6e95a72b3b96aff834a80677519f2a9f118a559",
         "Assets/Tests/PlayMode/CompanionController3DPlayTests.cs": "7fd6342d91eed2a73fe3bdc1f260caa90f4d685cd146597dba74875cbb202f00",
@@ -9624,7 +9624,7 @@
       ],
       "notes": "接近中の明示ロック弾を、騎士の周囲の指定半径内で表示する。別の物理空間、上下に離れた弾、発射待ちの弾は候補から除く。近傍検索は通常は直接比較し、大量の弾に繰り返し照会した場合にグリッドを固定更新内で再利用する。 飛翔体候補の参照は照会を抜ける際に解放する。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "9f3c16e938272500c0ea408dc6c5718c94b9e8ceb9cec0f88c8192817f72eee9",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "7d4b15fec4e5d56d26b23649261fdcb62e7055b07ce1da74d3816b30d1242258",
         "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileSpatialIndex.cs": "54067e8bc38861b2baf4f3a1d154282cbd1175661240ce26d852ca5b5c550d97",
         "Assets/MyAsset/Runtime/UI/HudController.ProjectileWarnings.cs": "21f86a8ac441a907167dce9e934ea1f0a86cb655e93847f85daf5930c8f98cd8",
         "Assets/MyAsset/Runtime/UI/ProjectileLockWarningHud3D.cs": "a1f5f33f3113b587d516df9b73fdadbfaca8ca4d411a45d7871b46e369a87f81",
@@ -9820,7 +9820,7 @@
         "Assets/MyAsset/Runtime/Animation/CharacterAnimationController.cs": "d2db8675c9cb6a2cc9a875f449a9f0751588a7a8aa168045b7d9dd48c1fa2735",
         "Assets/MyAsset/Runtime/Character/PlayerCombatLoadout3D.cs": "8915e9407520b0e23495a210317a8037113a7124291a623a3499c40fc0d4fe9e",
         "Assets/MyAsset/Runtime/Combat/ActionCatalog.cs": "623b1a5ad74c7922c92c43b1c585875e6cf80874b047929683e06782912fc212",
-        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "92dfb1b79993538e6499c0ebf05be589cc286cf2b34aada413df91e5000997bd",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "d63b0218c6e1e5e64616e34e6c6344e72fd863f6f06c70711959e4553d29ed19",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "63b816b95a795397bdb6c899aa26ecb00d7dc498e189b3bd0c3287656f0b8b24",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.cs": "51dbe300b4ffb75417862df9483470855a7814d11eeff80f6e741db1c875c076",
         "Assets/Scenes/ExpeditionMock3DScene.unity": "b7dc9b22cf61f1297bc04ee46a43eb3f4e4d89029393d8f354d90d4d8033cbbd",
@@ -9888,7 +9888,7 @@
         "Assets/MyAsset/Data/PLACEHOLDER_MineFlameCircle3D.asset.meta": "25785df65f3ced39e6737e72cf19bbb78f52a998b5c2d692c69a67c80b11ea0b",
         "Assets/MyAsset/Runtime/Animation/CharacterAnimationController.cs": "d2db8675c9cb6a2cc9a875f449a9f0751588a7a8aa168045b7d9dd48c1fa2735",
         "Assets/MyAsset/Runtime/Character/PlayerCombatLoadout3D.cs": "8915e9407520b0e23495a210317a8037113a7124291a623a3499c40fc0d4fe9e",
-        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "92dfb1b79993538e6499c0ebf05be589cc286cf2b34aada413df91e5000997bd",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "d63b0218c6e1e5e64616e34e6c6344e72fd863f6f06c70711959e4553d29ed19",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "63b816b95a795397bdb6c899aa26ecb00d7dc498e189b3bd0c3287656f0b8b24",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.cs": "51dbe300b4ffb75417862df9483470855a7814d11eeff80f6e741db1c875c076",
         "Assets/Scenes/ExpeditionMock3DScene.unity": "b7dc9b22cf61f1297bc04ee46a43eb3f4e4d89029393d8f354d90d4d8033cbbd",
@@ -10312,12 +10312,12 @@
       "tests": [
         "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs"
       ],
-      "notes": "同じ区画に指定された床の中継点を使い、登録済みの騎士の近くへ歩く。停止条件は追従距離と通視。実壁を迂回して同じ登録世代で追いつき、経路がすべて塞がれば停止して目の前の通路が開いた後に移動を再開する。中継点の未設定時は直進する。探索と戦闘の切り替え順が入れ替わっても物理更新を一度だけ進める。",
+      "notes": "同じ区画に指定された床の中継点を使い、登録済みの騎士の近くへ歩く。停止条件は追従距離と通視。実壁を迂回して同じ登録世代で追いつき、経路がすべて塞がれば停止して目の前の通路が開いた後に移動を再開する。中継点の未設定時は直進する。探索と戦闘の切り替え順が入れ替わっても物理更新を一度だけ進める。 迂回を準備できないときは、騎士への見通しと次の1m以内の区間の支持・通過幅を確認して直進する。探索範囲を超えた平床では再探索待ち中から歩き、溝の手前では止まることを確認した。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs": "b01cdcb6fdb1dcdc9a8c9888d8502c311f7307f23bcf169c8ee5f8e460d7d1e6",
+        "Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs": "e8a01a52f97a411c7f0a3219a89b4b729c8b1075dfb2b88f5ccf9479e753ab1c",
         "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs": "a5219ec0ecc2baf14a2269f9b94fcdc53307b857bffafac62ea88222a221f0f5",
         "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs": "3cfb7bdff9f602cd48d135a3d8fa415193ad464e68ae6672d9cdb9414da9fd89",
-        "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "3dfebc4e6811b16758ad573c2409b388bd6dd82eb84f6ff1852492a71b43086c"
+        "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "108c05dabd1a36bc30b08ecde1a6c05eb532f079e6e747e3d4f9f93a09c1e491"
       }
     }
   },
@@ -10359,13 +10359,13 @@
       "tests": [
         "Assets/Tests/PlayMode/SpatialCombat3DPlayTests.ExplosiveProps.cs"
       ],
-      "notes": "指定のコライダーを近接有効時間か弾の接触で一度だけ起爆する。弾は壁で止まり、別のコライダーや予備動作では起爆しない。弾は親キャラクターより指定コライダーを先に照合し、設定が無効な爆発物を攻撃対象にしない。爆風は起爆攻撃の陣営を使い、同じ物理シーンの球内にいる敵の世代を照合して火属性を適用する。",
+      "notes": "指定のコライダーを近接有効時間か弾の接触で一度だけ起爆する。弾は壁で止まり、別のコライダーや予備動作では起爆しない。弾は親キャラクターより指定コライダーを先に照合し、設定が無効な爆発物を攻撃対象にしない。爆風は起爆攻撃の陣営を使い、同じ物理シーンの球内にいる敵の世代を照合して火属性を適用する。 有効な接触が同距離ならシーンとHierarchyの順で起爆する。手前の壁や遮蔽用レイヤーの別の爆発物は直接攻撃を遮り、起爆後の爆風は同じ物理シーンの球内へ壁をはさんでも届く。",
       "verification_hashes": {
         "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "3d29d7835bcca15680cb8972a2539c5e8ec2344937f10b99a1c14840626796cb",
-        "Assets/MyAsset/Runtime/Combat/ExplosiveProp3D.cs": "b27395affd92ced7379fc89a6e42c73cf6b62e786e132875077058792bbb4099",
-        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "92dfb1b79993538e6499c0ebf05be589cc286cf2b34aada413df91e5000997bd",
-        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "9f3c16e938272500c0ea408dc6c5718c94b9e8ceb9cec0f88c8192817f72eee9",
-        "Assets/Tests/PlayMode/SpatialCombat3DPlayTests.ExplosiveProps.cs": "e59825e6204650dec2930001d977eb2afaf712a80d5bf0f5b3f2a99074f30888",
+        "Assets/MyAsset/Runtime/Combat/ExplosiveProp3D.cs": "dc41f97038f6bcab6fc7749095c02b8fd58d79cdd1801de61bae2796bbd21a64",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "d63b0218c6e1e5e64616e34e6c6344e72fd863f6f06c70711959e4553d29ed19",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "7d4b15fec4e5d56d26b23649261fdcb62e7055b07ce1da74d3816b30d1242258",
+        "Assets/Tests/PlayMode/SpatialCombat3DPlayTests.ExplosiveProps.cs": "1a2962278846312676256cc09dc834b08514a684f595907595a0152d7fc7b58e",
         "Assets/Tests/PlayMode/SpatialCombat3DPlayTests.cs": "6d06bad29dd5adff2b1fcf685f360f9d57b4e53a479df0a5d30f3804111c5ff8"
       }
     }

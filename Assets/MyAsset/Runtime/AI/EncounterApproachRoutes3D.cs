@@ -11,6 +11,7 @@ namespace Game.Runtime
         internal const int k_MaxWaypoints = 12;
         private const float k_MaxSegment = 12f;
         private const float k_MaxDirectApproach = 16f;
+        private const float k_DirectFollowProbeDistance = 1f;
         private const float k_FloorTolerance = 0.2f;
         private const float k_FloorProbeSpacing = 0.3f;
         private const float k_WaypointArrival = 0.12f;
@@ -165,6 +166,7 @@ namespace Game.Runtime
             if (leader == null || leader.gameObject.scene != scene) { Remove(actor.Actor); return Vector3.zero; }
 
             PhysicsScene world = scene.GetPhysicsScene();
+            if (!world.IsValid()) { return Vector3.zero; }
             Vector3 targetFeet = leader.Motor.FeetPosition;
             Vector3 targetCenter = leader.Body.bounds.center;
             if ((actor.Motor.FeetPosition - targetFeet).sqrMagnitude <= followDistance * followDistance
@@ -176,10 +178,43 @@ namespace Game.Runtime
 
             ActorRef target = leader.Actor;
             ObservedTarget observation = new(target, _observationTick, targetFeet, targetCenter);
-            return TryPrepare(actor, observation, AttackTargetRelation.Friendly, followDistance, waypoints, null,
+            if (TryPrepare(actor, observation, AttackTargetRelation.Friendly, followDistance, waypoints, null,
                     groundLayers, blockers, out Decision route)
-                && TryFollow(actor, target, route, false, groundLayers, blockers, out Vector3 direction, out _)
-                ? direction : Vector3.zero;
+                && TryFollow(actor, target, route, false, groundLayers, blockers, out Vector3 direction, out _))
+            {
+                return direction;
+            }
+            return ProbeDirectFollow(world, actor, leader, followDistance, groundLayers, blockers);
+        }
+
+        private Vector3 ProbeDirectFollow(PhysicsScene world, CharacterActor3D actor, CharacterActor3D leader,
+            float followDistance, LayerMask groundLayers, LayerMask blockers)
+        {
+            ActorRef owner = actor.Actor;
+            ActorRef target = leader.Actor;
+            if (!owner.IsValid || !actor.IsAlive || !actor.Body.enabled || !actor.Motor.IsGrounded
+                || GameManager.Data.GetFlags(owner.Hash).IsVanished || !MultiLockTargeting3D.TryGetActor(target, out _)
+                || !HasRelation(owner, target, AttackTargetRelation.Friendly)) { return Vector3.zero; }
+
+            Vector3 feet = actor.Motor.FeetPosition;
+            Vector3 offset = Horizontal(leader.Motor.FeetPosition - feet);
+            float distance = offset.magnitude;
+            float travel = Mathf.Min(distance - followDistance, k_DirectFollowProbeDistance);
+            float step = actor.Motor.MoveSpeed * Time.fixedDeltaTime;
+            if (!float.IsFinite(distance) || !(travel > 0f) || !float.IsFinite(step) || !(step > 0f)) { return Vector3.zero; }
+
+            Bounds bounds = actor.Body.bounds;
+            float radius = Mathf.Min(bounds.extents.x, bounds.extents.z);
+            Vector3 direction = offset / distance;
+            // 中継点を使えない時も、遮蔽物に向かわず次の短い床区間だけを進む。
+            if (!(radius > 0f) || !(bounds.size.y > 0f)
+                || !HasSight(world, bounds.center, leader.Body.bounds.center, blockers, leader.Body)
+                || !TryGetGround(world, feet, groundLayers, out _)
+                || !TryGetGround(world, feet + direction * travel, groundLayers, out Vector3 end)
+                || !CanWalk(world, feet, end, radius, bounds.size.y, groundLayers, blockers)
+                || !IsClearAt(world, end, radius, bounds.size.y, blockers, actor.Body)) { return Vector3.zero; }
+
+            return direction * Mathf.Min(1f, travel / step);
         }
 
         private bool TryPrepare(CharacterActor3D actor, in ObservedTarget observation, AttackTargetRelation relation,

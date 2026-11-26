@@ -286,7 +286,8 @@ namespace Game.Runtime
                     float propDistance = toProp.sqrMagnitude;
                     if (propDistance > nearestDistance || (propDistance == nearestDistance
                         && (nearest != null || (nearestProp != null
-                            && hit.GetHashCode() >= nearestProp.HitCollider.GetHashCode())))) { continue; }
+                            && ExplosiveProp3D.CompareContactOrder(hit, nearestProp.HitCollider) >= 0)))) { continue; }
+                    // 経路をふさぐ別のコライダーがあれば、その奥にある爆発物には届かない。
                     if (propDistance > 0f && world.Raycast(origin, toProp.normalized, out RaycastHit obstruction,
                         Mathf.Sqrt(propDistance), profile.obstructionLayers, QueryTriggerInteraction.Ignore)
                         && obstruction.collider != hit) { continue; }

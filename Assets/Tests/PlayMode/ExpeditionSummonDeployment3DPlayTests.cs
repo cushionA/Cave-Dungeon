@@ -273,6 +273,63 @@ namespace Game.Tests.PlayMode
         public IEnumerator NormalDeployment_WhenDetourIsBlocked_WaitsUntilDirectPathOpens()
             => FollowAroundWall(blockDetour: true);
 
+        [UnityTest]
+        public IEnumerator NormalDeployment_WithLeaderBeyondPlannerRange_StillFollowsAcrossOpenFloor()
+            => FollowDistantLeader(hasGap: false);
+
+        [UnityTest]
+        public IEnumerator NormalDeployment_WithLeaderBeyondPlannerRange_StopsBeforeGap()
+            => FollowDistantLeader(hasGap: true);
+
+        private IEnumerator FollowDistantLeader(bool hasGap)
+        {
+            Vector3 spawn = _positions[0].position;
+            int groundLayer = LayerMask.NameToLayer("Ground");
+            _floor.gameObject.layer = groundLayer;
+            if (hasGap)
+            {
+                _floor.transform.position = new Vector3(0f, -0.25f, -1.5f);
+                _floor.size = new Vector3(14f, 0.5f, 8f);
+                CreateBox("Far bank", new Vector3(0f, -0.25f, 18f), new Vector3(14f, 0.5f, 10f))
+                    .gameObject.layer = groundLayer;
+            }
+            else { _floor.size = new Vector3(14f, 0.5f, 46f); }
+
+            Assert.That(_squad.TryConfirm(new[] { new ExpeditionSquad.Selection("scout", 1) }), Is.True);
+            CharacterActor3D knight = CreateCharacter("Distant knight", new Vector3(spawn.x, 0.04f, 20f), CharacterFeature.Player);
+            knight.gameObject.SetActive(true);
+            Configure(leader: knight);
+            LayerMask ground = 1 << groundLayer;
+            SetSerializedField(_deployment, "followGroundLayers", ground);
+            SetSerializedField(_deployment, "followObstructionLayers", ground);
+            SetSerializedField(_deployment, "followWaypoints", new[]
+            {
+                NewObject("Irrelevant rear waypoint", new Vector3(0f, 0f, -1f)).transform,
+            });
+            Physics.SyncTransforms();
+            Assert.That(_deployment.TryDeployConfirmed(), Is.True);
+            _deployment.CopyActiveSummons(_summons);
+            ActorRef identity = _summons[0].Actor;
+            CharacterActor3D scout = GetUnit(identity);
+
+            for (int step = 0; step < 10; step++) { yield return new WaitForFixedUpdate(); }
+            Assert.That(scout.Motor.FeetPosition.z, Is.GreaterThan(spawn.z + 0.25f));
+            Assert.That(knight.Motor.FeetPosition.z - scout.Motor.FeetPosition.z, Is.GreaterThan(16f));
+
+            int stepLimit = hasGap ? 40 : 230;
+            for (int step = 0; step < stepLimit && knight.Motor.FeetPosition.z - scout.Motor.FeetPosition.z > 2.22f; step++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+
+            Vector3 feet = scout.Motor.FeetPosition;
+            if (hasGap) { Assert.That(feet.z, Is.LessThan(2.1f)); }
+            else { Assert.That(knight.Motor.FeetPosition.z - feet.z, Is.InRange(2.05f, 2.22f)); }
+            Assert.That(feet.x, Is.EqualTo(spawn.x).Within(0.05f));
+            Assert.That(scout.Motor.IsGrounded, Is.True);
+            Assert.That(scout.Actor, Is.EqualTo(identity));
+        }
+
         private IEnumerator FollowAroundWall(bool blockDetour)
         {
             const float wallZ = 3.6f;
