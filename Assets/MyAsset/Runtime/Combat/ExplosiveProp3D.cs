@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using Game.Core;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.Pool;
 using UnityEngine.SceneManagement;
 
 namespace Game.Runtime
 {
     /// <summary>指定した形状への攻撃で一度だけ起爆し、同じ物理シーンの敵へ火属性ダメージを与える。</summary>
+    /// <remarks>配置した爆発物は、エリアシーンを読み直すと未起爆の初期状態に戻る。</remarks>
     [DisallowMultipleComponent]
     public sealed class ExplosiveProp3D : MonoBehaviour
     {
@@ -126,19 +128,22 @@ namespace Game.Runtime
             ActorRegistry actors, SoACharaDataDic data)
         {
             // 爆風は同じ物理シーンの球範囲に届く。壁の先も範囲内なら対象になる。
-            List<int> hashes = new List<int>();
-            List<ActorRef> victims = new List<ActorRef>();
-            data.GetAllHashes(hashes);
-            foreach (int hash in hashes)
+            using var victimLease = ListPool<ActorRef>.Get(out List<ActorRef> victims);
+            using (ListPool<int>.Get(out List<int> hashes))
             {
-                if (actors.TryGet(hash, out ActorRef target)
-                    && FindVictim(target, blast, world, center, radiusSquared, actors, data) != null)
+                data.GetAllHashes(hashes);
+                foreach (int hash in hashes)
                 {
-                    victims.Add(target);
+                    if (actors.TryGet(hash, out ActorRef target)
+                        && FindVictim(target, blast, world, center, radiusSquared, actors, data) != null)
+                    {
+                        victims.Add(target);
+                    }
                 }
             }
 
-            // 被弾通知中に登録し直した個体へ旧世代の爆風を引き継がない。
+            // 被弾通知から別の起爆があっても、この起爆の対象リストは処理を終えるまで返さない。
+            // 登録し直した個体へ旧世代の爆風を引き継がない。
             foreach (ActorRef target in victims)
             {
                 if (!ReferenceEquals(GameManager.Data, data) || !ReferenceEquals(GameManager.Actors, actors)) { break; }

@@ -61,6 +61,29 @@ namespace Game.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator ExplosiveMelee3D_MultiLockHitsItsSelectedActorWithoutDetonatingACloserProp()
+        {
+            CharacterActor3D attacker = CreateActor(_room, "Knight", new Vector3(0f, 0.1f, 0f), CharacterBelong.Ally);
+            CharacterActor3D selected = CreateActor(_room, "Selected hostile", new Vector3(0.65f, 0.1f, 1.8f));
+            ExplosiveProp3D prop = CreateExplosiveProp(new Vector3(0f, 1f, 1.2f), out BoxCollider hit);
+            int detonations = 0;
+            prop.OnDetonated.AddListener(() => detonations++);
+            yield return null;
+            SynchronizeWorld(_room);
+
+            AttackInfo melee = CreateAttack(AttackShape3D.Melee);
+            melee.attack3D.targetLayers |= LayerMask.GetMask("Default");
+            melee.multiLockRange = 4f;
+            Assert.That(GameManager.Actions.Execute3D(attacker, melee, new[] { selected.Actor }, out long cast), Is.True);
+            Step(0.25f);
+
+            AssertSingleHit(attacker, selected, cast);
+            Assert.That(prop.HasDetonated, Is.False);
+            Assert.That(hit.enabled, Is.True);
+            Assert.That(detonations, Is.Zero);
+        }
+
+        [UnityTest]
         public IEnumerator ExplosiveMelee3D_CoverStopsTheAttackButNotTheBlast()
         {
             CharacterActor3D attacker = CreateActor(_room, "Knight", new Vector3(0f, 0.1f, 0f), CharacterBelong.Ally);

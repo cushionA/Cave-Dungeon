@@ -96,11 +96,16 @@ namespace Game.Runtime
             Deployment group = _normal;
             GameActionRuntime actions = GameManager.Actions;
             // 未設定の編成だけ対象外とする。設定済みの同行先を失っても重力と接地は進める。
-            if (_changing || group == null || ReferenceEquals(explorationLeader, null) || actions == null
-                || !HasValidFollowDistance()) { return; }
+            if (_changing || group == null) { return; }
+            if (ReferenceEquals(explorationLeader, null) || actions == null || !HasValidFollowDistance())
+            {
+                group.followRoutes = null;
+                return;
+            }
 
             CharacterActor3D leader = IsExplorationLeaderAvailable() ? explorationLeader : null;
             PrepareFollowRoutes(group, leader);
+            bool routesSynced = Physics.autoSyncTransforms;
             for (int i = 0; ReferenceEquals(group, _normal) && i < group.units.Count; i++)
             {
                 CharacterActor3D actor = group.units[i].actor;
@@ -122,6 +127,11 @@ namespace Game.Runtime
                 Vector3 direction = Vector3.zero;
                 if (!blocked)
                 {
+                    if (routes != null && !routesSynced)
+                    {
+                        Physics.SyncTransforms();
+                        routesSynced = true;
+                    }
                     direction = routes != null
                         ? routes.FollowLeader(actor, leader, followDistance, followWaypoints, followGroundLayers, followObstructionLayers)
                         : CompanionTactics3D.FollowDirection(actor, leader, followDistance);
@@ -138,7 +148,6 @@ namespace Game.Runtime
                 return;
             }
 
-            Physics.SyncTransforms();
             _followParticipants.Clear();
             foreach ((CharacterActor3D actor, string _) in group.units)
             {
