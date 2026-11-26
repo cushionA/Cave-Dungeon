@@ -87,6 +87,52 @@ namespace Game.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator ExplosiveAim_WhenUnsafePropIsInFallbackLine_StopsWithoutDetonating()
+        {
+            CreateEncounter(new Vector3(0f, 0.04f, 5.9f));
+            CreateActor("Ally next to barrel", new Vector3(-1.2f, 0.04f, 5f), CharacterBelong.Enemy);
+            int fullHp = Hp(_knight);
+            int detonations = 0;
+            _prop.OnDetonated.AddListener(() => detonations++);
+
+            for (int step = 0; step < 30 && GameManager.Projectiles3D.ActiveCount == 0; step++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+            Assert.That(GameManager.Projectiles3D.ActiveCount, Is.EqualTo(1));
+            for (int step = 0; step < 30 && GameManager.Projectiles3D.ActiveCount != 0; step++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+
+            Assert.That(GameManager.Projectiles3D.ActiveCount, Is.Zero);
+            Assert.That(_prop.HasDetonated, Is.False);
+            Assert.That(detonations, Is.Zero);
+            Assert.That(Hp(_knight), Is.EqualTo(fullHp));
+        }
+
+        [UnityTest]
+        public IEnumerator ExplosiveAim_WhenDifferentPropMovesInAfterRelease_StopsWithoutDetonatingIt()
+        {
+            CreateEncounter();
+            ExplosiveProp3D blocker = CreateProp("Moving barrel", new Vector3(-4f, 0.95f, 3f));
+            for (int step = 0; step < 30 && GameManager.Projectiles3D.ActiveCount == 0; step++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+            Assert.That(GameManager.Projectiles3D.ActiveCount, Is.EqualTo(1));
+            blocker.transform.position = new Vector3(0f, 0.95f, 3f);
+            for (int step = 0; step < 30 && GameManager.Projectiles3D.ActiveCount != 0; step++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+
+            Assert.That(GameManager.Projectiles3D.ActiveCount, Is.Zero);
+            Assert.That(_prop.HasDetonated, Is.False);
+            Assert.That(blocker.HasDetonated, Is.False);
+        }
+
+        [UnityTest]
         public IEnumerator ExplosiveAim_WhenAllyEntersBlastDuringWindup_DoesNotReleaseCommittedShot()
         {
             CreateEncounter();
@@ -115,15 +161,11 @@ namespace Game.Tests.PlayMode
             Assert.That(_prop.HasDetonated, Is.False);
         }
 
-        private void CreateEncounter()
+        private void CreateEncounter(Vector3? knightPosition = null)
         {
             _caster = CreateActor("Caster", Vector3.up * 0.04f, CharacterBelong.Enemy);
-            _knight = CreateActor("Knight", new Vector3(1.4f, 0.04f, 5f), CharacterBelong.Ally);
-            BoxCollider hit = CreateBox("Barrel", new Vector3(0f, 0.95f, 5f), new Vector3(0.45f, 1.1f, 0.5f), "Default");
-            _prop = hit.gameObject.AddComponent<ExplosiveProp3D>();
-            Set(_prop, "hitCollider", hit);
-            Set(_prop, "blastRadius", 1.8f);
-            Set(_prop, "blastDamage", 60);
+            _knight = CreateActor("Knight", knightPosition ?? new Vector3(1.4f, 0.04f, 5f), CharacterBelong.Ally);
+            _prop = CreateProp("Barrel", new Vector3(0f, 0.95f, 5f));
 
             EncounterCombat3D encounter = CreateObject("Encounter", Vector3.zero).AddComponent<EncounterCombat3D>();
             Set(encounter, "knight", _knight);
@@ -135,6 +177,16 @@ namespace Game.Tests.PlayMode
             Assert.That(encounter.Register(combatant), Is.True);
             Physics.SyncTransforms();
             _room.GetPhysicsScene().Simulate(Time.fixedDeltaTime);
+        }
+
+        private ExplosiveProp3D CreateProp(string name, Vector3 position)
+        {
+            BoxCollider hit = CreateBox(name, position, new Vector3(0.45f, 1.1f, 0.5f), "Default");
+            ExplosiveProp3D prop = hit.gameObject.AddComponent<ExplosiveProp3D>();
+            Set(prop, "hitCollider", hit);
+            Set(prop, "blastRadius", 1.8f);
+            Set(prop, "blastDamage", 60);
+            return prop;
         }
 
         private AttackInfo CreateProjectileAttack()

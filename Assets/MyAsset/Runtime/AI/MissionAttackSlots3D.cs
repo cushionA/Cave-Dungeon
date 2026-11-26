@@ -47,15 +47,16 @@ namespace Game.Runtime
 
         internal int ActiveCount => _reservations.Count;
 
-        internal bool TryExecute(CharacterActor3D owner, ActorRef target, AttackInfo attack, out long instanceId)
-            => TryExecute(owner, target, attack, default, out instanceId);
+        internal bool TryExecute(CharacterActor3D owner, ActorRef target, AttackInfo attack, out long instanceId,
+            bool allowDetonation = true)
+            => TryExecute(owner, target, attack, default, out instanceId, allowDetonation);
 
         internal bool TryExecuteExplosive(CharacterActor3D owner, AttackInfo attack,
             in EncounterExplosiveAim3D.Selection selection, out long instanceId)
             => TryExecute(owner, selection.Enemy, attack, selection, out instanceId);
 
         private bool TryExecute(CharacterActor3D owner, ActorRef target, AttackInfo attack,
-            in EncounterExplosiveAim3D.Selection selection, out long instanceId)
+            in EncounterExplosiveAim3D.Selection selection, out long instanceId, bool allowDetonation = true)
         {
             instanceId = 0;
             bool explosive = selection.Enemy.IsValid;
@@ -86,7 +87,8 @@ namespace Game.Runtime
             {
                 accepted = explosive
                     ? _actions.TryExecuteExplosiveShot3D(owner, attack, selection, out instanceId)
-                    : _actions.Execute3D(owner, attack, target, out instanceId);
+                    : allowDetonation ? _actions.Execute3D(owner, attack, target, out instanceId)
+                        : _actions.Execute3DWithoutDetonation(owner, attack, target, out instanceId);
                 return accepted;
             }
             finally

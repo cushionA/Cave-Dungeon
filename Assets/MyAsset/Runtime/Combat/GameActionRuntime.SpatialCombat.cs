@@ -19,6 +19,10 @@ namespace Game.Runtime
         public bool Execute3D(CharacterActor3D owner, AttackInfo definition, ActorRef primaryTarget, out long instanceId)
             => Execute3D(owner, definition, primaryTarget, default, out instanceId);
 
+        internal bool Execute3DWithoutDetonation(CharacterActor3D owner, AttackInfo definition, ActorRef primaryTarget,
+            out long instanceId)
+            => Execute3D(owner, definition, primaryTarget, default, out instanceId, allowDetonation: false);
+
         /// <summary>長押し中に選んだ世代付きの順序を、この攻撃の要求へコピーする。</summary>
         public bool Execute3D(CharacterActor3D owner, AttackInfo definition, IReadOnlyList<ActorRef> targets, out long instanceId)
         {
@@ -33,7 +37,7 @@ namespace Game.Runtime
         }
 
         private bool Execute3D(CharacterActor3D owner, AttackInfo definition, ActorRef primaryTarget,
-            ActionTargetSelection selected, out long instanceId)
+            ActionTargetSelection selected, out long instanceId, bool allowDetonation = true)
         {
             instanceId = 0;
             if (owner == null || definition == null || !owner.IsAlive)
@@ -52,7 +56,9 @@ namespace Game.Runtime
                 return false;
             }
 
-            return ExecuteSpatialRequest(actor, definitionId, primaryTarget, selected, out instanceId);
+            return !allowDetonation && entry.attack3D.shape == AttackShape3D.Projectile
+                ? ExecuteRestrictedShot3D(actor, definitionId, primaryTarget, selected, null, out instanceId)
+                : ExecuteSpatialRequest(actor, definitionId, primaryTarget, selected, out instanceId);
         }
 
         private bool ExecuteSpatialRequest(ActorRef actor, int definitionId, ActorRef primaryTarget,
@@ -93,13 +99,16 @@ namespace Game.Runtime
                 attack.motionValue = consumable != null ? 1f : attack.motionValue * current.chargeMultiplier;
                 attack.equipmentStatusEffects = consumable != null ? null
                     : GameManager.Equipment.GetOnHitEffects(owner.ObjectHash, entry.equipmentSource);
+                StartingExplosiveShot? explosiveShot = TakeStartingExplosiveShot(current);
                 CombatExecution capture = new CombatExecution
                 {
                     attack = attack,
                     attack3D = entry.attack3D,
                     multiLockRange = MultiLockTargeting3D.SupportsLock(entry.attack3D.shape) ? entry.multiLockRange : 0f,
                     multiLockTargets = current.selectedTargets,
-                    explosiveAim3D = GetStartingExplosiveAim(current),
+                    explosiveAim3D = explosiveShot?.selection,
+                    explosiveContact3D = explosiveShot.HasValue
+                        ? new ProjectileManager3D.ExplosiveContact(explosiveShot.Value.selection?.HitCollider) : default,
                 };
                 if (capture.multiLockRange > 0f && capture.multiLockTargets.Count == 0)
                 {
@@ -241,7 +250,8 @@ namespace Game.Runtime
             Vector3 forward = owner.Motor.Facing;
             if (combat.multiLockRange <= 0f && !primary.IsValid)
             {
-                manager.Spawn(scene, origin, forward, combat.attack3D, combat.magic, combat.attack, context, default);
+                manager.Spawn(scene, origin, forward, combat.attack3D, combat.magic, combat.attack, context,
+                    default, combat.explosiveContact3D);
                 return;
             }
 
@@ -261,7 +271,7 @@ namespace Game.Runtime
                 }
                 Vector3 offset = position - origin;
                 manager.Spawn(scene, origin, offset.sqrMagnitude > 0f ? offset.normalized : forward,
-                    combat.attack3D, combat.magic, combat.attack, context, target);
+                    combat.attack3D, combat.magic, combat.attack, context, target, combat.explosiveContact3D);
             }
         }
 

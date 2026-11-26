@@ -183,7 +183,7 @@ namespace Game.Runtime
         }
 
         private static bool TryGetHostile(CharacterActor3D source, ActorRef candidate, out CharacterActor3D target)
-            => MultiLockTargeting3D.TryGetActor(candidate, out target) && target.gameObject.scene == source.gameObject.scene
+            => MultiLockTargeting3D.TryGetActor(candidate, out target) && IsOrderScene(source.gameObject.scene, target.gameObject.scene)
                 && AttackTargetRules.CanAffect(source.Actor, GameManager.Data.GetFlags(source.Actor.Hash).Belong,
                     candidate, GameManager.Data.GetFlags(candidate.Hash).Belong, AttackTargetRelation.Hostile);
 
@@ -249,8 +249,11 @@ namespace Game.Runtime
         }
 
         private bool IsOrderSurface(Collider surface) => surface != null && surface.enabled && surface.gameObject.activeInHierarchy
-            && !surface.isTrigger && surface.gameObject.scene == gameObject.scene
+            && !surface.isTrigger && IsOrderScene(gameObject.scene, surface.gameObject.scene)
             && (followGroundLayers.value & (1 << surface.gameObject.layer)) != 0
             && surface.GetComponentInParent<CharacterActor3D>() == null;
+
+        private static bool IsOrderScene(Scene persistent, Scene candidate)
+            => persistent == candidate || GameManager.LevelStreaming?.IsLoadedAreaOf(persistent, candidate) == true;
     }
 }

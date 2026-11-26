@@ -11,6 +11,21 @@ namespace Game.Runtime
     {
         private const int k_InitOrder = 310;
 
+        internal readonly struct ExplosiveContact
+        {
+            private readonly bool _restricted;
+            private readonly Collider _allowed;
+
+            // 既定値は通常の着弾。AIは許可した装置だけを起爆し、未指定なら着弾だけ行う。
+            internal ExplosiveContact(Collider allowed)
+            {
+                _restricted = true;
+                _allowed = allowed;
+            }
+
+            internal bool Allows(Collider contact) => !_restricted || contact == _allowed;
+        }
+
         private sealed class Shot
         {
             public ulong leaseId;
@@ -30,6 +45,7 @@ namespace Game.Runtime
             public ActorRef explicitTarget;
             public GroundAttack3D? groundImpact;
             public GameObject warning;
+            public ExplosiveContact explosiveContact;
 
             public float Speed => Mathf.Max(0f, profile.speed + profile.acceleration * elapsed);
         }
@@ -88,11 +104,14 @@ namespace Game.Runtime
         private void OnDisable() => ClearAll();
 
         internal bool Spawn(Scene scene, Vector3 position, Vector3 direction, in AttackProfile3D shape,
-            in MagicDefinition magic, in AttackMotionData attack, in AttackContext context, ActorRef explicitTarget)
+            in MagicDefinition magic, in AttackMotionData attack, in AttackContext context, ActorRef explicitTarget,
+            ExplosiveContact explosiveContact = default)
         {
             Shot shot = CreateShot(scene, position, direction, shape, magic, attack, context, explicitTarget);
+            if (shot == null) { return false; }
+            shot.explosiveContact = explosiveContact;
             GameObject warning = null;
-            return shot != null && ActivateShot(shot, magic.projectilePrefab, ref warning);
+            return ActivateShot(shot, magic.projectilePrefab, ref warning);
         }
 
         private Shot CreateShot(Scene scene, Vector3 position, Vector3 direction, in AttackProfile3D shape,
@@ -319,7 +338,10 @@ namespace Game.Runtime
                 Retire(shot);
                 if (contact.propCollider != null)
                 {
-                    TryDetonateContact(shot, distance, contact);
+                    if (shot.explosiveContact.Allows(contact.propCollider))
+                    {
+                        TryDetonateContact(shot, distance, contact);
+                    }
                 }
                 else
                 {

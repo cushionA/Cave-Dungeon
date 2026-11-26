@@ -23,6 +23,7 @@ namespace Game.Runtime
             public GroundAttack3D groundAttack3D;
             public SpatialRepeat repeat3D;
             public EncounterExplosiveAim3D.Selection? explosiveAim3D;
+            public ProjectileManager3D.ExplosiveContact explosiveContact3D;
         }
 
         private readonly SoACharaDataDic _data;

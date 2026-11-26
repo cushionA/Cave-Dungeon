@@ -10,12 +10,15 @@ namespace Game.Runtime
         {
             public readonly ActorRef owner;
             public readonly int definitionId;
-            public readonly EncounterExplosiveAim3D.Selection selection;
+            public readonly ActorRef target;
+            public readonly EncounterExplosiveAim3D.Selection? selection;
 
-            public StartingExplosiveShot(ActorRef owner, int definitionId, in EncounterExplosiveAim3D.Selection selection)
+            public StartingExplosiveShot(ActorRef owner, int definitionId, ActorRef target,
+                EncounterExplosiveAim3D.Selection? selection)
             {
                 this.owner = owner;
                 this.definitionId = definitionId;
+                this.target = target;
                 this.selection = selection;
             }
         }
@@ -30,15 +33,23 @@ namespace Game.Runtime
             in EncounterExplosiveAim3D.Selection selection, out long instanceId)
         {
             instanceId = 0;
-            if (_startingExplosiveShot.HasValue || owner == null || attack == null) { return false; }
+            if (owner == null || attack == null) { return false; }
             Physics.SyncTransforms();
             if (!TryGetExplosiveShot3D(owner, attack, selection, out int definitionId)) { return false; }
-            ActorRef actor = owner.Actor;
-            _startingExplosiveShot = new StartingExplosiveShot(actor, definitionId, selection);
+            // 攻撃枠と行動の世代検証は観測した敵を使い、弾が向かう爆発物は別に捕捉する。
+            return ExecuteRestrictedShot3D(owner.Actor, definitionId, selection.Enemy, default, selection,
+                out instanceId);
+        }
+
+        private bool ExecuteRestrictedShot3D(ActorRef actor, int definitionId, ActorRef target,
+            ActionTargetSelection selected, EncounterExplosiveAim3D.Selection? selection, out long instanceId)
+        {
+            instanceId = 0;
+            if (_startingExplosiveShot.HasValue) { return false; }
+            _startingExplosiveShot = new StartingExplosiveShot(actor, definitionId, target, selection);
             try
             {
-                // 攻撃枠と行動の世代検証は観測した敵を使い、弾が向かう爆発物は別に捕捉する。
-                return ExecuteSpatialRequest(actor, definitionId, selection.Enemy, default, out instanceId);
+                return ExecuteSpatialRequest(actor, definitionId, target, selected, out instanceId);
             }
             finally { _startingExplosiveShot = null; }
         }
@@ -68,10 +79,15 @@ namespace Game.Runtime
             return selection.TryGetLaunchDirection(owner, entry.attack3D, magic.bulletProfile, context, out _);
         }
 
-        private EncounterExplosiveAim3D.Selection? GetStartingExplosiveAim(in ActionExecution current)
-            => _startingExplosiveShot is StartingExplosiveShot starting && !current.forced
-                && starting.owner == current.ownerRef && starting.definitionId == current.definitionId
-                && starting.selection.Enemy == current.targetRef ? starting.selection : null;
+        private StartingExplosiveShot? TakeStartingExplosiveShot(in ActionExecution current)
+        {
+            if (_startingExplosiveShot is not StartingExplosiveShot starting || current.forced
+                || starting.owner != current.ownerRef || starting.definitionId != current.definitionId
+                || starting.target != current.targetRef) { return null; }
+
+            _startingExplosiveShot = null;
+            return starting;
+        }
 
         private void ReleaseExplosiveShot3D(CharacterActor3D owner, in ActionExecution current, CombatExecution combat,
             in AttackContext context, in EncounterExplosiveAim3D.Selection aim)
@@ -83,7 +99,7 @@ namespace Game.Runtime
             if (!aim.TryGetLaunchDirection(owner, combat.attack3D, combat.magic.bulletProfile, context,
                 out Vector3 direction)) { return; }
             manager.Spawn(owner.gameObject.scene, MultiLockTargeting3D.Origin(owner, combat.attack3D),
-                direction, combat.attack3D, combat.magic, combat.attack, context, default);
+                direction, combat.attack3D, combat.magic, combat.attack, context, default, combat.explosiveContact3D);
         }
     }
 }

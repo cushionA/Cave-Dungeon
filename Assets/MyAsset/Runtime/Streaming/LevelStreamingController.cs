@@ -41,6 +41,12 @@ namespace Game.Runtime
 
         public LevelStreamingOrchestrator Orchestrator => _orchestrator;
 
+        internal bool IsLoadedAreaOf(Scene persistent, Scene area)
+            => isActiveAndEnabled && _orchestrator != null && persistent.isLoaded && area.isLoaded
+                && _streamedScenes.TryGetValue(area, out string key) && key != _unloadOperationScene
+                && _orchestrator.IsLoaded(key) && ResolveScene(_orchestrator.PersistentScene) == persistent
+                && persistent.GetPhysicsScene() == area.GetPhysicsScene();
+
         /// <summary>IGameSubManager 初期化順。数値が小さいほど先。</summary>
         public int InitOrder => k_InitOrder;
 

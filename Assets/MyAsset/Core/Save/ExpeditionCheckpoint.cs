@@ -87,6 +87,11 @@ namespace Game.Core
 
         public static bool TrySaveCurrentSlot(SaveManager saves, SaveDataStore store, string scenePath, string savePointId,
             in CharacterVitals vitals, out Resources recovered)
+            => TrySaveCurrentSlot(saves, store, scenePath, savePointId, vitals, out recovered, null, null);
+
+        /// <summary>遠征のチェックポイントと転移地点の訪問記録を同じ保存に含める。</summary>
+        public static bool TrySaveCurrentSlot(SaveManager saves, SaveDataStore store, string scenePath, string savePointId,
+            in CharacterVitals vitals, out Resources recovered, FlagManager visitFlags, string visitKey)
         {
             recovered = default;
             if (!CanUse(saves, store, scenePath, savePointId) || vitals.currentHp <= 0 || vitals.maxHp <= 0
@@ -104,7 +109,7 @@ namespace Game.Core
                 stamina = vitals.maxStamina,
                 armor = vitals.currentArmor,
             };
-            if (!TryWriteCheckpoint(saves, store, snapshot)) { return false; }
+            if (!TryWriteCheckpoint(saves, store, snapshot, visitFlags: visitFlags, visitKey: visitKey)) { return false; }
             recovered = ToResources(snapshot);
             return true;
         }
@@ -135,7 +140,7 @@ namespace Game.Core
         }
 
         private static bool TryWriteCheckpoint(SaveManager saves, SaveDataStore store, Snapshot snapshot,
-            Func<bool> canCommit = null)
+            Func<bool> canCommit = null, FlagManager visitFlags = null, string visitKey = null)
         {
             int slot = saves.ActiveSlotIndex;
             ulong revision = saves.LoadRevision;
@@ -148,6 +153,13 @@ namespace Game.Core
             }
             if (candidate == null || !IsCurrent(saves, slot, revision) || canCommit?.Invoke() == false) { return false; }
 
+            if (visitKey != null)
+            {
+                // チェックポイントと訪問記録を同じディスク書き込みで確定する。
+                if (visitFlags == null || !candidate.entries.TryGetValue(visitFlags.SaveId, out object entry)
+                    || entry is not FlagSaveData flags) { return false; }
+                flags.globalFlags[visitKey] = true;
+            }
             candidate.entries[k_SaveId] = snapshot;
             return saves.TryWriteSlot(slot, candidate, store);
         }

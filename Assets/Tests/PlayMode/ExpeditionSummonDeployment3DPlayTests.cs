@@ -44,6 +44,8 @@ namespace Game.Tests.PlayMode
 
             GameObject world = new GameObject("Expedition game manager");
             world.SetActive(false);
+            LevelStreamingController streaming = world.AddComponent<LevelStreamingController>();
+            SetSerializedField(streaming, "persistentSceneName", k_PersistentOrderRoom);
             ExpeditionSquadManager roster = world.AddComponent<ExpeditionSquadManager>();
             SetSerializedField(roster, "rules", rules);
             world.AddComponent<GameManager>();
@@ -77,6 +79,12 @@ namespace Game.Tests.PlayMode
         [UnityTearDown]
         public IEnumerator TearDown()
         {
+            if (_streamsOrderArea)
+            {
+                Scene area = SceneManager.GetSceneByPath(k_OrderAreaPath);
+                if (area.isLoaded) { yield return SceneManager.UnloadSceneAsync(area); }
+                _streamsOrderArea = false;
+            }
             if (_room.isLoaded) { yield return SceneManager.UnloadSceneAsync(_room); }
             if (_foreignOrderScene.isLoaded) { yield return SceneManager.UnloadSceneAsync(_foreignOrderScene); }
             foreach (ScriptableObject asset in _assets) { Object.Destroy(asset); }

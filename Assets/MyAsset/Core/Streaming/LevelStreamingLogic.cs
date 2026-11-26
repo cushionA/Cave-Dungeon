@@ -38,9 +38,11 @@ namespace Game.Core
         }
 
         /// <summary>シーンロード要求をキューに追加。既にロード済みならfalse。</summary>
-        public bool RequestLoad(string sceneName)
+        public bool RequestLoad(string sceneName) => RequestLoad(sceneName, reloadAfterUnload: false);
+
+        internal bool RequestLoad(string sceneName, bool reloadAfterUnload)
         {
-            if (_loadedScenes.Contains(sceneName))
+            if (!reloadAfterUnload && _loadedScenes.Contains(sceneName))
             {
                 return false;
             }

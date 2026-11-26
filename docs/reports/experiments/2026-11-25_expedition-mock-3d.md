@@ -19,7 +19,7 @@ Tab／LT または `GEAR & GROWTH` 台で「戦闘準備」を開く。武器は
 
 工兵を解放したら、坑道入口脇の `REINFORCEMENT DRILL` で E／パッド上ボタンを長押しし、増援訓練を始められる。編成画面の「増援」に切り替え、プリセットを読み込んで確定すると、訓練用の追加枠に工兵1体が出撃する。`DRILL FINISH` に到達すると成功し、`WITHDRAW` を操作すると撤退する。どちらでも増援を解除し、通常編成は探索に同行し続ける。[訓練の操作](../../../Assets/MyAsset/Runtime/World/ExpeditionReinforcementDrill3D.cs)・[増援の試験](../../../Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs)
 
-入口の `SAVE` と、`SENTINEL PASSAGE` の先にある坑道奥の転移地点は、E／パッド上ボタンの長押しで操作する。各地点を訪問すると同じスロットの移動先に登録される。移動先リストから選ぶと、同じ騎士が到着地点へ移る。必要な区画は先に読み込む。次の通常保存で訪問記録も保存される。[ファストトラベル](../../../Assets/MyAsset/Runtime/World/ExpeditionFastTravel3D.cs)・[転移の試験](../../../Assets/Tests/PlayMode/ExpeditionFastTravel3DPlayTests.cs)
+入口の `SAVE` と、`SENTINEL PASSAGE` の先にある坑道奥の転移地点は、E／パッド上ボタンの長押しで操作する。各地点を訪問すると同じスロットの移動先に登録される。入口では通常保存と同時に訪問記録を確定し、坑道奥の訪問記録は次の保存に含める。移動先リストから選ぶと、必要な区画を読み込んで同じ騎士が到着地点へ移る。[ファストトラベル](../../../Assets/MyAsset/Runtime/World/ExpeditionFastTravel3D.cs)・[転移の試験](../../../Assets/Tests/PlayMode/ExpeditionFastTravel3DPlayTests.cs)
 
 通常探索で工兵を出撃させたら、F／十字キー下を短く押して号令を出す。長押しして離すたびに「集合」「集中攻撃」「ここを守れ」「おまかせ」を切り替える。「集中攻撃」は敵を、「ここを守れ」は床を照準する。集団戦が始まるとその遭遇が号令を受け付け、終了後は通常の同行へ戻る。[探索号令の試験](../../../Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.FieldOrders.cs)
 
@@ -48,7 +48,7 @@ Tab／LT または `GEAR & GROWTH` 台で「戦闘準備」を開く。武器は
 
 ## 自動検証
 
-2026-11-26の全体回帰では、Unity 6000.6.8f1 で EditMode 2,389件と PlayMode 524件がすべて通過した。転移では未ロードの区画の復帰、保存スロット切り替え時のキャンセル、壁との干渉、35度の斜面への到着を検証した。[転移の試験](../../../Assets/Tests/PlayMode/ExpeditionFastTravel3DPlayTests.cs)
+2026-11-26の全体回帰では、Unity 6000.6.8f1 で EditMode 2,389件と PlayMode 532件がすべて通過した。転移では未ロードの区画の復帰、中断後の区画解放と再選択、通常遷移への引き継ぎ、壁との干渉、35度の斜面への到着を検証した。Linux Playerの新規スロットに再開地点と訪問記録がともに出力され、PlayModeでは書き込み失敗時に訪問が登録されないことを確認した。[転移の試験](../../../Assets/Tests/PlayMode/ExpeditionFastTravel3DPlayTests.cs)・[保存失敗の試験](../../../Assets/Tests/PlayMode/ExpeditionSavePointMockPlayTests.cs)
 
 装備と魔法枠はディスク往復と旧セーブの読み込みを確認した。PlayModeでは石碑の長押しから専用イベントが始まり、通常終了とスキップのどちらでも元の騎士でガードできることを確認した。実シーンの装備台では武器とコアを交換して魔法枠を登録し、測量で得たポイントを配分した。番人の150経験値も実戦で確認した。[装備の保存](../../../Assets/Tests/EditMode/PlayerCombatLoadoutSelectionTests.cs)・[イベントの実入力](../../../Assets/Tests/PlayMode/ExpeditionEvent3DScenePlayTests.cs)・[統合モック試験](../../../Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs)
 

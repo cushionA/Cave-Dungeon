@@ -16,9 +16,10 @@ namespace Game.Runtime
         internal bool IsAvailableTo(CharacterActor3D actor) => TryGetTravel(actor, out ExpeditionFastTravel3D travel)
             && travel.OwnsPoint(this);
 
-        internal void RecordVisit(CharacterActor3D actor)
+        internal bool TryGetVisitKey(CharacterActor3D actor, out string key)
         {
-            if (TryGetTravel(actor, out ExpeditionFastTravel3D travel)) { travel.RecordVisit(this); }
+            key = null;
+            return TryGetTravel(actor, out ExpeditionFastTravel3D travel) && travel.TryGetVisitKey(this, out key);
         }
 
         internal bool TryOpen(CharacterActor3D actor) => TryGetTravel(actor, out ExpeditionFastTravel3D travel)

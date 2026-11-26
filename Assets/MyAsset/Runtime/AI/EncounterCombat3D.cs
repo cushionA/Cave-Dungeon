@@ -319,7 +319,8 @@ namespace Game.Runtime
                     {
                         Vector3 facing = Horizontal(offset);
                         if (facing.sqrMagnitude > 0.001f) { actor.transform.rotation = Quaternion.LookRotation(facing); }
-                        _attackSlots.TryExecute(actor, sighting.Target, member.Attack, out _);
+                        _attackSlots.TryExecute(actor, sighting.Target, member.Attack, out _,
+                            allowDetonation: explosiveProps == null || explosiveProps.Length == 0);
                     }
                     _approachRoutes?.Remove(owner);
                     actor.Motor.SimulateFixedStep(Vector3.zero, false, Time.fixedDeltaTime);

@@ -81,15 +81,21 @@ namespace Game.Runtime
         {
             if (!TryGetKnight(out ActorRef actor) || !_interaction.TryGetDistanceSquared(knight, out _)) { return false; }
             SaveManager saves = GameManager.Saves;
-            if (TryGetComponent(out ExpeditionFastTravelPoint3D point)) { point.RecordVisit(knight); }
+            FlagManager flags = GameManager.Flags;
+            string visitKey = null;
+            if (flags != null && TryGetComponent(out ExpeditionFastTravelPoint3D point)) { point.TryGetVisitKey(knight, out visitKey); }
             CharacterVitals vitals = GameManager.Data.GetVitals(actor.Hash);
             if (!ExpeditionCheckpoint.TrySaveCurrentSlot(saves, Store, gameObject.scene.path, savePointId, vitals,
-                out ExpeditionCheckpoint.Resources recovered)) { return false; }
+                out ExpeditionCheckpoint.Resources recovered, flags, visitKey)) { return false; }
 
-            if (ReferenceEquals(GameManager.Saves, saves) && knight != null && knight.Actor == actor && knight.IsAlive)
+            if (ReferenceEquals(GameManager.Saves, saves))
             {
-                recovered.ApplyRecovery(ref GameManager.Data.GetVitals(actor.Hash));
-                GameManager.Events?.FireSavePointUsed(savePointId);
+                if (visitKey != null && ReferenceEquals(GameManager.Flags, flags)) { flags.SetGlobalFlag(visitKey, true); }
+                if (knight != null && knight.Actor == actor && knight.IsAlive)
+                {
+                    recovered.ApplyRecovery(ref GameManager.Data.GetVitals(actor.Hash));
+                    GameManager.Events?.FireSavePointUsed(savePointId);
+                }
             }
             return true;
         }

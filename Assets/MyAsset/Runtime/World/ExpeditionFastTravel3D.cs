@@ -40,6 +40,7 @@ namespace Game.Runtime
         private ulong _selectionRevision;
         private ulong _slotRevision;
         private Destination? _pending;
+        private LevelStreamingOrchestrator.AreaPreload _preload;
         private LevelStreamingOrchestrator _streaming;
         private string _originArea;
         private InputActionMap _gameplayMap;
@@ -102,17 +103,21 @@ namespace Game.Runtime
                 FailTravel();
                 return false;
             }
-            Scene room = GetDestinationScene(destination);
-            if (!room.isLoaded)
+            bool loaded = GetDestinationScene(destination).isLoaded;
+            string path = destination.areaScenePath;
+            if (!loaded)
             {
-                string path = destination.areaScenePath;
                 int index = SceneUtility.GetBuildIndexByScenePath(path);
                 if (_streaming == null || index < 0 || !Application.CanStreamedLevelBeLoaded(index)
-                    || !_streaming.RequestAreaPreload(path))
+                    || (_preload = _streaming.RequestAreaPreload(path)) == null)
                 {
                     FailTravel();
                     return false;
                 }
+            }
+            else if (!string.IsNullOrWhiteSpace(path))
+            {
+                _preload = _streaming?.RequestAreaPreload(path, allowNewLoad: false);
             }
             RenderMenu("移動先を確認しています…");
             return true;
@@ -126,8 +131,7 @@ namespace Game.Runtime
             _status = null;
             _source = null;
             _saves = null;
-            _pending = null;
-            _streaming = null;
+            ClearPendingTravel();
             if (_gameplayMap != null && _input != null && _input.isActiveAndEnabled
                 && ReferenceEquals(_input.currentActionMap, _menuMap))
             {
@@ -159,11 +163,16 @@ namespace Game.Runtime
 
         internal void RecordVisit(ExpeditionFastTravelPoint3D point)
         {
-            if (OwnsPoint(point) && FindPoint(point.gameObject.scene, point.PointId) == point
-                && TryFindDestination(point.PointId, out Destination destination))
-            {
-                GameManager.Flags?.SetGlobalFlag(VisitKey(destination), true);
-            }
+            if (TryGetVisitKey(point, out string key)) { GameManager.Flags?.SetGlobalFlag(key, true); }
+        }
+
+        internal bool TryGetVisitKey(ExpeditionFastTravelPoint3D point, out string key)
+        {
+            key = null;
+            if (!OwnsPoint(point) || FindPoint(point.gameObject.scene, point.PointId) != point
+                || !TryFindDestination(point.PointId, out Destination destination)) { return false; }
+            key = VisitKey(destination);
+            return true;
         }
 
         private void ContinueTravel(Destination destination)
@@ -227,9 +236,16 @@ namespace Game.Runtime
 
         private void FailTravel()
         {
+            ClearPendingTravel();
+            RenderMenu("移動先を利用できません。");
+        }
+
+        private void ClearPendingTravel()
+        {
+            _preload?.Discard();
+            _preload = null;
             _pending = null;
             _streaming = null;
-            RenderMenu("移動先を利用できません。");
         }
 
         private bool HasOpenSession() => CanUseKnight() && _owner == _knight.Actor && _saves != null

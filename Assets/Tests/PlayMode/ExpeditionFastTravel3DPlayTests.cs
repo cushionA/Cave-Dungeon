@@ -119,8 +119,8 @@ namespace Game.Tests.PlayMode
             if (_streaming != null && _streaming.Orchestrator is LevelStreamingOrchestrator streaming)
             {
                 // A canceled trip may leave the additive load running. Await it before unloading the scene.
-                yield return Until(() => !streaming.IsAreaLoadPending(k_DestinationPath) && !streaming.IsAreaLoadPending(k_ConcurrentPath),
-                    "The fixture's scene loads should finish before teardown.");
+                yield return Until(() => !streaming.IsAreaLoadPending(k_DestinationPath) && !streaming.IsAreaLoadPending(k_ConcurrentPath)
+                    && streaming.State != StreamingState.Unloading, "The fixture's scene operations should finish before teardown.");
             }
             if (_initialScene.isLoaded) { SceneManager.SetActiveScene(_initialScene); }
             Scene destination = SceneManager.GetSceneByPath(k_DestinationPath);
@@ -208,14 +208,19 @@ namespace Game.Tests.PlayMode
             Vector3 source = _knight.transform.position;
             var transitions = new List<(string from, string to)>();
             using var transition = GameManager.Events.OnAreaTransition.Subscribe(transitions.Add);
+            var areaUnloads = new List<string>();
+            _streaming.Orchestrator.OnAreaUnloadCompleted += areaUnloads.Add;
 
             Submit(ButtonFor(k_Passage));
+            Assert.IsTrue(_travel.IsTraveling);
             yield return Until(() => !_travel.IsTraveling, "The unsafe arrival should be rejected after loading.");
+            yield return Until(IsPassageUnloaded, "The unsafe arrival's preload should be released.");
             Assert.AreEqual(source, _knight.transform.position);
             Assert.AreEqual(owner, _knight.Actor);
             Assert.AreEqual(_origin.name, _streaming.Orchestrator.ActiveScene);
             Assert.AreEqual(_origin.name, GameManager.Flags.CurrentMapId);
             Assert.That(transitions, Is.Empty, "Preloading a blocked arrival must not publish a transition.");
+            Assert.That(areaUnloads, Is.Empty, "Discarding a preload must not trigger gameplay area's global pool cleanup.");
         }
 
         [UnityTest]
@@ -229,9 +234,9 @@ namespace Game.Tests.PlayMode
             Assert.IsTrue(_travel.IsTraveling);
 
             yield return Until(() => !_travel.IsTraveling, "A wall belonging to the support collider should block arrival.");
+            yield return Until(IsPassageUnloaded, "The failed arrival's preload should be released.");
             Assert.AreEqual(source, _knight.transform.position);
             Assert.AreEqual(_origin.name, GameManager.Flags.CurrentMapId);
-            Assert.IsTrue(SceneManager.GetSceneByPath(k_DestinationPath).isLoaded);
         }
 
         [UnityTest]
@@ -259,16 +264,69 @@ namespace Game.Tests.PlayMode
             Vector3 source = _knight.transform.position;
             Submit(ButtonFor(k_Passage));
             Assert.IsTrue(_travel.IsTraveling);
+            _streaming.Orchestrator.ProcessQueue();
+            Assert.AreEqual(StreamingState.Loading, _streaming.Orchestrator.State);
 
             GameManager.Saves.SetActiveSlot(2);
             GameManager.Saves.SetActiveSlot(k_Slot);
             yield return Until(() => !_travel.IsTraveling, "Changing save slots must invalidate a queued travel.");
-            yield return Until(() => _streaming.Orchestrator.IsLoaded(k_DestinationPath),
-                "A canceled trip may still complete its passive area load.");
+            yield return Until(IsPassageUnloaded, "The in-flight preload should be released after cancellation.");
             Assert.AreEqual(source, _knight.transform.position);
             Assert.AreEqual(_origin.name, _streaming.Orchestrator.ActiveScene);
             Assert.AreEqual(_origin.name, GameManager.Flags.CurrentMapId);
             Assert.AreEqual("Player", _input.currentActionMap?.name);
+        }
+
+        [UnityTest]
+        public IEnumerator FastTravel_WhenRetriedImmediately_ReusesTheInFlightPreload()
+        {
+            yield return VisitPassageAndReturn();
+            var started = new List<string>();
+            using var sceneLoad = GameManager.Events.OnSceneLoadStarted.Subscribe(started.Add);
+            Assert.IsTrue(_travel.TryOpen(_home));
+            Submit(ButtonFor(k_Passage));
+            _streaming.Orchestrator.ProcessQueue();
+            Assert.AreEqual(StreamingState.Loading, _streaming.Orchestrator.State);
+            Submit(_document.rootVisualElement.Q<Button>("fast-travel-close"));
+            Assert.IsFalse(_travel.IsOpen);
+
+            Assert.IsTrue(_travel.TryOpen(_home));
+            Submit(ButtonFor(k_Passage));
+            Assert.IsTrue(_travel.IsTraveling);
+            yield return Until(() => !_travel.IsTraveling, "The reopened menu should reuse the in-flight load.");
+            AssertArrived(s_Passage, k_DestinationPath);
+            Assert.That(started, Is.EqualTo(new[] { k_DestinationPath }));
+        }
+
+        [UnityTest]
+        public IEnumerator Streaming_WhenOrdinaryMovementTargetsACanceledTravelPreload_ActivatesTheAreaOnce(
+            [Values(StreamingState.Idle, StreamingState.Loading, StreamingState.Unloading)] StreamingState activationState)
+        {
+            yield return VisitPassageAndReturn();
+            LevelStreamingOrchestrator streaming = _streaming.Orchestrator;
+            var arrivals = new List<string>();
+            streaming.OnAreaLoadCompleted += arrivals.Add;
+            var started = new List<string>();
+            using var sceneLoad = GameManager.Events.OnSceneLoadStarted.Subscribe(started.Add);
+            Assert.IsTrue(_travel.TryOpen(_home));
+            Submit(ButtonFor(k_Passage));
+            Assert.IsTrue(_travel.IsTraveling);
+            if (activationState != StreamingState.Idle) { streaming.ProcessQueue(); }
+            Submit(_document.rootVisualElement.Q<Button>("fast-travel-close"));
+            if (activationState == StreamingState.Unloading)
+            {
+                yield return Until(() => streaming.State == StreamingState.Unloading, "Canceled preload should begin unloading.");
+            }
+            Assert.AreEqual(activationState, streaming.State);
+
+            Assert.IsTrue(_streaming.RequestAreaLoad(k_DestinationPath));
+            yield return Until(() => streaming.ActiveScene == k_DestinationPath, "The normal area request should activate the scene.");
+            Assert.That(arrivals, Is.EqualTo(new[] { k_DestinationPath }));
+            Assert.AreEqual(activationState == StreamingState.Unloading ? 2 : 1, started.Count);
+            Assert.IsTrue(SceneManager.GetSceneByPath(k_DestinationPath).isLoaded);
+            Assert.AreEqual(k_DestinationPath, GameManager.Flags.CurrentMapId);
+            Assert.AreEqual(s_Home.x, _knight.transform.position.x);
+            Assert.AreEqual(s_Home.z, _knight.transform.position.z);
         }
 
         [UnityTest]
@@ -325,7 +383,11 @@ namespace Game.Tests.PlayMode
             yield return Until(() => _streaming.Orchestrator.ActiveScene == k_ConcurrentPath, "The ordinary load should finish normally.");
             Assert.AreEqual(source, _knight.transform.position);
             Assert.That(transitions, Is.EqualTo(new[] { (_origin.name, k_ConcurrentPath) }));
+            Assert.IsTrue(_streaming.Orchestrator.IsLoaded(k_DestinationPath), "An already resident area belongs to the world, not the canceled trip.");
         }
+
+        private bool IsPassageUnloaded() => !_streaming.Orchestrator.IsAreaLoadPending(k_DestinationPath)
+            && !_streaming.Orchestrator.IsLoaded(k_DestinationPath) && !SceneManager.GetSceneByPath(k_DestinationPath).isLoaded;
 
         private IEnumerator VisitPassageAndReturn(bool unloadPassage = true)
         {

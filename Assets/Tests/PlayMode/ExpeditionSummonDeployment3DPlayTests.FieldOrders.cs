@@ -14,7 +14,10 @@ namespace Game.Tests.PlayMode
 {
     public sealed partial class ExpeditionSummonDeployment3DPlayTests
     {
+        private const string k_PersistentOrderRoom = "Exploration field order persistent room";
+        private const string k_OrderAreaPath = "Assets/Scenes/StreamingAreaB3DTestScene.unity";
         private Scene _foreignOrderScene;
+        private bool _streamsOrderArea;
 
         [UnityTest]
         public IEnumerator ExplorationKeyboardOrders_RallyAndDefendYieldToTheEncounterAndRestoreFollow()
@@ -129,6 +132,68 @@ namespace Game.Tests.PlayMode
             Assert.That(input.Adapter.ActiveFieldOrder, Is.EqualTo(BroadcastAction.ReleaseOrder));
             input.Tap();
             Assert.That(_deployment.ActiveExplorationOrder, Is.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator ExplorationKeyboardDefend_AcceptsManagedAreaFloorUntilItUnloads()
+        {
+            Scene originalRoom = _room;
+            _room = SceneManager.CreateScene(k_PersistentOrderRoom);
+            foreach (GameObject root in originalRoom.GetRootGameObjects()) { SceneManager.MoveGameObjectToScene(root, _room); }
+            yield return SceneManager.UnloadSceneAsync(originalRoom);
+
+            LevelStreamingController streaming = GameManager.LevelStreaming;
+            _streamsOrderArea = true;
+            Assert.That(streaming.RequestAreaLoad(k_OrderAreaPath), Is.True);
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (!streaming.Orchestrator.IsLoaded(k_OrderAreaPath) && Time.realtimeSinceStartup < deadline)
+            {
+                yield return null;
+            }
+            Assert.That(streaming.Orchestrator.IsLoaded(k_OrderAreaPath), Is.True);
+            Scene area = SceneManager.GetSceneByPath(k_OrderAreaPath);
+            Assert.That(area.GetPhysicsScene(), Is.EqualTo(_room.GetPhysicsScene()));
+
+            CharacterActor3D knight = CreateCharacter("Knight at the deep mine", new Vector3(1.55f, 0.04f, 11.15f),
+                CharacterFeature.Player);
+            _positions[0].position = new Vector3(-0.55f, 0.02f, 11.5f);
+            CharacterActor3D scout = PrepareOrderGroup(knight);
+            SetSerializedField(_deployment, "followGroundLayers", (LayerMask)LayerMask.GetMask("Ground", "Default"));
+            Vector3 station = new Vector3(0.25f, 0f, 10.2f);
+            Camera camera = OrderCamera(station);
+            using var input = new ExplorationOrderKeyboard(knight, _deployment, camera);
+            yield return new WaitForFixedUpdate();
+            Assert.That(knight.Motor.Ground.Surface.gameObject.scene, Is.EqualTo(area));
+
+            input.Tap(0.45);
+            input.Tap(0.45);
+            input.Aim(station);
+            input.Tap();
+            Assert.That(_deployment.ActiveExplorationOrder, Is.EqualTo(BroadcastAction.DefendPoint));
+
+            _foreignOrderScene = SceneManager.CreateScene("Unmanaged room sharing expedition physics");
+            Vector3 foreignPoint = station + Vector3.left * 4f;
+            BoxCollider unrelatedFloor = CreateBox("Unmanaged floor", foreignPoint + Vector3.down * 0.25f,
+                new Vector3(2f, 0.5f, 2f));
+            SceneManager.MoveGameObjectToScene(unrelatedFloor.gameObject, _foreignOrderScene);
+            Physics.SyncTransforms();
+            Assert.That(_foreignOrderScene.GetPhysicsScene(), Is.EqualTo(_room.GetPhysicsScene()));
+            Assert.That(_deployment.TryIssueExplorationOrder(knight, BroadcastAction.DefendPoint,
+                position: foreignPoint, surface: unrelatedFloor), Is.False);
+            Assert.That(_deployment.ActiveExplorationOrder, Is.EqualTo(BroadcastAction.DefendPoint));
+
+            for (int i = 0; i < 60 && Vector3.Distance(scout.Motor.FeetPosition, station) > 0.33f; i++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+            Assert.That(Vector3.Distance(scout.Motor.FeetPosition, station), Is.LessThanOrEqualTo(0.33f));
+            Assert.That(scout.Motor.Ground.Surface.gameObject.scene, Is.EqualTo(area));
+            ActorRef identity = scout.Actor;
+
+            yield return SceneManager.UnloadSceneAsync(area);
+            yield return new WaitForFixedUpdate();
+            Assert.That(_deployment.ActiveExplorationOrder, Is.Null);
+            Assert.That(scout.Actor, Is.EqualTo(identity));
         }
 
         private CharacterActor3D PrepareOrderGroup(CharacterActor3D knight, EncounterCombat3D encounter = null)

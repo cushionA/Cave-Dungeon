@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Game.Core;
 using Game.Runtime;
 using NUnit.Framework;
@@ -45,6 +46,33 @@ namespace Game.Tests.PlayMode
         public IEnumerator AuthoredSavePoint_WhenMadeActiveAfterStartup_RestoresFirstCycleAtTheSamePoint()
             => SaveAndReopen(activateBeforeStart: false);
 
+        [UnityTest]
+        public IEnumerator AuthoredSavePoint_WhenDiskWriteFails_DoesNotUnlockTravel()
+        {
+            SaveDataStore store = new SaveDataStore(_saveFolder);
+            yield return LoadMock(store, activateBeforeStart: true);
+            CharacterActor3D knight = Find<CharacterActor3D>("[PLACEHOLDER] Knight");
+            ExpeditionSavePoint3D checkpoint = Find<ExpeditionSavePoint3D>("[PLACEHOLDER] Expedition save point");
+            ExpeditionFastTravelPoint3D point = checkpoint.GetComponent<ExpeditionFastTravelPoint3D>();
+            knight.transform.position = checkpoint.transform.Find("Resume anchor").position;
+            Physics.SyncTransforms();
+            Assert.That(point.TryGetVisitKey(knight, out string visitKey), Is.True);
+
+            Directory.CreateDirectory(_saveFolder);
+            string blocked = Path.Combine(_saveFolder, "blocked-save-directory");
+            File.WriteAllText(blocked, string.Empty);
+            checkpoint.SetStoreForTest(new SaveDataStore(blocked));
+            bool saveFailed = false;
+            checkpoint.SaveFailed.AddListener(() => saveFailed = true);
+            LogAssert.Expect(LogType.Error, new Regex(@"\[SaveDataStore\] 一時ファイル書き込みに失敗しました"));
+            checkpoint.SaveCurrentSlot();
+
+            Assert.That(saveFailed, Is.True);
+            Assert.That(GameManager.Flags.GetGlobalFlag(visitKey), Is.False);
+            Assert.That(knight.GetComponent<ExpeditionFastTravel3D>().IsOpen, Is.False);
+            Assert.That(GameManager.Saves.HasSaveData(0), Is.False);
+        }
+
         private IEnumerator SaveAndReopen(bool activateBeforeStart)
         {
             SaveDataStore store = new SaveDataStore(_saveFolder);
@@ -65,9 +93,12 @@ namespace Game.Tests.PlayMode
             GameManager.Data.GetVitals(knight.Actor.Hash).currentMp = 0;
             GameManager.Data.GetVitals(knight.Actor.Hash).currentStamina = 0f;
             GameManager.Flags.SetGlobalFlag("checkpoint-test", true);
+            Assert.That(checkpoint.GetComponent<ExpeditionFastTravelPoint3D>().TryGetVisitKey(knight,
+                out string visitKey), Is.True);
 
             Assert.That(interaction.TryInteract(knight), Is.True);
             Assert.That(store.ReadFromDisk(0)?.entries.ContainsKey(ExpeditionCheckpoint.k_SaveId), Is.True);
+            Assert.That(GameManager.Flags.GetGlobalFlag(visitKey), Is.True);
             AssertRecovered(knight);
             Assert.That(checkpoint.GetComponentInChildren<TextMesh>().text, Is.EqualTo("SAVED"));
 
@@ -85,6 +116,7 @@ namespace Game.Tests.PlayMode
             Assert.That(GameManager.Saves.LoadRevision, Is.EqualTo(1UL));
             Assert.That(GameManager.Playthrough.CycleNumber, Is.EqualTo(1));
             Assert.That(GameManager.Flags.GetGlobalFlag("checkpoint-test"), Is.True);
+            Assert.That(GameManager.Flags.GetGlobalFlag(visitKey), Is.True);
             Assert.That(Vector3.Distance(knight.transform.position, respawn), Is.LessThan(0.01f));
             AssertRecovered(knight);
             yield return ExpeditionEvent3DScenePlayTests.WaitForJournalRestore();
