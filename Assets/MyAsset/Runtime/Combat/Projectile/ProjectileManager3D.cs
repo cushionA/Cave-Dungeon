@@ -39,6 +39,7 @@ namespace Game.Runtime
             public bool found;
             public float distance;
             public ActorRef actor;
+            public Collider propCollider;
         }
 
         private readonly List<Shot> _active = new List<Shot>(16);
@@ -295,12 +296,31 @@ namespace Game.Runtime
             if (contact.found)
             {
                 Retire(shot);
-                CharacterActor3D defender = GetTarget(shot, contact.actor);
-                ApplyDamage(shot, defender, contact.actor, origin);
+                if (contact.propCollider != null)
+                {
+                    TryDetonateContact(shot, distance, contact);
+                }
+                else
+                {
+                    CharacterActor3D defender = GetTarget(shot, contact.actor);
+                    ApplyDamage(shot, defender, contact.actor, origin);
+                }
                 return;
             }
 
             MoveShot(shot, shot.position + shot.direction * distance);
+        }
+
+        private void TryDetonateContact(Shot shot, float distance, in Contact contact)
+        {
+            // ビジュアルを退場させる通知で装置や遮蔽物が動いた場合、古い接触を使わない。
+            if (this == null || !isActiveAndEnabled || _data == null || !ReferenceEquals(_data, GameManager.Data)
+                || !shot.scene.isLoaded || !shot.world.IsValid()) { return; }
+            Physics.SyncTransforms();
+            Contact current = FindFirstContact(shot, distance);
+            if (current.propCollider != contact.propCollider || !Mathf.Approximately(current.distance, contact.distance)) { return; }
+            ExplosiveProp3D prop = ExplosiveProp3D.FindLiveContact(current.propCollider);
+            if (prop != null) { prop.TryDetonate(shot.context, shot.world); }
         }
 
         private static void ApplyDamage(Shot shot, CharacterActor3D defender, ActorRef actor, Vector3 origin)
@@ -372,21 +392,30 @@ namespace Game.Runtime
             if (collider == null || (contact.found && distance > contact.distance)) { return; }
 
             ActorRef actor = default;
-            CharacterActor3D body = collider.GetComponentInParent<CharacterActor3D>();
-            if (body != null)
+            Collider propCollider = null;
+            bool tie = contact.found && distance == contact.distance;
+            int layer = 1 << collider.gameObject.layer;
+            if ((shot.shape.targetLayers.value & layer) != 0 && ExplosiveProp3D.FindLiveContact(collider) != null)
             {
-                actor = body.Actor;
-                if (GetTarget(shot, actor) != body) { return; }
-                // PhysXの列挙順に頼らず、同じ距離では遮蔽物、その次に個体のHashを優先する。
-                if (contact.found && distance == contact.distance
-                    && (!contact.actor.IsValid || actor.Hash >= contact.actor.Hash)) { return; }
+                if (tie && (contact.propCollider == null
+                    || collider.GetHashCode() >= contact.propCollider.GetHashCode())) { return; }
+                propCollider = collider;
             }
-            else if ((shot.shape.obstructionLayers.value & (1 << collider.gameObject.layer)) == 0)
+            else
             {
-                return;
+                CharacterActor3D body = collider.GetComponentInParent<CharacterActor3D>();
+                if (body != null)
+                {
+                    actor = body.Actor;
+                    if (GetTarget(shot, actor) != body) { return; }
+                    // 同距離は遮蔽物、個体、爆発物の順。個体同士はHashで決める。
+                    if (tie && contact.propCollider == null
+                        && (!contact.actor.IsValid || actor.Hash >= contact.actor.Hash)) { return; }
+                }
+                else if ((shot.shape.obstructionLayers.value & layer) == 0) { return; }
             }
 
-            contact = new Contact { found = true, distance = distance, actor = actor };
+            contact = new Contact { found = true, distance = distance, actor = actor, propCollider = propCollider };
         }
 
         private CharacterActor3D GetTarget(Shot shot, ActorRef actor) =>
