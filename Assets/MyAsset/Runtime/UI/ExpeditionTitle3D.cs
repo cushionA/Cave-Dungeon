@@ -173,9 +173,11 @@ namespace Game.Runtime
             _requestedScene = null;
 
             GameManager manager = GameManager.Instance;
+            // DontDestroyOnLoad に移動した後も、今回ロードしたシーンが作った個体だけを所有する。
+            if (manager != null && manager.OriginScene != world) { manager = null; }
             try
             {
-                if (this != null && !_cancelled && _sourceScene.isLoaded && TryEnterWorld(world))
+                if (this != null && !_cancelled && _sourceScene.isLoaded && manager != null && TryEnterWorld(world, manager))
                 {
                     SceneManager.UnloadSceneAsync(_sourceScene);
                     return;
@@ -183,17 +185,17 @@ namespace Game.Runtime
             }
             catch (Exception exception) { Debug.LogError($"[ExpeditionTitle3D] 遠征を開始できませんでした: {exception.Message}", this); }
 
-            if (_sourceScene.isLoaded) { SceneManager.SetActiveScene(_sourceScene); }
+            if (_sourceScene.isLoaded && SceneManager.GetActiveScene() == world) { SceneManager.SetActiveScene(_sourceScene); }
             AsyncOperation unload = SceneManager.UnloadSceneAsync(world);
             if (unload != null) { unload.completed += _ => RetireFailedWorld(manager); }
             else { RetireFailedWorld(manager); }
         }
 
-        private bool TryEnterWorld(Scene world)
+        private bool TryEnterWorld(Scene world, GameManager manager)
         {
             SaveManager saves = GameManager.Saves;
             if (saves == null || saves.LoadRevision != 0 || !SceneManager.SetActiveScene(world)
-                || _cancelled || GameManager.Saves != saves || saves.LoadRevision != 0) { return false; }
+                || _cancelled || GameManager.Instance != manager || GameManager.Saves != saves || saves.LoadRevision != 0) { return false; }
             if (!ExpeditionLaunch.TryReadUnchangedSlot(Store, _requestedSlot, SupportsScene, _requestedSave, out ExpeditionSlot current))
             {
                 _failure = k_SlotChanged;

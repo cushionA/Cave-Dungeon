@@ -193,6 +193,7 @@ namespace Game.Runtime
                 filter.useTriggers = true;
                 _sweepHits.Clear();
                 world.CircleCast(startCenter, radius, displacement / distance, distance, filter, _sweepHits);
+                bool dispatchedHit = false;
                 for (int i = 0; i < _sweepHits.Count; i++)
                 {
                     if (!Matches(projectile, leaseId) || !projectile.IsAlive) { break; }
@@ -207,9 +208,18 @@ namespace Game.Runtime
                         projectile.Position = impact;
                         bool accepted = ProcessTarget(target, projectile, leaseId);
                         if (!Matches(projectile, leaseId)) { return; }
-                        if (accepted) { _sweptTargets.Add(target); }
+                        if (accepted)
+                        {
+                            _sweptTargets.Add(target);
+                            dispatchedHit = true;
+                        }
                     }
-                    else if (!ProcessProp(hit.collider, projectile, leaseId, world, impact)) { continue; }
+                    else
+                    {
+                        Vector2? sweepCenter = dispatchedHit ? hit.centroid : null;
+                        if (!ProcessProp(hit.collider, projectile, leaseId, world, impact, sweepCenter, radius)) { continue; }
+                        dispatchedHit = true;
+                    }
 
                     if (!Matches(projectile, leaseId)) { return; }
                     if (projectile.IsAlive) { projectile.Position = destination; }
@@ -241,7 +251,8 @@ namespace Game.Runtime
             else { ProcessProp(other, projectile, leaseId, gameObject.scene.GetPhysicsScene2D(), projectile.Position); }
         }
 
-        private bool ProcessProp(Collider2D contact, Projectile projectile, ulong leaseId, PhysicsScene2D world, Vector2 impact)
+        private bool ProcessProp(Collider2D contact, Projectile projectile, ulong leaseId, PhysicsScene2D world,
+            Vector2 impact, Vector2? sweepCenter = null, float sweepRadius = 0f)
         {
             MagicDefinition magic = _magic;
             if (!_canCollide || magic.magicType != MagicType.Attack || !magic.attackContext.IsCaptured
@@ -254,6 +265,7 @@ namespace Game.Runtime
             if (prop == null || contact.gameObject.scene.GetPhysicsScene2D() != world
                 || (Physics2D.GetLayerCollisionMask(gameObject.layer) & (1 << contact.gameObject.layer)) == 0
                 || actors == null || data == null || manager == null || !manager.IsCurrent(this, projectile, leaseId)
+                || (sweepCenter.HasValue && !StillTouchesSweptCircle(contact, sweepCenter.Value, sweepRadius))
                 || !prop.TryGetBlast(out Vector2 center, out float radiusSquared) || !projectile.RegisterHit()) { return false; }
 
             projectile.Position = impact;
@@ -261,6 +273,15 @@ namespace Game.Runtime
             prop.Detonate(magic.attackContext, world, actors, data, center, radiusSquared);
             FinishHit(projectile, leaseId, manager, magic, shouldDespawn, world);
             return true;
+        }
+
+        private static bool StillTouchesSweptCircle(Collider2D contact, Vector2 center, float radius)
+        {
+            // A prior impact can move this collider through a synchronous damage or detonation listener.
+            Physics2D.SyncTransforms();
+            const float contactTolerance = 0.001f;
+            float reach = radius + contactTolerance;
+            return (contact.ClosestPoint(center) - center).sqrMagnitude <= reach * reach;
         }
 
         private bool ProcessTarget(ActorRef target, Projectile projectile, ulong leaseId)

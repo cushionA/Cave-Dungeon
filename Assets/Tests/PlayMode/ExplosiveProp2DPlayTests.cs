@@ -99,6 +99,52 @@ namespace Game.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator ProjectileSweep_RechecksPropMovedByAnEarlierHitCallback()
+        {
+            ProjectileManager projectiles = MakeProjectileManager(_room);
+            BaseCharacter caster = MakeVictim("Caster", Vector2.left * 4f, CharacterBelong.Ally);
+            BaseCharacter blocker = MakeVictim("First target", Vector2.left * 0.5f, CharacterBelong.Enemy);
+            BaseCharacter distant = MakeVictim("Distant target", Vector2.right * 20f, CharacterBelong.Enemy);
+            ExplosiveProp2D prop = MakeProp(out _);
+            Vector3 originalPosition = prop.transform.position;
+            int detonations = 0;
+            prop.OnDetonated.AddListener(() => detonations++);
+            yield return null;
+
+            int blockerHp = Hp(blocker);
+            int distantHp = Hp(distant);
+            bool movedProp = false;
+            using var receiver = GameManager.Events.OnDamageDealt.Subscribe(change =>
+            {
+                if (!movedProp && change.result.defenderRef.Hash == blocker.ObjectHash)
+                {
+                    movedProp = true;
+                    prop.transform.position = distant.PhysicsPosition;
+                }
+            });
+
+            ProjectileController shot = Shoot(projectiles, caster, hitLimit: 2);
+            Assert.IsNotNull(shot);
+            projectiles.SimulationTick(0.05f);
+
+            Assert.Less(Hp(blocker), blockerHp);
+            Assert.AreEqual(distant.PhysicsPosition, (Vector2)prop.transform.position);
+            Assert.IsFalse(prop.HasDetonated);
+            Assert.AreEqual(0, detonations);
+            Assert.AreEqual(distantHp, Hp(distant));
+            Assert.AreEqual(1, shot.CoreProjectile.RemainingHits);
+            Assert.AreEqual(1, projectiles.ActiveCount);
+
+            projectiles.ClearAll();
+            prop.transform.position = originalPosition;
+            Assert.IsNotNull(Shoot(projectiles, caster, hitLimit: 2));
+            projectiles.SimulationTick(0.05f);
+            Assert.IsTrue(prop.HasDetonated);
+            Assert.AreEqual(1, detonations);
+            Assert.AreEqual(0, projectiles.ActiveCount);
+        }
+
+        [UnityTest]
         public IEnumerator ProjectilePropImpact_RemainsInItsPhysicsWorldAndCannotAffectAReturnedLease()
         {
             _foreign = SceneManager.CreateScene("Isolated projectile world", new CreateSceneParameters(LocalPhysicsMode.Physics2D));
@@ -198,7 +244,7 @@ namespace Game.Tests.PlayMode
         }
 
         private static ProjectileController Shoot(ProjectileManager projectiles, BaseCharacter caster,
-            MagicType type = MagicType.Attack, BulletFeature features = BulletFeature.None)
+            MagicType type = MagicType.Attack, BulletFeature features = BulletFeature.None, int hitLimit = 1)
         {
             return projectiles.SpawnProjectile(caster.ObjectHash, new MagicDefinition
             {
@@ -210,7 +256,7 @@ namespace Game.Tests.PlayMode
                     moveType = BulletMoveType.Straight,
                     speed = 160f,
                     lifeTime = 3f,
-                    hitLimit = 1,
+                    hitLimit = hitLimit,
                     features = features,
                     explodeRadius = 2.25f,
                 },

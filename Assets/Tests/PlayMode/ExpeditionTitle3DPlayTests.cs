@@ -231,6 +231,34 @@ namespace Game.Tests.PlayMode
             Assert.That(Slot(0).text, Is.EqualTo("つづきから"));
         }
 
+        [UnityTest]
+        public IEnumerator Title_WhenAnotherWorldStartsDuringContinue_LeavesItsManagerAndSlotAlone()
+        {
+            WriteCheckpoint(1, k_Point);
+            string checkpoint = File.ReadAllText(SlotFile(1));
+            yield return LoadTitle();
+
+            Submit(Slot(1));
+            GameObject otherWorld = new GameObject("Unrelated game world");
+            otherWorld.SetActive(false);
+            SceneManager.MoveGameObjectToScene(otherWorld, _testScene);
+            GameManager otherManager = otherWorld.AddComponent<GameManager>();
+            otherWorld.SetActive(true);
+            Assert.That(GameManager.Instance, Is.SameAs(otherManager));
+            Assert.That(SceneManager.SetActiveScene(_testScene), Is.True);
+            GameManager.Saves.SetActiveSlot(2);
+
+            yield return WaitFor(() => _title.isLoaded && TitleRoot().Q<Label>("expedition-title-status").text
+                == "このスロットを開けませんでした。", "Continue should leave the other world running.");
+
+            Assert.That(GameManager.Instance, Is.SameAs(otherManager));
+            Assert.That(GameManager.Saves.ActiveSlotIndex, Is.EqualTo(2));
+            Assert.That(GameManager.Saves.LoadRevision, Is.Zero);
+            Assert.That(SceneManager.GetActiveScene(), Is.EqualTo(_testScene));
+            Assert.That(SceneManager.GetSceneByPath(k_Mock).isLoaded, Is.False);
+            Assert.That(File.ReadAllText(SlotFile(1)), Is.EqualTo(checkpoint));
+        }
+
         private IEnumerator LoadTitle()
         {
             void Configure(Scene scene, LoadSceneMode _)

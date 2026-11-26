@@ -54,6 +54,7 @@ namespace Game.Runtime
         private readonly Dictionary<Type, IGameSubManager> _subManagers = new Dictionary<Type, IGameSubManager>();
 
         public static GameManager Instance { get; private set; }
+        internal Scene OriginScene { get; private set; }
         public GameLoop Loop => _loop;
         public static SoACharaDataDic Data => Instance != null ? Instance._core.Data : null;
         internal static RuntimeFieldOrders FieldOrders => Instance != null ? Instance._fieldOrders : null;
@@ -131,6 +132,7 @@ namespace Game.Runtime
                 return;
             }
 
+            OriginScene = gameObject.scene;
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
