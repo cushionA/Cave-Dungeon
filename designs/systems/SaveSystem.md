@@ -35,6 +35,8 @@ Section: 1 — MVP
 
 遠征の試作シーンでは入口の `SAVE` に近づき、操作ボタン（キーボードの E、ゲームパッドの Y）を長押しして保存する。現在のスロットへの書き込みが成功すると、騎士のHP・MP・スタミナが全回復し、目印が `SAVED` に変わる。保存には通常の遠征編成、物語の進捗、現在の周回と再開地点が含まれる。再開時は同じシーンの同じ `Save Point Id` に対応する `Resume Anchor` に騎士を配置する。[3Dセーブポイント](../../Assets/MyAsset/Runtime/World/ExpeditionSavePoint3D.cs) [試作シーン](../../Assets/Scenes/ExpeditionMock3DScene.unity)
 
+指定区画への到達や指定遭遇の勝利では、同じスロットに現在のHP・MP・スタミナ・アーマーをオートセーブする。戦闘で消耗していれば「つづきから」でもその残量を現在の上限内で引き継ぐ。再開地点には消耗した騎士が安全に行動を始められる場所を指定する。入口で手動保存する場合は、休息による回復後の値を保存する。[オートセーブ](../../Assets/MyAsset/Runtime/World/ExpeditionAutosave3D.cs)
+
 ```
 セーブポイント使用時:
 1. HP/MP/スタミナ全回復
