@@ -15,6 +15,7 @@ namespace Game.Runtime
         [Serializable]
         private struct Destination
         {
+            [Tooltip("保存に使う、ゲーム全体で一意の地点ID。シーンのパス変更後も維持する。")]
             public string pointId;
             public string displayName;
             [Tooltip("永続シーンの地点は空欄。加算区画は Build Settings の完全なパスを指定する。")]
@@ -94,7 +95,13 @@ namespace Game.Runtime
             if (!IsOpen || IsTraveling || !HasOpenSession() || pointId == _source.PointId
                 || !TryFindDestination(pointId, out Destination destination) || !IsVisited(destination)) { return false; }
 
-            _streaming = GameManager.LevelStreaming?.Orchestrator;
+            LevelStreamingController streaming = GameManager.LevelStreaming;
+            if (streaming?.Orchestrator != null && !streaming.IsPersistentScene(gameObject.scene))
+            {
+                FailTravel();
+                return false;
+            }
+            _streaming = streaming?.Orchestrator;
             _originArea = _streaming?.ActiveScene;
             _slotRevision = _saves.ActiveSlotContentRevision;
             _pending = destination;
@@ -189,13 +196,19 @@ namespace Game.Runtime
             bool additive = !string.IsNullOrWhiteSpace(destination.areaScenePath);
             string area = additive ? destination.areaScenePath : _streaming?.PersistentScene;
             if (_streaming?.State == StreamingState.Unloading || (additive && _streaming?.IsAreaLoadPending(area) == true)) { return; }
-            if (!room.isLoaded || (additive && _streaming?.IsLoaded(area) != true)) { FailTravel(); return; }
+            if (!room.isLoaded || (area != null && _streaming?.IsLoaded(area) != true)) { FailTravel(); return; }
 
             ExpeditionFastTravelPoint3D point = FindPoint(room, destination.pointId);
             if (!OwnsPoint(point) || !TryValidateArrival(point, out Pose arrival)) { FailTravel(); return; }
 
+            Pose departure = new Pose(_knight.transform.position, _knight.transform.rotation);
             ExpeditionSavePoint3D.PlaceKnight(_knight, arrival.position, arrival.rotation);
-            if (area != null) { _streaming.TryActivateLoadedArea(area); }
+            if (area != null && !_streaming.TryActivateLoadedArea(area))
+            {
+                ExpeditionSavePoint3D.PlaceKnight(_knight, departure.position, departure.rotation);
+                FailTravel();
+                return;
+            }
             Close();
         }
 
@@ -280,9 +293,11 @@ namespace Game.Runtime
         private Scene GetDestinationScene(Destination destination) => string.IsNullOrWhiteSpace(destination.areaScenePath)
             ? gameObject.scene : SceneManager.GetSceneByPath(destination.areaScenePath);
 
-        private bool IsVisited(Destination destination) => GameManager.Flags?.GetGlobalFlag(VisitKey(destination)) == true;
+        private bool IsVisited(Destination destination) => GameManager.Flags is FlagManager flags
+            && (flags.GetGlobalFlag(VisitKey(destination))
+                || flags.GetGlobalFlag(k_VisitPrefix + gameObject.scene.path + "#" + destination.pointId));
 
-        private string VisitKey(Destination destination) => k_VisitPrefix + gameObject.scene.path + "#" + destination.pointId;
+        private static string VisitKey(Destination destination) => k_VisitPrefix + destination.pointId;
 
         private static ExpeditionFastTravelPoint3D FindPoint(Scene scene, string pointId)
         {

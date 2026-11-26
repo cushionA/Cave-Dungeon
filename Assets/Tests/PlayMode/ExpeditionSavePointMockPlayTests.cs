@@ -95,6 +95,7 @@ namespace Game.Tests.PlayMode
             GameManager.Flags.SetGlobalFlag("checkpoint-test", true);
             Assert.That(checkpoint.GetComponent<ExpeditionFastTravelPoint3D>().TryGetVisitKey(knight,
                 out string visitKey), Is.True);
+            Assert.That(visitKey, Is.EqualTo("expedition.fast-travel.visited.expedition.mock.trailhead"));
 
             Assert.That(interaction.TryInteract(knight), Is.True);
             Assert.That(store.ReadFromDisk(0)?.entries.ContainsKey(ExpeditionCheckpoint.k_SaveId), Is.True);

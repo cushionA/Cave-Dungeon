@@ -199,6 +199,28 @@ namespace Game.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator FastTravel_WhenAnOldSaveHasAPathBasedVisit_OffersThePoint()
+        {
+            GameManager.Flags.SetGlobalFlag($"expedition.fast-travel.visited.{_origin.path}#{k_Passage}", true);
+            Assert.IsTrue(_travel.TryOpen(_home));
+            Assert.IsNotNull(ButtonFor(k_Passage));
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator FastTravel_WhenStreamingBelongsToAnotherWorld_LeavesTheKnightInPlace()
+        {
+            yield return VisitPassageAndReturn();
+            SetField(_streaming, "persistentSceneName", "Different expedition");
+            _streaming.Initialize();
+            Assert.IsTrue(_travel.TryOpen(_home));
+            Assert.IsFalse(_travel.TryTravel(k_Passage));
+            Assert.IsFalse(SceneManager.GetSceneByPath(k_DestinationPath).isLoaded);
+            Assert.That(_knight.transform.position.x, Is.EqualTo(s_Home.x).Within(0.01f));
+            Assert.That(_knight.transform.position.z, Is.EqualTo(s_Home.z).Within(0.01f));
+        }
+
+        [UnityTest]
         public IEnumerator FastTravel_WhenArrivalIsBlocked_KeepsTheSourceMapAndKnight()
         {
             yield return VisitPassageAndReturn();
