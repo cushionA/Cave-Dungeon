@@ -430,10 +430,14 @@ namespace Game.Runtime
                 || !TryGetGround(world, link.Takeoff.position, groundLayers, out Vector3 takeoff)
                 || (start - takeoff).sqrMagnitude > k_LandingTolerance * k_LandingTolerance
                 || !TryGetSupport(world, link.Landing.position, groundLayers, out RaycastHit landing)
-                || landing.collider != link.LandingSurface || Mathf.Abs(landing.point.y - takeoff.y) > k_FloorTolerance)
+                || landing.collider != link.LandingSurface)
             {
                 return false;
             }
+
+            float drop = takeoff.y - landing.point.y;
+            if (drop < -k_FloorTolerance || (drop > k_FloorTolerance
+                && (!float.IsFinite(link.MaxDescent) || drop > link.MaxDescent))) { return false; }
 
             CharacterMotor3D motor = actor.Motor;
             float speed = motor.MoveSpeed;

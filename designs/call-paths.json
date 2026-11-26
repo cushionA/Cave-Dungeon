@@ -873,6 +873,60 @@
     }
   },
   {
+    "feature": "DamageSystem_HpArmorKnockback",
+    "path": {
+      "key": "native-3d-spatial-knockback",
+      "title": "3Dの被弾で吹き飛び、着地したら起き上がる",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "runtime_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs",
+          "symbol": "DamageReceiver.ReceiveDamage3D",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs",
+          "symbol": "GameActionRuntime.ReactKnockback3D",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Character/CharacterMotor3D.Knockback.cs",
+          "symbol": "CharacterMotor3D.BeginKnockback",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs",
+          "symbol": "CharacterMotor3D.FixedUpdate",
+          "kind": "update"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs",
+          "symbol": "GameActionRuntime.Tick",
+          "kind": "output"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Character/CharacterActor3D.cs",
+          "symbol": "CharacterActor3D.OnDisable",
+          "kind": "event"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/PlayMode/DamageReceiver3DPlayTests.cs"
+      ],
+      "notes": "攻撃の発生位置から離れる水平速度と耐性を適用した鉛直速度を使い、着地したら起き上がりへ移る。床のない場合は4秒で行動を解除する。再登録時には前の世代の速度と移動を破棄する。Unity 6000.6.8f1のPlayModeで移動、着地、解除と再登録を確認した。",
+      "verification_hashes": {
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "471ed86d7be09fe9302f69591241d59ca8c69ffa32f2bd09381fdbe3a178302f",
+        "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "fba5acdf5fea992e2a0c3c771b46942a315815c0b418843b458716ed32bd1c5a",
+        "Assets/MyAsset/Runtime/Character/CharacterMotor3D.Knockback.cs": "a95ebdd0756241e1065460ac5895459caf9cd338453f2d45112e7f67bc344dd1",
+        "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs": "3cfb7bdff9f602cd48d135a3d8fa415193ad464e68ae6672d9cdb9414da9fd89",
+        "Assets/MyAsset/Runtime/Character/CharacterActor3D.cs": "6d980fe371d4bc5d554a4840b6cade59fe9dcb58d297f9c85a10a38417e6fb8b",
+        "Assets/Tests/PlayMode/DamageReceiver3DPlayTests.cs": "d95dddc58a34870fd0909b406d714483b93ecc2da2981b245f4d8146ba92a2a8"
+      }
+    }
+  },
+  {
     "feature": "ParryGuard_GuardJudgment",
     "path": {
       "key": "guard-evaluation",
@@ -3826,7 +3880,7 @@
         "Assets/Scenes/CharacterMotor3DTestScene.unity": "49be52846ae97da61a84f4d080ada428cea164b8817b04c6f1d37db5cb9017a8",
         "Assets/InputSystem_Actions.inputactions": "31d199426d631b6c852e8830aad54e54f9336e2bcb46dae92a47578c20e9b92f",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.cs": "51dbe300b4ffb75417862df9483470855a7814d11eeff80f6e741db1c875c076",
-        "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs": "0f9a5f6e0dc7ca18eb4e5e42343d7eeb4af413be30e07c240d2f3d086b72d8cd",
+        "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs": "3cfb7bdff9f602cd48d135a3d8fa415193ad464e68ae6672d9cdb9414da9fd89",
         "Assets/MyAsset/Runtime/Camera/CameraFollow3D.cs": "2b01bbbfa2495aaa56fc50607b3e3ab31435627d8a87b53ee2a3e426ecc7045e",
         "Assets/Tests/EditMode/PlayerCharacterInput3DEditModeTests.cs": "d823ec5b0c4536b00be2fb359dc74c39675a17dbc814986e23780ec90dfa6246",
         "Assets/Tests/PlayMode/CharacterMotor3DPlayTests.cs": "e37af9b19e5c12406c2716a788d125231d92d5609f6d5ca3108fb4e4c0f375cd",
@@ -3899,7 +3953,7 @@
         "Assets/MyAsset/Core/Combat/Projectile/ProjectileHitProcessor.cs": "ca6888228b0cb476bcb0fabadc05a092b7d6903104598d1de0710d66bc9a3d0e",
         "Assets/MyAsset/Core/GameManager/ActorRegistry.cs": "7a6f43444e76ff8ceb963bef0efe8578334152b3ae6b012a16bfdeb464ac46d2",
         "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "189cb73d9cb497c594c2c30f59ef57f41dcb0ac89542c5b2238109d42ec004e0",
-        "Assets/MyAsset/Runtime/Character/CharacterActor3D.cs": "d4231bf9121109dc9fafb7822f845336bd8f32cfc45c921b10b49d35096a6b4d",
+        "Assets/MyAsset/Runtime/Character/CharacterActor3D.cs": "6d980fe371d4bc5d554a4840b6cade59fe9dcb58d297f9c85a10a38417e6fb8b",
         "Assets/MyAsset/Runtime/GameManager.cs": "606684ce62e8fb27c13b49074a891a562bd9c0b9a0df8d294e51625eb3b19d17",
         "Assets/Tests/PlayMode/CharacterActor3DPlayTests.cs": "96a7c3dd73ff3e4c52b3e96bb5967d159f05888f2cb932c2cf26cc3f548063c4"
       }
@@ -6237,11 +6291,11 @@
       ],
       "notes": "経路を同じ観測時点の実行者・標的の世代と結び付ける。壁・橋の迂回と命中、標的変更、世代交代、同じ時点の閉塞と旧経路の拒否を確認した。 移動直前の拒否判定は選んだ観測の位置を基準とし、経路再計画は前回の計画位置を基準とする。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs": "ce257527062a9dd9ef4f6f6a83986af4f5e7f789d2b9f567913cb4a50edda992",
+        "Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs": "3f8902f74e6f2f95d39e9289172d2d90d7d17d4e26fad9902a174e6b7b3e1473",
         "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "154b4982a336554f7aea509e50f9259bb39a445eb110439a2bf702a18fa1b9eb",
         "Assets/MyAsset/Runtime/AI/EncounterObservation3D.cs": "d99912d3fbec7609a8fe2b8f3318251b9118126552a7a2d30e9adba86435ba3b",
-        "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs": "0f9a5f6e0dc7ca18eb4e5e42343d7eeb4af413be30e07c240d2f3d086b72d8cd",
-        "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs": "17e1004fcec269e01196f07e69f3e0e82fca36c55fa3d97069c929141e1bb0ce",
+        "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs": "3cfb7bdff9f602cd48d135a3d8fa415193ad464e68ae6672d9cdb9414da9fd89",
+        "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs": "07d9631035018fe6d1fc5aabb7b1c1b2f0058fd1471a526f72ca5a86dadcb035",
         "Assets/MyAsset/Runtime/AI/EncounterSighting3D.cs": "99b498eaf91f6c59b37379c4a65f18da3c7d50af2bbe6ab5aa642d603d8ac571"
       }
     }
@@ -6295,7 +6349,7 @@
         "Assets/Tests/PlayMode/PlayerActionCancellationTests.cs",
         "Assets/Tests/PlayMode/CharacterPhysicsBoundaryTests.cs"
       ],
-      "notes": "既存のプレイヤーはBeginJumpで行動を受理し、移動処理で鉛直速度を設定する。AIの選択経路からこの踏切と着地判定につなぐ。シーンの固定リンクIDに踏切・着地アンカー、動作、方向を持たせ、NavMeshリンクの実行時IDと対応させる。同程度の高さの溝・降下は自動生成の候補とし、登り・特殊動作は手配置する。能力で使えるリンクを絞り、歩行区間と特殊区間の順序を保つ。TestSceneBuilder.CreateGapの下には床が続くため、検証には床を分けた溝と迂回橋を使う。同じ目的地へ、跳べるキャラは溝を越え、歩行のみのキャラは橋を渡る。現行のQueryGroundが返す接地と法線に加え、予定した足場への着地を確認して歩行を再開する。別の足場への着地、着地失敗、着地点の閉塞では再探索する。 3D遭遇の片方向ジャンプと歩行の切替はtraverse-native-3d-jump-linksで接続した。既存2DのAI経路と特殊移動の接続、ほかの高さと動作は残る。",
+      "notes": "既存のプレイヤーはBeginJumpで行動を受理し、移動処理で鉛直速度を設定する。AIの選択経路からこの踏切と着地判定につなぐ。シーンの固定リンクIDに踏切・着地アンカー、動作、方向を持たせ、NavMeshリンクの実行時IDと対応させる。同程度の高さの溝・降下は自動生成の候補とし、登り・特殊動作は手配置する。能力で使えるリンクを絞り、歩行区間と特殊区間の順序を保つ。TestSceneBuilder.CreateGapの下には床が続くため、検証には床を分けた溝と迂回橋を使う。同じ目的地へ、跳べるキャラは溝を越え、歩行のみのキャラは橋を渡る。現行のQueryGroundが返す接地と法線に加え、予定した足場への着地を確認して歩行を再開する。別の足場への着地、着地失敗、着地点の閉塞では再探索する。 3D遭遇の片方向ジャンプと歩行の切替はtraverse-native-3d-jump-linksで接続した。3Dの下段へはリンクごとに最大落差を設定できる。既存2DのAIと特殊移動の接続や、上段向けのリンクとその他の特殊動作は残る。",
       "verification_hashes": {}
     }
   },
@@ -6343,14 +6397,14 @@
         "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs",
         "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs"
       ],
-      "notes": "同じ物理シーンの踏切、着地点と床を作者が指定する。ジャンプ能力と実モーターの距離、上空と着地先の空きを照合する。溝を越えて着地後に命中し、能力なしと着地先の閉塞では橋を渡る。遭遇が飛行中に終了した場合も着地し、古い接近行動はそこで終了する。 Unity 6000.6.8f1でEncounterCombat3DPlayTests 9件、ExpeditionSummonDeployment3DPlayTests 10件が成功。 遭遇の終了・無効化・破棄と参加解除で飛行中のモーターを引き継ぎ、着地後に旧経路を再開しないことを確認した。",
+      "notes": "同じ物理シーンの踏切、着地点と床を作者が指定する。ジャンプ能力と実モーターの距離、上空と着地先の空きを照合する。溝を越えて着地後に命中し、能力なしと着地先の閉塞では橋を渡る。遭遇が飛行中に終了した場合も着地し、古い接近行動はそこで終了する。 Unity 6000.6.8f1でEncounterCombat3DPlayTests 9件、ExpeditionSummonDeployment3DPlayTests 10件が成功。 遭遇の終了・無効化・破棄と参加解除で飛行中のモーターを引き継ぎ、着地後に旧経路を再開しないことを確認した。 下段へのジャンプはリンクごとに最大落差を指定する。実床で0.625m低い指定面への着地と命中、落差上限超過と着地点の閉塞時にジャンプを選ばないことを確認した。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs": "ce257527062a9dd9ef4f6f6a83986af4f5e7f789d2b9f567913cb4a50edda992",
+        "Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs": "3f8902f74e6f2f95d39e9289172d2d90d7d17d4e26fad9902a174e6b7b3e1473",
         "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "154b4982a336554f7aea509e50f9259bb39a445eb110439a2bf702a18fa1b9eb",
         "Assets/MyAsset/Runtime/AI/EncounterCombatant3D.cs": "834791e50c6eb46c81b70015d9a5e25d081ebc5509aa4efc3e6d96469ff5e610",
-        "Assets/MyAsset/Runtime/AI/EncounterJumpLink3D.cs": "4f8fdf5e0f024f445e594a451cf0349c70eb699942f74d046242b00bb023c793",
-        "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs": "0f9a5f6e0dc7ca18eb4e5e42343d7eeb4af413be30e07c240d2f3d086b72d8cd",
-        "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs": "17e1004fcec269e01196f07e69f3e0e82fca36c55fa3d97069c929141e1bb0ce",
+        "Assets/MyAsset/Runtime/AI/EncounterJumpLink3D.cs": "a97a4d0acf53b5d64a7ec021cac6c74392ed73ff7cc8c3e8217a065c1b347a8d",
+        "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs": "3cfb7bdff9f602cd48d135a3d8fa415193ad464e68ae6672d9cdb9414da9fd89",
+        "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs": "07d9631035018fe6d1fc5aabb7b1c1b2f0058fd1471a526f72ca5a86dadcb035",
         "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "1ce31fccf1879c296191c3676dabb60c9232c218c906bcf32342cd1c79c845c8",
         "designs/systems/AICore.md": "546759de1f279bc1c686bb1c184e5497645493aba66eff82644f7ae169f1f8b7"
       }
@@ -8844,10 +8898,10 @@
       "verification_hashes": {
         "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs": "07736920ccf4c9614a9ad6b9ed6693748b20694b3873574e9bc92fb94d2f3dad",
         "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "154b4982a336554f7aea509e50f9259bb39a445eb110439a2bf702a18fa1b9eb",
-        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "fb334fb2c4819e572eb2269811c658d2804d82adedd15d80ee79ee36ef75976f",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "471ed86d7be09fe9302f69591241d59ca8c69ffa32f2bd09381fdbe3a178302f",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "7ef3a9969cf9645885b3aada797c932f1e0363d17c69dae636face803003898f",
         "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "58732262d3ce3f322f5ab1cbfcab51d1bf2e7710089fa9c85e1d501331775520",
-        "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs": "17e1004fcec269e01196f07e69f3e0e82fca36c55fa3d97069c929141e1bb0ce",
+        "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs": "07d9631035018fe6d1fc5aabb7b1c1b2f0058fd1471a526f72ca5a86dadcb035",
         "Assets/Tests/PlayMode/SpatialCombat3DPlayTests.StatusEffects.cs": "e936cac2f97ac8b03c4bf9f5ed1d7791d1a5355a99bbe3a28548c2315a550dcc",
         "Assets/Tests/PlayMode/SpatialCombat3DPlayTests.cs": "6d06bad29dd5adff2b1fcf685f360f9d57b4e53a479df0a5d30f3804111c5ff8"
       }

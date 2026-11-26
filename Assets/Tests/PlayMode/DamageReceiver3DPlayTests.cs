@@ -119,6 +119,107 @@ namespace Game.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Damage3D_KnockbackMovesAwayFromTheHitAndWakesUpOnLanding()
+        {
+            GameObject floor = new GameObject("Knockback floor");
+            SceneManager.MoveGameObjectToScene(floor, _room);
+            floor.transform.position = Vector3.down * 0.5f;
+            floor.AddComponent<BoxCollider>().size = new Vector3(16f, 1f, 16f);
+            CharacterActor3D defender = CreateActor(_room, CharacterBelong.Ally, Vector3.up * 0.04f);
+            defender.Body.center = Vector3.up * 0.8f;
+            defender.Body.height = 1.6f;
+            defender.Body.radius = 0.3f;
+            CharacterActor3D source = CreateActor(_room, CharacterBelong.Enemy, new Vector3(3f, 1f, 4f));
+            yield return null;
+            Physics.SyncTransforms();
+            const float step = 0.02f;
+            PhysicsScene physics = _room.GetPhysicsScene();
+            for (int i = 0; i < 16 && !defender.Motor.IsGrounded; i++)
+            {
+                defender.Motor.Simulate(Vector3.zero, false, step);
+                physics.Simulate(step);
+            }
+            Assert.IsTrue(defender.Motor.IsGrounded);
+
+            int hash = defender.Actor.Hash;
+            GameManager.Data.GetVitals(hash).currentArmor = 0f;
+            GameManager.Data.GetCombatStats(hash).knockbackResistance = 0.25f;
+            Vector3 start = defender.transform.position;
+            Quaternion facing = defender.transform.rotation;
+            DamageData attack = Capture(source, defender);
+            attack.knockbackForce = new Vector2(6f, 5f);
+            Assert.AreEqual(HitReaction.Knockback,
+                defender.GetComponent<DamageReceiver>().ReceiveDamage3D(attack, source.transform.position).hitReaction);
+            GameActionRuntime actions = GameManager.Actions;
+            Assert.IsTrue(actions.IsPhysicsControlled(hash));
+            Assert.AreEqual(ActState.Knockbacked, GameManager.Data.GetFlags(hash).ActState);
+
+            yield return new WaitForFixedUpdate();
+            actions.Execution.Tick(step);
+            actions.Tick();
+            Vector3 offset = defender.transform.position - start;
+            Assert.That(offset.y, Is.GreaterThan(0f));
+            Assert.That(Vector3.Dot(offset, new Vector3(-0.6f, 0f, -0.8f)), Is.GreaterThan(0f));
+            Assert.That(Quaternion.Angle(facing, defender.transform.rotation), Is.LessThan(0.01f));
+            Assert.IsFalse(defender.Motor.IsGrounded);
+
+            for (int i = 0; i < 80 && actions.IsPhysicsControlled(hash); i++)
+            {
+                yield return new WaitForFixedUpdate();
+                physics.Simulate(step);
+                actions.Execution.Tick(step);
+                actions.Tick();
+            }
+            Assert.IsTrue(defender.Motor.IsGrounded);
+            Assert.AreEqual(ActState.WakeUp, GameManager.Data.GetFlags(hash).ActState);
+            Assert.IsFalse(actions.IsPhysicsControlled(hash));
+            Assert.IsTrue(actions.IsMovementBlocked(hash));
+
+            actions.Execution.Tick(WakeUpLogic.k_DefaultWakeUpDuration + step);
+            actions.Tick();
+            Assert.IsFalse(actions.IsMovementBlocked(hash));
+            Assert.AreEqual(ActState.Neutral, GameManager.Data.GetFlags(hash).ActState);
+        }
+
+        [UnityTest]
+        public IEnumerator Damage3D_KnockbackWithoutAFloorExpiresAndCannotSurviveReregistration()
+        {
+            CharacterActor3D defender = CreateActor(_room, CharacterBelong.Ally, Vector3.zero);
+            CharacterActor3D source = CreateActor(_room, CharacterBelong.Enemy, Vector3.forward * 3f);
+            yield return null;
+            ActorRef owner = defender.Actor;
+            GameManager.Data.GetVitals(owner.Hash).currentArmor = 0f;
+            GameActionRuntime actions = GameManager.Actions;
+            DamageReceiver receiver = defender.GetComponent<DamageReceiver>();
+            DamageData hit = Capture(source, defender);
+            hit.knockbackForce = new Vector2(4f, 6f);
+
+            Assert.AreEqual(HitReaction.Knockback, receiver.ReceiveDamage3D(hit, source.transform.position).hitReaction);
+            actions.Execution.Tick(4.1f);
+            actions.Tick();
+            Assert.IsFalse(actions.IsPhysicsControlled(owner.Hash));
+            Assert.AreEqual(ActState.Neutral, GameManager.Data.GetFlags(owner.Hash).ActState);
+
+            defender.enabled = false;
+            defender.enabled = true;
+            Assert.AreNotEqual(owner, defender.Actor);
+            defender.Motor.Simulate(Vector3.zero, false, 0.02f);
+            Assert.That(defender.Motor.Velocity.y, Is.LessThanOrEqualTo(0f));
+
+            owner = defender.Actor;
+            GameManager.Data.GetVitals(owner.Hash).currentArmor = 0f;
+            hit = Capture(source, defender);
+            hit.knockbackForce = new Vector2(4f, 6f);
+            Assert.AreEqual(HitReaction.Knockback, receiver.ReceiveDamage3D(hit, source.transform.position).hitReaction);
+            defender.enabled = false;
+            defender.enabled = true;
+            Assert.AreNotEqual(owner, defender.Actor);
+            defender.Motor.Simulate(Vector3.zero, false, 0.02f);
+            Assert.That(defender.Motor.Velocity.y, Is.LessThanOrEqualTo(0f));
+            Assert.IsFalse(actions.IsMovementBlocked(defender.Actor.Hash));
+        }
+
+        [UnityTest]
         public IEnumerator Damage3D_ForeignSceneFriendlyActorOrReusedGeneration_RejectsTheHit()
         {
             CharacterActor3D defender = CreateActor(_room, CharacterBelong.Ally, Vector3.zero);
