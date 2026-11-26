@@ -7294,7 +7294,7 @@
         "Assets/MyAsset/Runtime/World/EncounterSession3D.cs": "d663fd2019ed396ff198b2dda383c462f98ee9a7c5b2fe6938830c6c9b8547cc",
         "Assets/Tests/EditMode/ExpeditionPlaythroughTests.cs": "0c3631c2d95cea48cad110109b2388690cbd1055a7d6ee897837f490421867be",
         "Assets/Tests/PlayMode/BossEncounter3DPlayTests.cs": "38e835f8c47562b4c034471d8940620bfeff5a19ad49492a79f62080150a10c4",
-        "designs/systems/SaveSystem.md": "360ec8fc1bb04c2c9e88a01f45d6fbbe1c5f244f996138989e3c1febcd22834b"
+        "designs/systems/SaveSystem.md": "1157b4477f82d9484468b1b8feee0177f8c4127654f580b13358eeea15fbad4a"
       }
     }
   },
@@ -7385,7 +7385,7 @@
         "Assets/Tests/PlayMode/ExpeditionNextPlaythroughScenePlayTests.cs": "e1a7bba600a309bec9239cf489e5f2721574821d0d5ec9ebabcc38f29333b199",
         "Assets/Tests/PlayMode/PixelCrushersStorySlotPlayTests.cs": "3039a64410a9810f99648b7185a26f40c314f234c407381be1dc529d0511aa79",
         "ProjectSettings/EditorBuildSettings.asset": "874e4c18b7cab084ac90586bc6f36b7026609a16741a791c4841d482bfca1147",
-        "designs/systems/SaveSystem.md": "360ec8fc1bb04c2c9e88a01f45d6fbbe1c5f244f996138989e3c1febcd22834b"
+        "designs/systems/SaveSystem.md": "1157b4477f82d9484468b1b8feee0177f8c4127654f580b13358eeea15fbad4a"
       }
     }
   },
@@ -7544,7 +7544,7 @@
         "Assets/Tests/PlayMode/ExpeditionEncounterBudget3DPlayTests.cs": "07e34820c14f65a227d65009a7c9579db2c2584500790476227cc5803044eae6",
         "Assets/Tests/PlayMode/ExpeditionSquadPlayTests.cs": "df4a165b6c14c601875a12d34ddea75f84d5a12a0affc0c14aac54655c36ad25",
         "Assets/Tests/PlayMode/PixelCrushersStorySlotPlayTests.cs": "3039a64410a9810f99648b7185a26f40c314f234c407381be1dc529d0511aa79",
-        "designs/systems/SaveSystem.md": "360ec8fc1bb04c2c9e88a01f45d6fbbe1c5f244f996138989e3c1febcd22834b"
+        "designs/systems/SaveSystem.md": "1157b4477f82d9484468b1b8feee0177f8c4127654f580b13358eeea15fbad4a"
       }
     }
   },
@@ -8654,7 +8654,7 @@
         "Assets/Tests/EditMode/SaveManagerWiringTests.cs": "18bc703f387121b5c3cad36f6f4efa5055293bd40ac00a181561ea5137bd87cd",
         "Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs": "f394b1cbd61177ce4f59e0469bdc3bd1dcb688761360fe1f52eb61a447a33b7c",
         "Assets/Tests/PlayMode/PixelCrushersStorySlotPlayTests.cs": "3039a64410a9810f99648b7185a26f40c314f234c407381be1dc529d0511aa79",
-        "designs/systems/SaveSystem.md": "360ec8fc1bb04c2c9e88a01f45d6fbbe1c5f244f996138989e3c1febcd22834b"
+        "designs/systems/SaveSystem.md": "1157b4477f82d9484468b1b8feee0177f8c4127654f580b13358eeea15fbad4a"
       }
     }
   },
