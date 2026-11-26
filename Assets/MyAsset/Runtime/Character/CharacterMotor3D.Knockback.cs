@@ -28,7 +28,8 @@ namespace Game.Runtime
                 planarVelocity = new Vector3(impulse.x, 0f, impulse.z),
             };
             _detachedJump = default;
-            _verticalSpeed += impulse.y;
+            if (impulse.y > 0f) { _verticalSpeed = Mathf.Max(_verticalSpeed, impulse.y); }
+            else if (impulse.y < 0f) { _verticalSpeed = Mathf.Min(_verticalSpeed, impulse.y); }
             if (_verticalSpeed > 0f) { Ground = default; }
         }
 

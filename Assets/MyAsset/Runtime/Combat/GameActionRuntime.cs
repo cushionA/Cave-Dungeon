@@ -375,8 +375,8 @@ namespace Game.Runtime
                 React(owner.Hash, HitReaction.Flinch);
                 return;
             }
-            if (StartBuiltin(owner.Hash, Builtin.Knockback, default, out long instanceId,
-                forced: true, duration: k_MaxKnockback3DSeconds) && actor != null && actor.Actor == owner
+            if (StartBuiltin(owner.Hash, Builtin.Knockback, default, out long instanceId, forced: true)
+                && actor != null && actor.Actor == owner
                 && Execution.TryGetInstance(instanceId, out _))
             {
                 actor.Motor.BeginKnockback(actor, owner, instanceId, velocity);
@@ -397,7 +397,9 @@ namespace Game.Runtime
             {
                 int owner = _ownerBuffer[i];
                 if (!GameManager.IsCharacterValid(owner)) { continue; }
-                if (IsHeld(owner, Builtin.Knockback) && CanWakeUpFromKnockback(owner))
+                if (_held.TryGetValue((owner, Builtin.Knockback), out long instanceId)
+                    && Execution.TryGetInstance(instanceId, out ActionExecution knockback)
+                    && CanWakeUpFromKnockback(owner, knockback))
                 {
                     ReleaseHeld(owner, Builtin.Knockback);
                     StartBuiltin(owner, Builtin.WakeUp, default, 1f, true);
@@ -407,14 +409,23 @@ namespace Game.Runtime
             TickSpatialRepeats();
         }
 
-        private bool CanWakeUpFromKnockback(int owner)
+        private bool CanWakeUpFromKnockback(int owner, in ActionExecution knockback)
         {
             ManagedCharacter actor = _data.GetManaged(owner);
             if (actor is BaseCharacter legacy) { return legacy.IsGrounded && legacy.PhysicsVelocity.y <= 0f; }
             if (actor is CharacterActor3D spatial)
             {
-                long instance = _held[(owner, Builtin.Knockback)];
-                if (spatial.Motor != null && spatial.Motor.TryGetKnockbackLanding(instance, out bool landed)) { return landed; }
+                if (spatial.Motor != null && spatial.Motor.TryGetKnockbackLanding(knockback.instanceId, out bool landed))
+                {
+                    if (landed) { return true; }
+                    // 接地と制限時間が同じ固定更新に重なれば、実際の接地を優先する。
+                    if (knockback.elapsed >= k_MaxKnockback3DSeconds)
+                    {
+                        _held.Remove((owner, Builtin.Knockback));
+                        Execution.Complete(knockback.instanceId);
+                    }
+                    return false;
+                }
                 ReleaseHeld(owner, Builtin.Knockback);
             }
             return false;
