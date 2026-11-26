@@ -40,6 +40,7 @@ namespace Game.Core
         }
 
         private readonly SaveSlotData[] _slots;
+        private readonly ulong[] _slotRevisions = new ulong[k_MaxSlots];
         private readonly List<ISaveable> _saveables;
         private readonly HashSet<string> _registeredIds;
         private int _activeSlotIndex;
@@ -54,6 +55,8 @@ namespace Game.Core
         /// <summary>最後に復元されたデータ。保存・スロット選択・ディスク読み込みだけでは変わらない。</summary>
         public SaveSlotData LastLoadedSlot { get; private set; }
         public ulong LoadRevision { get; private set; }
+        internal ulong ActiveSlotRevision { get; private set; }
+        internal ulong GetSlotRevision(int slotIndex) => _slotRevisions[slotIndex];
 
         /// <summary>登録済みのデータをすべて復元し、アクティブスロットを確定した後に通知する。</summary>
         /// <remarks>保存、ロード、スロット変更は通知終了後に実行する。</remarks>
@@ -117,7 +120,7 @@ namespace Game.Core
         public SaveSlotData Save(int slotIndex)
         {
             SaveSlotData slotData = CaptureSlot(slotIndex);
-            if (slotData != null) { _slots[slotIndex] = slotData; }
+            if (slotData != null) { ReplaceSlot(slotIndex, slotData); }
             return slotData;
         }
 
@@ -131,7 +134,7 @@ namespace Game.Core
             try
             {
                 if (!store.TryWriteToDisk(slotData)) { return false; }
-                _slots[slotIndex] = slotData;
+                ReplaceSlot(slotIndex, slotData);
                 return true;
             }
             catch (Exception exception)
@@ -176,8 +179,8 @@ namespace Game.Core
             {
                 if (!TryApplySlot(slotIndex, slotData, commit)) { return false; }
 
-                _slots[slotIndex] = slotData;
-                _activeSlotIndex = slotIndex;
+                ReplaceSlot(slotIndex, slotData);
+                SelectSlot(slotIndex);
                 LastLoadedSlot = slotData;
                 LoadRevision++;
 
@@ -301,7 +304,7 @@ namespace Game.Core
                 return;
             }
 
-            _activeSlotIndex = slotIndex;
+            SelectSlot(slotIndex);
         }
 
         /// <summary>スロットデータ取得（表示用）</summary>
@@ -323,7 +326,7 @@ namespace Game.Core
                 return;
             }
 
-            _slots[slotIndex] = data;
+            ReplaceSlot(slotIndex, data);
         }
 
         /// <summary>セーブデータをメモリから削除する。ディスクの削除は SaveDataStore に委譲する。</summary>
@@ -334,8 +337,21 @@ namespace Game.Core
                 return false;
             }
 
-            _slots[slotIndex] = null;
+            ReplaceSlot(slotIndex, null);
             return true;
+        }
+
+        private void ReplaceSlot(int slotIndex, SaveSlotData data)
+        {
+            _slots[slotIndex] = data;
+            _slotRevisions[slotIndex]++;
+        }
+
+        private void SelectSlot(int slotIndex)
+        {
+            if (_activeSlotIndex == slotIndex) { return; }
+            _activeSlotIndex = slotIndex;
+            ActiveSlotRevision++;
         }
 
         // ===== IGameSubManager =====

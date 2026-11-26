@@ -24,6 +24,7 @@ namespace Game.Runtime
         private bool _canCollide;
         private bool _hasSimulated;
         private ulong _leaseId;
+        private PhysicsScene2D? _originWorld;
         private ProjectileManager _manager;
         private Vector3 _baseLocalScale;
         private bool _localScaleModified;
@@ -35,6 +36,7 @@ namespace Game.Runtime
         internal MagicDefinition CapturedMagic => _magic;
         public bool IsActive => _isActive;
         internal ulong LeaseId => _leaseId;
+        internal PhysicsScene2D? OriginWorld => _originWorld;
         internal int ActiveIndex { get; set; } = -1;
         internal GameObject PoolPrefab { get; private set; }
 
@@ -73,6 +75,10 @@ namespace Game.Runtime
 
         /// <summary>状態を先に設定し、OnEnableが完全な個体を観測できる順序で有効化する。</summary>
         public void Activate(Projectile projectile, MagicDefinition magic, ProjectileManager manager, bool canCollide = true)
+            => Activate(projectile, magic, manager, ProjectileManager.CaptureOriginWorld(projectile.CasterRef), canCollide);
+
+        internal void Activate(Projectile projectile, MagicDefinition magic, ProjectileManager manager,
+            PhysicsScene2D? originWorld, bool canCollide)
         {
             EnsureComponents();
             if (magic.childBullet != null)
@@ -86,6 +92,7 @@ namespace Game.Runtime
             }
             _coreProjectile = projectile;
             _leaseId = projectile.LeaseId;
+            _originWorld = originWorld;
             _magic = magic;
             _manager = manager;
             _isActive = true;
@@ -109,6 +116,7 @@ namespace Game.Runtime
             _magic = default;
             _manager = null;
             _leaseId = 0;
+            _originWorld = null;
             _hasSimulated = false;
             _hitCounts.Clear();
             _sweptTargets.Clear();
@@ -157,11 +165,10 @@ namespace Game.Runtime
             if (_spriteRenderer != null) { _spriteRenderer.enabled = visible; }
         }
 
-        private float WorldRadius()
-        {
-            Vector3 scale = transform.lossyScale;
-            return _triggerCollider.radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.y));
-        }
+        private float WorldRadius() => GetWorldRadius(_triggerCollider.radius, transform.lossyScale);
+
+        internal static float GetWorldRadius(float radius, Vector3 scale)
+            => radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.y));
 
         /// <summary>旧位置から新位置までを円で走査し、薄い敵を跨ぐ高速弾も接触順に処理する。</summary>
         internal void SweepToCorePosition(Projectile projectile, ulong leaseId)
@@ -238,7 +245,8 @@ namespace Game.Runtime
         {
             MagicDefinition magic = _magic;
             if (!_canCollide || magic.magicType != MagicType.Attack || !magic.attackContext.IsCaptured
-                || magic.attackContext.Owner != projectile.CasterRef || !world.IsValid()) { return false; }
+                || magic.attackContext.Owner != projectile.CasterRef || !world.IsValid()
+                || !_originWorld.HasValue || _originWorld.Value != world) { return false; }
             ExplosiveProp2D prop = ExplosiveProp2D.FindLiveContact(contact);
             ProjectileManager manager = _manager;
             ActorRegistry actors = GameManager.Actors;
@@ -278,7 +286,7 @@ namespace Game.Runtime
             if (!manager.IsCurrent(this, projectile, leaseId)) { return; }
             if (ChildBulletHelper.HasChildBullet(magic) && magic.childBullet.trigger == ChildBulletTrigger.OnHit)
             {
-                manager.SpawnChildProjectiles(projectile, magic);
+                manager.SpawnChildProjectiles(projectile, magic, _originWorld);
             }
             if (!manager.IsCurrent(this, projectile, leaseId)) { return; }
             if (shouldDespawn && projectile.IsAlive) { projectile.Kill(); }

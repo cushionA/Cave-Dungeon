@@ -1,5 +1,5 @@
 using System;
-using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using Game.Core;
 using UnityEngine;
@@ -16,11 +16,22 @@ namespace Game.Runtime
         [SerializeField] private string newGameScenePath;
         [SerializeField] private string[] supportedScenePaths = Array.Empty<string>();
         [SerializeField] private string saveFolder = "ExpeditionMock3D";
+        [SerializeField, Tooltip("遠征のロード中に停止する、タイトル側の入力と音声のコンポーネント。")]
+        private Behaviour[] transitionPresentation = Array.Empty<Behaviour>();
 
+        private const string k_OpenFailed = "このスロットを開けませんでした。";
+        private const string k_SlotChanged = "セーブが変更されました。スロットを選び直してください。";
+
+        private readonly List<Behaviour> _suspendedPresentation = new();
         private SaveDataStore _store;
         private Label _status;
         private Button[] _buttons;
         private bool _busy;
+        private bool _cancelled;
+        private bool _retiring;
+        private GameManager _retiringManager;
+        private string _failure;
+        private Scene _sourceScene;
         private int _requestedSlot;
         private string _requestedScene;
         private ExpeditionSlot _requestedSave;
@@ -30,7 +41,23 @@ namespace Game.Runtime
 
         private void Start() => BuildPanel();
 
-        private void OnDisable() => SceneManager.sceneLoaded -= EnterLoadedWorld;
+        private void OnEnable()
+        {
+            if (_buttons != null && !_busy) { BuildPanel(); }
+        }
+
+        private void OnDisable()
+        {
+            // 加算ロードは止められない。完了通知で読み込んだシーンを破棄する。
+            if (_busy) { _cancelled = true; }
+        }
+
+        private void Update()
+        {
+            if (!_retiring || _retiringManager != null) { return; }
+            _retiring = false;
+            FinishLaunchFailure();
+        }
 
         private void BuildPanel()
         {
@@ -113,16 +140,21 @@ namespace Game.Runtime
             string scenePath = newGame ? newGameScenePath : saved.ScenePath;
             if (saved.Status != expected || !SupportsScene(scenePath) || SceneManager.GetSceneByPath(scenePath).isLoaded)
             {
-                ShowFailure();
+                _failure = k_OpenFailed;
+                FinishLaunchFailure();
                 return;
             }
 
             _busy = true;
+            _cancelled = false;
+            _failure = k_OpenFailed;
+            _sourceScene = gameObject.scene;
             _requestedSlot = slot;
             _requestedScene = scenePath;
             _requestedSave = saved;
             foreach (Button button in _buttons) { button.SetEnabled(false); }
             _status.text = "読み込み中…";
+            SuspendPresentation();
             SceneManager.sceneLoaded += EnterLoadedWorld;
             try
             {
@@ -130,29 +162,49 @@ namespace Game.Runtime
             }
             catch (Exception exception) { Debug.LogError($"[ExpeditionTitle3D] シーンの読み込みに失敗しました: {exception.Message}", this); }
             SceneManager.sceneLoaded -= EnterLoadedWorld;
-            ShowFailure();
+            _requestedScene = null;
+            FinishLaunchFailure();
         }
 
         private void EnterLoadedWorld(Scene world, LoadSceneMode mode)
         {
             if (mode != LoadSceneMode.Additive || !string.Equals(world.path, _requestedScene, StringComparison.Ordinal)) { return; }
             SceneManager.sceneLoaded -= EnterLoadedWorld;
+            _requestedScene = null;
 
-            Scene title = gameObject.scene;
             GameManager manager = GameManager.Instance;
-            SaveManager saves = GameManager.Saves;
-            if (saves != null && saves.LoadRevision == 0 && SceneManager.SetActiveScene(world) && ApplyRequestedSlot(world, saves))
+            try
             {
-                // 遭遇の Start より前に、選ばれたスロットを新しいシーンへ適用する。
-                SceneManager.UnloadSceneAsync(title);
-                return;
+                if (this != null && !_cancelled && _sourceScene.isLoaded && TryEnterWorld(world))
+                {
+                    SceneManager.UnloadSceneAsync(_sourceScene);
+                    return;
+                }
             }
+            catch (Exception exception) { Debug.LogError($"[ExpeditionTitle3D] 遠征を開始できませんでした: {exception.Message}", this); }
 
-            SceneManager.SetActiveScene(title);
-            StartCoroutine(UnloadFailedWorld(world, manager));
+            if (_sourceScene.isLoaded) { SceneManager.SetActiveScene(_sourceScene); }
+            AsyncOperation unload = SceneManager.UnloadSceneAsync(world);
+            if (unload != null) { unload.completed += _ => RetireFailedWorld(manager); }
+            else { RetireFailedWorld(manager); }
         }
 
-        private bool ApplyRequestedSlot(Scene world, SaveManager saves)
+        private bool TryEnterWorld(Scene world)
+        {
+            SaveManager saves = GameManager.Saves;
+            if (saves == null || saves.LoadRevision != 0 || !SceneManager.SetActiveScene(world)
+                || _cancelled || GameManager.Saves != saves || saves.LoadRevision != 0) { return false; }
+            if (!ExpeditionLaunch.TryReadUnchangedSlot(Store, _requestedSlot, SupportsScene, _requestedSave, out ExpeditionSlot current))
+            {
+                _failure = k_SlotChanged;
+                return false;
+            }
+
+            // 遭遇の Start より前に、選ばれたスロットを新しいシーンへ適用する。
+            return ApplyRequestedSlot(world, saves, current);
+        }
+
+        private bool ApplyRequestedSlot(Scene world, SaveManager saves, ExpeditionSlot current)
         {
             ExpeditionSavePoint3D matchingPoint = null;
             foreach (GameObject root in world.GetRootGameObjects())
@@ -160,8 +212,8 @@ namespace Game.Runtime
                 foreach (ExpeditionSavePoint3D point in root.GetComponentsInChildren<ExpeditionSavePoint3D>(true))
                 {
                     point.UseSaveStore(Store);
-                    if (_requestedSave.SavePointId == null
-                        || !string.Equals(point.SavePointId, _requestedSave.SavePointId, StringComparison.Ordinal)) { continue; }
+                    if (current.SavePointId == null
+                        || !string.Equals(point.SavePointId, current.SavePointId, StringComparison.Ordinal)) { continue; }
                     if (matchingPoint != null) { return false; }
                     matchingPoint = point;
                 }
@@ -173,30 +225,53 @@ namespace Game.Runtime
 
             saves.SetActiveSlot(_requestedSlot);
             if (saves.ActiveSlotIndex != _requestedSlot) { return false; }
-            if (_requestedSave.Status == ExpeditionSlotStatus.Empty)
-            {
-                return ExpeditionLaunch.ReadSlot(Store, _requestedSlot, SupportsScene).Status == ExpeditionSlotStatus.Empty;
-            }
-            if (_requestedSave.SavePointId == null) { return ExpeditionLaunch.TryRestoreStart(saves, _requestedSave, world.path); }
-            return matchingPoint != null && matchingPoint.TryRestoreFromTitle(saves, _requestedSave);
+            if (current.Status == ExpeditionSlotStatus.Empty) { return true; }
+            if (current.SavePointId == null) { return ExpeditionLaunch.TryRestoreStart(saves, current, world.path); }
+            return matchingPoint != null && matchingPoint.TryRestoreFromTitle(saves, current);
         }
 
-        private IEnumerator UnloadFailedWorld(Scene world, GameManager manager)
+        private void RetireFailedWorld(GameManager manager)
         {
-            yield return SceneManager.UnloadSceneAsync(world);
-            if (manager != null)
+            if (manager != null) { Destroy(manager.gameObject); }
+            if (this == null) { RestorePresentation(); }
+            else
             {
-                Destroy(manager.gameObject);
-                yield return null;
+                _retiring = true;
+                _retiringManager = manager;
             }
-            ShowFailure();
         }
 
-        private void ShowFailure()
+        private void FinishLaunchFailure()
         {
+            RestorePresentation();
             _busy = false;
+            _requestedSave = default;
             BuildPanel();
-            _status.text = "このスロットを開けませんでした。";
+            if (_status != null) { _status.text = _cancelled ? string.Empty : _failure; }
+        }
+
+        private void SuspendPresentation()
+        {
+            foreach (Behaviour behaviour in transitionPresentation)
+            {
+                if (behaviour == null || behaviour == this || !behaviour.isActiveAndEnabled
+                    || behaviour.gameObject.scene != _sourceScene) { continue; }
+                _suspendedPresentation.Add(behaviour);
+                behaviour.enabled = false;
+            }
+        }
+
+        private void RestorePresentation()
+        {
+            for (int i = _suspendedPresentation.Count - 1; i >= 0; i--)
+            {
+                Behaviour behaviour = _suspendedPresentation[i];
+                if (behaviour != null && behaviour.gameObject.scene == _sourceScene && _sourceScene.isLoaded)
+                {
+                    behaviour.enabled = true;
+                }
+            }
+            _suspendedPresentation.Clear();
         }
 
         private bool SupportsScene(string path)

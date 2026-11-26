@@ -31,6 +31,9 @@ namespace Game.Core
         public const string k_BackupExtension = ".bak";
         public const string k_TempExtension = ".tmp";
 
+        private static readonly Dictionary<string, ulong> s_SlotRevisions = new Dictionary<string, ulong>(
+            Path.DirectorySeparatorChar == '\\' ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+
         private readonly string _basePath;
         private readonly string _savesDir;
 
@@ -123,6 +126,7 @@ namespace Game.Core
                 return false;
             }
 
+            RecordSlotMutation(filePath);
             return true;
         }
 
@@ -167,17 +171,18 @@ namespace Game.Core
         /// <summary>ディスクからJSONファイルを読み込みSaveSlotDataに復元する。
         /// メインファイルのパース/検証に失敗したら .bak からフォールバック読み込みする。
         /// 両方とも失敗した場合は null を返す。</summary>
-        public SaveSlotData ReadFromDisk(int slotIndex) => ReadFromDisk(slotIndex, logFailures: true);
+        public SaveSlotData ReadFromDisk(int slotIndex) => ReadFromDisk(slotIndex, logFailures: true, out _);
 
-        internal SaveSlotData ReadFromDisk(int slotIndex, bool logFailures)
+        internal SaveSlotData ReadFromDisk(int slotIndex, bool logFailures, out string sourceText)
         {
+            sourceText = null;
             string filePath = GetSlotFilePath(slotIndex);
             string backupPath = GetBackupFilePath(slotIndex);
 
             // まずメインファイルから読み込みを試みる
             if (File.Exists(filePath))
             {
-                SaveSlotData mainData = TryReadSlotFile(filePath, out string mainError);
+                SaveSlotData mainData = TryReadSlotFile(filePath, out string mainError, out sourceText);
                 if (mainData != null)
                 {
                     return mainData;
@@ -194,7 +199,7 @@ namespace Game.Core
             // メインが壊れている/存在しないので .bak からフォールバック
             if (File.Exists(backupPath))
             {
-                SaveSlotData backupData = TryReadSlotFile(backupPath, out string backupError);
+                SaveSlotData backupData = TryReadSlotFile(backupPath, out string backupError, out sourceText);
                 if (backupData != null)
                 {
                     if (logFailures) { Debug.LogError($"[SaveDataStore] .bak からフォールバック復元しました (slot={slotIndex}, path='{backupPath}')"); }
@@ -211,6 +216,7 @@ namespace Game.Core
         public void DeleteSlot(int slotIndex)
         {
             string filePath = GetSlotFilePath(slotIndex);
+            RecordSlotMutation(filePath);
             if (File.Exists(filePath))
             {
                 File.Delete(filePath);
@@ -231,13 +237,33 @@ namespace Game.Core
 
         internal bool HasSlotFiles(int slotIndex) => HasSlotFile(slotIndex) || File.Exists(GetBackupFilePath(slotIndex));
 
+        internal ulong GetSlotRevision(int slotIndex)
+        {
+            string filePath = Path.GetFullPath(GetSlotFilePath(slotIndex));
+            lock (s_SlotRevisions)
+            {
+                return s_SlotRevisions.TryGetValue(filePath, out ulong revision) ? revision : 0;
+            }
+        }
+
+        private static void RecordSlotMutation(string filePath)
+        {
+            filePath = Path.GetFullPath(filePath);
+            lock (s_SlotRevisions)
+            {
+                s_SlotRevisions.TryGetValue(filePath, out ulong revision);
+                s_SlotRevisions[filePath] = revision + 1;
+            }
+        }
+
         /// <summary>
         /// 指定パスのJSONファイルを読み込んで SaveSlotData に復元する。
         /// 成功時は SaveSlotData、失敗時は null を返し errorMessage にエラー内容を格納する。
         /// </summary>
-        private static SaveSlotData TryReadSlotFile(string filePath, out string errorMessage)
+        private static SaveSlotData TryReadSlotFile(string filePath, out string errorMessage, out string sourceText)
         {
             errorMessage = null;
+            sourceText = null;
 
             string fileJson;
             try
@@ -326,6 +352,7 @@ namespace Game.Core
                 }
             }
 
+            sourceText = fileJson;
             return slotData;
         }
 

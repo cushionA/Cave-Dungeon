@@ -85,10 +85,12 @@ namespace Game.Core
                 applyHpDamage: !context.usesMpBarrier);
             float actionArmorDamage = actionArmorBefore - actionArmor;
             defense.actionArmorConsumed += actionArmorDamage;
-            bool interrupt = actionArmorBefore > 0f && actionArmorDamage > 0f && actionArmor <= 0f
+            // バリア枯渇で消滅するときは、受理済みの行動を被弾リアクションで置き換えない。
+            bool depletesBarrier = context.usesMpBarrier && actualDamage > 0 && actualDamage >= vitals.currentMp;
+            bool interrupt = !depletesBarrier && actionArmorBefore > 0f && actionArmorDamage > 0f && actionArmor <= 0f
                 && !effects.hasSuperArmor && !GuardJudgmentLogic.IsGuardSucceeded(guard.result);
             bool hasKnockback = attack.knockbackForce.sqrMagnitude > 0.01f;
-            HitReaction reaction = HitReactionLogic.Determine(effects.hasSuperArmor,
+            HitReaction reaction = depletesBarrier ? HitReaction.None : HitReactionLogic.Determine(effects.hasSuperArmor,
                 effects.hasKnockbackImmunity, armorBefore + actionArmorBefore,
                 hasKnockback, guard.result, currentState);
             if (interrupt && reaction == HitReaction.None)

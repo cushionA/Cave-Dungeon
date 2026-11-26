@@ -28,7 +28,7 @@ namespace Game.Runtime
         public UnityEvent SaveFailed => onSaveFailed;
         internal string SavePointId => savePointId;
 
-        private SaveDataStore Store => _store ??= new SaveDataStore(string.IsNullOrWhiteSpace(saveFolder)
+        internal SaveDataStore Store => _store ??= new SaveDataStore(string.IsNullOrWhiteSpace(saveFolder)
             ? Application.persistentDataPath : System.IO.Path.Combine(Application.persistentDataPath, saveFolder));
 
         private void Awake() => _interaction = GetComponent<NpcInteraction3D>();
@@ -92,10 +92,12 @@ namespace Game.Runtime
             return true;
         }
 
-        internal bool TryAutosaveCurrentSlot(ActorRef expectedActor)
+        internal bool TryAutosaveCurrentSlot(ActorRef expectedActor, ExpeditionCheckpoint.AutosaveTicket? ticket = null,
+            System.Func<bool> canCommit = null)
         {
             if (!TryGetKnight(out ActorRef actor) || actor != expectedActor) { return false; }
             CharacterVitals vitals = GameManager.Data.GetVitals(actor.Hash);
+            if (ticket.HasValue) { return ticket.Value.TryWrite(gameObject.scene.path, savePointId, vitals, canCommit); }
             return ExpeditionCheckpoint.TryAutosaveCurrentSlot(GameManager.Saves, Store,
                 gameObject.scene.path, savePointId, vitals);
         }

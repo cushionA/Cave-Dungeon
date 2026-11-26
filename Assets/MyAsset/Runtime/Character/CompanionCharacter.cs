@@ -358,6 +358,7 @@ namespace Game.Runtime
         private void OnEnable() => SyncAvailability();
         private void OnDisable()
         {
+            if (_actionExecutorController != null) { _actionExecutorController.CancelGimmickApproach(); }
             ForgetFieldOrders();
             // AIだけを停止しても、存在状態は共有データの正本に従う。
             // GameObjectの終了・プール返却では保存した物理設定を戻す。

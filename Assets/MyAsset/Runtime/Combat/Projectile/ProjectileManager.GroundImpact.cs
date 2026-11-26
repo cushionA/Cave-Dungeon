@@ -32,7 +32,8 @@ namespace Game.Runtime
                 Vector2 direction = (impactPosition - origin).normalized;
                 magic.bulletProfile.moveType = BulletMoveType.Straight;
                 ProjectileController controller = SpawnCapturedProjectile(source.ownerRef, magic, origin, direction,
-                    source.targetRef, explicitTarget: true, groundImpact: new GroundImpactShot(impactPosition, warning));
+                    source.targetRef, CaptureOriginWorld(source.ownerRef), explicitTarget: true,
+                    groundImpact: new GroundImpactShot(impactPosition, warning));
                 transferredWarning = controller != null;
             }
             finally

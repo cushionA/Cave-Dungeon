@@ -15,6 +15,7 @@ namespace Game.Runtime
     {
         /// <summary>InitOrder: 飛翔体は Enemy スポナーより後に初期化する。</summary>
         private const int k_InitOrder = 300;
+        private const float k_FallbackColliderRadius = 0.5f;
 
         [SerializeField] private GameObject _defaultProjectilePrefab;
         [SerializeField] private int _preWarmCount = 32;
@@ -63,7 +64,8 @@ namespace Game.Runtime
             public readonly Vector2 direction;
             public readonly int count;
             public readonly float spread;
-            public ChildSpawn(Projectile parent, in MagicDefinition parentMagic)
+            public readonly PhysicsScene2D? originWorld;
+            public ChildSpawn(Projectile parent, in MagicDefinition parentMagic, PhysicsScene2D? originWorld)
             {
                 ChildBulletConfig config = parentMagic.childBullet;
                 magic = ChildBulletHelper.CreateChildMagic(parentMagic, config);
@@ -74,6 +76,7 @@ namespace Game.Runtime
                     : (parent.InitialDirection.sqrMagnitude > 0.001f ? parent.InitialDirection : Vector2.right);
                 count = config.count;
                 spread = config.spreadAngle;
+                this.originWorld = originWorld;
             }
         }
 
@@ -152,11 +155,12 @@ namespace Game.Runtime
         {
             if (!CanBeginPublicShot(caster)) { return null; }
             if (!TryCaptureAttack(caster, ref magic)) { return null; }
-            return SpawnCapturedProjectile(caster, magic, position, direction, target, explicitTarget: true);
+            return SpawnCapturedProjectile(caster, magic, position, direction, target, CaptureOriginWorld(caster),
+                explicitTarget: true);
         }
 
         private ProjectileController SpawnCapturedProjectile(ActorRef caster, in MagicDefinition magic,
-            Vector2 position, Vector2 direction, ActorRef target, bool explicitTarget = false,
+            Vector2 position, Vector2 direction, ActorRef target, PhysicsScene2D? originWorld, bool explicitTarget = false,
             bool requireTarget = false, GroundImpactShot? groundImpact = null)
         {
             if (_corePool == null || _isClearing || !magic.attackContext.IsCaptured
@@ -191,7 +195,7 @@ namespace Game.Runtime
             try
             {
                 if (groundImpact.HasValue) { _groundImpactShots.Add(lease, groundImpact.Value); }
-                controller.Activate(core, magic, this, canCollide: !groundImpact.HasValue);
+                controller.Activate(core, magic, this, originWorld, canCollide: !groundImpact.HasValue);
             }
             catch
             {
@@ -205,7 +209,7 @@ namespace Game.Runtime
             }
             if (controller.HasChildTrigger(ChildBulletTrigger.OnActivate))
             {
-                SpawnChildProjectiles(core, controller.CapturedMagic);
+                SpawnChildProjectiles(core, controller.CapturedMagic, originWorld);
             }
             return IsCurrent(controller, core, lease) ? controller : null;
 
@@ -221,14 +225,32 @@ namespace Game.Runtime
             && !GameManager.Data.Uses3DPhysics(caster.Hash)
             && !GameManager.Data.GetFlags(caster.Hash).IsVanished;
 
-        internal int GetCollisionMask(GameObject customPrefab)
+        internal static PhysicsScene2D? CaptureOriginWorld(ActorRef caster)
+            => GameManager.Actors?.IsCurrent(caster) == true
+                ? GameManager.PhysicsSceneOf(GameManager.Data.GetManaged(caster.Hash))
+                : null;
+
+        internal bool TryGetStraightCollisionShape(GameObject customPrefab, out int mask, out float worldRadius)
         {
+            mask = 0;
+            worldRadius = 0f;
             GameObject prefab = customPrefab != null ? customPrefab : _defaultProjectilePrefab;
-            if (prefab != null && prefab.TryGetComponent(out CircleCollider2D collider) && collider.offset != Vector2.zero)
+            float radius = k_FallbackColliderRadius;
+            Vector3 scale = Vector3.one;
+            if (prefab != null)
             {
-                return 0;
+                if (prefab.TryGetComponent(out CircleCollider2D collider))
+                {
+                    if (collider.offset != Vector2.zero) { return false; }
+                    radius = collider.radius;
+                }
+                scale = prefab.transform.localScale;
             }
-            return Physics2D.GetLayerCollisionMask(prefab != null ? prefab.layer : 0);
+            mask = Physics2D.GetLayerCollisionMask(prefab != null ? prefab.layer : 0);
+            // A horizontal projectile sets its rotation in world space, even under a scaled pool parent.
+            Matrix4x4 localShape = Matrix4x4.TRS(Vector3.zero, Quaternion.Inverse(transform.rotation), scale);
+            worldRadius = ProjectileController.GetWorldRadius(radius, (transform.localToWorldMatrix * localShape).lossyScale);
+            return worldRadius > 0f && float.IsFinite(worldRadius);
         }
 
         private bool TryCaptureAttack(ActorRef caster, ref MagicDefinition magic, bool acceptedExecution = false)
@@ -289,14 +311,15 @@ namespace Game.Runtime
         {
             if (!CanBeginPublicShot(caster)) { return; }
             if (!TryCaptureAttack(caster, ref magic)) { return; }
-            SpawnCapturedSpread(caster, magic, position, baseDirection, count, spreadAngle, target, explicitTarget: true);
+            SpawnCapturedSpread(caster, magic, position, baseDirection, count, spreadAngle, target, CaptureOriginWorld(caster),
+                explicitTarget: true);
         }
 
         internal void SpawnSpreadFromExecution(in ActionExecution source, MagicDefinition magic,
             Vector2 position, Vector2 baseDirection, int count, float spreadAngle, ActorRef target = default)
         {
             if (!TryCaptureExecutionShot(source, ref magic)) { return; }
-            SpawnCapturedSpread(source.ownerRef, magic, position, baseDirection, count, spreadAngle, target,
+            SpawnCapturedSpread(source.ownerRef, magic, position, baseDirection, count, spreadAngle, target, CaptureOriginWorld(source.ownerRef),
                 explicitTarget: magic.bulletProfile.moveType == BulletMoveType.Homing);
         }
 
@@ -308,6 +331,7 @@ namespace Game.Runtime
 
             Physics2D.SyncTransforms();
             uint clearVersion = _clearVersion;
+            PhysicsScene2D? originWorld = CaptureOriginWorld(source.ownerRef);
             for (int i = 0; i < targets.Count; i++)
             {
                 if (_isClearing || clearVersion != _clearVersion
@@ -318,7 +342,7 @@ namespace Game.Runtime
                 Vector2 offset = targetPosition - position;
                 Vector2 direction = offset.sqrMagnitude > 0f ? offset.normalized
                     : source.direction.sqrMagnitude > 0f ? source.direction.normalized : Vector2.right;
-                SpawnCapturedProjectile(source.ownerRef, magic, position, direction, target,
+                SpawnCapturedProjectile(source.ownerRef, magic, position, direction, target, originWorld,
                     explicitTarget: true, requireTarget: true);
             }
         }
@@ -336,12 +360,13 @@ namespace Game.Runtime
         }
 
         private void SpawnCapturedSpread(ActorRef caster, in MagicDefinition magic,
-            Vector2 position, Vector2 baseDirection, int count, float spreadAngle, ActorRef target, bool explicitTarget = false)
+            Vector2 position, Vector2 baseDirection, int count, float spreadAngle, ActorRef target,
+            PhysicsScene2D? originWorld, bool explicitTarget = false)
         {
             if (count <= 0) { return; }
             if (count == 1)
             {
-                SpawnCapturedProjectile(caster, magic, position, baseDirection, target, explicitTarget);
+                SpawnCapturedProjectile(caster, magic, position, baseDirection, target, originWorld, explicitTarget);
                 return;
             }
 
@@ -357,7 +382,7 @@ namespace Game.Runtime
                 float rad = angle * Mathf.Deg2Rad;
                 Vector2 dir = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
 
-                SpawnCapturedProjectile(caster, magic, position, dir, target, explicitTarget);
+                SpawnCapturedProjectile(caster, magic, position, dir, target, originWorld, explicitTarget);
             }
         }
 
@@ -397,7 +422,7 @@ namespace Game.Runtime
                                 step.core.LastEmitTime, step.core.CapturedProfile.emitInterval))
                         {
                             step.core.LastEmitTime = step.core.ElapsedTime;
-                            SpawnChildProjectiles(step.core, step.controller.CapturedMagic);
+                            SpawnChildProjectiles(step.core, step.controller.CapturedMagic, step.controller.OriginWorld);
                         }
                     }
                     if (IsCurrent(step.controller, step.core, step.lease) && !step.core.IsAlive)
@@ -654,7 +679,7 @@ namespace Game.Runtime
             bool emit = emitDestroy && _corePool.IsActive(core, lease) && !ReferenceEquals(controller, null)
                 && controller.HasChildTrigger(ChildBulletTrigger.OnDestroy);
             // Own the child inputs before pool return/OnDisable can reuse the controller.
-            ChildSpawn children = emit ? new ChildSpawn(core, controller.CapturedMagic) : default;
+            ChildSpawn children = emit ? new ChildSpawn(core, controller.CapturedMagic, controller.OriginWorld) : default;
             uint clearVersion = _clearVersion;
             int lastIndex = _activeProjectiles.Count - 1;
             if (index != lastIndex)
@@ -710,7 +735,7 @@ namespace Game.Runtime
                 go = new GameObject("[Projectile]");
                 go.transform.SetParent(_poolParent, false);
                 go.AddComponent<Rigidbody2D>();
-                go.AddComponent<CircleCollider2D>();
+                go.AddComponent<CircleCollider2D>().radius = k_FallbackColliderRadius;
             }
             ProjectileController controller = go.GetComponent<ProjectileController>();
             if (controller == null) { controller = go.AddComponent<ProjectileController>(); }
@@ -720,10 +745,10 @@ namespace Game.Runtime
         }
 
         /// <summary>個体・攻撃snapshotを継承し、子自身のchildBulletを切って再帰生成を防ぐ。</summary>
-        internal void SpawnChildProjectiles(Projectile parent, MagicDefinition parentMagic)
+        internal void SpawnChildProjectiles(Projectile parent, MagicDefinition parentMagic, PhysicsScene2D? originWorld)
         {
             if (parent == null || !ChildBulletHelper.HasChildBullet(parentMagic)) { return; }
-            SpawnChildren(new ChildSpawn(parent, parentMagic));
+            SpawnChildren(new ChildSpawn(parent, parentMagic, originWorld));
         }
 
         private void SpawnChildren(in ChildSpawn children)
@@ -732,7 +757,7 @@ namespace Game.Runtime
             if (children.magic.attackContext.IsCaptured)
             {
                 SpawnCapturedSpread(children.caster, children.magic, children.position,
-                    children.direction, children.count, children.spread, children.target);
+                    children.direction, children.count, children.spread, children.target, children.originWorld);
             }
             else if (CanBeginPublicShot(children.caster))
             {
@@ -740,7 +765,7 @@ namespace Game.Runtime
                 if (TryCaptureAttack(children.caster, ref magic))
                 {
                     SpawnCapturedSpread(children.caster, magic, children.position,
-                        children.direction, children.count, children.spread, children.target);
+                        children.direction, children.count, children.spread, children.target, children.originWorld);
                 }
             }
         }

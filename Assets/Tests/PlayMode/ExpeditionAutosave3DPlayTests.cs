@@ -33,6 +33,7 @@ namespace Game.Tests.PlayMode
         private CharacterInfo _knightInfo;
         private EncounterSession3D _encounter;
         private ChallengeDefinition _challenge;
+        private ExpeditionAutosave3D _autosave;
 
         [UnitySetUp]
         public IEnumerator SetUp()
@@ -82,8 +83,8 @@ namespace Game.Tests.PlayMode
             encounter.SetActive(true);
 
             GameObject source = NewInactiveRoot("Authored autosave hooks");
-            ExpeditionAutosave3D autosave = source.AddComponent<ExpeditionAutosave3D>();
-            config = new SerializedObject(autosave);
+            _autosave = source.AddComponent<ExpeditionAutosave3D>();
+            config = new SerializedObject(_autosave);
             config.FindProperty("savePoint").objectReferenceValue = _checkpoint;
             SerializedProperty areas = config.FindProperty("areaPaths");
             areas.arraySize = 1;
@@ -177,6 +178,13 @@ namespace Game.Tests.PlayMode
 
             saves.SetActiveSlot(k_ActiveSlot);
             CompleteEncounter();
+            saves.SetActiveSlot(2);
+            saves.SetActiveSlot(k_ActiveSlot);
+            yield return null;
+            yield return null;
+            Assert.AreSame(original, saves.GetSlotData(k_ActiveSlot));
+
+            CompleteEncounter();
             ActorRef before = _knight.Actor;
             _knight.enabled = false;
             _knight.enabled = true;
@@ -184,6 +192,104 @@ namespace Game.Tests.PlayMode
             yield return null;
             yield return null;
             Assert.AreSame(original, saves.GetSlotData(k_ActiveSlot));
+        }
+
+        [UnityTest]
+        public IEnumerator Autosave_WhenSameSlotIsChangedLater_LeavesTheNewerWriteOrDeletionInPlace()
+        {
+            SaveManager saves = GameManager.Saves;
+            CompleteEncounter();
+            Assert.IsTrue(saves.DeleteSaveData(k_ActiveSlot));
+            yield return null;
+            yield return null;
+            Assert.IsFalse(_store.HasSlotFile(k_ActiveSlot), "Deleting an empty slot also cancels pending writes.");
+
+            CompleteEncounter();
+            saves.SetSlotData(k_ActiveSlot, new SaveSlotData(k_ActiveSlot));
+            saves.SetSlotData(k_ActiveSlot, null);
+            yield return null;
+            yield return null;
+            Assert.IsFalse(_store.HasSlotFile(k_ActiveSlot), "Replacing the slot and returning to its old value is still a change.");
+
+            CompleteEncounter();
+            GameManager.Data.GetVitals(_knight.Actor.Hash).currentHp = 37;
+            CharacterVitals vitals = GameManager.Data.GetVitals(_knight.Actor.Hash);
+            Assert.IsTrue(ExpeditionCheckpoint.TrySaveCurrentSlot(saves, _store, k_Origin, k_Checkpoint, vitals, out _));
+            SaveSlotData manual = saves.GetSlotData(k_ActiveSlot);
+            yield return null;
+            yield return null;
+            Assert.AreSame(manual, saves.GetSlotData(k_ActiveSlot), "The later manual save wins.");
+
+            SaveDataStore otherStore = new SaveDataStore(Path.Combine(_directory, "."));
+            SaveSlotData diskReplacement = new SaveSlotData(k_ActiveSlot);
+            diskReplacement.entries["LaterSave"] = true;
+            CompleteEncounter();
+            Assert.IsTrue(otherStore.TryWriteToDisk(diskReplacement));
+            yield return null;
+            yield return null;
+            Assert.AreEqual(true, _store.ReadFromDisk(k_ActiveSlot).entries["LaterSave"]);
+
+            CompleteEncounter();
+            otherStore.DeleteSlot(k_ActiveSlot);
+            yield return null;
+            yield return null;
+            Assert.IsNull(_store.ReadFromDisk(k_ActiveSlot), "A disk-only deletion also wins.");
+        }
+
+        [UnityTest]
+        public IEnumerator Autosave_WhenTriggerIsDisabledInCompletion_SavesAfterLaterRewards()
+        {
+            _encounter.Ended += state =>
+            {
+                if (state != ChallengeState.Completed) { return; }
+                _autosave.enabled = false;
+                GameManager.Flags.SetGlobalFlag(k_Completion, true);
+            };
+
+            CompleteEncounter();
+            Assert.IsFalse(_autosave.isActiveAndEnabled);
+            Assert.IsFalse(_store.HasSlotFile(k_ActiveSlot));
+            yield return WaitForSave();
+
+            using var resumed = new GameManagerCore();
+            resumed.Saves.SetActiveSlot(k_ActiveSlot);
+            Assert.IsTrue(ExpeditionCheckpoint.TryRestoreCurrentSlot(resumed.Saves, _store, k_Origin, k_Checkpoint, out _));
+            Assert.IsTrue(resumed.Flags.GetGlobalFlag(k_Completion));
+        }
+
+        [UnityTest]
+        public IEnumerator Autosave_WhenPreparingAnIntentionalUnload_WritesBeforeTheCheckpointAndKnightLeave()
+        {
+            GameManager.Data.GetVitals(_knight.Actor.Hash).currentHp = 37;
+            GameManager.Data.GetVitals(_knight.Actor.Hash).currentMp = 14f;
+            _encounter.Ended += state =>
+            {
+                if (state == ChallengeState.Completed) { GameManager.Instance.StartCoroutine(UnloadAfterSave()); }
+            };
+            _encounter.Ended += state =>
+            {
+                if (state == ChallengeState.Completed) { GameManager.Flags.SetGlobalFlag(k_Completion, true); }
+            };
+
+            CompleteEncounter();
+            Assert.IsTrue(_origin.isLoaded);
+            float timeout = Time.realtimeSinceStartup + 5f;
+            while (_origin.isLoaded && Time.realtimeSinceStartup < timeout) { yield return null; }
+            Assert.IsFalse(_origin.isLoaded);
+
+            using var resumed = new GameManagerCore();
+            resumed.Saves.SetActiveSlot(k_ActiveSlot);
+            Assert.IsTrue(ExpeditionCheckpoint.TryRestoreCurrentSlot(resumed.Saves, _store, k_Origin, k_Checkpoint,
+                out ExpeditionCheckpoint.Resources resources));
+            Assert.AreEqual(37, resources.Hp);
+            Assert.AreEqual(14f, resources.Mp);
+            Assert.IsTrue(resumed.Flags.GetGlobalFlag(k_Completion));
+        }
+
+        private IEnumerator UnloadAfterSave()
+        {
+            yield return _autosave.WaitForPendingSave();
+            yield return SceneManager.UnloadSceneAsync(_origin);
         }
 
         private void CompleteEncounter()

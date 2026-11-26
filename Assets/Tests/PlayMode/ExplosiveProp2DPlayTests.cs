@@ -147,6 +147,47 @@ namespace Game.Tests.PlayMode
             Assert.AreEqual(1, projectiles.ActiveCount);
         }
 
+        [UnityTest]
+        public IEnumerator ProjectilePropImpact_RequiresTheOriginalCasterWorldForActionAndChildShots()
+        {
+            _foreign = SceneManager.CreateScene("Isolated shooter world", new CreateSceneParameters(LocalPhysicsMode.Physics2D));
+            BaseCharacter caster = MakeVictim("Isolated caster", Vector2.left * 2.5f, CharacterBelong.Ally, _foreign);
+            ExplosiveProp2D prop = MakeProp(out _);
+            ProjectileManager projectiles = GameManager.Projectiles;
+            yield return null;
+
+            GameManager.Data.GetVitals(caster.ObjectHash).position = caster.PhysicsPosition;
+            Assert.AreNotEqual(caster.gameObject.scene.GetPhysicsScene2D(), projectiles.gameObject.scene.GetPhysicsScene2D());
+            Assert.IsTrue(GameManager.Actions.Execute(caster.ObjectHash, MakeShot(), 0, Vector2.right, out _));
+            Assert.AreEqual(1, projectiles.ActiveCount);
+            projectiles.SimulationTick(0.08f);
+            Assert.IsFalse(prop.HasDetonated, "The global projectile manager must preserve the action's original physics world.");
+            projectiles.ClearAll();
+
+            ProjectileController parent = projectiles.SpawnProjectile(caster.ObjectHash, new MagicDefinition
+            {
+                magicType = MagicType.Attack,
+                bulletProfile = new BulletProfile { moveType = BulletMoveType.Straight, lifeTime = 0.05f, hitLimit = 1 },
+                childBullet = new ChildBulletConfig
+                {
+                    trigger = ChildBulletTrigger.OnDestroy,
+                    count = 1,
+                    profile = new BulletProfile { moveType = BulletMoveType.Straight, speed = 160f, lifeTime = 1f, hitLimit = 1 },
+                },
+            }, caster.PhysicsPosition, Vector2.right);
+            Assert.IsNotNull(parent);
+            SceneManager.MoveGameObjectToScene(caster.gameObject, _room);
+            projectiles.SimulationTick(0.1f);
+            Assert.AreEqual(1, projectiles.ActiveCount, "The expired shot emitted its child.");
+            projectiles.SimulationTick(0.05f);
+            Assert.IsFalse(prop.HasDetonated, "A child must inherit the launch world before the caster moved.");
+
+            projectiles.ClearAll();
+            Assert.IsNotNull(Shoot(projectiles, caster));
+            projectiles.SimulationTick(0.05f);
+            Assert.IsTrue(prop.HasDetonated, "A new shot from the same-world caster can detonate the prop.");
+        }
+
         private static ProjectileManager MakeProjectileManager(Scene scene)
         {
             GameObject root = new GameObject("Projectile manager");
@@ -312,14 +353,7 @@ namespace Game.Tests.PlayMode
         [UnityTest]
         public IEnumerator AiGimmick_RequiresSafeClearAim_AndOnlyTheProjectileContactDetonates()
         {
-            AttackInfo shot = MakeAttack();
-            shot.SetPersistentIdForTest("explosive-prop-test-shot");
-            shot.motion.info = new MotionInfo { activeMotionDuration = 0.2f, recoveryDuration = 0.1f };
-            shot.magicType = MagicType.Attack;
-            shot.projectileInfo = new ProjectileInfo
-            {
-                hasProjectile = true, trajectory = BulletMoveType.Straight, speed = 60f, lifetime = 1f, projectileCount = 1,
-            };
+            AttackInfo shot = MakeShot();
             GameObject body = MakeBody("Enemy archer", Vector2.left * 2.5f);
             body.AddComponent<ActionExecutorController>();
             EnemyCharacter archer = AddActor<EnemyCharacter>(body, CharacterBelong.Enemy, CharacterFeature.Minion);
@@ -359,7 +393,14 @@ namespace Game.Tests.PlayMode
             Assert.AreEqual(0, projectiles.ActiveCount, "The prop's configured collider is occluded.");
 
             wall.SetActive(false);
+            ExplosiveProp2D nearer = MakeProp(out _);
+            nearer.transform.position = s_Origin + new Vector2(-1f, 0.42f);
             GameManager.Instance.SimulationTick(0.6f, 2.2f);
+            Assert.AreEqual(0, projectiles.ActiveCount, "The projectile radius clips a nearer prop outside the centerline.");
+            Assert.IsFalse(nearer.HasDetonated);
+
+            nearer.gameObject.SetActive(false);
+            GameManager.Instance.SimulationTick(0.6f, 2.8f);
             Assert.AreEqual(knight.ObjectHash, archer.FieldOrderJudgment.CurrentTargetHash);
             Assert.IsTrue(GameManager.Actions.Execution.GetPrimary(archer.ObjectHash, out ActionExecution execution));
             Assert.AreEqual(Vector2.right, execution.direction);
@@ -531,6 +572,19 @@ namespace Game.Tests.PlayMode
             attack.attackElement = Element.Slash;
             _assets.Add(attack);
             return attack;
+        }
+
+        private AttackInfo MakeShot()
+        {
+            AttackInfo shot = MakeAttack();
+            shot.SetPersistentIdForTest("explosive-prop-test-shot");
+            shot.motion.info = new MotionInfo { activeMotionDuration = 0.2f, recoveryDuration = 0.1f };
+            shot.magicType = MagicType.Attack;
+            shot.projectileInfo = new ProjectileInfo
+            {
+                hasProjectile = true, trajectory = BulletMoveType.Straight, speed = 60f, lifetime = 1f, projectileCount = 1,
+            };
+            return shot;
         }
 
         private static int Hp(BaseCharacter actor) => GameManager.Data.GetVitals(actor.ObjectHash).currentHp;

@@ -153,6 +153,10 @@ MonoBehaviour:
   supportedScenePaths:
   - Assets/Scenes/ExpeditionMock3DScene.unity
   saveFolder: ExpeditionMock3D
+  transitionPresentation:
+  - {fileID: 1427173262}
+  - {fileID: 1427173263}
+  - {fileID: 529379527}
 --- !u!114 &495650754
 MonoBehaviour:
   m_ObjectHideFlags: 0

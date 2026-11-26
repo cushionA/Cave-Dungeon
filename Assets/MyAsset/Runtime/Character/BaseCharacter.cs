@@ -316,7 +316,11 @@ namespace Game.Runtime
         }
 
         /// <summary>全キャラの判断後、同じUnity物理ステップに間に合う位置で適用する。</summary>
-        public virtual void ApplySimulationPhysics() => SyncPositionToData();
+        public virtual void ApplySimulationPhysics()
+        {
+            if (_actionController != null) { _actionController.RecheckGimmickApproachBeforePhysics(); }
+            SyncPositionToData();
+        }
 
         protected void SyncPositionToData()
         {

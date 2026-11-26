@@ -204,11 +204,22 @@ namespace Game.Tests.PlayMode
             routes.BeginObservation(2, participants);
             Assert.IsFalse(routes.TryFollow(fighter, first.Actor, firstRoute, false, ground, ground, out _, out _));
             Assert.IsFalse(routes.TryPrepare(fighter, oldSighting, 1.6f, waypoints, null, ground, ground, out _));
+            first.transform.position += Vector3.right * 0.3f;
+            Physics.SyncTransforms();
             EncounterSighting3D firstSighting = new(fighter.Actor, first.Actor, 2, first.Motor.FeetPosition, first.Body.bounds.center);
             EncounterSighting3D secondSighting = new(fighter.Actor, second.Actor, 2, second.Motor.FeetPosition, second.Body.bounds.center);
             Assert.IsTrue(routes.TryPrepare(fighter, firstSighting, 1.6f, waypoints, null, ground, ground,
                 out EncounterApproachRoutes3D.Decision currentFirst));
             Assert.AreEqual(firstRoute.RouteId, currentFirst.RouteId);
+            first.transform.position += Vector3.right * 0.1f;
+            Physics.SyncTransforms();
+            Assert.IsTrue(routes.TryFollow(fighter, first.Actor, currentFirst, false, ground, ground,
+                out Vector3 following, out _));
+            Assert.That(following.x, Is.GreaterThan(0.9f));
+            first.transform.position += Vector3.right * 0.3f;
+            Physics.SyncTransforms();
+            Assert.IsFalse(routes.TryFollow(fighter, first.Actor, currentFirst, false, ground, ground, out _, out _));
+
             Assert.IsTrue(routes.TryPrepare(fighter, secondSighting, 1.6f, waypoints, null, ground, ground,
                 out EncounterApproachRoutes3D.Decision currentSecond));
             Assert.AreNotEqual(currentFirst.RouteId, currentSecond.RouteId);

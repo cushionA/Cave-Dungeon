@@ -297,6 +297,50 @@ namespace Game.Tests.PlayMode
         }
 
         [Test]
+        public void DistantSwitch_DisablingOnlyTheOperatorReleasesItsReservationAndStopsMovement()
+        {
+            CreateApproachFloor();
+            AISceneGimmickController lever = CreateApproachSwitch();
+            GameManager.Instance.SimulationTick(DecisionInterval, 1f);
+            ActionExecutorController executor = _operator.GetComponent<ActionExecutorController>();
+            long approachGroup = executor.CurrentGroupId;
+            Assert.AreNotEqual(0, approachGroup);
+            Assert.IsFalse(lever.IsAvailable);
+            Assert.Less(_operator.PhysicsVelocity.x, 0f);
+
+            _operator.enabled = false;
+
+            Assert.IsTrue(_operator.gameObject.activeInHierarchy);
+            Assert.IsTrue(lever.IsAvailable);
+            Assert.IsFalse(GameManager.Actions.Execution.IsGroupActive(approachGroup));
+            Assert.AreEqual(0f, _operator.PhysicsVelocity.x);
+        }
+
+        [UnityTest]
+        public IEnumerator DistantSwitch_LosingTheFloorDuringAnotherDecisionStopsBeforePhysics()
+        {
+            BoxCollider2D floor = CreateApproachFloor();
+            AISceneGimmickController lever = CreateApproachSwitch();
+            GameManager.Instance.SimulationTick(DecisionInterval, 1f);
+            ActionExecutorController executor = _operator.GetComponent<ActionExecutorController>();
+            long approachGroup = executor.CurrentGroupId;
+            Assert.AreNotEqual(0, approachGroup);
+            Assert.Less(_operator.PhysicsVelocity.x, 0f);
+
+            CreateOperator(7.5f);
+            AISceneGimmickController nearby = CreateSwitch(3f, operationX: 8f);
+            nearby.OnActivated.AddListener(() => floor.enabled = false);
+            yield return null;
+
+            GameManager.Instance.SimulationTick(DecisionInterval, 1f + DecisionInterval);
+
+            Assert.IsFalse(floor.enabled, "The other AI must operate its switch during the decision phase.");
+            Assert.IsTrue(lever.IsAvailable);
+            Assert.IsFalse(GameManager.Actions.Execution.IsGroupActive(approachGroup));
+            Assert.AreEqual(0f, _operator.PhysicsVelocity.x);
+        }
+
+        [Test]
         public void DistantSwitch_AnImmediateSwitchTakesPriorityEvenIfItsAnchorIsFurther()
         {
             CreateApproachFloor();

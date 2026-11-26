@@ -76,6 +76,21 @@ namespace Game.Tests.EditMode
                 ExpeditionLaunch.ReadSlot(_store, 0, path => path == "Assets/Scenes/Other/NextExpeditionStart.unity").Status);
         }
 
+        [Test]
+        public void ReadSlot_NextCycleRouteRequiresAValidCycleOfAtLeastTwo()
+        {
+            using var world = new GameManagerCore();
+            StartNextCycle(world);
+            SaveSlotData saved = _store.ReadFromDisk(0);
+
+            foreach (object invalid in new object[] { 1, "2" })
+            {
+                saved.entries[k_CycleEntry] = invalid;
+                Assert.IsTrue(_store.TryWriteToDisk(saved));
+                Assert.AreEqual(ExpeditionSlotStatus.Unavailable, Read(0).Status);
+            }
+        }
+
         [TestCase(true)]
         [TestCase(false)]
         public void ReadSlot_PresentInvalidCheckpointPreventsFallbackToNextCycle(bool nullEntry)

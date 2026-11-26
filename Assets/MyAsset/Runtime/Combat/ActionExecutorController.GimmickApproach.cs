@@ -30,7 +30,35 @@ namespace Game.Runtime
             return Result(ActionDispatchStatus.Accepted, instance, group, target);
         }
 
-        private void RefreshGimmickApproach(in ActionExecution current, float deltaTime)
+        // 別のAIの行動開始コールバックが、判断後に床や操作点を変えることがある。
+        internal void RecheckGimmickApproachBeforePhysics()
+        {
+            if (_gimmickApproach.IsAssigned && GameManager.Actions is GameActionRuntime actions
+                && actions.Execution.TryGetInstance(_aiMovementInstanceId, out ActionExecution current)
+                && current.ownerHash == _ownerHash)
+            {
+                RefreshGimmickApproach(current, Time.fixedDeltaTime, activateOnArrival: false);
+            }
+        }
+
+        internal void CancelGimmickApproach()
+        {
+            if (!_gimmickApproach.IsAssigned) { return; }
+            _gimmickApproach.Release();
+            _gimmickApproach = default;
+            if (GameManager.Actions is not GameActionRuntime actions
+                || !actions.Execution.TryGetInstance(_aiMovementInstanceId, out ActionExecution current)
+                || current.ownerHash != _ownerHash) { return; }
+
+            actions.Execution.UpdateInput(current.instanceId, Vector2.zero, 0f);
+            if (GameManager.Data.GetManaged(_ownerHash) is BaseCharacter owner && owner != null)
+            {
+                owner.SetPhysicsVelocity(new Vector2(0f, owner.PhysicsVelocity.y));
+            }
+            actions.Execution.CancelGroup(current.groupId);
+        }
+
+        private void RefreshGimmickApproach(in ActionExecution current, float deltaTime, bool activateOnArrival = true)
         {
             ActionExecutionSystem execution = GameManager.Actions.Execution;
             if (_gimmickApproach.TryGetStep(_gimmickActors, out Vector2 destination, out bool arrived)
@@ -45,6 +73,8 @@ namespace Game.Runtime
                 }
 
                 execution.UpdateInput(current.instanceId, Vector2.zero, 0f);
+                if (!activateOnArrival) { return; }
+                owner.SetPhysicsVelocity(new Vector2(0f, owner.PhysicsVelocity.y));
                 AISceneGimmickController.ApproachReservation completed = _gimmickApproach;
                 _gimmickApproach = default;
                 try { completed.Activate(); }
@@ -56,10 +86,7 @@ namespace Game.Runtime
                 return;
             }
 
-            _gimmickApproach.Release();
-            _gimmickApproach = default;
-            execution.UpdateInput(current.instanceId, Vector2.zero, 0f);
-            execution.CancelGroup(current.groupId);
+            CancelGimmickApproach();
         }
 
         private void ReleaseGimmickTravel()

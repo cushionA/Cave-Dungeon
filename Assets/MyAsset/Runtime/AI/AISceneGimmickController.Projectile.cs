@@ -84,38 +84,45 @@ namespace Game.Runtime
                 return false;
             }
 
-            int collisionMask = projectiles.GetCollisionMask(prefab);
-            if ((collisionMask & (1 << hit.gameObject.layer)) == 0) { return false; }
+            if (!projectiles.TryGetStraightCollisionShape(prefab, out int collisionMask, out float radius)
+                || (collisionMask & (1 << hit.gameObject.layer)) == 0
+                || !float.IsFinite(position.x) || !float.IsFinite(position.y)) { return false; }
             float dx = hit.bounds.center.x - position.x;
             float distance = Mathf.Min(Mathf.Abs(dx), bullet.speed * bullet.lifeTime);
-            if (!(distance > 0f) || !float.IsFinite(position.y)) { return false; }
+            if (!(distance > 0f)) { return false; }
 
             Vector2 aim = Vector2.right * Mathf.Sign(dx);
             ContactFilter2D filter = new ContactFilter2D { useTriggers = true };
-            filter.SetLayerMask(operationBlockers.value | collisionMask);
-            world.Raycast(position, aim, distance, filter, _shotHits);
-            bool reachesProp = false;
-            foreach (RaycastHit2D contact in _shotHits)
+            filter.SetLayerMask(collisionMask);
+            world.CircleCast(position, radius, aim, distance, filter, _shotHits);
+            Collider2D firstProp = null;
+            foreach (RaycastHit2D impact in _shotHits)
             {
-                if (contact.collider == hit)
+                ExplosiveProp2D prop = ExplosiveProp2D.FindLiveContact(impact.collider);
+                if (prop != null && prop.TryGetBlast(out _, out _))
                 {
-                    reachesProp = true;
-                    break;
-                }
-                Collider2D obstruction = contact.collider;
-                int layer = 1 << obstruction.gameObject.layer;
-                if (!obstruction.isTrigger && (operationBlockers.value & layer) != 0
-                    || (collisionMask & layer) != 0 && ExplosiveProp2D.FindLiveContact(obstruction) != null)
-                {
+                    firstProp = impact.collider;
                     break;
                 }
             }
             _shotHits.Clear();
-            if (!reachesProp) { return false; }
+            if (firstProp != hit || !HasClearProjectileSight(world, position, aim, distance, hit)) { return false; }
 
             direction = aim;
             lifetime = bullet.lifeTime;
             return true;
+        }
+
+        private bool HasClearProjectileSight(PhysicsScene2D world, Vector2 position, Vector2 aim, float distance,
+            Collider2D intendedProp)
+        {
+            if (operationBlockers.value == 0) { return true; }
+            ContactFilter2D filter = new ContactFilter2D { useTriggers = false };
+            filter.SetLayerMask(operationBlockers);
+            world.Raycast(position, aim, distance, filter, _shotHits);
+            bool clear = _shotHits.Count == 0 || _shotHits[0].collider == intendedProp;
+            _shotHits.Clear();
+            return clear;
         }
 
         private bool ReserveShot(PhysicsScene2D world, Vector2 spawnPosition, out ShotReservation shot)

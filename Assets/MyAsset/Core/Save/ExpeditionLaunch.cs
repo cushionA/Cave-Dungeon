@@ -8,6 +8,7 @@ namespace Game.Core
     public readonly struct ExpeditionSlot
     {
         internal SaveSlotData Data { get; }
+        internal string SourceText { get; }
         public ExpeditionSlotStatus Status { get; }
         public string ScenePath { get; }
         public string SavePointId { get; }
@@ -15,13 +16,14 @@ namespace Game.Core
         public string Timestamp => Data?.timestamp;
 
         internal ExpeditionSlot(ExpeditionSlotStatus status, SaveSlotData data = null, string scenePath = null,
-            string savePointId = null, int cycleNumber = 0)
+            string savePointId = null, int cycleNumber = 0, string sourceText = null)
         {
             Status = status;
             Data = data;
             ScenePath = scenePath;
             SavePointId = savePointId;
             CycleNumber = cycleNumber;
+            SourceText = sourceText;
         }
     }
 
@@ -33,7 +35,7 @@ namespace Game.Core
             if (store == null || (uint)slot >= SaveManager.k_MaxSlots || isSupportedScene == null) { return unavailable; }
             if (!store.HasSlotFiles(slot)) { return new ExpeditionSlot(ExpeditionSlotStatus.Empty); }
 
-            SaveSlotData saved = store.ReadFromDisk(slot, logFailures: false);
+            SaveSlotData saved = store.ReadFromDisk(slot, logFailures: false, out string sourceText);
             if (saved?.slotIndex != slot || saved.entries == null) { return unavailable; }
             int cycleNumber = 1;
             if (saved.entries.TryGetValue(ExpeditionPlaythrough.k_SaveId, out object cycle)
@@ -45,8 +47,19 @@ namespace Game.Core
                 ? ExpeditionCheckpoint.TryReadDestination(saved, out scenePath, out savePointId)
                 : ExpeditionNextPlaythrough.TryReadStartScene(saved, out scenePath) && cycleNumber >= 2;
             return valid && isSupportedScene(scenePath)
-                ? new ExpeditionSlot(ExpeditionSlotStatus.Ready, saved, scenePath, savePointId, cycleNumber)
+                ? new ExpeditionSlot(ExpeditionSlotStatus.Ready, saved, scenePath, savePointId, cycleNumber, sourceText)
                 : unavailable;
+        }
+
+        /// <summary>シーンの準備中に保存内容が変わっていない場合だけ、現在のスロットを返す。</summary>
+        public static bool TryReadUnchangedSlot(SaveDataStore store, int slot, Func<string, bool> isSupportedScene,
+            ExpeditionSlot selected, out ExpeditionSlot current)
+        {
+            current = ReadSlot(store, slot, isSupportedScene);
+            if (selected.Status != current.Status) { return false; }
+            return current.Status == ExpeditionSlotStatus.Empty
+                || (current.Status == ExpeditionSlotStatus.Ready && selected.Data.slotIndex == slot
+                    && string.Equals(current.SourceText, selected.SourceText, StringComparison.Ordinal));
         }
 
         public static bool TryRestoreCheckpoint(SaveManager saves, ExpeditionSlot launch, string scenePath, string savePointId,

@@ -27,16 +27,18 @@ namespace Game.Runtime
             public ActorRef Owner { get; }
             public ActorRef Target { get; }
             public long ObservationTick { get; }
+            public Vector3 ObservedTargetPosition { get; }
             public ulong RouteId { get; }
             public Vector3 ArrivalPoint { get; }
             public float TravelSeconds { get; }
 
-            internal Decision(ActorRef owner, ActorRef target, long observationTick, ulong routeId,
+            internal Decision(ActorRef owner, in EncounterSighting3D sighting, ulong routeId,
                 Vector3 arrivalPoint, float travelSeconds)
             {
                 Owner = owner;
-                Target = target;
-                ObservationTick = observationTick;
+                Target = sighting.Target;
+                ObservationTick = sighting.ObservationTick;
+                ObservedTargetPosition = sighting.Position;
                 RouteId = routeId;
                 ArrivalPoint = arrivalPoint;
                 TravelSeconds = travelSeconds;
@@ -65,7 +67,7 @@ namespace Game.Runtime
             public ulong id;
             public Scene scene;
             public ActorRef target;
-            public Vector3 targetPosition;
+            public Vector3 plannedTargetPosition;
             public int next = -1;
             public float retryAt;
             public float stalledTime;
@@ -159,11 +161,11 @@ namespace Game.Runtime
             }
             bool changedTarget = route.scene != scene || route.target != sighting.Target;
             if (changedTarget) { route.failedJump = default; }
-            if (changedTarget || (route.targetPosition - sighting.Position).sqrMagnitude > k_TargetDrift * k_TargetDrift)
+            if (changedTarget || (route.plannedTargetPosition - sighting.Position).sqrMagnitude > k_TargetDrift * k_TargetDrift)
             {
                 route.scene = scene;
                 route.target = sighting.Target;
-                route.targetPosition = sighting.Position;
+                route.plannedTargetPosition = sighting.Position;
                 route.next = -1;
                 route.retryAt = 0f;
             }
@@ -195,7 +197,7 @@ namespace Game.Runtime
                 : Vector3.Distance(feet, route.steps[route.next]) + route.remainingCost[route.next];
             float travelSeconds = remaining / speed;
             if (!float.IsFinite(travelSeconds)) { return false; }
-            decision = new Decision(owner, sighting.Target, sighting.ObservationTick, route.id, route.steps[0], travelSeconds);
+            decision = new Decision(owner, sighting, route.id, route.steps[0], travelSeconds);
             return true;
         }
 
@@ -213,7 +215,7 @@ namespace Game.Runtime
                 || !actor.Motor.IsGrounded || !actor.Body.enabled
                 || !MultiLockTargeting3D.TryGetActor(target, out CharacterActor3D liveTarget)
                 || liveTarget.gameObject.scene != scene || !IsHostile(decision.Owner, target)
-                || (liveTarget.Motor.FeetPosition - route.targetPosition).sqrMagnitude > k_TargetDrift * k_TargetDrift)
+                || (liveTarget.Motor.FeetPosition - decision.ObservedTargetPosition).sqrMagnitude > k_TargetDrift * k_TargetDrift)
             {
                 return false;
             }

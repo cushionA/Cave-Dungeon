@@ -136,6 +136,101 @@ namespace Game.Tests.PlayMode
             Assert.That(File.ReadAllText(SlotFile(2)), Is.EqualTo(previous));
         }
 
+        [UnityTest]
+        public IEnumerator Title_WhenSavedProgressChangesDuringContinue_RequiresReselection()
+            => RejectChangedSlot(continueExisting: true);
+
+        [UnityTest]
+        public IEnumerator Title_WhenAnEmptySlotIsFilledDuringNewGame_RequiresReselection()
+            => RejectChangedSlot(continueExisting: false);
+
+        [UnityTest]
+        public IEnumerator Title_WhenAListenerWritesDuringWorldActivation_RequiresReselection()
+            => RejectChangedSlot(continueExisting: true, writeOnActivation: true);
+
+        private IEnumerator RejectChangedSlot(bool continueExisting, bool writeOnActivation = false)
+        {
+            const int slot = 1;
+            if (continueExisting) { WriteCheckpoint(slot, k_Point); }
+            yield return LoadTitle();
+            Behaviour[] presentation = TitlePresentation();
+            Assert.That(presentation.All(component => component.isActiveAndEnabled), Is.True);
+            bool requestedLoadApplied = false;
+            string editedContents = null;
+            void ChangeSlot(Scene scene)
+            {
+                if (scene.path != k_Mock) { return; }
+                Assert.That(presentation.Any(component => component.isActiveAndEnabled), Is.False);
+                GameManager.Saves.Loaded += _ => requestedLoadApplied = true;
+                if (!continueExisting) { WriteCheckpoint(slot, k_Point); }
+                SaveSlotData changed = _store.ReadFromDisk(slot);
+                // Keep the original timestamp and destination while changing the actual saved progress.
+                changed.entries["newer.external.progress"] = 7;
+                Assert.That(_store.TryWriteToDisk(changed), Is.True);
+                editedContents = File.ReadAllText(SlotFile(slot));
+            }
+
+            void WriteDuringLoad(Scene scene, LoadSceneMode _) => ChangeSlot(scene);
+            void WriteDuringActivation(Scene _, Scene scene) => ChangeSlot(scene);
+
+            if (writeOnActivation) { SceneManager.activeSceneChanged += WriteDuringActivation; }
+            else { SceneManager.sceneLoaded += WriteDuringLoad; }
+            try
+            {
+                Submit(Slot(slot));
+                yield return WaitFor(() => TitleRoot().Q<Label>("expedition-title-status").text
+                    == "セーブが変更されました。スロットを選び直してください。", "The changed slot should remain at the title.");
+            }
+            finally
+            {
+                SceneManager.sceneLoaded -= WriteDuringLoad;
+                SceneManager.activeSceneChanged -= WriteDuringActivation;
+            }
+
+            Assert.That(requestedLoadApplied, Is.False);
+            Assert.That(GameManager.Instance, Is.Null);
+            Assert.That(SceneManager.GetSceneByPath(k_Mock).isLoaded, Is.False);
+            Assert.That(SceneManager.GetActiveScene(), Is.EqualTo(_title));
+            Assert.That(presentation.All(component => component.isActiveAndEnabled), Is.True);
+            Assert.That(Slot(slot).text, Is.EqualTo("つづきから"));
+            Assert.That(editedContents, Is.Not.Null);
+            Assert.That(File.ReadAllText(SlotFile(slot)), Is.EqualTo(editedContents));
+        }
+
+        [UnityTest]
+        public IEnumerator Title_WhenDisabledDuringLaunch_RetiresTheUncommittedWorldAndRestoresTheMenu()
+        {
+            WriteCheckpoint(0, k_Point);
+            yield return LoadTitle();
+            Behaviour[] presentation = TitlePresentation();
+            GameObject titleObject = Find<ExpeditionTitle3D>(_title, "Expedition title").gameObject;
+            bool worldLoaded = false;
+            bool requestedLoadApplied = false;
+            void ObserveWorld(Scene scene, LoadSceneMode _)
+            {
+                if (scene.path != k_Mock) { return; }
+                worldLoaded = true;
+                GameManager.Saves.Loaded += _ => requestedLoadApplied = true;
+            }
+
+            SceneManager.sceneLoaded += ObserveWorld;
+            try
+            {
+                Submit(Slot(0));
+                titleObject.SetActive(false);
+                yield return WaitFor(() => worldLoaded && !SceneManager.GetSceneByPath(k_Mock).isLoaded
+                    && GameManager.Instance == null, "Disabling the title should retire the in-flight world.");
+            }
+            finally { SceneManager.sceneLoaded -= ObserveWorld; }
+
+            Assert.That(requestedLoadApplied, Is.False);
+            Assert.That(SceneManager.GetActiveScene(), Is.EqualTo(_title));
+            titleObject.SetActive(true);
+            yield return WaitFor(() => Slot(0)?.enabledInHierarchy == true, "Re-enabling the title should give back its slots.");
+            Assert.That(presentation.All(component => component.isActiveAndEnabled), Is.True);
+            Assert.That(Slot(0).text, Is.EqualTo("つづきから"));
+        }
+
         private IEnumerator LoadTitle()
         {
             void Configure(Scene scene, LoadSceneMode _)
@@ -186,7 +281,16 @@ namespace Game.Tests.PlayMode
 
         private VisualElement TitleRoot() => Find<UIDocument>(_title, "Expedition title").rootVisualElement;
 
-        private Button Slot(int slot) => TitleRoot().Q<Button>($"expedition-slot-{slot}");
+        private Button Slot(int slot) => TitleRoot()?.Q<Button>($"expedition-slot-{slot}");
+
+        private Behaviour[] TitlePresentation()
+        {
+            GameObject events = Find<Transform>(_title, "Expedition title UI events").gameObject;
+            Behaviour[] presentation = events.GetComponents<Behaviour>()
+                .Append(Find<AudioListener>(_title, "Title camera")).ToArray();
+            Assert.That(presentation, Has.Length.EqualTo(3));
+            return presentation;
+        }
 
         private static T Find<T>(Scene scene, string name) where T : Component => scene.GetRootGameObjects()
             .SelectMany(root => root.GetComponentsInChildren<T>(true)).Single(component => component.name == name);
@@ -206,7 +310,7 @@ namespace Game.Tests.PlayMode
             float timeout = Time.realtimeSinceStartup + 8f;
             while (!condition() && Time.realtimeSinceStartup < timeout) { yield return null; }
             if (condition()) { yield break; }
-            string titleStatus = _title.isLoaded ? TitleRoot().Q<Label>("expedition-title-status")?.text : "unloaded";
+            string titleStatus = _title.isLoaded ? TitleRoot()?.Q<Label>("expedition-title-status")?.text : "unloaded";
             Assert.Fail($"{message} Active scene was '{SceneManager.GetActiveScene().path}'. "
                 + $"Expedition loaded = {SceneManager.GetSceneByPath(k_Mock).isLoaded}, title status = '{titleStatus}'.");
         }
