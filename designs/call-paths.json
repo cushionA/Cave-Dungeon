@@ -8744,7 +8744,7 @@
       "notes": "実シーンの境界を越えて加算ロードとアンロードを行う。騎士の同じ登録世代を保ち、外部アンロードで残った読み込み済み情報を取り除く。 Unity 6000.6.8f1でLevelStreaming3DPlayTests 1件、ExpeditionMock3DScenePlayTests 1件が成功。",
       "verification_hashes": {
         "Assets/MyAsset/Runtime/Streaming/AreaBoundaryTrigger3D.cs": "09c1af53d469a3f57f2d4458ac948158a9e2c1670fa986edf743a7d3e4adb671",
-        "Assets/MyAsset/Runtime/Streaming/LevelStreamingController.cs": "58c337230e3fe2fda1a235f4b47a9e49522fcd959116b4858df914a01d69f65f",
+        "Assets/MyAsset/Runtime/Streaming/LevelStreamingController.cs": "b3fa95cfc1be07fecc8b8950bde1e4943fd2abd982044315827adf7dd1da43b1",
         "Assets/Scenes/ExpeditionMock3DScene.unity": "7a9cf703e2844ad74df7154a56edcfbef0105f709500ec0a940cb9ae4a772ebd",
         "Assets/Scenes/StreamingAreaA3DTestScene.unity": "d02e031e89ea52ef860a49a6e343b06d2f6ecfa8675c15dde1f13c5b973e7165",
         "Assets/Scenes/StreamingAreaB3DTestScene.unity": "695b7c4f077a0ae030da8c8b8b0bcca8597fe559a3e63d6d702b7121fdb43e46",
@@ -8936,7 +8936,7 @@
       "verification_hashes": {
         "Assets/Integration/ExpeditionQuestGiver.cs": "0e3133114d9c00d37a79da0d69ccc22e18e7ac18c56c27ad8011af60f1f20ccc",
         "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "82e5bd022280b019238a2b77d33c64f5bab929c519249eed001cf4495a4e78a2",
-        "Assets/MyAsset/Runtime/Streaming/LevelStreamingController.cs": "58c337230e3fe2fda1a235f4b47a9e49522fcd959116b4858df914a01d69f65f",
+        "Assets/MyAsset/Runtime/Streaming/LevelStreamingController.cs": "b3fa95cfc1be07fecc8b8950bde1e4943fd2abd982044315827adf7dd1da43b1",
         "Assets/MyAsset/Runtime/UI/ExpeditionNextPlaythroughPanel.cs": "d485515b73443ef1b08797d4db9fdce46aff6962bc0189185780c053330b6d5f",
         "Assets/MyAsset/Runtime/World/BossEncounter3D.cs": "e747af82ed060712f60694a33678f42fce837145773eb19e8145aacbd4cbdc9d",
         "Assets/Scenes/ExpeditionMock3DScene.unity": "7a9cf703e2844ad74df7154a56edcfbef0105f709500ec0a940cb9ae4a772ebd",
