@@ -361,7 +361,7 @@ Coreロジックは実装済みだが、Unity上で動かすMonoBehaviour橋渡�
 - [x] **LevelStreaming Runtime** — Additiveシーンロード/アンロードを実行するMonoBehaviour
   - Core有 / Runtime無
   - エリア境界Trigger検知→ロード指示のロジックはCoreにある
-  - ✅ LevelStreamingOrchestrator + LevelStreamingController + AreaBoundaryTrigger で実装完了
+  - ✅ LevelStreamingOrchestrator、LevelStreamingController、AreaBoundaryTrigger3D で実装完了
 
 ### 🟡 早期に必要（最低限のゲーム体験）
 
@@ -753,8 +753,8 @@ main に取り込まれた「仕様確定版」は新仕様 (perTargetHitLimit �
 
 - [ ] 🟡✓ **動的カメラBounds切替** (2026-04-26 ProCamera2D 導入済み、着手可能)
   - **背景**: エリア遷移時のカメラ範囲切替
-  - **仕様**: `ProCamera2DNumericBoundaries` または `ProCamera2DRooms` を利用し、`AreaBoundaryTrigger.OnAreaLoaded` イベントで bounds を切替
-  - **対象**: `Assets/MyAsset/Runtime/Streaming/AreaBoundaryTrigger.cs`、`LevelStreamingOrchestrator`
+  - **仕様**: `ProCamera2DNumericBoundaries` または `ProCamera2DRooms` を利用し、`GameEvents.OnAreaTransition` の通知で bounds を切替
+  - **対象**: `Assets/MyAsset/Runtime/Camera/ProCamera2DRoomsAdapter.cs`、`LevelStreamingOrchestrator`
 
 - [ ] 🟡✓ **Look-Ahead — Inspector 設定のみで完了 (コード変更不要)** (2026-04-26 検証済み)
   - **背景**: プレイヤー移動方向に先行してカメラを動かす機能
@@ -871,10 +871,7 @@ main に取り込まれた「仕様確定版」は新仕様 (perTargetHitLimit �
 
 - [x] **`FlagManager.SwitchMap` がストリーミング経路から自動呼び出しされない** — `LevelStreamingOrchestrator.AttachFlagManager(FlagManager)` を新設。`NotifyLoadComplete` で接続済みなら自動 SwitchMap(sceneName)。加えて `OnAreaLoadCompleted` / `OnAreaUnloadCompleted` イベントを公開
 
-- [x] **AreaBoundaryTrigger に進入方向判定なし（包括レビュー 2026-04-18）** — 逆方向（退出）でもロードが発火する。Continuous Collision 要件の明記もない
-  - 対象: `Assets/MyAsset/Runtime/Streaming/AreaBoundaryTrigger.cs:28-50`
-  - 修正: 進入方向（velocity）判定を追加 + 高速移動での貫通対策を文書化
-  - ✅ PR TBD で対応
+- [x] **エリア境界の進入方向判定（包括レビュー 2026-04-18）** — `AreaBoundaryTrigger3D` で進入方向を判定する。実シーンのロードとアンロードは `LevelStreaming3DPlayTests` で確認する。
 
 - [x] **LevelStreamingController にロード失敗時のフォールバック** — `_loadOperation.isDone` 後に `HandleLoadComplete` で `SceneManager.GetSceneByName().IsValid() && isLoaded` を検証。無効なら `Debug.LogError` + `k_FallbackSceneName = "GameScene"` を Additive ロード。テスト用注入フック (`SetTestHooks`) も追加
 
