@@ -110,7 +110,7 @@ namespace Game.Runtime
             return true;
         }
 
-        private bool TryGetBlast(out Vector3 center, out float radiusSquared)
+        internal bool TryGetBlast(out Vector3 center, out float radiusSquared)
         {
             center = default;
             radiusSquared = blastRadius * blastRadius;

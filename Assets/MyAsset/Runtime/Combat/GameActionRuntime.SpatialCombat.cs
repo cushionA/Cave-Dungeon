@@ -52,7 +52,12 @@ namespace Game.Runtime
                 return false;
             }
 
-            return Execution.TryStart(new ActionRequest
+            return ExecuteSpatialRequest(actor, definitionId, primaryTarget, selected, out instanceId);
+        }
+
+        private bool ExecuteSpatialRequest(ActorRef actor, int definitionId, ActorRef primaryTarget,
+            ActionTargetSelection selected, out long instanceId)
+            => Execution.TryStart(new ActionRequest
             {
                 ownerHash = actor.Hash,
                 ownerRef = actor,
@@ -63,7 +68,6 @@ namespace Game.Runtime
                 speedMultiplier = 1f,
                 chargeMultiplier = 1f,
             }, out instanceId, out _);
-        }
 
         private void HandleSpatialExecution(in ActionExecutionEvent notification, CharacterActor3D owner)
         {
@@ -95,6 +99,7 @@ namespace Game.Runtime
                     attack3D = entry.attack3D,
                     multiLockRange = MultiLockTargeting3D.SupportsLock(entry.attack3D.shape) ? entry.multiLockRange : 0f,
                     multiLockTargets = current.selectedTargets,
+                    explosiveAim3D = GetStartingExplosiveAim(current),
                 };
                 if (capture.multiLockRange > 0f && capture.multiLockTargets.Count == 0)
                 {
@@ -168,7 +173,14 @@ namespace Game.Runtime
             if (combat.attack3D.shape == AttackShape3D.Projectile)
             {
                 ClearGroundWarning(combat);
-                ReleaseProjectiles3D(owner, current.targetRef, combat, context);
+                if (combat.explosiveAim3D is EncounterExplosiveAim3D.Selection explosiveAim)
+                {
+                    ReleaseExplosiveShot3D(owner, current, combat, context, explosiveAim);
+                }
+                else
+                {
+                    ReleaseProjectiles3D(owner, current.targetRef, combat, context);
+                }
                 if (consumable != null) { ShowConsumableEffect(consumable, owner, combat); }
                 return;
             }

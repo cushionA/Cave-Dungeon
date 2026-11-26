@@ -139,7 +139,7 @@ namespace Game.Runtime
         }
 #endif
 
-        private void ResetPlayerState()
+        internal void ResetPlayerState()
         {
             GameManager.Actions?.StopActor(ObjectHash);
             _jumpBufferTimer = 0f;

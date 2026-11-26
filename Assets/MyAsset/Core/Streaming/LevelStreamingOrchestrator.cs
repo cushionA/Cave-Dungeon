@@ -15,6 +15,8 @@ namespace Game.Core
         private readonly Action<string> _loadSceneCallback;
         private readonly Action<string> _unloadSceneCallback;
         private readonly HashSet<string> _pendingLoads;
+        private readonly HashSet<string> _preloads = new();
+        private readonly HashSet<string> _preloadedAreas = new();
         private FlagManager _flagManager;
         private string _previousActiveScene;
 
@@ -30,7 +32,10 @@ namespace Game.Core
         public event Action<string> OnAreaUnloadCompleted;
 
         public string ActiveScene => _logic.ActiveScene;
+        public string PersistentScene => _logic.PersistentScene;
         public StreamingState State => _logic.State;
+        /// <summary>完了時に活動中のマップを切り替えるロードが待機中または実行中。</summary>
+        public bool HasPendingAreaActivation => _pendingLoads.Count > _preloads.Count;
 
         public LevelStreamingOrchestrator(
             string persistentScene,
@@ -58,6 +63,18 @@ namespace Game.Core
         /// <summary>エリアシーンのロードを要求する。既にロード済みまたはキュー内ならfalse。</summary>
         public bool RequestAreaLoad(string sceneName)
         {
+            if (_preloads.Remove(sceneName)) { return true; }
+            bool firstArrival = _preloadedAreas.Contains(sceneName);
+            if (!string.Equals(_logic.ActiveScene, sceneName, StringComparison.Ordinal) && TryActivateLoadedArea(sceneName))
+            {
+                if (firstArrival) { OnAreaLoadCompleted?.Invoke(sceneName); }
+                return true;
+            }
+            return QueueLoad(sceneName);
+        }
+
+        private bool QueueLoad(string sceneName)
+        {
             if (_pendingLoads.Contains(sceneName))
             {
                 return false;
@@ -69,6 +86,28 @@ namespace Game.Core
             }
 
             _pendingLoads.Add(sceneName);
+            return true;
+        }
+
+        /// <summary>到着先を確認するため、マップの切替や到達報酬を発生させずに加算ロードする。</summary>
+        public bool RequestAreaPreload(string sceneName)
+        {
+            if (string.IsNullOrWhiteSpace(sceneName) || !QueueLoad(sceneName)) { return false; }
+            _preloads.Add(sceneName);
+            return true;
+        }
+
+        public bool IsAreaLoadPending(string sceneName) => _pendingLoads.Contains(sceneName);
+
+        /// <summary>ロード済みの区画へ移動できた時点で、前回のロードを再実行せずに活動中のマップを切り替える。</summary>
+        public bool TryActivateLoadedArea(string sceneName)
+        {
+            string previous = _logic.ActiveScene;
+            if (_logic.State == StreamingState.Unloading || !_logic.TryActivateLoadedScene(sceneName)) { return false; }
+            _preloadedAreas.Remove(sceneName);
+            if (string.Equals(previous, sceneName, StringComparison.Ordinal)) { return true; }
+            _flagManager?.SwitchMap(sceneName);
+            _events.FireAreaTransition(previous, sceneName);
             return true;
         }
 
@@ -109,9 +148,12 @@ namespace Game.Core
         public void NotifyLoadComplete(string sceneName)
         {
             _pendingLoads.Remove(sceneName);
+            bool preload = _preloads.Remove(sceneName);
+            if (preload) { _preloadedAreas.Add(sceneName); }
             _previousActiveScene = _logic.ActiveScene;
-            _logic.CompleteLoad(sceneName);
+            _logic.CompleteLoad(sceneName, makeActive: !preload);
             _events.FireSceneLoadCompleted(sceneName);
+            if (preload) { return; }
             _events.FireAreaTransition(_previousActiveScene, sceneName);
 
             // FlagManager が接続されていればマップローカルフラグセットを切り替え
@@ -126,18 +168,24 @@ namespace Game.Core
         /// <summary>失敗したシーンの再要求と、後続のロードを許可する。</summary>
         public void NotifyLoadFailed(string sceneName)
         {
+            _preloads.Remove(sceneName);
             if (_pendingLoads.Remove(sceneName)) { _logic.FailLoad(); }
         }
 
         /// <summary>シーンアンロード完了を通知する。</summary>
         public void NotifyUnloadComplete(string sceneName)
         {
+            _preloadedAreas.Remove(sceneName);
             _logic.CompleteUnload(sceneName);
             OnAreaUnloadCompleted?.Invoke(sceneName);
         }
 
         /// <summary>別のシーン遷移がアンロードしたエリアをストリーミング状態から取り除く。</summary>
-        public void ForgetUnloadedArea(string sceneName) => _logic.ForgetUnloadedArea(sceneName);
+        public void ForgetUnloadedArea(string sceneName)
+        {
+            _preloadedAreas.Remove(sceneName);
+            _logic.ForgetUnloadedArea(sceneName);
+        }
 
         /// <summary>指定シーンがロード済みか。</summary>
         public bool IsLoaded(string sceneName)

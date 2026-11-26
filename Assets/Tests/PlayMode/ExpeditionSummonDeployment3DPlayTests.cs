@@ -13,7 +13,7 @@ using Object = UnityEngine.Object;
 
 namespace Game.Tests.PlayMode
 {
-    public sealed class ExpeditionSummonDeployment3DPlayTests
+    public sealed partial class ExpeditionSummonDeployment3DPlayTests
     {
         private readonly List<ScriptableObject> _assets = new();
         private readonly List<ExpeditionSummonDeployment3D.DeployedSummon> _summons = new();
@@ -78,6 +78,7 @@ namespace Game.Tests.PlayMode
         public IEnumerator TearDown()
         {
             if (_room.isLoaded) { yield return SceneManager.UnloadSceneAsync(_room); }
+            if (_foreignOrderScene.isLoaded) { yield return SceneManager.UnloadSceneAsync(_foreignOrderScene); }
             foreach (ScriptableObject asset in _assets) { Object.Destroy(asset); }
             _assets.Clear();
             _summons.Clear();
@@ -589,7 +590,7 @@ namespace Game.Tests.PlayMode
             fixedUpdate.Invoke(controller, null);
         }
 
-        private CharacterActor3D CreateCharacter(string name, Vector3 position, CharacterFeature feature)
+        private CharacterActor3D CreateCharacter(string name, Vector3 position, CharacterFeature feature, CharacterBelong side = CharacterBelong.Ally)
         {
             GameObject gameObject = NewObject(name, position);
             gameObject.SetActive(false);
@@ -599,7 +600,7 @@ namespace Game.Tests.PlayMode
             body.center = Vector3.up * 0.9f;
             body.skinWidth = 0.04f;
             CharacterActor3D actor = gameObject.AddComponent<CharacterActor3D>();
-            Game.Core.CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo(CharacterBelong.Ally, feature);
+            Game.Core.CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo(side, feature);
             _assets.Add(info);
             actor.SetCharacterInfoForTest(info);
             return actor;

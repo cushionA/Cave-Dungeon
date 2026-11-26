@@ -555,6 +555,28 @@ namespace Game.Runtime
             return true;
         }
 
+        internal static Vector3 WalkStepTowardPoint(CharacterActor3D actor, Vector3 goal, float stopDistance,
+            LayerMask groundLayers, LayerMask blockers)
+        {
+            if (!actor.Motor.IsGrounded) { return Vector3.zero; }
+            Vector3 feet = actor.Motor.FeetPosition;
+            Vector3 offset = Horizontal(goal - feet);
+            float distance = offset.magnitude;
+            float travel = Mathf.Min(distance - stopDistance, k_DirectFollowProbeDistance);
+            float step = actor.Motor.MoveSpeed * Time.fixedDeltaTime;
+            if (!(travel > 0f) || !float.IsFinite(distance) || !(step > 0f) || !float.IsFinite(step)) { return Vector3.zero; }
+
+            PhysicsScene world = actor.gameObject.scene.GetPhysicsScene();
+            Vector3 direction = offset / distance;
+            Bounds body = actor.Body.bounds;
+            float radius = Mathf.Min(body.extents.x, body.extents.z);
+            if (!(radius > 0f) || !(body.size.y > 0f) || !world.IsValid()
+                || !TryGetGround(world, feet, groundLayers, out _)
+                || !TryGetGround(world, feet + direction * travel, groundLayers, out Vector3 end)
+                || !CanWalk(world, feet, end, radius, body.size.y, groundLayers, blockers)) { return Vector3.zero; }
+            return direction * Mathf.Min(1f, travel / step);
+        }
+
         private static bool CanWalk(PhysicsScene world, Vector3 start, Vector3 end, float radius, float height,
             LayerMask groundLayers, LayerMask blockers, float maxLength = k_MaxSegment)
         {

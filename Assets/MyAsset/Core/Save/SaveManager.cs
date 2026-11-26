@@ -55,7 +55,8 @@ namespace Game.Core
         /// <summary>最後に復元されたデータ。保存・スロット選択・ディスク読み込みだけでは変わらない。</summary>
         public SaveSlotData LastLoadedSlot { get; private set; }
         public ulong LoadRevision { get; private set; }
-        internal ulong ActiveSlotRevision { get; private set; }
+        public ulong ActiveSlotRevision { get; private set; }
+        public ulong ActiveSlotContentRevision => _slotRevisions[_activeSlotIndex];
         internal ulong GetSlotRevision(int slotIndex) => _slotRevisions[slotIndex];
 
         /// <summary>登録済みのデータをすべて復元し、アクティブスロットを確定した後に通知する。</summary>

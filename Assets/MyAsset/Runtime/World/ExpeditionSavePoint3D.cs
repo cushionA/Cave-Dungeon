@@ -72,14 +72,16 @@ namespace Game.Runtime
 
         public void SaveCurrentSlot()
         {
-            if (TrySaveCurrentSlot()) { onSaved.Invoke(); }
-            else { onSaveFailed.Invoke(); }
+            if (!TrySaveCurrentSlot()) { onSaveFailed.Invoke(); return; }
+            onSaved.Invoke();
+            if (TryGetComponent(out ExpeditionFastTravelPoint3D point)) { point.TryOpen(knight); }
         }
 
         public bool TrySaveCurrentSlot()
         {
             if (!TryGetKnight(out ActorRef actor) || !_interaction.TryGetDistanceSquared(knight, out _)) { return false; }
             SaveManager saves = GameManager.Saves;
+            if (TryGetComponent(out ExpeditionFastTravelPoint3D point)) { point.RecordVisit(knight); }
             CharacterVitals vitals = GameManager.Data.GetVitals(actor.Hash);
             if (!ExpeditionCheckpoint.TrySaveCurrentSlot(saves, Store, gameObject.scene.path, savePointId, vitals,
                 out ExpeditionCheckpoint.Resources recovered)) { return false; }
@@ -123,7 +125,7 @@ namespace Game.Runtime
             {
                 if (!ReferenceEquals(GameManager.Saves, saves) || knight != owner
                     || !TryGetKnight(out ActorRef resumed) || resumed != actor) { return false; }
-                PlaceKnight(position, rotation);
+                PlaceKnight(owner, position, rotation);
                 resources.Restore(ref GameManager.Data.GetVitals(actor.Hash));
                 return true;
             }
@@ -158,7 +160,7 @@ namespace Game.Runtime
             return (GameManager.Data.GetFlags(actor.Hash).Feature & CharacterFeature.Player) != 0;
         }
 
-        private void PlaceKnight(Vector3 position, Quaternion rotation)
+        internal static void PlaceKnight(CharacterActor3D knight, Vector3 position, Quaternion rotation)
         {
             CharacterMotor3D motor = knight.Motor;
             CharacterController body = knight.Body;

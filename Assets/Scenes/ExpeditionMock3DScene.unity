@@ -5759,6 +5759,7 @@ GameObject:
   - component: {fileID: 1606096596}
   - component: {fileID: 1606096597}
   - component: {fileID: 1606096598}
+  - component: {fileID: 1606096599}
   m_Layer: 7
   m_Name: '[PLACEHOLDER] Knight'
   m_TagString: Untagged
@@ -5800,6 +5801,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: GameCode::Game.Runtime.PlayerCharacterInput3D
   companion: {fileID: 663687373}
   encounterOrders: {fileID: 0}
+  explorationOrders: {fileID: 663687368}
   fieldOrderAimDistance: 20
   fieldOrderRayMask:
     serializedVersion: 2
@@ -9001,6 +9003,7 @@ GameObject:
   - component: {fileID: 751845503}
   - component: {fileID: 751845502}
   - component: {fileID: 751845505}
+  - component: {fileID: 751845506}
   m_Layer: 0
   m_Name: '[PLACEHOLDER] Expedition save point'
   m_TagString: Untagged
@@ -11220,6 +11223,101 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2089167376}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &751845506
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 751845501}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 713fff067a3a437a8544993002c67654, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: GameCode::Game.Runtime.ExpeditionFastTravelPoint3D
+  pointId: expedition.mock.trailhead
+  arrivalAnchor: {fileID: 2073721621}
+--- !u!114 &1606096599
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1606096585}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2766c72cc22f4306bd96c307a114c3b8, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: GameCode::Game.Runtime.ExpeditionFastTravel3D
+  document: {fileID: 1732215111}
+  destinations:
+  - pointId: expedition.mock.trailhead
+    displayName: "\u5751\u9053\u5165\u53E3"
+    areaScenePath:
+  - pointId: expedition.mock.deep-mine
+    displayName: "\u5751\u9053\u5965"
+    areaScenePath: Assets/Scenes/StreamingAreaB3DTestScene.unity
+  groundLayers:
+    serializedVersion: 2
+    m_Bits: 65
+  obstructionLayers:
+    serializedVersion: 2
+    m_Bits: 4294967291
+--- !u!1 &1732215110
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1732215112}
+  - component: {fileID: 1732215111}
+  m_Layer: 0
+  m_Name: Expedition fast travel panel
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1732215111
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1732215110}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name:
+  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
+  m_PanelSettings: {fileID: 11400000, guid: 4787b204cc277964da12454843ec80a8, type: 2}
+  m_ParentUI: {fileID: 0}
+  sourceAsset: {fileID: 0}
+  m_SortingOrder: 80
+  m_Position: 0
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+  m_PivotReferenceSize: 0
+  m_Pivot: 0
+  m_WorldSpaceCollider: {fileID: 0}
+--- !u!4 &1732215112
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1732215110}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -11253,3 +11351,4 @@ SceneRoots:
   - {fileID: 1834883508}
   - {fileID: 3328388667562128245}
   - {fileID: 751845504}
+  - {fileID: 1732215112}

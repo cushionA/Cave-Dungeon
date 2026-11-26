@@ -301,7 +301,7 @@ namespace Game.Runtime
 
                 // PlayerCharacterの内部フラグを全リセット
                 // （落下攻撃、枯渇ペナルティ、コンボ等）
-                _player.ResetInternalState();
+                _player.ResetPlayerState();
 
                 // 入力をクリア（前周回の残留入力を防止）
                 _inputHandler.ClearOverrideInput();
@@ -683,7 +683,7 @@ namespace Game.Runtime
                             ref CharacterVitals v = ref GameManager.Data.GetVitals(h);
                             v.currentStamina = v.maxStamina;
                         }
-                        _player.ResetInternalState();
+                        _player.ResetPlayerState();
                     },
                     () => { LogPass($"空中攻撃用スタミナ回復完了: {GetCurrentStamina():F1}"); });
 
@@ -751,7 +751,7 @@ namespace Game.Runtime
                             ref CharacterVitals v = ref GameManager.Data.GetVitals(h);
                             v.currentStamina = v.maxStamina;
                         }
-                        _player.ResetInternalState();
+                        _player.ResetPlayerState();
                     },
                     () => { LogPass($"複合テスト準備完了: stamina={GetCurrentStamina():F1}"); });
 

@@ -30,12 +30,14 @@ namespace Game.Runtime
         {
             distanceSquared = 0f;
             if (!isActiveAndEnabled || player == null || !player.isActiveAndEnabled || !player.IsAlive
-                || player.gameObject.scene != gameObject.scene || !(interactionRadius > 0f)
+                || !(interactionRadius > 0f)
                 || !float.IsFinite(interactionRadius)
                 || (GameManager.Data.GetFlags(player.Actor.Hash).Feature & CharacterFeature.Player) == 0)
             {
                 return false;
             }
+            if (player.gameObject.scene != gameObject.scene && (interactionType != InteractionType.SavePoint
+                || !TryGetComponent(out ExpeditionFastTravelPoint3D point) || !point.IsAvailableTo(player))) { return false; }
 
             distanceSquared = (player.Motor.FeetPosition - transform.position).sqrMagnitude;
             return distanceSquared <= interactionRadius * interactionRadius;
@@ -44,6 +46,11 @@ namespace Game.Runtime
         internal bool TryInteract(CharacterActor3D player)
         {
             if (!TryGetDistanceSquared(player, out _)) { return false; }
+            if (interactionType == InteractionType.SavePoint && TryGetComponent(out ExpeditionFastTravelPoint3D point)
+                && !TryGetComponent(out ExpeditionSavePoint3D _))
+            {
+                return point.TryOpen(player);
+            }
             onInteracted.Invoke();
             return true;
         }

@@ -14,13 +14,15 @@ namespace Game.Runtime
         {
             public readonly ActorRef Owner;
             public readonly ActorRef Target;
+            public readonly ExplosiveProp3D Prop;
             public long GroupId;
             public bool Invalidated;
 
-            public Reservation(ActorRef owner, ActorRef target)
+            public Reservation(ActorRef owner, ActorRef target, ExplosiveProp3D prop)
             {
                 Owner = owner;
                 Target = target;
+                Prop = prop;
             }
         }
 
@@ -46,9 +48,19 @@ namespace Game.Runtime
         internal int ActiveCount => _reservations.Count;
 
         internal bool TryExecute(CharacterActor3D owner, ActorRef target, AttackInfo attack, out long instanceId)
+            => TryExecute(owner, target, attack, default, out instanceId);
+
+        internal bool TryExecuteExplosive(CharacterActor3D owner, AttackInfo attack,
+            in EncounterExplosiveAim3D.Selection selection, out long instanceId)
+            => TryExecute(owner, selection.Enemy, attack, selection, out instanceId);
+
+        private bool TryExecute(CharacterActor3D owner, ActorRef target, AttackInfo attack,
+            in EncounterExplosiveAim3D.Selection selection, out long instanceId)
         {
             instanceId = 0;
-            if (_disposed || !ReferenceEquals(_actions, GameManager.Actions) || owner == null || attack == null)
+            bool explosive = selection.Enemy.IsValid;
+            if (_disposed || !ReferenceEquals(_actions, GameManager.Actions) || owner == null || attack == null
+                || (explosive && selection.Prop == null))
             {
                 return false;
             }
@@ -63,16 +75,18 @@ namespace Game.Runtime
 
             foreach (Reservation existing in _reservations.Values)
             {
-                if (existing.Owner == attacker) { return false; }
+                if (existing.Owner == attacker || (explosive && existing.Prop == selection.Prop)) { return false; }
             }
 
             // 行動開始の通知は同期なので、その通知から再度要求されても枠を奪えないよう先に確保する。
-            Reservation pending = new Reservation(attacker, target);
+            Reservation pending = new Reservation(attacker, target, selection.Prop);
             _reservations.Add(target, pending);
             bool accepted = false;
             try
             {
-                accepted = _actions.Execute3D(owner, attack, target, out instanceId);
+                accepted = explosive
+                    ? _actions.TryExecuteExplosiveShot3D(owner, attack, selection, out instanceId)
+                    : _actions.Execute3D(owner, attack, target, out instanceId);
                 return accepted;
             }
             finally

@@ -37,15 +37,21 @@ namespace Game.Runtime
         {
             _heldInteractionTarget = null;
             _heldInteractionOwner = default;
-            if (!TryGetInteractionOwner(out ActorRef owner) || interactionTargets == null) { return; }
+            if (!TryGetInteractionOwner(out ActorRef owner)) { return; }
 
             float nearestDistance = float.PositiveInfinity;
-            foreach (NpcInteraction3D target in interactionTargets)
+            foreach (NpcInteraction3D target in interactionTargets ?? Array.Empty<NpcInteraction3D>())
             {
                 if (target == null || !target.TryGetDistanceSquared(_actor, out float distance)
                     || distance >= nearestDistance) { continue; }
                 nearestDistance = distance;
                 _heldInteractionTarget = target;
+                _heldInteractionOwner = owner;
+            }
+            if (_actor.TryGetComponent(out ExpeditionFastTravel3D fastTravel)
+                && fastTravel.TryFindInteraction(nearestDistance, out NpcInteraction3D nearbyCheckpoint))
+            {
+                _heldInteractionTarget = nearbyCheckpoint;
                 _heldInteractionOwner = owner;
             }
         }

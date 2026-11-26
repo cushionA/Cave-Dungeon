@@ -39,6 +39,8 @@ namespace Game.Runtime
         private LayerMask approachGroundLayers = Physics.DefaultRaycastLayers;
         [SerializeField, Tooltip("踏切と着地には上の中継点を設定する。最大12本の片方向リンク。")]
         private EncounterJumpLink3D[] approachJumpLinks;
+        [SerializeField, Tooltip("目撃した敵に対して直撃弾で起爆できる装置。最大12個。")]
+        private ExplosiveProp3D[] explosiveProps;
 
         private readonly HashSet<EncounterCombatant3D> _combatants = new();
         private readonly List<EncounterCombatant3D> _activeCombatants = new();
@@ -51,6 +53,7 @@ namespace Game.Runtime
         private readonly HashSet<CharacterBelong> _unfinishedRallies = new();
         private MissionAttackSlots3D _attackSlots;
         private EncounterApproachRoutes3D _approachRoutes;
+        private EncounterExplosiveAim3D _explosiveAim;
         private EncounterSession3D _observedObjective;
         private bool _driving;
 
@@ -93,6 +96,9 @@ namespace Game.Runtime
         internal bool Drives(CharacterActor3D actor) => IsRunning && IsParticipant(actor)
             && actor.TryGetComponent(out EncounterCombatant3D combatant) && combatant.isActiveAndEnabled
             && _combatants.Contains(combatant);
+
+        internal bool CanReceivePlayerOrders(CharacterActor3D source)
+            => IsRunning && IsParticipant(source) && IsCommander(source, FieldOrderIssuer.Player);
 
         public bool TryIssue(CharacterActor3D source, BroadcastAction action, ActorRef target = default,
             Vector3? position = null, Collider surface = null)
@@ -309,9 +315,12 @@ namespace Game.Runtime
                 Vector3 offset = sighting.Position - actor.Motor.FeetPosition;
                 if (offset.sqrMagnitude <= member.AttackRange * member.AttackRange)
                 {
-                    Vector3 facing = Horizontal(offset);
-                    if (facing.sqrMagnitude > 0.001f) { actor.transform.rotation = Quaternion.LookRotation(facing); }
-                    _attackSlots.TryExecute(actor, sighting.Target, member.Attack, out _);
+                    if (!TryShootExplosive(actor, sighting, member.Attack, actions))
+                    {
+                        Vector3 facing = Horizontal(offset);
+                        if (facing.sqrMagnitude > 0.001f) { actor.transform.rotation = Quaternion.LookRotation(facing); }
+                        _attackSlots.TryExecute(actor, sighting.Target, member.Attack, out _);
+                    }
                     _approachRoutes?.Remove(owner);
                     actor.Motor.SimulateFixedStep(Vector3.zero, false, Time.fixedDeltaTime);
                     return;
@@ -338,6 +347,22 @@ namespace Game.Runtime
                 }
             }
             actor.Motor.SimulateFixedStep(move, jumpPressed, Time.fixedDeltaTime);
+        }
+
+        private bool TryShootExplosive(CharacterActor3D actor, in EncounterSighting3D sighting, AttackInfo attack,
+            GameActionRuntime actions)
+        {
+            if (explosiveProps == null || explosiveProps.Length == 0 || attack.attack3D.shape != AttackShape3D.Projectile)
+            {
+                return false;
+            }
+            _explosiveAim ??= new EncounterExplosiveAim3D();
+            if (!_explosiveAim.TrySelect(actor, sighting, attack, explosiveProps, sightRange, obstructionLayers,
+                actions, out EncounterExplosiveAim3D.Selection selection)) { return false; }
+
+            Vector3 facing = Horizontal(selection.HitCollider.bounds.center - actor.Motor.FeetPosition);
+            if (facing.sqrMagnitude > 0.001f) { actor.transform.rotation = Quaternion.LookRotation(facing); }
+            return _attackSlots.TryExecuteExplosive(actor, attack, selection, out _);
         }
 
         private Transform AssignStation(EncounterCombatant3D member, ActorRef owner, CharacterBelong faction)
