@@ -7294,7 +7294,7 @@
         "Assets/MyAsset/Runtime/World/EncounterSession3D.cs": "d663fd2019ed396ff198b2dda383c462f98ee9a7c5b2fe6938830c6c9b8547cc",
         "Assets/Tests/EditMode/ExpeditionPlaythroughTests.cs": "0c3631c2d95cea48cad110109b2388690cbd1055a7d6ee897837f490421867be",
         "Assets/Tests/PlayMode/BossEncounter3DPlayTests.cs": "38e835f8c47562b4c034471d8940620bfeff5a19ad49492a79f62080150a10c4",
-        "designs/systems/SaveSystem.md": "1157b4477f82d9484468b1b8feee0177f8c4127654f580b13358eeea15fbad4a"
+        "designs/systems/SaveSystem.md": "13cb6354141db7160416c5af80afa45bcf9dcede8c51c90959a8265f0233c2a7"
       }
     }
   },
@@ -7385,7 +7385,7 @@
         "Assets/Tests/PlayMode/ExpeditionNextPlaythroughScenePlayTests.cs": "e1a7bba600a309bec9239cf489e5f2721574821d0d5ec9ebabcc38f29333b199",
         "Assets/Tests/PlayMode/PixelCrushersStorySlotPlayTests.cs": "3039a64410a9810f99648b7185a26f40c314f234c407381be1dc529d0511aa79",
         "ProjectSettings/EditorBuildSettings.asset": "874e4c18b7cab084ac90586bc6f36b7026609a16741a791c4841d482bfca1147",
-        "designs/systems/SaveSystem.md": "1157b4477f82d9484468b1b8feee0177f8c4127654f580b13358eeea15fbad4a"
+        "designs/systems/SaveSystem.md": "13cb6354141db7160416c5af80afa45bcf9dcede8c51c90959a8265f0233c2a7"
       }
     }
   },
@@ -7544,7 +7544,7 @@
         "Assets/Tests/PlayMode/ExpeditionEncounterBudget3DPlayTests.cs": "07e34820c14f65a227d65009a7c9579db2c2584500790476227cc5803044eae6",
         "Assets/Tests/PlayMode/ExpeditionSquadPlayTests.cs": "df4a165b6c14c601875a12d34ddea75f84d5a12a0affc0c14aac54655c36ad25",
         "Assets/Tests/PlayMode/PixelCrushersStorySlotPlayTests.cs": "3039a64410a9810f99648b7185a26f40c314f234c407381be1dc529d0511aa79",
-        "designs/systems/SaveSystem.md": "1157b4477f82d9484468b1b8feee0177f8c4127654f580b13358eeea15fbad4a"
+        "designs/systems/SaveSystem.md": "13cb6354141db7160416c5af80afa45bcf9dcede8c51c90959a8265f0233c2a7"
       }
     }
   },
@@ -8654,7 +8654,7 @@
         "Assets/Tests/EditMode/SaveManagerWiringTests.cs": "18bc703f387121b5c3cad36f6f4efa5055293bd40ac00a181561ea5137bd87cd",
         "Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs": "f394b1cbd61177ce4f59e0469bdc3bd1dcb688761360fe1f52eb61a447a33b7c",
         "Assets/Tests/PlayMode/PixelCrushersStorySlotPlayTests.cs": "3039a64410a9810f99648b7185a26f40c314f234c407381be1dc529d0511aa79",
-        "designs/systems/SaveSystem.md": "1157b4477f82d9484468b1b8feee0177f8c4127654f580b13358eeea15fbad4a"
+        "designs/systems/SaveSystem.md": "13cb6354141db7160416c5af80afa45bcf9dcede8c51c90959a8265f0233c2a7"
       }
     }
   },
@@ -10409,20 +10409,20 @@
         "Assets/Tests/PlayMode/ExpeditionFastTravel3DPlayTests.cs",
         "Assets/Tests/PlayMode/ExpeditionSavePointMockPlayTests.cs"
       ],
-      "notes": "訪問済み地点を同じスロットのフラグとして記録し、必要な区画を加算ロードして同じ騎士を動かす。安全な足場と空きを確認し、別スロット、通常の区画ロード、アンロード、床と壁を兼ねる形状による塞がりを確認する。 保存に失敗した地点は解放されず、中断時にこの転移だけが先読みした区画を解放する。通常の移動が利用する区画はそのまま引き渡す。 新しい訪問キーはシーンパスに依存せず、同じパスにある旧形式のフラグも利用できる。別の遠征の区画管理を参照した場合は移動を中止する。",
+      "notes": "訪問済み地点を同じスロットのフラグとして記録し、必要な区画を加算ロードして同じ騎士を動かす。安全な足場と空きを確認し、別スロット、通常の区画ロード、アンロード、床と壁を兼ねる形状による塞がりを確認する。 保存に失敗した地点は解放されず、中断時にこの転移だけが先読みした区画を解放する。通常の移動が利用する区画はそのまま引き渡す。 新しい訪問キーはシーンパスに依存せず、同じパスにある旧形式のフラグも利用できる。別の遠征の区画管理を参照した場合は移動を中止する。 先読みした区画への到着が成立した時点で通常と同じロード完了通知を一度送る。設定済みのオートセーブが同じスロットの現在資源を保存し、中止または到着失敗では通知しない。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Save/SaveManager.cs": "fe20390190bc0ca984f2f063c85ddcae8e9efe295d5b3cdafdd3b215eb9437e4",
         "Assets/MyAsset/Core/Streaming/LevelStreamingLogic.cs": "1cf7fb44c4abcdd49d6e31405bdbc022a2a8defe724e90901866ac7e9161601e",
-        "Assets/MyAsset/Core/Streaming/LevelStreamingOrchestrator.cs": "02518315838f8a5b01a81dffc6e3de6965ab6821d5033850d83d6aa911daa9aa",
+        "Assets/MyAsset/Core/Streaming/LevelStreamingOrchestrator.cs": "3b8c08ed0484874aae612a691cfe34561ad121383f71d397c577b5b61427aa80",
         "Assets/MyAsset/Runtime/Character/NpcInteraction3D.cs": "23a29fd9c203fa5a5e8fc50a047115ad4a4fb9b0ffb84bf31bdb485823444bce",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.Interaction.cs": "622c77af0d5e18308e694b964aa6871f99ce4ef6cf50f760aaad3d94dad3cc65",
         "Assets/MyAsset/Runtime/World/ExpeditionFastTravel3D.Menu.cs": "1b7b079b9477e7a2c4f33bbc86c37c328a448b719025372a9fc55e90d3522223",
-        "Assets/MyAsset/Runtime/World/ExpeditionFastTravel3D.cs": "59fce3311479eab32c4d08d0d9e88c2425ccfcc9a99ea589e2196e48a5a120e3",
+        "Assets/MyAsset/Runtime/World/ExpeditionFastTravel3D.cs": "db0f0b61a5d78a95bbceb8b8d8deaf7267c5925d9b93ff77ec88e64a0867d1cf",
         "Assets/MyAsset/Runtime/World/ExpeditionFastTravelPoint3D.cs": "e0e51bfd3b603fb7514e4c1621bf73e198eadaff73ca87406c1cf7ff8770ae12",
         "Assets/MyAsset/Runtime/World/ExpeditionSavePoint3D.cs": "ded36006a0e9b38e6c39c92960bf90b6daea49dd3571f2e3cea3b611556d56ed",
         "Assets/Scenes/ExpeditionMock3DScene.unity": "9b6cd6627eca87b40c11f795534fd288837a178c13de7d5673408d5206324fcd",
         "Assets/Scenes/StreamingAreaB3DTestScene.unity": "65aa4bf38f0a3590cda4f1e37fe98f8bfc9155bf747095a430ec54ae66140861",
-        "Assets/Tests/PlayMode/ExpeditionFastTravel3DPlayTests.cs": "928a53b2e35cb7bd897be5d8156ed189cd6421c51950f4e17f1320c1e08fa1e1",
+        "Assets/Tests/PlayMode/ExpeditionFastTravel3DPlayTests.cs": "4771d2fa5bf3b6ac0101b3c5fe2ba810db39232be924e0d0372ce6606d9f7c0a",
         "Assets/MyAsset/Core/Save/ExpeditionCheckpoint.cs": "9670ad5050aaed12e78e4f68a6c071ea500a0e82a51231f0aa3213996b1989ec",
         "Assets/Tests/PlayMode/ExpeditionSavePointMockPlayTests.cs": "daaccf3402c88c513e83e64fd47e61d0158dea83dbadc9cb630c980e6f963f8d",
         "Assets/MyAsset/Runtime/Streaming/LevelStreamingController.cs": "b66ebcc043602838f74a3a603b578bbd7dd88c5a11dab28094bc5d0d0293be0a"

@@ -72,6 +72,8 @@ public class SaveDataStore
 
 区画が未ロードなら先に加算ロードし、同じ遠征の区画であることと着地点の床・空きを確認してから、登録世代を保った同じ騎士を配置する。中止した場合はその転移のためにロードした区画を解放する。通常の移動がその区画を要求した場合は、そのまま通常の遷移に利用する。移動した時点の持ち物と能力値を引き継ぐ。[3Dファストトラベル](../../Assets/MyAsset/Runtime/World/ExpeditionFastTravel3D.cs)
 
+先読みした区画への転移が成立し、その区画が活動中のマップになった時点で、通常移動と同じ到達通知を一度送る。オートセーブ対象の区画なら、現在の資源で保存する。先読み中や中断時には通知しない。ロード済みで到達通知を送った区画に戻る場合は、ロード完了通知を再送しない。[区画の到達通知](../../Assets/MyAsset/Core/Streaming/LevelStreamingOrchestrator.cs)・[オートセーブ](../../Assets/MyAsset/Runtime/World/ExpeditionAutosave3D.cs)
+
 ```
 1. SavePoint使用 → ファストトラベルメニュー表示
 2. 開通済みSavePointを一覧表示

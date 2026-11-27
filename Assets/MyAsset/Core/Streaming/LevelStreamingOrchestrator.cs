@@ -33,8 +33,8 @@ namespace Game.Core
         private string _previousActiveScene;
 
         /// <summary>
-        /// エリアロード完了時に呼ばれる。引数は完了したシーン名（=マップID）。
-        /// FlagManager 等がローカルフラグセットを切り替えるフックとして使用。
+        /// ロードした区画が初めて活動中のマップになったときに呼ばれる。引数はシーン名（=マップID）。
+        /// 先読みだけでは通知せず、通常移動または転移で到着が成立したときに通知する。
         /// </summary>
         public event Action<string> OnAreaLoadCompleted;
 
@@ -77,12 +77,11 @@ namespace Game.Core
         {
             if (string.IsNullOrWhiteSpace(sceneName)) { return false; }
             if (_preloads.Remove(sceneName)) { return true; }
-            bool firstArrival = _preloadedAreas.TryGetValue(sceneName, out AreaPreload preload);
             if (!string.Equals(_logic.ActiveScene, sceneName, StringComparison.Ordinal) && TryActivateLoadedArea(sceneName))
             {
-                if (firstArrival) { OnAreaLoadCompleted?.Invoke(sceneName); }
                 return true;
             }
+            _preloadedAreas.TryGetValue(sceneName, out AreaPreload preload);
             return QueueLoad(sceneName, reloadAfterUnload: preload?.Unloading == true);
         }
 
@@ -125,10 +124,13 @@ namespace Game.Core
         {
             string previous = _logic.ActiveScene;
             if (_logic.State == StreamingState.Unloading || !_logic.TryActivateLoadedScene(sceneName)) { return false; }
-            _preloadedAreas.Remove(sceneName);
-            if (string.Equals(previous, sceneName, StringComparison.Ordinal)) { return true; }
-            _flagManager?.SwitchMap(sceneName);
-            _events.FireAreaTransition(previous, sceneName);
+            bool firstArrival = _preloadedAreas.Remove(sceneName);
+            if (!string.Equals(previous, sceneName, StringComparison.Ordinal))
+            {
+                _flagManager?.SwitchMap(sceneName);
+                _events.FireAreaTransition(previous, sceneName);
+            }
+            if (firstArrival) { OnAreaLoadCompleted?.Invoke(sceneName); }
             return true;
         }
 

@@ -199,6 +199,62 @@ namespace Game.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator FastTravel_WhenPreloadedAreaIsReached_AutosavesOnceWithoutResting()
+        {
+            yield return VisitPassageAndReturn();
+            GameObject source = CreateInactive(_origin, "Arrival autosave", Vector3.zero);
+            ExpeditionAutosave3D autosave = source.AddComponent<ExpeditionAutosave3D>();
+            SetField(autosave, "savePoint", _checkpoint);
+            SetField(autosave, "areaPaths", new[] { k_DestinationPath });
+            source.SetActive(true);
+            yield return null;
+
+            int hash = _knight.Actor.Hash;
+            GameManager.Data.GetVitals(hash).currentHp = 37;
+            GameManager.Data.GetVitals(hash).currentMp = 14f;
+            GameManager.Data.GetVitals(hash).currentStamina = 31f;
+            ulong revision = GameManager.Saves.ActiveSlotContentRevision;
+            var arrivals = new List<(string area, string activeMap, Vector3 position)>();
+            _streaming.Orchestrator.OnAreaLoadCompleted += area =>
+                arrivals.Add((area, GameManager.Flags.CurrentMapId, _knight.transform.position));
+
+            Assert.IsTrue(_travel.TryOpen(_home));
+            Submit(ButtonFor(k_Passage));
+            Assert.IsTrue(_travel.IsTraveling);
+            Assert.That(arrivals, Is.Empty);
+            Assert.AreEqual(revision, GameManager.Saves.ActiveSlotContentRevision);
+            yield return Until(() => !_travel.IsTraveling, "Travel must activate the preloaded area.");
+            AssertArrived(s_Passage, k_DestinationPath);
+            Assert.That(arrivals, Has.Count.EqualTo(1));
+            Assert.AreEqual(k_DestinationPath, arrivals[0].area);
+            Assert.AreEqual(k_DestinationPath, arrivals[0].activeMap);
+            Assert.That(Vector3.Distance(arrivals[0].position, s_Passage), Is.LessThan(0.08f));
+            yield return autosave.WaitForPendingSave();
+
+            Assert.AreEqual(revision + 1, GameManager.Saves.ActiveSlotContentRevision);
+            Assert.AreEqual(37, GameManager.Data.GetVitals(hash).currentHp);
+            using var resumed = new GameManagerCore();
+            resumed.Saves.SetActiveSlot(k_Slot);
+            Assert.IsTrue(ExpeditionCheckpoint.TryRestoreCurrentSlot(resumed.Saves, _store, k_OriginPath, k_Home,
+                out ExpeditionCheckpoint.Resources saved));
+            Assert.AreEqual(37, saved.Hp);
+            Assert.AreEqual(14f, saved.Mp);
+            Assert.AreEqual(31f, saved.Stamina);
+
+            Assert.IsTrue(_travel.TryOpen(_passage));
+            Submit(ButtonFor(k_Home));
+            yield return Until(() => !_travel.IsTraveling, "Travel back to camp must finish.");
+            AssertArrived(s_Home, _origin.name);
+            Assert.IsTrue(_travel.TryOpen(_home));
+            Submit(ButtonFor(k_Passage));
+            yield return Until(() => !_travel.IsTraveling, "Travel to the resident area must finish.");
+            AssertArrived(s_Passage, k_DestinationPath);
+            yield return autosave.WaitForPendingSave();
+            Assert.That(arrivals, Has.Count.EqualTo(1));
+            Assert.AreEqual(revision + 1, GameManager.Saves.ActiveSlotContentRevision);
+        }
+
+        [UnityTest]
         public IEnumerator FastTravel_WhenAnOldSaveHasAPathBasedVisit_OffersThePoint()
         {
             GameManager.Flags.SetGlobalFlag($"expedition.fast-travel.visited.{_origin.path}#{k_Passage}", true);
@@ -232,6 +288,8 @@ namespace Game.Tests.PlayMode
             using var transition = GameManager.Events.OnAreaTransition.Subscribe(transitions.Add);
             var areaUnloads = new List<string>();
             _streaming.Orchestrator.OnAreaUnloadCompleted += areaUnloads.Add;
+            var arrivals = new List<string>();
+            _streaming.Orchestrator.OnAreaLoadCompleted += arrivals.Add;
 
             Submit(ButtonFor(k_Passage));
             Assert.IsTrue(_travel.IsTraveling);
@@ -242,6 +300,7 @@ namespace Game.Tests.PlayMode
             Assert.AreEqual(_origin.name, _streaming.Orchestrator.ActiveScene);
             Assert.AreEqual(_origin.name, GameManager.Flags.CurrentMapId);
             Assert.That(transitions, Is.Empty, "Preloading a blocked arrival must not publish a transition.");
+            Assert.That(arrivals, Is.Empty, "A blocked arrival must not request autosave.");
             Assert.That(areaUnloads, Is.Empty, "Discarding a preload must not trigger gameplay area's global pool cleanup.");
         }
 
@@ -282,6 +341,8 @@ namespace Game.Tests.PlayMode
         public IEnumerator FastTravel_WhenSlotIsSwitchedDuringPreload_DiscardsTheRequest()
         {
             yield return VisitPassageAndReturn();
+            var arrivals = new List<string>();
+            _streaming.Orchestrator.OnAreaLoadCompleted += arrivals.Add;
             Assert.IsTrue(_travel.TryOpen(_home));
             Vector3 source = _knight.transform.position;
             Submit(ButtonFor(k_Passage));
@@ -297,6 +358,7 @@ namespace Game.Tests.PlayMode
             Assert.AreEqual(_origin.name, _streaming.Orchestrator.ActiveScene);
             Assert.AreEqual(_origin.name, GameManager.Flags.CurrentMapId);
             Assert.AreEqual("Player", _input.currentActionMap?.name);
+            Assert.That(arrivals, Is.Empty, "A canceled trip must not request autosave.");
         }
 
         [UnityTest]

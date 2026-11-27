@@ -209,6 +209,7 @@ namespace Game.Runtime
                 FailTravel();
                 return;
             }
+            _preload = null;
             Close();
         }
 
