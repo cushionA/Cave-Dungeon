@@ -57,12 +57,28 @@ namespace Game.Runtime
             internal bool StartingOwned => startingOwned;
         }
 
+        [Serializable]
+        public sealed class CooperationOption
+        {
+            [SerializeField, Min(0)] private int itemId;
+            [SerializeField] private string displayName;
+            [SerializeField] private StatusEffectInfo effect;
+            [SerializeField] private bool startingOwned;
+
+            public int ItemId => itemId;
+            public string DisplayName => displayName;
+            internal StatusEffectInfo Effect => effect;
+            internal bool StartingOwned => startingOwned;
+        }
+
         [SerializeField] private WeaponOption[] weapons = Array.Empty<WeaponOption>();
         [SerializeField] private CoreOption[] cores = Array.Empty<CoreOption>();
         [SerializeField] private SpellOption[] spells = Array.Empty<SpellOption>();
+        [SerializeField] private CooperationOption[] cooperationOptions = Array.Empty<CooperationOption>();
         [SerializeField] private int startingWeaponId = PlayerCombatLoadoutSelection.k_EmptyItem;
         [SerializeField] private int startingCoreId = PlayerCombatLoadoutSelection.k_EmptyItem;
         [SerializeField] private int startingSpellId = PlayerCombatLoadoutSelection.k_EmptyItem;
+        [SerializeField] private int startingCooperationId = PlayerCombatLoadoutSelection.k_EmptyItem;
 
         private CharacterActor3D _actor;
         private PlayerCharacterInput3D _input;
@@ -77,8 +93,11 @@ namespace Game.Runtime
         public IReadOnlyList<WeaponOption> Weapons => weapons;
         public IReadOnlyList<CoreOption> Cores => cores;
         public IReadOnlyList<SpellOption> Spells => spells;
+        public IReadOnlyList<CooperationOption> CooperationOptions => cooperationOptions ?? Array.Empty<CooperationOption>();
         public int CurrentWeaponId => GameManager.CombatLoadout?.WeaponId ?? PlayerCombatLoadoutSelection.k_EmptyItem;
         public int CurrentCoreId => GameManager.CombatLoadout?.CoreId ?? PlayerCombatLoadoutSelection.k_EmptyItem;
+        public int CurrentCooperationId => GameManager.CombatLoadout?.CooperationId ?? PlayerCombatLoadoutSelection.k_EmptyItem;
+        internal bool HasCooperationOptions => cooperationOptions != null && cooperationOptions.Length > 0;
         public int SpellSlotCount => PlayerCombatLoadoutSelection.k_SpellSlotCount;
         public int ActiveSpellSlot => GameManager.CombatLoadout?.ActiveSpellSlot ?? 0;
         public int GetSpellId(int slot) => GameManager.CombatLoadout?.GetSpellId(slot) ?? PlayerCombatLoadoutSelection.k_EmptyItem;
@@ -111,6 +130,7 @@ namespace Game.Runtime
         public bool OwnsWeapon(int itemId) => FindWeapon(itemId) != null && Owns(itemId, ItemCategory.Weapon);
         public bool OwnsCore(int itemId) => FindCore(itemId) != null && Owns(itemId, ItemCategory.Core);
         public bool OwnsSpell(int itemId) => FindSpell(itemId) != null && Owns(itemId, ItemCategory.PlayerMagic);
+        public bool OwnsCooperation(int itemId) => FindCooperation(itemId) != null && Owns(itemId, ItemCategory.CompanionMagic);
 
         public bool TryEquipWeapon(int itemId)
         {
@@ -133,6 +153,34 @@ namespace Game.Runtime
 
         public bool TryClearSpell(int slot) => Synchronize() && GameManager.CombatLoadout.TryClearSpell(slot);
 
+        public bool TryEquipCooperation(int itemId)
+        {
+            if (!Synchronize() || !OwnsCooperation(itemId)) { return false; }
+            PlayerCombatLoadoutSelection selection = GameManager.CombatLoadout;
+            int previous = selection.CooperationId;
+            if (!selection.IsCooperationInitialized || !selection.TryEquipCooperation(itemId)) { return false; }
+            if (_input != null && previous != selection.CooperationId) { _input.ClearPendingCooperation(); }
+            return true;
+        }
+
+        internal bool TryResolveCooperation(out int itemId, out StatusEffectInfo effect)
+        {
+            itemId = PlayerCombatLoadoutSelection.k_EmptyItem;
+            effect = default;
+            PlayerCombatLoadoutSelection selection = GameManager.CombatLoadout;
+            if (!isActiveAndEnabled || _actor == null || !_actor.IsAlive || selection == null || !HasCooperationOptions)
+            {
+                return false;
+            }
+            InitializeCooperation(selection);
+            int equipped = selection.CooperationId;
+            CooperationOption option = FindCooperation(equipped);
+            if (option == null || !Owns(equipped, ItemCategory.CompanionMagic)) { return false; }
+            itemId = equipped;
+            effect = option.Effect;
+            return true;
+        }
+
         internal AttackInfo ResolveWeaponAttack() => Synchronize() && Owns(CurrentWeaponId, ItemCategory.Weapon)
             ? FindWeapon(CurrentWeaponId)?.Attack : null;
 
@@ -154,7 +202,11 @@ namespace Game.Runtime
 
         private void OnSlotLoaded(int _)
         {
-            if (_input != null) { _input.ClearLoadoutCombatInput(); }
+            if (_input != null)
+            {
+                _input.ClearLoadoutCombatInput();
+                _input.ClearPendingCooperation();
+            }
             Synchronize();
         }
 
@@ -166,6 +218,7 @@ namespace Game.Runtime
             ObserveSaves();
             PlayerCombatLoadoutSelection selection = GameManager.CombatLoadout;
             if (selection.TryInitialize()) { AssignStartingLoadout(selection); }
+            InitializeCooperation(selection);
 
             if (_equipmentOwner != owner)
             {
@@ -247,12 +300,35 @@ namespace Game.Runtime
             if (FindSpell(startingSpellId) != null) { selection.TryAssignSpell(0, startingSpellId); }
         }
 
+        private void InitializeCooperation(PlayerCombatLoadoutSelection selection)
+        {
+            if (!HasCooperationOptions || selection.IsCooperationInitialized) { return; }
+            InventoryManager inventory = GameManager.Inventory;
+            if (inventory == null) { return; }
+            int missingStarters = 0;
+            foreach (CooperationOption option in cooperationOptions)
+            {
+                if (IsCooperationStarter(option) && !Owns(option.ItemId, ItemCategory.CompanionMagic))
+                {
+                    missingStarters++;
+                }
+            }
+            if (missingStarters > InventoryManager.k_MaxSlotCount - inventory.ItemCount) { return; }
+            foreach (CooperationOption option in cooperationOptions)
+            {
+                if (IsCooperationStarter(option) && !GrantStarter(option.ItemId, ItemCategory.CompanionMagic)) { return; }
+            }
+            if (!selection.TryInitializeCooperation()) { return; }
+            if (FindCooperation(startingCooperationId) != null) { selection.TryEquipCooperation(startingCooperationId); }
+        }
+
+        private bool IsCooperationStarter(CooperationOption option) =>
+            option?.StartingOwned == true && FindCooperation(option.ItemId) == option;
+
         private static bool Owns(int itemId, ItemCategory category) => itemId >= 0 && GameManager.Inventory?.GetCount(itemId, category) > 0;
 
-        private static void GrantStarter(int itemId, ItemCategory category)
-        {
-            if (!Owns(itemId, category)) { GameManager.Inventory.Add(itemId, category, 1, 1); }
-        }
+        private static bool GrantStarter(int itemId, ItemCategory category) =>
+            Owns(itemId, category) || GameManager.Inventory.Add(itemId, category, 1, 1) == 1;
 
         private WeaponOption FindWeapon(int id)
         {
@@ -271,6 +347,19 @@ namespace Game.Runtime
         {
             SpellOption option = FindUnique(spells, id, static entry => entry.ItemId);
             return option != null && Has3DAttack(option.Attack) && option.Attack.category == AttackCategory.Magic ? option : null;
+        }
+
+        private CooperationOption FindCooperation(int id)
+        {
+            if (!HasCooperationOptions) { return null; }
+            CooperationOption option = FindUnique(cooperationOptions, id, static entry => entry.ItemId);
+            if (option == null) { return null; }
+            StatusEffectInfo effect = option.Effect;
+            return (effect.effect is StatusEffectId.AttackUp or StatusEffectId.DefenseUp)
+                && float.IsFinite(effect.duration) && effect.duration > 0f
+                && effect.modifier > 0f && effect.modifier <= 1f && effect.tickDamage == 0f
+                && float.IsFinite(effect.accumulateValue) && float.IsFinite(effect.tickInterval)
+                ? option : null;
         }
 
         private static bool Has3DAttack(AttackInfo attack) => attack != null && attack.attack3D.shape != AttackShape3D.None;

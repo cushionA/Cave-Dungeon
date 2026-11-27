@@ -11,6 +11,8 @@ Unity で `ExpeditionMock3DScene` を開いて Play する。坑道の依頼と�
 
 Tab／LT または `GEAR & GROWTH` 台で「戦闘準備」を開く。武器は騎士の剣と坑道の弩、コアは探索と残り火、魔法は追尾弾と火輪から選べる。魔法は使いたい枠を選んでからセットする。`SURVEY` の初回通過で100経験値、`CAVE SENTINEL` の撃破で150経験値を獲得する。レベルが上がったら「能力値」で残りポイントを配分できる。[装備と魔法枠](../../../designs/systems/WeaponSystem.md)・[成長](../../../designs/systems/LevelUpSystem.md)
 
+戦闘準備の「連携」では、所持している防御支援と攻撃支援から1つを装備する。シスターの近くで V／十字キー上を押すと装備中の支援が騎士にかかる。選択はセーブスロットごとに保存し、支援ごとのクールタイムは装備を切り替えても進み続ける。[3D連携の仕様](../../../designs/systems/CoopAction.md)・[装備画面の試験](../../../Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs)
+
 開始地点の近くに回復薬（`HEALING DRAUGHT`）3個と火炎瓶（`EMBER FLASK`）2個を配置した。E／パッド上ボタンを長押しして拾い、「消耗品」ボタンまたは Esc／Start で登録画面を開く。所持品を4枠のベルトに登録し、1・2／十字キー左右で切り替え、R／パッド右ボタンで使用する。回復薬はHPを最大25回復し、火炎瓶は周囲に火属性の攻撃判定を出す。火炎瓶の基礎威力は `22 + 知力 × 0.65` を四捨五入した値で、命中時は属性防御を適用する。[所持品とベルトの仕様](../../../designs/systems/InventorySystem.md)
 
 工兵は確定編成から所定の地点に出現し、通常探索では騎士について歩く。凍結や移動を占有する行動が終わると追従を再開する。区画の召喚設定で `Follow Waypoints` に床上の中継点を指定すると、工兵は壁を迂回できる。床のレイヤーを `Follow Ground Layers` に、通行を妨げる地形のレイヤーを `Follow Obstruction Layers` に指定する。迂回経路を組めない場合も、次の区間に足場と通行幅があれば直進し、塞がっていれば待つ。中継点が空なら従来の直進で同行する。[召喚の出撃と同行](../../../Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs)・[迂回の試験](../../../Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs)
@@ -29,7 +31,7 @@ Tab／LT または `GEAR & GROWTH` 台で「戦闘準備」を開く。武器は
 
 | 項目 | 現在の接続・検証 | プレイヤー向けに残る作業 |
 |---|---|---|
-| シスターとの連携・AI調整 | `Cooperation` は V／十字キー上。騎士への防御支援を発動し、クールタイム明けの無料分と必要MPを共有実行で扱う。シスターは通常時に追従し、指定集団戦では戦闘側が移動を担当する。3D用の戦術編集では確認した設定を登録世代が一致するシスターに適用する。[連携入力](../../../Assets/Tests/PlayMode/PlayerCooperationInput3DPlayTests.cs)・[戦術編集](../../../Assets/Tests/PlayMode/CompanionAISettings3DPlayTests.cs) | 連携スロットの選択、3Dのワープと盾による反射・足場、対応行動の追加。 |
+| シスターとの連携・AI調整 | `Cooperation` は V／十字キー上。戦闘準備で選んだ支援を騎士に発動し、クールタイム明けの無料分と必要MPを共有実行で扱う。シスターは通常時に追従し、指定集団戦では戦闘側が移動を担当する。3D用の戦術編集では確認した設定を登録世代が一致するシスターに適用する。[連携入力](../../../Assets/Tests/PlayMode/PlayerCooperationInput3DPlayTests.cs)・[戦術編集](../../../Assets/Tests/PlayMode/CompanionAISettings3DPlayTests.cs) | 3Dのワープと盾による反射・足場、対応行動の追加。 |
 | 専用イベントシーン | 加算ロードした専用シーンのカメラとTimelineを使い、再生終了とスキップから元の騎士へ操作を戻す。鑑賞済みフラグも保存できる。NPC会話・依頼は従来のDialogue SystemとQuest Machineに接続している。[イベント試験](../../../Assets/Tests/PlayMode/ExpeditionEvent3DScenePlayTests.cs)・[会話・依頼の保存](../../../Assets/Tests/PlayMode/PixelCrushersStorySlotPlayTests.cs) | 本編のイベント台本、カメラ、音声、発生条件の設定。 |
 | エリアのストリーミング | 騎士の3Dコントローラーと進入方向を境界で判定し、隣接シーンを加算ロードする。隣接エリア間の実シーンを移動して、騎士が継続することを確かめる専用試験がある。[境界実装](../../../Assets/MyAsset/Runtime/Streaming/AreaBoundaryTrigger3D.cs)・[隣接エリア試験](../../../Assets/Tests/PlayMode/LevelStreaming3DPlayTests.cs) | 本編マップの区画・境界の配置と、複数の遷移や復元を通した検証。 |
 | 回復・攻撃アイテム | 配置した拾得物から所持品へ追加し、ベルトで登録・選択・使用する。モーションの効果発揮で1個だけ消費し、回復または攻撃判定と粒子演出を出す。効果発揮前に中断すると所持数を維持する。所持数と登録はスロットごとに保存する。[モックの拾得と使用](../../../Assets/Tests/PlayMode/ExpeditionConsumablesMockScenePlayTests.cs)・[攻撃と中断](../../../Assets/Tests/PlayMode/PlayerItemUse3DPlayTests.cs)・[在庫と保存](../../../Assets/Tests/EditMode/InventoryUsageBeltTests.cs) | 本編の品ぞろえと配置。モックの配置物はシーンを読み直すと復活する。 |
@@ -42,13 +44,15 @@ Tab／LT または `GEAR & GROWTH` 台で「戦闘準備」を開く。武器は
 
 2026-11-26にキーボードとマウスで、新規スロットの開始、測量の受注と報告、工兵の編成と召喚、区画の歩行通過、坑道入口と坑道奥の転移の往復、番人の撃破、第2周開始を確認した。第2周では石碑の専用カメラで封印が開く動きと、再生終了後に同じ位置へ戻ることを確認した。探索で集合とおまかせを操作し、移動後のシスターと工兵の追従再開を確認した。[遠征モック](../../../Assets/Scenes/ExpeditionMock3DScene.unity)・[探索号令の試験](../../../Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.FieldOrders.cs)
 
+2026-11-27に旧セーブを開き、「戦闘準備」の連携タブで攻撃支援を選択して保存した。Linux Playerを起動し直して同じスロットを開き、攻撃支援が選択済みとして表示されることを確認した。装備中の支援を所持品から除いた検証用セーブでは「連携が未装備です」と表示され、防御支援を装備すると表示が消えた。[連携の仕様](../../../designs/systems/CoopAction.md)
+
 番人の攻撃前に、赤い円が足元の床に表示された。騎士は弩の構えから発射へ移り、武器の動きと弾を確認できた。警告確認用のシーンでは、通常近接の録音が無音で、危険近接の予備動作中だけ警告音の波形が記録された。橋上では赤い床予告、発射後の画面端の方向警告、両方の消去を確認した。橋の下では足元に同じ円は出なかった。[警告確認用シーン](../../../Assets/Scenes/CharacterMotor3DTestScene.unity)
 
 区画の継ぎ目では床面が重なって縞状にちらついた。番人は撃破後も紫の仮モデルが画面に残り、撃破は「次の周回へ」の表示で判別した。探索号令は選択中の号令名が画面に出ないため、切り替え結果は味方の動きで判別した。モーションの確認には試作用の仮モデルを使用した。[遠征モック](../../../Assets/Scenes/ExpeditionMock3DScene.unity)
 
 ## 自動検証
 
-2026-11-27の全体回帰では、Unity 6000.6.8f1 で EditMode 2,389件と PlayMode 535件がすべて通過した。転移で先読み区画に到着すると対象スロットへのオートセーブが一度だけ実行され、到着が成立しなければ保存の通知は発生しないことも確認した。転移では未ロードの区画の復帰、中断後の区画解放と再選択、通常遷移への引き継ぎ、壁との干渉、35度の斜面への到着を検証した。Linux Playerでは旧形式のセーブから入口を再開し、新しい地点IDで訪問記録が保存されることを確認した。PlayModeでは書き込み失敗時に訪問が登録されないことを確認した。[転移の試験](../../../Assets/Tests/PlayMode/ExpeditionFastTravel3DPlayTests.cs)・[保存失敗の試験](../../../Assets/Tests/PlayMode/ExpeditionSavePointMockPlayTests.cs)
+2026-11-27の全体回帰では、Unity 6000.6.8f1 で EditMode 2,393件と PlayMode 540件がすべて通過した。転移で先読み区画に到着すると対象スロットへのオートセーブが一度だけ実行され、到着が成立しなければ保存の通知は発生しないことも確認した。転移では未ロードの区画の復帰、中断後の区画解放と再選択、通常遷移への引き継ぎ、壁との干渉、35度の斜面への到着を検証した。Linux Playerでは旧形式のセーブから入口を再開し、新しい地点IDで訪問記録が保存されることを確認した。PlayModeでは書き込み失敗時に訪問が登録されないことを確認した。[転移の試験](../../../Assets/Tests/PlayMode/ExpeditionFastTravel3DPlayTests.cs)・[保存失敗の試験](../../../Assets/Tests/PlayMode/ExpeditionSavePointMockPlayTests.cs)
 
 装備と魔法枠はディスク往復と旧セーブの読み込みを確認した。PlayModeでは石碑の長押しから専用イベントが始まり、通常終了とスキップのどちらでも元の騎士でガードできることを確認した。実シーンの装備台では武器とコアを交換して魔法枠を登録し、測量で得たポイントを配分した。番人の150経験値も実戦で確認した。[装備の保存](../../../Assets/Tests/EditMode/PlayerCombatLoadoutSelectionTests.cs)・[イベントの実入力](../../../Assets/Tests/PlayMode/ExpeditionEvent3DScenePlayTests.cs)・[統合モック試験](../../../Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs)
 

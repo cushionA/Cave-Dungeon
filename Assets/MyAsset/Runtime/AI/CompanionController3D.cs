@@ -32,8 +32,9 @@ namespace Game.Runtime
         };
         [SerializeField] private GameObject presentation;
 
-        private readonly CoopCooldownTracker _cooldown = new CoopCooldownTracker();
+        private readonly Dictionary<int, CoopCooldownTracker> _cooperationCooldowns = new();
         private CharacterActor3D _actor;
+        private PlayerCombatLoadout3D _cooperationLoadout;
         private ActorRef _owner;
         private GameActionRuntime _actions;
         private CompanionMpManager _mp;
@@ -51,12 +52,22 @@ namespace Game.Runtime
         public bool IsCooperating => _actor != null && _actor.Actor == _owner && _cast != 0
             && _actions.Execution.TryGetInstance(_cast, out _);
         public int ActiveModeIndex => _tactics?.ActiveModeIndex ?? 0;
-        public float CooperationCooldownRemaining => _cooldown.GetRemaining(Time.fixedTime);
+        public float CooperationCooldownRemaining
+        {
+            get
+            {
+                int id = _cooperationLoadout != null && _cooperationLoadout.HasCooperationOptions
+                    ? _cooperationLoadout.CurrentCooperationId : PlayerCombatLoadoutSelection.k_EmptyItem;
+                return _cooperationCooldowns.TryGetValue(id, out CoopCooldownTracker cooldown)
+                    ? cooldown.GetRemaining(Time.fixedTime) : 0f;
+            }
+        }
         public IReadOnlyList<AttackInfo> AvailableAttacks => attacks;
 
         private void Awake()
         {
             _actor = GetComponent<CharacterActor3D>();
+            _cooperationLoadout = knight != null ? knight.GetComponent<PlayerCombatLoadout3D>() : null;
             _deployment = GetComponent<ExpeditionSummonDeployment3D>();
             GetComponent<DamageReceiver>().BindCompanion(this);
         }
@@ -93,25 +104,67 @@ namespace Game.Runtime
             if (!isActiveAndEnabled || requester != knight || !BindActor() || IsCooperating
                 || !CanSupport(requester, out ActorRef target)) { return false; }
 
+            ActorRef source = _owner;
+            GameActionRuntime actions = _actions;
+            if (!TryResolveCooperation(out int cooperationId, out StatusEffectInfo effect)
+                || !IsCurrentCooperationSource(source, actions) || requester == null || requester.Actor != target
+                || GameManager.Data.GetCombatStats(target.Hash).statusDefense.Resolve(effect.effect).immune) { return false; }
+            if (!_cooperationCooldowns.TryGetValue(cooperationId, out CoopCooldownTracker cooldown))
+            {
+                cooldown = new CoopCooldownTracker();
+                _cooperationCooldowns.Add(cooperationId, cooldown);
+            }
+
             float now = Time.fixedTime;
             int availableMp = Mathf.FloorToInt(_mp.CurrentMp);
-            bool free = _cooldown.IsCooldownReady(now);
+            bool free = cooldown.IsCooldownReady(now);
             if (!free && availableMp < cooperationMpCost) { return false; }
-            ActorRef source = _owner;
-            if (!_actions.Execution.TryStart(new ActionRequest
+            if (!actions.Execution.TryStart(new ActionRequest
             {
                 ownerHash = source.Hash, ownerRef = source, targetHash = target.Hash, targetRef = target,
                 definitionId = free ? _freeCast : _paidCast, speedMultiplier = 1f,
-            }, out _cast)) { return false; }
+            }, out long cast)) { return false; }
 
-            if (_actor.Actor != source || requester.Actor != target) { return false; }
-            _cooldown.TryActivate(now, cooperationMpCost, availableMp, cooperationCooldown);
-            GameManager.StatusEffects.Apply(target.Hash, new StatusEffectInfo
+            if (!IsCurrentCooperationSource(source, actions)
+                || requester == null || requester.Actor != target || !requester.IsAlive)
             {
-                effect = StatusEffectId.DefenseUp, modifier = wardDefense, duration = wardDuration, maxStack = 1,
-            }, source.Hash);
+                actions.Execution.Cancel(cast, force: true);
+                return false;
+            }
+            _cast = cast;
+            if (!GameManager.StatusEffects.Apply(target.Hash, effect, source.Hash))
+            {
+                if (_cast == cast) { _cast = 0; }
+                actions.Execution.Cancel(cast, force: true);
+                return false;
+            }
+            cooldown.TryActivate(now, cooperationMpCost, availableMp, cooperationCooldown);
             return true;
         }
+
+        private bool TryResolveCooperation(out int id, out StatusEffectInfo effect)
+        {
+            if (_cooperationLoadout == null && knight != null)
+            {
+                _cooperationLoadout = knight.GetComponent<PlayerCombatLoadout3D>();
+            }
+            if (_cooperationLoadout != null && _cooperationLoadout.HasCooperationOptions)
+            {
+                if (_cooperationLoadout.TryResolveCooperation(out id, out effect)) { return true; }
+                if (GameManager.CombatLoadout?.IsCooperationInitialized != false) { return false; }
+            }
+
+            id = PlayerCombatLoadoutSelection.k_EmptyItem;
+            effect = new StatusEffectInfo
+            {
+                effect = StatusEffectId.DefenseUp, modifier = wardDefense, duration = wardDuration, maxStack = 1,
+            };
+            return true;
+        }
+
+        private bool IsCurrentCooperationSource(ActorRef source, GameActionRuntime actions)
+            => _owner == source && _actor != null && _actor.Actor == source
+                && ReferenceEquals(_actions, actions) && ReferenceEquals(GameManager.Actions, actions);
 
         private bool CanSupport(CharacterActor3D requester, out ActorRef target)
         {
@@ -239,7 +292,7 @@ namespace Game.Runtime
             _actions = null;
             _owner = default;
             _groupWasDriving = false;
-            _cooldown.Reset();
+            _cooperationCooldowns.Clear();
         }
 
 #if UNITY_INCLUDE_TESTS

@@ -6036,9 +6036,33 @@ MonoBehaviour:
     displayName: "\u706B\u8F2A"
     attack: {fileID: 11400000, guid: 96e1580345fe13c91983b00a6662ccd2, type: 2}
     startingOwned: 1
+  cooperationOptions:
+  - itemId: 4241
+    displayName: "\u9632\u5FA1\u652F\u63F4"
+    effect:
+      effect: 14
+      accumulateValue: 0
+      duration: 2
+      tickDamage: 0
+      tickInterval: 0
+      modifier: 0.4
+      maxStack: 1
+    startingOwned: 1
+  - itemId: 4242
+    displayName: "\u653B\u6483\u652F\u63F4"
+    effect:
+      effect: 13
+      accumulateValue: 0
+      duration: 2
+      tickDamage: 0
+      tickInterval: 0
+      modifier: 0.25
+      maxStack: 1
+    startingOwned: 1
   startingWeaponId: 4201
   startingCoreId: 4211
   startingSpellId: 4221
+  startingCooperationId: 4241
 --- !u!114 &1606096597
 MonoBehaviour:
   m_ObjectHideFlags: 0

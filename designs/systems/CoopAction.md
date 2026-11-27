@@ -17,6 +17,16 @@ Section: 2 — AI・仲間・連携
 | CoopCooldownTracker | アクション別クールタイム管理 | No |
 | CoopComboState | コンボ段数・入力猶予の状態管理 | No |
 
+## 3D遠征の連携スロット
+
+戦闘準備の「連携」で、所持品の仲間用魔法から1つを装備する。有効な技が装備されていない場合は「連携が未装備です」と表示し、所持している技を選べる。V／十字キー上で発動し、シスターと騎士の所属、距離、遮蔽を確認する。装備した連携はセーブスロットに記録し、選択を持たない旧セーブにはシーンに設定した初期の支援を割り当てる。旧セーブの所持品が満杯なら、初期の支援を受け取れる空きができるまで従来の防御支援を使える。[戦闘準備](../../Assets/MyAsset/Runtime/UI/ExpeditionLoadoutPanel3D.cs)・[セーブデータ](../../Assets/MyAsset/Core/Inventory/PlayerCombatLoadoutSelection.cs)
+
+遠征モックでは防御支援と攻撃支援を選べる。各支援の初回とクールタイム明けは無料で、同じ支援をクールタイム中に再使用する場合はシスターの共有MPを使う。装備を切り替えても前に使った支援のクールタイムは保持する。[3D連携の実行](../../Assets/MyAsset/Runtime/AI/CompanionController3D.cs)・[連携入力の試験](../../Assets/Tests/PlayMode/PlayerCooperationInput3DPlayTests.cs)
+
+発動の開始通知中に受け手の騎士が登録解除・交代・死亡した場合は、開始した連携を中断する。効果の付与とクールタイムの開始は、同じ騎士が引き続き有効な場合に行う。[3D連携の実行](../../Assets/MyAsset/Runtime/AI/CompanionController3D.cs)
+
+対象の耐性で支援が無効なら、行動を開始する前に発動を拒否する。開始後に付与が失敗した場合は、その連携を中断する。クールタイムは効果を付与できた時点で始まり、MPは行動の受理時に共通の実行処理で消費する。[3D連携の実行](../../Assets/MyAsset/Runtime/AI/CompanionController3D.cs)
+
 ---
 
 ## 連携アクション基底クラス
