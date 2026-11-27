@@ -18,6 +18,7 @@ namespace Game.Tests.PlayMode
     {
         private readonly InputTestFixture _devices = new InputTestFixture();
         private readonly List<CharacterInfo> _actorSettings = new List<CharacterInfo>();
+        private readonly List<ScriptableObject> _combatSettings = new List<ScriptableObject>();
         private Scene _scene;
         private Scene _previousScene;
         private InputActionAsset _actions;
@@ -52,7 +53,13 @@ namespace Game.Tests.PlayMode
             _previousScene = SceneManager.GetActiveScene();
             _scene = SceneManager.CreateScene("PlayerCooperationInput3D", new CreateSceneParameters(LocalPhysicsMode.Physics3D));
             SceneManager.SetActiveScene(_scene);
-            TestSceneHelper.CreateGameManager();
+            GameObject manager = new GameObject("Cooperation game manager");
+            manager.SetActive(false);
+            GameObject projectiles = new GameObject("3D projectiles");
+            projectiles.transform.SetParent(manager.transform, false);
+            projectiles.AddComponent<ProjectileManager3D>();
+            manager.AddComponent<GameManager>();
+            manager.SetActive(true);
             GameObject floor = new GameObject("Floor");
             floor.transform.position = Vector3.down * 0.5f;
             floor.AddComponent<BoxCollider>().size = new Vector3(25f, 1f, 25f);
@@ -85,6 +92,8 @@ namespace Game.Tests.PlayMode
             Object.Destroy(_actions);
             foreach (CharacterInfo info in _actorSettings) { Object.Destroy(info); }
             _actorSettings.Clear();
+            foreach (ScriptableObject asset in _combatSettings) { Object.Destroy(asset); }
+            _combatSettings.Clear();
             yield return null;
             _devices.TearDown();
         }
@@ -316,6 +325,88 @@ namespace Game.Tests.PlayMode
             float CooperationMp() => GameManager.Data.GetVitals(sister.Actor.Hash).currentMp;
         }
 
+        [UnityTest]
+        public IEnumerator KeyboardCooperation_EquipsReflectionShieldAndRejectsInvalidPaidMetadata()
+        {
+            const int ward = 7321;
+            const int reflection = 7322;
+            PlayerCombatLoadout3D.CooperationOption shield = CreateSupport(reflection, StatusEffectId.None, startingOwned: true);
+            SetField(shield, "effectKind", PlayerCombatLoadout3D.CooperationEffectKind.ReflectionShield);
+            SetField(shield, "shieldDuration", 5f);
+            SetField(shield, "shieldRadius", 1.2f);
+            SetField(_loadout, "cooperationOptions", new[]
+            {
+                CreateSupport(ward, StatusEffectId.DefenseUp, startingOwned: true),
+                shield,
+            });
+            SetField(_loadout, "startingCooperationId", ward);
+            CharacterActor3D shooter = CreateActor("Enemy shooter", Vector3.forward * 5f, CharacterFeature.Minion,
+                CharacterBelong.Enemy);
+            shooter.transform.rotation = Quaternion.LookRotation(Vector3.back);
+            shooter.gameObject.SetActive(true);
+            yield return null;
+            Assert.That(_loadout.CurrentCooperationId, Is.EqualTo(ward));
+            Assert.That(_loadout.TryEquipCooperation(reflection), Is.True);
+            GameManager.Data.GetCombatStats(_knight.Actor.Hash).statusDefense.defenseUp.immune = true;
+            Physics.SyncTransforms();
+
+            TapKeyboard();
+            yield return new WaitForFixedUpdate();
+            Assert.That(_companion.IsCooperating, Is.True);
+            Assert.That(_companion.CooperationCooldownRemaining, Is.Positive);
+            Assert.That(DefenseMultiplier(), Is.EqualTo(1f));
+            Assert.That(AttackMultiplier(), Is.EqualTo(1f));
+
+            int knightHp = GameManager.Data.GetVitals(_knight.Actor.Hash).currentHp;
+            int enemyHp = GameManager.Data.GetVitals(shooter.Actor.Hash).currentHp;
+            ActorRef shieldCaster = _companion.GetComponent<CharacterActor3D>().Actor;
+            ActorRef hitSource = default;
+            using var listener = GameManager.Events.OnDamageDealt.Subscribe(change =>
+            {
+                if (change.result.defenderRef == shooter.Actor) { hitSource = change.result.attackerRef; }
+            });
+            Assert.That(GameManager.Actions.Execute3D(shooter, CreateShieldTestProjectile(), _knight.Actor, out _), Is.True);
+            for (int i = 0; i < 95 && GameManager.Data.GetVitals(shooter.Actor.Hash).currentHp == enemyHp; i++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+            Assert.That(GameManager.Data.GetVitals(_knight.Actor.Hash).currentHp, Is.EqualTo(knightHp));
+            Assert.That(GameManager.Data.GetVitals(shooter.Actor.Hash).currentHp, Is.LessThan(enemyHp));
+            Assert.That(hitSource, Is.EqualTo(shieldCaster));
+            yield return WaitForSupportToFinish();
+
+            SetField(shield, "shieldRadius", float.NaN);
+            Assert.That(_loadout.OwnsCooperation(reflection), Is.False);
+            Assert.That(_loadout.CurrentCooperationId, Is.EqualTo(reflection));
+            GameManager.Data.GetVitals(shieldCaster.Hash).currentMp = 25f;
+            TapKeyboard();
+            yield return new WaitForFixedUpdate();
+            Assert.That(_companion.IsCooperating, Is.False);
+            Assert.That(GameManager.Data.GetVitals(shieldCaster.Hash).currentMp, Is.GreaterThanOrEqualTo(25f));
+        }
+
+        private AttackInfo CreateShieldTestProjectile()
+        {
+            MotionDefinition motion = ScriptableObject.CreateInstance<MotionDefinition>();
+            _combatSettings.Add(motion);
+            motion.info = new MotionInfo { activeMotionDuration = 0.15f, recoveryDuration = 0.15f };
+            AttackInfo attack = ScriptableObject.CreateInstance<AttackInfo>();
+            _combatSettings.Add(attack);
+            attack.motion = motion;
+            attack.damageMultiplier = 1f;
+            attack.attackElement = Element.Slash;
+            attack.attack3D = new AttackProfile3D
+            {
+                shape = AttackShape3D.Projectile, localCenter = new Vector3(0f, 0.8f, 0.45f),
+                projectileRadius = 0.08f, targetLayers = LayerMask.GetMask("Default"),
+            };
+            attack.projectileInfo = new ProjectileInfo
+            {
+                hasProjectile = true, trajectory = BulletMoveType.Straight, speed = 15f, lifetime = 2f,
+            };
+            return attack;
+        }
+
         private IEnumerator WaitForSupportToFinish()
         {
             for (int i = 0; i < 45 && _companion.IsCooperating; i++) { yield return new WaitForFixedUpdate(); }
@@ -422,7 +513,8 @@ namespace Game.Tests.PlayMode
             PressKeyboard(false);
         }
 
-        private CharacterActor3D CreateActor(string name, Vector3 position, CharacterFeature feature)
+        private CharacterActor3D CreateActor(string name, Vector3 position, CharacterFeature feature,
+            CharacterBelong side = CharacterBelong.Ally)
         {
             GameObject body = new GameObject(name);
             body.SetActive(false);
@@ -432,7 +524,7 @@ namespace Game.Tests.PlayMode
             controller.height = 1.6f;
             controller.radius = 0.3f;
             CharacterActor3D actor = body.AddComponent<CharacterActor3D>();
-            CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo(CharacterBelong.Ally, feature);
+            CharacterInfo info = TestSceneHelper.CreateTestCharacterInfo(side, feature);
             _actorSettings.Add(info);
             actor.SetCharacterInfoForTest(info);
             return actor;

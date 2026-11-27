@@ -4,6 +4,8 @@ using Game.Core;
 using R3;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using CooperationEffect = Game.Runtime.PlayerCombatLoadout3D.CooperationEffect;
+using CooperationEffectKind = Game.Runtime.PlayerCombatLoadout3D.CooperationEffectKind;
 
 namespace Game.Runtime
 {
@@ -106,9 +108,9 @@ namespace Game.Runtime
 
             ActorRef source = _owner;
             GameActionRuntime actions = _actions;
-            if (!TryResolveCooperation(out int cooperationId, out StatusEffectInfo effect)
+            if (!TryResolveCooperation(out int cooperationId, out CooperationEffect effect)
                 || !IsCurrentCooperationSource(source, actions) || requester == null || requester.Actor != target
-                || GameManager.Data.GetCombatStats(target.Hash).statusDefense.Resolve(effect.effect).immune) { return false; }
+                || !CanApplyCooperation(requester, target, effect)) { return false; }
             if (!_cooperationCooldowns.TryGetValue(cooperationId, out CoopCooldownTracker cooldown))
             {
                 cooldown = new CoopCooldownTracker();
@@ -132,7 +134,10 @@ namespace Game.Runtime
                 return false;
             }
             _cast = cast;
-            if (!GameManager.StatusEffects.Apply(target.Hash, effect, source.Hash))
+            bool applied = effect.Kind == CooperationEffectKind.ReflectionShield
+                ? ProjectileReflectionShield3D.TryActivate(_actor, requester, effect.ShieldDuration, effect.ShieldRadius)
+                : GameManager.StatusEffects.Apply(target.Hash, effect.Status, source.Hash);
+            if (!applied)
             {
                 if (_cast == cast) { _cast = 0; }
                 actions.Execution.Cancel(cast, force: true);
@@ -142,7 +147,12 @@ namespace Game.Runtime
             return true;
         }
 
-        private bool TryResolveCooperation(out int id, out StatusEffectInfo effect)
+        private bool CanApplyCooperation(CharacterActor3D requester, ActorRef target, in CooperationEffect effect)
+            => effect.Kind == CooperationEffectKind.ReflectionShield
+                ? ProjectileReflectionShield3D.CanActivate(_actor, requester, effect.ShieldDuration, effect.ShieldRadius)
+                : !GameManager.Data.GetCombatStats(target.Hash).statusDefense.Resolve(effect.Status.effect).immune;
+
+        private bool TryResolveCooperation(out int id, out CooperationEffect effect)
         {
             if (_cooperationLoadout == null && knight != null)
             {
@@ -155,10 +165,11 @@ namespace Game.Runtime
             }
 
             id = PlayerCombatLoadoutSelection.k_EmptyItem;
-            effect = new StatusEffectInfo
+            StatusEffectInfo ward = new StatusEffectInfo
             {
                 effect = StatusEffectId.DefenseUp, modifier = wardDefense, duration = wardDuration, maxStack = 1,
             };
+            effect = new CooperationEffect(CooperationEffectKind.StatusEffect, ward, 0f, 0f);
             return true;
         }
 

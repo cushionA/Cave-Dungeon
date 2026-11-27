@@ -43,6 +43,8 @@ namespace Game.Runtime
             public AttackContext context;
             public ActorRef assignedTarget;
             public ActorRef explicitTarget;
+            public int shooterLayerMask;
+            public ActorRef reflectedFrom;
             public GroundAttack3D? groundImpact;
             public GameObject warning;
             public ExplosiveContact explosiveContact;
@@ -66,9 +68,10 @@ namespace Game.Runtime
             public readonly AttackProfile3D shape;
             public readonly AttackContext context;
             public readonly ActorRef assignedTarget;
+            public readonly ActorRef reflectedFrom;
 
             public ContactTrace(PhysicsScene world, Vector3 position, Vector3 direction, in AttackProfile3D shape,
-                in AttackContext context, ActorRef assignedTarget = default)
+                in AttackContext context, ActorRef assignedTarget = default, ActorRef reflectedFrom = default)
             {
                 this.world = world;
                 this.position = position;
@@ -76,6 +79,7 @@ namespace Game.Runtime
                 this.shape = shape;
                 this.context = context;
                 this.assignedTarget = assignedTarget;
+                this.reflectedFrom = reflectedFrom;
             }
         }
 
@@ -156,6 +160,7 @@ namespace Game.Runtime
                 context = context,
                 assignedTarget = explicitTarget,
                 explicitTarget = explicitTarget,
+                shooterLayerMask = 1 << owner.Body.gameObject.layer,
                 groundImpact = groundImpact,
             };
             if (explicitTarget.IsValid && GetTarget(shot, explicitTarget) == null)
@@ -333,6 +338,13 @@ namespace Game.Runtime
                 return;
             }
             Contact contact = FindFirstContact(shot, distance);
+            if (TryReflect(shot, distance, contact, out float distanceToShield))
+            {
+                distance -= distanceToShield;
+                if (distance <= 0f) { return; }
+                origin = shot.position;
+                contact = FindFirstContact(shot, distance);
+            }
             if (contact.found)
             {
                 Retire(shot);
@@ -352,6 +364,34 @@ namespace Game.Runtime
             }
 
             MoveShot(shot, shot.position + shot.direction * distance);
+        }
+
+        private bool TryReflect(Shot shot, float distance, in Contact contact, out float distanceToShield)
+        {
+            distanceToShield = 0f;
+            if (shot.reflectedFrom.IsValid || distance <= 0f
+                || !ProjectileReflectionShield3D.TryFindContact(shot.context, shot.world, shot.position, shot.direction,
+                    distance, shot.shape.projectileRadius, out float hitDistance, out Vector3 normal,
+                    out CharacterActor3D reflector, out ActorRef bearer)
+                || (contact.found && hitDistance >= contact.distance
+                    && (contact.actor != bearer || !Mathf.Approximately(hitDistance, contact.distance))))
+            {
+                return false;
+            }
+
+            ActorRef newOwner = reflector.Actor;
+            Vector3 impact = shot.position + shot.direction * hitDistance;
+            shot.reflectedFrom = shot.context.Owner;
+            shot.context = shot.context.Reflect(newOwner, _data.GetFlags(newOwner.Hash).Belong);
+            shot.shape.targetLayers = shot.shape.targetLayers.value | shot.shooterLayerMask;
+            shot.assignedTarget = default;
+            shot.explicitTarget = default;
+            shot.attack.actionInstanceId = 0;
+            shot.explosiveContact = new ExplosiveContact(null);
+            shot.direction = Vector3.Reflect(shot.direction, normal).normalized;
+            MoveShot(shot, impact);
+            distanceToShield = hitDistance;
+            return true;
         }
 
         private void TryDetonateContact(Shot shot, float distance, in Contact contact)
@@ -389,7 +429,7 @@ namespace Game.Runtime
 
         private Contact FindFirstContact(Shot shot, float distance)
             => FindFirstContact(new ContactTrace(shot.world, shot.position, shot.direction, shot.shape,
-                shot.context, shot.assignedTarget), distance);
+                shot.context, shot.assignedTarget, shot.reflectedFrom), distance);
 
         /// <summary>AIが作動させる装置まで、発射と同じ初回接触を確認する。</summary>
         internal bool CanHitExplosiveFirst(CharacterActor3D owner, ExplosiveProp3D prop, Vector3 origin,
@@ -475,7 +515,8 @@ namespace Game.Runtime
                 if (body != null)
                 {
                     actor = body.Actor;
-                    if (GetTarget(trace.world, trace.shape, trace.context, trace.assignedTarget, actor) != body) { return; }
+                    if (GetTarget(trace.world, trace.shape, trace.context, trace.assignedTarget, trace.reflectedFrom,
+                        actor) != body) { return; }
                     // 同距離は遮蔽物、個体、爆発物の順。個体同士はHashで決める。
                     if (tie && contact.propCollider == null
                         && (!contact.actor.IsValid || actor.Hash >= contact.actor.Hash)) { return; }
@@ -487,11 +528,12 @@ namespace Game.Runtime
         }
 
         private CharacterActor3D GetTarget(Shot shot, ActorRef actor)
-            => GetTarget(shot.world, shot.shape, shot.context, shot.assignedTarget, actor);
+            => GetTarget(shot.world, shot.shape, shot.context, shot.assignedTarget, shot.reflectedFrom, actor);
 
         private CharacterActor3D GetTarget(PhysicsScene world, in AttackProfile3D shape, in AttackContext context,
-            ActorRef assignedTarget, ActorRef actor)
+            ActorRef assignedTarget, ActorRef reflectedFrom, ActorRef actor)
             => actor.Hash == context.Owner.Hash || (actor.Hash == assignedTarget.Hash && actor != assignedTarget)
+                || (actor.Hash == reflectedFrom.Hash && actor != reflectedFrom)
                 ? null : GetEligibleActor(world, shape, context, actor);
 
         private CharacterActor3D GetEligibleActor(Shot shot, ActorRef actor)

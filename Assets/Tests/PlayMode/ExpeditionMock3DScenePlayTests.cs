@@ -6,6 +6,7 @@ using System.Linq;
 using Game.Core;
 using Game.Runtime;
 using NUnit.Framework;
+using R3;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -199,6 +200,44 @@ namespace Game.Tests.PlayMode
             Assert.AreEqual(strength + 1, GameManager.Data.GetAttributes(hash).str);
             Submit(root, "loadout-close");
             Assert.AreEqual("Player", input.currentActionMap.name);
+        }
+
+        [UnityTest]
+        public IEnumerator AuthoredExpedition_ReflectionDrillReturnsAHostileBoltToItsCaster()
+        {
+            yield return LoadMock();
+
+            CharacterActor3D knight = Find<CharacterActor3D>("[PLACEHOLDER] Knight");
+            knight.GetComponent<PlayerCharacterInput3D>().enabled = false;
+            CharacterActor3D caster = Find<CharacterActor3D>("[PLACEHOLDER] Reflection drill caster");
+            CompanionController3D sister = Find<CompanionController3D>("[PLACEHOLDER] Expedition sister");
+            ActorRef sisterRef = sister.GetComponent<CharacterActor3D>().Actor;
+            ExpeditionLoadoutPanel3D panel = Find<ExpeditionLoadoutPanel3D>("Expedition loadout and growth");
+            panel.Open();
+            VisualElement root = panel.GetComponent<UIDocument>().rootVisualElement;
+            Submit(root, "loadout-tab-cooperation");
+            Assert.AreEqual("反射盾", root.Q<Button>("loadout-cooperation-4243")?.text);
+            Submit(root, "loadout-cooperation-4243");
+            Submit(root, "loadout-close");
+
+            int knightHp = GameManager.Data.GetVitals(knight.Actor.Hash).currentHp;
+            bool reflected = false;
+            using var observation = GameManager.Events.OnDamageDealt.Subscribe(change =>
+            {
+                if (change.result.defenderRef == caster.Actor && change.result.attackerRef == sisterRef
+                    && change.result.actionInstanceId == 0 && change.result.totalDamage > 0) { reflected = true; }
+            });
+
+            // この位置は試射範囲の外。最後に射手の前まで西へ進む。
+            yield return WalkNear(knight, new Vector3(-1.9f, 0f, -1.7f));
+            yield return WalkNear(knight, caster.transform.position + Vector3.right * 2.6f);
+            Vector3 facing = Vector3.ProjectOnPlane(caster.transform.position - knight.transform.position, Vector3.up);
+            knight.transform.rotation = Quaternion.LookRotation(facing);
+            Assert.IsTrue(sister.TryCooperate(knight));
+
+            for (int step = 0; step < 200 && !reflected; step++) { yield return new WaitForFixedUpdate(); }
+            Assert.IsTrue(reflected);
+            Assert.AreEqual(knightHp, GameManager.Data.GetVitals(knight.Actor.Hash).currentHp);
         }
 
         [UnityTest]
