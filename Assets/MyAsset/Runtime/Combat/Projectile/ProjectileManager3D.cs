@@ -11,6 +11,21 @@ namespace Game.Runtime
     {
         private const int k_InitOrder = 310;
 
+        internal readonly struct ExplosiveContact
+        {
+            private readonly bool _restricted;
+            private readonly Collider _allowed;
+
+            // 既定値は通常の着弾。AIは許可した装置だけを起爆し、未指定なら着弾だけ行う。
+            internal ExplosiveContact(Collider allowed)
+            {
+                _restricted = true;
+                _allowed = allowed;
+            }
+
+            internal bool Allows(Collider contact) => !_restricted || contact == _allowed;
+        }
+
         private sealed class Shot
         {
             public ulong leaseId;
@@ -30,6 +45,7 @@ namespace Game.Runtime
             public ActorRef explicitTarget;
             public GroundAttack3D? groundImpact;
             public GameObject warning;
+            public ExplosiveContact explosiveContact;
 
             public float Speed => Mathf.Max(0f, profile.speed + profile.acceleration * elapsed);
         }
@@ -40,6 +56,27 @@ namespace Game.Runtime
             public float distance;
             public ActorRef actor;
             public Collider propCollider;
+        }
+
+        private readonly struct ContactTrace
+        {
+            public readonly PhysicsScene world;
+            public readonly Vector3 position;
+            public readonly Vector3 direction;
+            public readonly AttackProfile3D shape;
+            public readonly AttackContext context;
+            public readonly ActorRef assignedTarget;
+
+            public ContactTrace(PhysicsScene world, Vector3 position, Vector3 direction, in AttackProfile3D shape,
+                in AttackContext context, ActorRef assignedTarget = default)
+            {
+                this.world = world;
+                this.position = position;
+                this.direction = direction;
+                this.shape = shape;
+                this.context = context;
+                this.assignedTarget = assignedTarget;
+            }
         }
 
         private readonly List<Shot> _active = new List<Shot>(16);
@@ -67,11 +104,14 @@ namespace Game.Runtime
         private void OnDisable() => ClearAll();
 
         internal bool Spawn(Scene scene, Vector3 position, Vector3 direction, in AttackProfile3D shape,
-            in MagicDefinition magic, in AttackMotionData attack, in AttackContext context, ActorRef explicitTarget)
+            in MagicDefinition magic, in AttackMotionData attack, in AttackContext context, ActorRef explicitTarget,
+            ExplosiveContact explosiveContact = default)
         {
             Shot shot = CreateShot(scene, position, direction, shape, magic, attack, context, explicitTarget);
+            if (shot == null) { return false; }
+            shot.explosiveContact = explosiveContact;
             GameObject warning = null;
-            return shot != null && ActivateShot(shot, magic.projectilePrefab, ref warning);
+            return ActivateShot(shot, magic.projectilePrefab, ref warning);
         }
 
         private Shot CreateShot(Scene scene, Vector3 position, Vector3 direction, in AttackProfile3D shape,
@@ -298,7 +338,10 @@ namespace Game.Runtime
                 Retire(shot);
                 if (contact.propCollider != null)
                 {
-                    TryDetonateContact(shot, distance, contact);
+                    if (shot.explosiveContact.Allows(contact.propCollider))
+                    {
+                        TryDetonateContact(shot, distance, contact);
+                    }
                 }
                 else
                 {
@@ -345,22 +388,47 @@ namespace Game.Runtime
         }
 
         private Contact FindFirstContact(Shot shot, float distance)
+            => FindFirstContact(new ContactTrace(shot.world, shot.position, shot.direction, shot.shape,
+                shot.context, shot.assignedTarget), distance);
+
+        /// <summary>AIが作動させる装置まで、発射と同じ初回接触を確認する。</summary>
+        internal bool CanHitExplosiveFirst(CharacterActor3D owner, ExplosiveProp3D prop, Vector3 origin,
+            Vector3 direction, float distance, in AttackProfile3D shape, in AttackContext context)
+        {
+            if (_data == null || !isActiveAndEnabled || _isClearing || owner == null || !owner.IsAlive
+                || !context.IsCaptured || owner.Actor != context.Owner || prop == null
+                || shape.shape != AttackShape3D.Projectile || !PositiveFinite(shape.projectileRadius)
+                || !PositiveFinite(distance) || !IsFinite(origin) || !IsFinite(direction)
+                || !PositiveFinite(direction.sqrMagnitude)) { return false; }
+            Collider collider = prop.HitCollider;
+            Scene scene = owner.gameObject.scene;
+            PhysicsScene world = scene.GetPhysicsScene();
+            if (!scene.isLoaded || !world.IsValid() || ExplosiveProp3D.FindLiveContact(collider) != prop
+                || prop.gameObject.scene.GetPhysicsScene() != world) { return false; }
+
+            Vector3 heading = direction.normalized;
+            if (heading == Vector3.zero) { return false; }
+            var trace = new ContactTrace(world, origin, heading, shape, context);
+            return FindFirstContact(trace, distance).propCollider == collider;
+        }
+
+        private Contact FindFirstContact(in ContactTrace trace, float distance)
         {
             Contact contact = default;
-            int layers = shot.shape.targetLayers.value | shot.shape.obstructionLayers.value;
-            int count = QueryOverlaps(shot.world, shot.position, shot.shape.projectileRadius, layers);
+            int layers = trace.shape.targetLayers.value | trace.shape.obstructionLayers.value;
+            int count = QueryOverlaps(trace.world, trace.position, trace.shape.projectileRadius, layers);
             for (int i = 0; i < count; i++)
             {
-                ConsiderContact(shot, _overlaps[i], 0f, ref contact);
+                ConsiderContact(trace, _overlaps[i], 0f, ref contact);
                 _overlaps[i] = null;
             }
             if (contact.found || distance <= 0f) { return contact; }
 
-            count = QuerySweep(shot.world, shot.position, shot.shape.projectileRadius, shot.direction, distance, layers);
+            count = QuerySweep(trace.world, trace.position, trace.shape.projectileRadius, trace.direction, distance, layers);
             for (int i = 0; i < count; i++)
             {
                 RaycastHit hit = _sweepHits[i];
-                ConsiderContact(shot, hit.collider, hit.distance, ref contact);
+                ConsiderContact(trace, hit.collider, hit.distance, ref contact);
             }
             return contact;
         }
@@ -387,7 +455,7 @@ namespace Game.Runtime
             }
         }
 
-        private void ConsiderContact(Shot shot, Collider collider, float distance, ref Contact contact)
+        private void ConsiderContact(in ContactTrace trace, Collider collider, float distance, ref Contact contact)
         {
             if (collider == null || (contact.found && distance > contact.distance)) { return; }
 
@@ -395,7 +463,7 @@ namespace Game.Runtime
             Collider propCollider = null;
             bool tie = contact.found && distance == contact.distance;
             int layer = 1 << collider.gameObject.layer;
-            if ((shot.shape.targetLayers.value & layer) != 0 && ExplosiveProp3D.FindLiveContact(collider) != null)
+            if ((trace.shape.targetLayers.value & layer) != 0 && ExplosiveProp3D.FindLiveContact(collider) != null)
             {
                 if (tie && (contact.propCollider == null
                     || ExplosiveProp3D.CompareContactOrder(collider, contact.propCollider) >= 0)) { return; }
@@ -407,30 +475,37 @@ namespace Game.Runtime
                 if (body != null)
                 {
                     actor = body.Actor;
-                    if (GetTarget(shot, actor) != body) { return; }
+                    if (GetTarget(trace.world, trace.shape, trace.context, trace.assignedTarget, actor) != body) { return; }
                     // 同距離は遮蔽物、個体、爆発物の順。個体同士はHashで決める。
                     if (tie && contact.propCollider == null
                         && (!contact.actor.IsValid || actor.Hash >= contact.actor.Hash)) { return; }
                 }
-                else if ((shot.shape.obstructionLayers.value & layer) == 0) { return; }
+                else if ((trace.shape.obstructionLayers.value & layer) == 0) { return; }
             }
 
             contact = new Contact { found = true, distance = distance, actor = actor, propCollider = propCollider };
         }
 
-        private CharacterActor3D GetTarget(Shot shot, ActorRef actor) =>
-            actor.Hash == shot.context.Owner.Hash
-                || (actor.Hash == shot.assignedTarget.Hash && actor != shot.assignedTarget)
-                ? null : GetEligibleActor(shot, actor);
+        private CharacterActor3D GetTarget(Shot shot, ActorRef actor)
+            => GetTarget(shot.world, shot.shape, shot.context, shot.assignedTarget, actor);
+
+        private CharacterActor3D GetTarget(PhysicsScene world, in AttackProfile3D shape, in AttackContext context,
+            ActorRef assignedTarget, ActorRef actor)
+            => actor.Hash == context.Owner.Hash || (actor.Hash == assignedTarget.Hash && actor != assignedTarget)
+                ? null : GetEligibleActor(world, shape, context, actor);
 
         private CharacterActor3D GetEligibleActor(Shot shot, ActorRef actor)
+            => GetEligibleActor(shot.world, shot.shape, shot.context, actor);
+
+        private CharacterActor3D GetEligibleActor(PhysicsScene world, in AttackProfile3D shape, in AttackContext context,
+            ActorRef actor)
         {
             if (!actor.IsValid
-                || !CombatDataHelper.CanAffectTarget(shot.context, actor, _data, GameManager.Actors)
+                || !CombatDataHelper.CanAffectTarget(context, actor, _data, GameManager.Actors)
                 || _data.GetManaged(actor.Hash) is not CharacterActor3D body || body == null
                 || body.Actor != actor || !body.IsAlive || _data.GetFlags(actor.Hash).ActState == ActState.Dead || !body.Body.enabled
-                || (shot.shape.targetLayers.value & (1 << body.Body.gameObject.layer)) == 0
-                || body.gameObject.scene.GetPhysicsScene() != shot.world)
+                || (shape.targetLayers.value & (1 << body.Body.gameObject.layer)) == 0
+                || body.gameObject.scene.GetPhysicsScene() != world)
             {
                 return null;
             }

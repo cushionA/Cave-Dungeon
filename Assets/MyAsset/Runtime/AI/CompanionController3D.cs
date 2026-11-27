@@ -38,6 +38,7 @@ namespace Game.Runtime
         private GameActionRuntime _actions;
         private CompanionMpManager _mp;
         private CompanionTactics3D _tactics;
+        private ExpeditionSummonDeployment3D _deployment;
         private IDisposable _actorRemoved;
         private bool _groupWasDriving;
         private int _freeCast;
@@ -56,6 +57,7 @@ namespace Game.Runtime
         private void Awake()
         {
             _actor = GetComponent<CharacterActor3D>();
+            _deployment = GetComponent<ExpeditionSummonDeployment3D>();
             GetComponent<DamageReceiver>().BindCompanion(this);
         }
 
@@ -137,6 +139,12 @@ namespace Game.Runtime
                 || GameManager.Data.GetStatusEffects(_owner.Hash).BlocksActions)
             {
                 _actor.Motor.Simulate(Vector3.zero, false, delta);
+                return;
+            }
+
+            if (_deployment != null && _deployment.TryGetSisterRally(_actor, knight, out float rallyDistance))
+            {
+                _actor.Motor.Simulate(CompanionTactics3D.FollowDirection(_actor, knight, rallyDistance), false, delta);
                 return;
             }
 

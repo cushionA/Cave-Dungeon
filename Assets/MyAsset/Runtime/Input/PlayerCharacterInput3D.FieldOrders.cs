@@ -21,11 +21,14 @@ namespace Game.Runtime
 
         [Header("現場指示")]
         [SerializeField] private EncounterCombat3D encounterOrders;
+        [SerializeField] private ExpeditionSummonDeployment3D explorationOrders;
         [SerializeField, Min(0.1f)] private float fieldOrderAimDistance = 20f;
         [SerializeField] private LayerMask fieldOrderRayMask = Physics.DefaultRaycastLayers;
 
         private InputAction _fieldOrderAction;
         private ActorRef _fieldOrderIssuer;
+        private EncounterCombat3D _pressedEncounter;
+        private ExpeditionSummonDeployment3D _pressedDeployment;
         private int _fieldOrderSlot;
         private RaycastHit[] _fieldOrderHits = new RaycastHit[16];
 
@@ -50,23 +53,43 @@ namespace Game.Runtime
 
         private void BeginFieldOrder(InputAction.CallbackContext context)
         {
-            _fieldOrderIssuer = FieldOrderInputActive() ? _actor.Actor : default;
+            CancelFieldOrderPress();
+            if (TryGetFieldOrderReceivers(out _pressedEncounter, out _pressedDeployment)) { _fieldOrderIssuer = _actor.Actor; }
         }
 
         private void CancelFieldOrder(InputAction.CallbackContext context) => CancelFieldOrderPress();
 
-        private void CancelFieldOrderPress() => _fieldOrderIssuer = default;
+        private void CancelFieldOrderPress()
+        {
+            _fieldOrderIssuer = default;
+            _pressedEncounter = null;
+            _pressedDeployment = null;
+        }
 
-        private bool FieldOrderInputActive() => _fieldOrderAction != null && _fieldOrderAction.enabled
-            && _playerInput.currentActionMap == _gameplayMap && encounterOrders != null && encounterOrders.isActiveAndEnabled
-            && _actor != null && _actor.isActiveAndEnabled && _actor.IsAlive;
+        private bool TryGetFieldOrderReceivers(out EncounterCombat3D battle, out ExpeditionSummonDeployment3D deployment)
+        {
+            battle = null;
+            deployment = null;
+            if (_fieldOrderAction == null || !_fieldOrderAction.enabled || _playerInput.currentActionMap != _gameplayMap
+                || _actor == null || !_actor.isActiveAndEnabled || !_actor.IsAlive) { return false; }
+
+            EncounterCombat3D linkedEncounter = explorationOrders != null ? explorationOrders.OrderEncounter : null;
+            if (encounterOrders != null && encounterOrders.CanReceivePlayerOrders(_actor)) { battle = encounterOrders; }
+            else if (linkedEncounter != null && linkedEncounter.CanReceivePlayerOrders(_actor)) { battle = linkedEncounter; }
+            else if (explorationOrders != null && explorationOrders.CanReceiveExplorationOrders(_actor)) { deployment = explorationOrders; }
+            return battle != null || deployment != null;
+        }
 
         // The shipped FieldOrder action performs on release and cancels if its map is disabled mid-press.
         private void ReleaseFieldOrder(InputAction.CallbackContext context)
         {
             ActorRef issuer = _fieldOrderIssuer;
+            EncounterCombat3D pressedEncounter = _pressedEncounter;
+            ExpeditionSummonDeployment3D pressedDeployment = _pressedDeployment;
             CancelFieldOrderPress();
-            if (!issuer.IsValid || !FieldOrderInputActive() || _actor.Actor != issuer) { return; }
+            if (!issuer.IsValid || !TryGetFieldOrderReceivers(out EncounterCombat3D battle, out ExpeditionSummonDeployment3D deployment)
+                || _actor.Actor != issuer || !ReferenceEquals(battle, pressedEncounter)
+                || !ReferenceEquals(deployment, pressedDeployment)) { return; }
 
             if (context.duration >= FieldOrderHoldSeconds)
             {
@@ -94,7 +117,8 @@ namespace Game.Runtime
                     surface = hit.collider;
                 }
             }
-            encounterOrders.TryIssue(_actor, action, target, position, surface);
+            if (battle != null) { battle.TryIssue(_actor, action, target, position, surface); }
+            else { deployment.TryIssueExplorationOrder(_actor, action, target, position, surface, fieldOrderAimDistance); }
         }
 
         private bool TryAimFieldOrder(InputDevice device, out RaycastHit closest)

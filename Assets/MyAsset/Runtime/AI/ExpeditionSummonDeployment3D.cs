@@ -11,7 +11,7 @@ namespace Game.Runtime
     [DefaultExecutionOrder(50)]
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CharacterActor3D))]
-    public sealed class ExpeditionSummonDeployment3D : MonoBehaviour
+    public sealed partial class ExpeditionSummonDeployment3D : MonoBehaviour
     {
         private const float k_MinFollowDistance = 0.1f;
 
@@ -63,6 +63,10 @@ namespace Game.Runtime
             public readonly List<(CharacterActor3D actor, string speciesId)> units = new();
             public EncounterApproachRoutes3D followRoutes;
             public long followTick;
+            public ExplorationOrder order;
+            public SaveManager orderSaves;
+            public ulong orderLoadRevision;
+            public MissionAttackSlots3D orderAttackSlots;
         }
 
         [SerializeField] private SpeciesPrefab[] speciesPrefabs = Array.Empty<SpeciesPrefab>();
@@ -100,10 +104,13 @@ namespace Game.Runtime
             if (ReferenceEquals(explorationLeader, null) || actions == null || !HasValidFollowDistance())
             {
                 group.followRoutes = null;
+                ClearExplorationOrder(group);
                 return;
             }
 
             CharacterActor3D leader = IsExplorationLeaderAvailable() ? explorationLeader : null;
+            PrepareExplorationOrder(group, leader);
+            if (!ReferenceEquals(group, _normal)) { return; }
             PrepareFollowRoutes(group, leader);
             bool routesSynced = Physics.autoSyncTransforms;
             for (int i = 0; ReferenceEquals(group, _normal) && i < group.units.Count; i++)
@@ -116,7 +123,8 @@ namespace Game.Runtime
                 if (flags.IsVanished || flags.ActState == ActState.Dead || flags.Belong != CharacterBelong.Ally) { continue; }
 
                 EncounterApproachRoutes3D routes = group.followRoutes;
-                if (routes != null && (actor.Motor.IsFinishingEncounterJump || (encounter != null && encounter.Drives(actor))))
+                bool encounterOwnsMovement = actor.Motor.IsFinishingEncounterJump || (encounter != null && encounter.Drives(actor));
+                if (routes != null && encounterOwnsMovement)
                 {
                     routes.Remove(actor.Actor);
                     // 遭遇の開始・終了が駆動順の間に入っても、未実行の固定更新はモーターへ渡す。
@@ -127,16 +135,16 @@ namespace Game.Runtime
                 Vector3 direction = Vector3.zero;
                 if (!blocked)
                 {
-                    if (routes != null && !routesSynced)
+                    if (encounterOwnsMovement || !TryDriveExplorationOrder(group, actor, leader, routes, actions,
+                        ref routesSynced, out direction))
                     {
-                        Physics.SyncTransforms();
-                        routesSynced = true;
+                        direction = FollowExplorationLeader(actor, leader, followDistance, routes, ref routesSynced);
                     }
-                    direction = routes != null
-                        ? routes.FollowLeader(actor, leader, followDistance, followWaypoints, followGroundLayers, followObstructionLayers)
-                        : CompanionTactics3D.FollowDirection(actor, leader, followDistance);
                 }
-                actor.Motor.SimulateFixedStep(direction, false, Time.fixedDeltaTime);
+                if (ReferenceEquals(group, _normal) && IsLive(actor) && actor.Body.enabled)
+                {
+                    actor.Motor.SimulateFixedStep(direction, false, Time.fixedDeltaTime);
+                }
             }
         }
 
@@ -449,7 +457,9 @@ namespace Game.Runtime
         {
             Deployment dismissed = deployment;
             deployment = null;
-            if (dismissed == null || dismissed.root == null) { return; }
+            if (dismissed == null) { return; }
+            ClearExplorationOrder(dismissed);
+            if (dismissed.root == null) { return; }
             foreach ((CharacterActor3D actor, string _) in dismissed.units)
             {
                 if (actor != null) { LeaveEncounter(actor); }

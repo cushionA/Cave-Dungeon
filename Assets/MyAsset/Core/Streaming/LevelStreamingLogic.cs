@@ -24,6 +24,7 @@ namespace Game.Core
         private StreamingState _state;
 
         public string ActiveScene => _activeScene;
+        internal string PersistentScene => _persistentScene;
         public StreamingState State => _state;
         public int LoadedSceneCount => _loadedScenes.Count;
 
@@ -37,9 +38,11 @@ namespace Game.Core
         }
 
         /// <summary>シーンロード要求をキューに追加。既にロード済みならfalse。</summary>
-        public bool RequestLoad(string sceneName)
+        public bool RequestLoad(string sceneName) => RequestLoad(sceneName, reloadAfterUnload: false);
+
+        internal bool RequestLoad(string sceneName, bool reloadAfterUnload)
         {
-            if (_loadedScenes.Contains(sceneName))
+            if (!reloadAfterUnload && _loadedScenes.Contains(sceneName))
             {
                 return false;
             }
@@ -62,11 +65,20 @@ namespace Game.Core
         }
 
         /// <summary>ロード完了を通知。Loaded状態に遷移、loadedScenesに追加、アクティブシーンを更新。</summary>
-        public void CompleteLoad(string sceneName)
+        public void CompleteLoad(string sceneName) => CompleteLoad(sceneName, makeActive: true);
+
+        internal void CompleteLoad(string sceneName, bool makeActive)
         {
             _loadedScenes.Add(sceneName);
-            _activeScene = sceneName;
+            if (makeActive) { _activeScene = sceneName; }
             _state = StreamingState.Loaded;
+        }
+
+        internal bool TryActivateLoadedScene(string sceneName)
+        {
+            if (!_loadedScenes.Contains(sceneName)) { return false; }
+            _activeScene = sceneName;
+            return true;
         }
 
         internal void FailLoad()
