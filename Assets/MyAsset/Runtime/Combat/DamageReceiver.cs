@@ -120,6 +120,10 @@ namespace Game.Runtime
         internal DamageResult ReceiveProjectileDamage3D(DamageData attack, Vector3 origin, PhysicsScene world)
             => attack.isProjectile ? ResolveDamage3D(attack, origin, world) : default;
 
+        /// <summary>爆心を攻撃の方向とし、起爆の原因になった個体の世代と陣営で爆風を解決する。</summary>
+        internal DamageResult ReceiveExplosionDamage3D(DamageData attack, Vector3 origin, PhysicsScene world)
+            => !attack.isProjectile ? ResolveDamage3D(attack, origin, world) : default;
+
         private DamageResult ResolveDamage3D(DamageData attack, Vector3 origin, PhysicsScene world)
         {
             if (!attack.attackContext.IsCaptured || !world.IsValid() || !IsFinite(origin)

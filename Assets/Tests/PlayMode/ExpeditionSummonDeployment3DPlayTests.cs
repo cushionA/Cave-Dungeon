@@ -23,6 +23,7 @@ namespace Game.Tests.PlayMode
         private CharacterActor3D _scoutPrefab;
         private CharacterActor3D _guardPrefab;
         private Transform[] _positions;
+        private BoxCollider _floor;
 
         [UnitySetUp]
         public IEnumerator SetUp()
@@ -58,7 +59,7 @@ namespace Game.Tests.PlayMode
                 new ExpeditionSquad.Selection("guard", 1)
             }), Is.True);
 
-            CreateBox("Room floor", new Vector3(0f, -0.25f, 0f), new Vector3(14f, 0.5f, 14f));
+            _floor = CreateBox("Room floor", new Vector3(0f, -0.25f, 0f), new Vector3(14f, 0.5f, 14f));
             CharacterActor3D sister = CreateCharacter("Sister", new Vector3(0f, 0.04f, -4f), CharacterFeature.Companion);
             _deployment = sister.gameObject.AddComponent<ExpeditionSummonDeployment3D>();
             sister.gameObject.SetActive(true);
@@ -265,6 +266,133 @@ namespace Game.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator NormalDeployment_WithAuthoredDetour_WalksAroundWallAndCatchesKnight()
+            => FollowAroundWall(blockDetour: false);
+
+        [UnityTest]
+        public IEnumerator NormalDeployment_WhenDetourIsBlocked_WaitsUntilDirectPathOpens()
+            => FollowAroundWall(blockDetour: true);
+
+        [UnityTest]
+        public IEnumerator NormalDeployment_WithLeaderBeyondPlannerRange_StillFollowsAcrossOpenFloor()
+            => FollowDistantLeader(hasGap: false);
+
+        [UnityTest]
+        public IEnumerator NormalDeployment_WithLeaderBeyondPlannerRange_StopsBeforeGap()
+            => FollowDistantLeader(hasGap: true);
+
+        private IEnumerator FollowDistantLeader(bool hasGap)
+        {
+            Vector3 spawn = _positions[0].position;
+            int groundLayer = LayerMask.NameToLayer("Ground");
+            _floor.gameObject.layer = groundLayer;
+            if (hasGap)
+            {
+                _floor.transform.position = new Vector3(0f, -0.25f, -1.5f);
+                _floor.size = new Vector3(14f, 0.5f, 8f);
+                CreateBox("Far bank", new Vector3(0f, -0.25f, 18f), new Vector3(14f, 0.5f, 10f))
+                    .gameObject.layer = groundLayer;
+            }
+            else { _floor.size = new Vector3(14f, 0.5f, 46f); }
+
+            Assert.That(_squad.TryConfirm(new[] { new ExpeditionSquad.Selection("scout", 1) }), Is.True);
+            CharacterActor3D knight = CreateCharacter("Distant knight", new Vector3(spawn.x, 0.04f, 20f), CharacterFeature.Player);
+            knight.gameObject.SetActive(true);
+            Configure(leader: knight);
+            LayerMask ground = 1 << groundLayer;
+            SetSerializedField(_deployment, "followGroundLayers", ground);
+            SetSerializedField(_deployment, "followObstructionLayers", ground);
+            SetSerializedField(_deployment, "followWaypoints", new[]
+            {
+                NewObject("Irrelevant rear waypoint", new Vector3(0f, 0f, -1f)).transform,
+            });
+            Physics.SyncTransforms();
+            Assert.That(_deployment.TryDeployConfirmed(), Is.True);
+            _deployment.CopyActiveSummons(_summons);
+            ActorRef identity = _summons[0].Actor;
+            CharacterActor3D scout = GetUnit(identity);
+
+            for (int step = 0; step < 10; step++) { yield return new WaitForFixedUpdate(); }
+            Assert.That(scout.Motor.FeetPosition.z, Is.GreaterThan(spawn.z + 0.25f));
+            Assert.That(knight.Motor.FeetPosition.z - scout.Motor.FeetPosition.z, Is.GreaterThan(16f));
+
+            int stepLimit = hasGap ? 40 : 230;
+            for (int step = 0; step < stepLimit && knight.Motor.FeetPosition.z - scout.Motor.FeetPosition.z > 2.22f; step++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+
+            Vector3 feet = scout.Motor.FeetPosition;
+            if (hasGap) { Assert.That(feet.z, Is.LessThan(2.1f)); }
+            else { Assert.That(knight.Motor.FeetPosition.z - feet.z, Is.InRange(2.05f, 2.22f)); }
+            Assert.That(feet.x, Is.EqualTo(spawn.x).Within(0.05f));
+            Assert.That(scout.Motor.IsGrounded, Is.True);
+            Assert.That(scout.Actor, Is.EqualTo(identity));
+        }
+
+        private IEnumerator FollowAroundWall(bool blockDetour)
+        {
+            const float wallZ = 3.6f;
+            float startX = _positions[0].position.x;
+            Assert.That(_squad.TryConfirm(new[] { new ExpeditionSquad.Selection("scout", 1) }), Is.True);
+            CharacterActor3D knight = CreateCharacter("Knight", new Vector3(startX, 0.04f, 6f), CharacterFeature.Player);
+            knight.gameObject.SetActive(true);
+            Configure(leader: knight);
+
+            int groundLayer = LayerMask.NameToLayer("Ground");
+            _floor.gameObject.layer = groundLayer;
+            BoxCollider wall = CreateBox("Wall across direct follow path", new Vector3(startX, 1.2f, wallZ),
+                new Vector3(3f, 2.4f, 0.4f));
+            wall.gameObject.layer = groundLayer;
+            if (blockDetour)
+            {
+                BoxCollider gate = CreateBox("Gate across detour", new Vector3(0f, 1.2f, wallZ), new Vector3(2f, 2.4f, 0.4f));
+                gate.gameObject.layer = groundLayer;
+            }
+            SetSerializedField(_deployment, "followGroundLayers", (LayerMask)(1 << groundLayer));
+            SetSerializedField(_deployment, "followObstructionLayers", (LayerMask)(1 << groundLayer));
+            SetSerializedField(_deployment, "followWaypoints", new[]
+            {
+                NewObject("Before wall", new Vector3(0f, 0f, 2.3f)).transform,
+                NewObject("After wall", new Vector3(0f, 0f, 4.9f)).transform,
+            });
+            Physics.SyncTransforms();
+            Assert.That(_deployment.TryDeployConfirmed(), Is.True);
+            _deployment.CopyActiveSummons(_summons);
+            ActorRef identity = _summons[0].Actor;
+            CharacterActor3D scout = GetUnit(identity);
+
+            if (blockDetour)
+            {
+                for (int step = 0; step < 25; step++) { yield return new WaitForFixedUpdate(); }
+                Assert.That(scout.Motor.FeetPosition.z, Is.EqualTo(_positions[0].position.z).Within(0.05f));
+                Assert.That(scout.Motor.IsGrounded, Is.True);
+                wall.enabled = false;
+            }
+
+            bool crossedWallLine = false;
+            for (int step = 0; step < 125; step++)
+            {
+                Vector3 before = scout.Motor.FeetPosition;
+                yield return new WaitForFixedUpdate();
+                Vector3 feet = scout.Motor.FeetPosition;
+                Assert.That(Vector3.Distance(before, feet), Is.LessThan(0.16f));
+                if (!crossedWallLine && feet.z > wallZ)
+                {
+                    crossedWallLine = true;
+                    if (blockDetour) { Assert.That(feet.x, Is.EqualTo(startX).Within(0.1f)); }
+                    else { Assert.That(feet.x, Is.GreaterThan(-0.65f)); }
+                }
+                if (crossedWallLine && Vector3.Distance(feet, knight.Motor.FeetPosition) <= 2.22f) { break; }
+            }
+
+            Assert.That(crossedWallLine, Is.True, $"Scout feet {scout.Motor.FeetPosition}.");
+            Assert.That(Vector3.Distance(scout.Motor.FeetPosition, knight.Motor.FeetPosition), Is.InRange(2.05f, 2.22f));
+            Assert.That(scout.Motor.IsGrounded, Is.True);
+            Assert.That(scout.Actor, Is.EqualTo(identity));
+        }
+
+        [UnityTest]
         public IEnumerator NormalDeployment_WhenLeaderIsLost_StopsFollowingAndStillFalls()
         {
             Assert.That(_squad.TryConfirm(new[] { new ExpeditionSquad.Selection("scout", 1) }), Is.True);
@@ -379,7 +507,11 @@ namespace Game.Tests.PlayMode
         public IEnumerator NormalDeployment_WhenEncounterStopsBetweenDrivers_ConsumesExactlyOneFixedStep()
             => CheckEncounterTransitionSteps(start: false);
 
-        private IEnumerator CheckEncounterTransitionSteps(bool start)
+        [UnityTest]
+        public IEnumerator NormalDeployment_WithWaypoints_WhenEncounterStartsBetweenDrivers_ConsumesExactlyOneFixedStep()
+            => CheckEncounterTransitionSteps(start: true, withWaypoints: true);
+
+        private IEnumerator CheckEncounterTransitionSteps(bool start, bool withWaypoints = false)
         {
             const float moveSpeed = 3f;
             Vector3 spawn = _positions[0].position;
@@ -399,6 +531,15 @@ namespace Game.Tests.PlayMode
             SetSerializedField(combatant, "home", NewObject("Combat destination", spawn + Vector3.right * 4f).transform);
             SetSerializedField(_scoutPrefab.GetComponent<CharacterMotor3D>(), "moveSpeed", moveSpeed);
             Configure(encounter, knight);
+            if (withWaypoints)
+            {
+                int groundLayer = LayerMask.NameToLayer("Ground");
+                _floor.gameObject.layer = groundLayer;
+                SetSerializedField(_deployment, "followGroundLayers", (LayerMask)(1 << groundLayer));
+                SetSerializedField(_deployment, "followObstructionLayers", (LayerMask)(1 << groundLayer));
+                SetSerializedField(_deployment, "followWaypoints",
+                    new[] { NewObject("Follow waypoint", spawn + Vector3.forward * 1.4f).transform });
+            }
 
             for (int ordering = 0; ordering < 2; ordering++)
             {
@@ -408,6 +549,14 @@ namespace Game.Tests.PlayMode
                 Assert.That(_deployment.TryDeployConfirmed(), Is.True);
                 _deployment.CopyActiveSummons(_summons);
                 CharacterActor3D scout = GetUnit(_summons[0].Actor);
+                if (withWaypoints)
+                {
+                    for (int settle = 0; settle < 12 && !scout.Motor.IsGrounded; settle++)
+                    {
+                        scout.Motor.Simulate(Vector3.zero, false, Time.fixedDeltaTime);
+                    }
+                    Assert.That(scout.Motor.IsGrounded, Is.True);
+                }
                 Vector3 before = scout.transform.position;
                 bool encounterFirst = ordering == 0;
                 MonoBehaviour first = encounterFirst ? encounter : _deployment;

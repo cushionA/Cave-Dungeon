@@ -13,7 +13,9 @@ Tab／LT または `GEAR & GROWTH` 台で「戦闘準備」を開く。武器は
 
 開始地点の近くに回復薬（`HEALING DRAUGHT`）3個と火炎瓶（`EMBER FLASK`）2個を配置した。E／パッド上ボタンを長押しして拾い、「消耗品」ボタンまたは Esc／Start で登録画面を開く。所持品を4枠のベルトに登録し、1・2／十字キー左右で切り替え、R／パッド右ボタンで使用する。回復薬はHPを最大25回復し、火炎瓶は周囲に火属性の攻撃判定を出す。火炎瓶の基礎威力は `22 + 知力 × 0.65` を四捨五入した値で、命中時は属性防御を適用する。[所持品とベルトの仕様](../../../designs/systems/InventorySystem.md)
 
-工兵は確定編成から所定の地点に出現し、通常探索では騎士について歩く。凍結や移動を占有する行動が終わると追従を再開する。騎士と工兵の間に迂回が必要な障害がある場合の経路探索は残る。[召喚の出撃と同行](../../../Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs)
+工兵は確定編成から所定の地点に出現し、通常探索では騎士について歩く。凍結や移動を占有する行動が終わると追従を再開する。区画の召喚設定で `Follow Waypoints` に床上の中継点を指定すると、工兵は壁を迂回できる。床のレイヤーを `Follow Ground Layers` に、通行を妨げる地形のレイヤーを `Follow Obstruction Layers` に指定する。迂回経路を組めない場合も、次の区間に足場と通行幅があれば直進し、塞がっていれば待つ。中継点が空なら従来の直進で同行する。[召喚の出撃と同行](../../../Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs)・[迂回の試験](../../../Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs)
+
+3Dの爆発物は、`ExplosiveProp3D` と同じオブジェクトの実体コライダーを `Hit Collider` に指定し、攻撃プロファイルの `Target Layers` にそのレイヤーを含める。近接や直撃弾が指定形状に届くと一度だけ起爆する。同距離の有効な候補が複数ある場合は、シーンとHierarchyの順を使う。手前の壁や別の爆発物を `Obstruction Layers` に含めると、奥にある爆発物への直接攻撃を遮る。起爆後の爆風は、壁をはさんでも同じ物理シーンの球内にいる敵へ火属性ダメージを与える。演出は `On Detonated` に設定できる。[爆発物の実装](../../../Assets/MyAsset/Runtime/Combat/ExplosiveProp3D.cs)・[実際の攻撃による起爆試験](../../../Assets/Tests/PlayMode/SpatialCombat3DPlayTests.ExplosiveProps.cs)
 
 工兵を解放したら、坑道入口脇の `REINFORCEMENT DRILL` で E／パッド上ボタンを長押しし、増援訓練を始められる。編成画面の「増援」に切り替え、プリセットを読み込んで確定すると、訓練用の追加枠に工兵1体が出撃する。`DRILL FINISH` に到達すると成功し、`WITHDRAW` を操作すると撤退する。どちらでも増援を解除し、通常編成は探索に同行し続ける。[訓練の操作](../../../Assets/MyAsset/Runtime/World/ExpeditionReinforcementDrill3D.cs)・[増援の試験](../../../Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs)
 

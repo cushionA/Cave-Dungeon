@@ -61,6 +61,8 @@ namespace Game.Runtime
             public GameObject root;
             public object reinforcementAttempt;
             public readonly List<(CharacterActor3D actor, string speciesId)> units = new();
+            public EncounterApproachRoutes3D followRoutes;
+            public long followTick;
         }
 
         [SerializeField] private SpeciesPrefab[] speciesPrefabs = Array.Empty<SpeciesPrefab>();
@@ -69,8 +71,13 @@ namespace Game.Runtime
         [SerializeField] private EncounterCombat3D encounter;
         [SerializeField] private CharacterActor3D explorationLeader;
         [SerializeField, Min(k_MinFollowDistance)] private float followDistance = 2.2f;
+        [SerializeField, Tooltip("通常召喚が迂回に使う同じ区画の床上の点。空なら従来の直進追従を使う。")]
+        private Transform[] followWaypoints = Array.Empty<Transform>();
+        [SerializeField] private LayerMask followGroundLayers = Physics.DefaultRaycastLayers;
+        [SerializeField] private LayerMask followObstructionLayers = Physics.DefaultRaycastLayers;
 
         private readonly Collider[] _overlap = new Collider[1];
+        private readonly List<ActorRef> _followParticipants = new();
         private CharacterActor3D _sister;
         private Deployment _normal;
         private Deployment _reinforcements;
@@ -89,10 +96,16 @@ namespace Game.Runtime
             Deployment group = _normal;
             GameActionRuntime actions = GameManager.Actions;
             // 未設定の編成だけ対象外とする。設定済みの同行先を失っても重力と接地は進める。
-            if (_changing || group == null || ReferenceEquals(explorationLeader, null) || actions == null
-                || !HasValidFollowDistance()) { return; }
+            if (_changing || group == null) { return; }
+            if (ReferenceEquals(explorationLeader, null) || actions == null || !HasValidFollowDistance())
+            {
+                group.followRoutes = null;
+                return;
+            }
 
             CharacterActor3D leader = IsExplorationLeaderAvailable() ? explorationLeader : null;
+            PrepareFollowRoutes(group, leader);
+            bool routesSynced = Physics.autoSyncTransforms;
             for (int i = 0; ReferenceEquals(group, _normal) && i < group.units.Count; i++)
             {
                 CharacterActor3D actor = group.units[i].actor;
@@ -102,10 +115,46 @@ namespace Game.Runtime
                 ref readonly CharacterFlags flags = ref GameManager.Data.GetFlags(hash);
                 if (flags.IsVanished || flags.ActState == ActState.Dead || flags.Belong != CharacterBelong.Ally) { continue; }
 
+                EncounterApproachRoutes3D routes = group.followRoutes;
+                if (routes != null && (actor.Motor.IsFinishingEncounterJump || (encounter != null && encounter.Drives(actor))))
+                {
+                    routes.Remove(actor.Actor);
+                    // 遭遇の開始・終了が駆動順の間に入っても、未実行の固定更新はモーターへ渡す。
+                    routes = null;
+                }
+
                 bool blocked = actions.IsMovementBlocked(hash) || GameManager.Data.GetStatusEffects(hash).BlocksMovement;
-                Vector3 direction = blocked ? Vector3.zero : CompanionTactics3D.FollowDirection(actor, leader, followDistance);
+                Vector3 direction = Vector3.zero;
+                if (!blocked)
+                {
+                    if (routes != null && !routesSynced)
+                    {
+                        Physics.SyncTransforms();
+                        routesSynced = true;
+                    }
+                    direction = routes != null
+                        ? routes.FollowLeader(actor, leader, followDistance, followWaypoints, followGroundLayers, followObstructionLayers)
+                        : CompanionTactics3D.FollowDirection(actor, leader, followDistance);
+                }
                 actor.Motor.SimulateFixedStep(direction, false, Time.fixedDeltaTime);
             }
+        }
+
+        private void PrepareFollowRoutes(Deployment group, CharacterActor3D leader)
+        {
+            if (leader == null || followWaypoints == null || followWaypoints.Length == 0)
+            {
+                group.followRoutes = null;
+                return;
+            }
+
+            _followParticipants.Clear();
+            foreach ((CharacterActor3D actor, string _) in group.units)
+            {
+                if (actor != null) { _followParticipants.Add(actor.Actor); }
+            }
+            group.followRoutes ??= new EncounterApproachRoutes3D();
+            group.followRoutes.BeginObservation(++group.followTick, _followParticipants);
         }
 
         private bool HasValidFollowDistance()

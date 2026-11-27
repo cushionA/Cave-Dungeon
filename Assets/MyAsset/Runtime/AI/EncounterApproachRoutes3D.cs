@@ -5,12 +5,13 @@ using UnityEngine.SceneManagement;
 
 namespace Game.Runtime
 {
-    /// <summary>遭遇の目撃に対し、既存の歩行モーターで到達できる射線付きの接近地点を選ぶ。</summary>
+    /// <summary>対象に近づくため、既存の歩行モーターで到達できる射線付きの地点を選ぶ。</summary>
     internal sealed class EncounterApproachRoutes3D
     {
         internal const int k_MaxWaypoints = 12;
         private const float k_MaxSegment = 12f;
         private const float k_MaxDirectApproach = 16f;
+        private const float k_DirectFollowProbeDistance = 1f;
         private const float k_FloorTolerance = 0.2f;
         private const float k_FloorProbeSpacing = 0.3f;
         private const float k_WaypointArrival = 0.12f;
@@ -32,16 +33,32 @@ namespace Game.Runtime
             public Vector3 ArrivalPoint { get; }
             public float TravelSeconds { get; }
 
-            internal Decision(ActorRef owner, in EncounterSighting3D sighting, ulong routeId,
+            internal Decision(ActorRef owner, ActorRef target, long observationTick, Vector3 observedTargetPosition, ulong routeId,
                 Vector3 arrivalPoint, float travelSeconds)
             {
                 Owner = owner;
-                Target = sighting.Target;
-                ObservationTick = sighting.ObservationTick;
-                ObservedTargetPosition = sighting.Position;
+                Target = target;
+                ObservationTick = observationTick;
+                ObservedTargetPosition = observedTargetPosition;
                 RouteId = routeId;
                 ArrivalPoint = arrivalPoint;
                 TravelSeconds = travelSeconds;
+            }
+        }
+
+        private readonly struct ObservedTarget
+        {
+            public readonly ActorRef actor;
+            public readonly long tick;
+            public readonly Vector3 feet;
+            public readonly Vector3 center;
+
+            public ObservedTarget(ActorRef actor, long tick, Vector3 feet, Vector3 center)
+            {
+                this.actor = actor;
+                this.tick = tick;
+                this.feet = feet;
+                this.center = center;
             }
         }
 
@@ -67,6 +84,7 @@ namespace Game.Runtime
             public ulong id;
             public Scene scene;
             public ActorRef target;
+            public AttackTargetRelation relation;
             public Vector3 plannedTargetPosition;
             public int next = -1;
             public float retryAt;
@@ -138,17 +156,81 @@ namespace Game.Runtime
 
         internal bool TryPrepare(CharacterActor3D actor, in EncounterSighting3D sighting, float attackRange,
             Transform[] waypoints, EncounterJumpLink3D[] jumpLinks, LayerMask groundLayers, LayerMask blockers, out Decision decision)
+            => TryPrepare(actor, new ObservedTarget(sighting.Target, sighting.ObservationTick, sighting.Position, sighting.TargetCenter),
+                AttackTargetRelation.Hostile, attackRange, waypoints, jumpLinks, groundLayers, blockers, out decision);
+
+        internal Vector3 FollowLeader(CharacterActor3D actor, CharacterActor3D leader, float followDistance,
+            Transform[] waypoints, LayerMask groundLayers, LayerMask blockers)
+        {
+            Scene scene = actor.gameObject.scene;
+            if (leader == null || leader.gameObject.scene != scene) { Remove(actor.Actor); return Vector3.zero; }
+
+            PhysicsScene world = scene.GetPhysicsScene();
+            if (!world.IsValid()) { return Vector3.zero; }
+            Vector3 targetFeet = leader.Motor.FeetPosition;
+            Vector3 targetCenter = leader.Body.bounds.center;
+            if ((actor.Motor.FeetPosition - targetFeet).sqrMagnitude <= followDistance * followDistance
+                && HasSight(world, actor.Body.bounds.center, targetCenter, blockers, leader.Body))
+            {
+                Remove(actor.Actor);
+                return Vector3.zero;
+            }
+
+            ActorRef target = leader.Actor;
+            ObservedTarget observation = new(target, _observationTick, targetFeet, targetCenter);
+            if (TryPrepare(actor, observation, AttackTargetRelation.Friendly, followDistance, waypoints, null,
+                    groundLayers, blockers, out Decision route)
+                && TryFollow(actor, target, route, false, groundLayers, blockers, out Vector3 direction, out _))
+            {
+                return direction;
+            }
+            return ProbeDirectFollow(world, actor, leader, followDistance, groundLayers, blockers);
+        }
+
+        private Vector3 ProbeDirectFollow(PhysicsScene world, CharacterActor3D actor, CharacterActor3D leader,
+            float followDistance, LayerMask groundLayers, LayerMask blockers)
+        {
+            ActorRef owner = actor.Actor;
+            ActorRef target = leader.Actor;
+            if (!owner.IsValid || !actor.IsAlive || !actor.Body.enabled || !actor.Motor.IsGrounded
+                || GameManager.Data.GetFlags(owner.Hash).IsVanished || !MultiLockTargeting3D.TryGetActor(target, out _)
+                || !HasRelation(owner, target, AttackTargetRelation.Friendly)) { return Vector3.zero; }
+
+            Vector3 feet = actor.Motor.FeetPosition;
+            Vector3 offset = Horizontal(leader.Motor.FeetPosition - feet);
+            float distance = offset.magnitude;
+            float travel = Mathf.Min(distance - followDistance, k_DirectFollowProbeDistance);
+            float step = actor.Motor.MoveSpeed * Time.fixedDeltaTime;
+            if (!float.IsFinite(distance) || !(travel > 0f) || !float.IsFinite(step) || !(step > 0f)) { return Vector3.zero; }
+
+            Bounds bounds = actor.Body.bounds;
+            float radius = Mathf.Min(bounds.extents.x, bounds.extents.z);
+            Vector3 direction = offset / distance;
+            // 中継点を使えない時も、遮蔽物に向かわず次の短い床区間だけを進む。
+            if (!(radius > 0f) || !(bounds.size.y > 0f)
+                || !HasSight(world, bounds.center, leader.Body.bounds.center, blockers, leader.Body)
+                || !TryGetGround(world, feet, groundLayers, out _)
+                || !TryGetGround(world, feet + direction * travel, groundLayers, out Vector3 end)
+                || !CanWalk(world, feet, end, radius, bounds.size.y, groundLayers, blockers)
+                || !IsClearAt(world, end, radius, bounds.size.y, blockers, actor.Body)) { return Vector3.zero; }
+
+            return direction * Mathf.Min(1f, travel / step);
+        }
+
+        private bool TryPrepare(CharacterActor3D actor, in ObservedTarget observation, AttackTargetRelation relation,
+            float approachDistance, Transform[] waypoints, EncounterJumpLink3D[] jumpLinks, LayerMask groundLayers,
+            LayerMask blockers, out Decision decision)
         {
             decision = default;
-            if (sighting.ObservationTick == 0 || sighting.ObservationTick != _observationTick) { return false; }
+            if (observation.tick == 0 || observation.tick != _observationTick) { return false; }
             ActorRef owner = actor.Actor;
             if (!owner.IsValid || !actor.IsAlive || GameManager.Data.GetFlags(owner.Hash).IsVanished) { return false; }
             Scene scene = actor.gameObject.scene;
             float speed = actor.Motor.MoveSpeed;
-            if (!actor.Motor.IsGrounded || !(attackRange > 0f) || !float.IsFinite(attackRange)
+            if (!actor.Motor.IsGrounded || !(approachDistance > 0f) || !float.IsFinite(approachDistance)
                 || !(speed > 0f) || !float.IsFinite(speed)
-                || !MultiLockTargeting3D.TryGetActor(sighting.Target, out CharacterActor3D target)
-                || target.gameObject.scene != scene || !IsHostile(owner, sighting.Target))
+                || !MultiLockTargeting3D.TryGetActor(observation.actor, out CharacterActor3D target)
+                || target.gameObject.scene != scene || !HasRelation(owner, observation.actor, relation))
             {
                 Remove(owner);
                 return false;
@@ -159,13 +241,14 @@ namespace Game.Runtime
                 route = new Route();
                 _routes.Add(owner, route);
             }
-            bool changedTarget = route.scene != scene || route.target != sighting.Target;
+            bool changedTarget = route.scene != scene || route.target != observation.actor || route.relation != relation;
             if (changedTarget) { route.failedJump = default; }
-            if (changedTarget || (route.plannedTargetPosition - sighting.Position).sqrMagnitude > k_TargetDrift * k_TargetDrift)
+            if (changedTarget || (route.plannedTargetPosition - observation.feet).sqrMagnitude > k_TargetDrift * k_TargetDrift)
             {
                 route.scene = scene;
-                route.target = sighting.Target;
-                route.plannedTargetPosition = sighting.Position;
+                route.target = observation.actor;
+                route.relation = relation;
+                route.plannedTargetPosition = observation.feet;
                 route.next = -1;
                 route.retryAt = 0f;
             }
@@ -186,7 +269,7 @@ namespace Game.Runtime
             {
                 route.retryAt = Time.fixedTime + k_RetryDelay;
                 route.ResetProgress();
-                FindRoute(route, actor, world, target.Body, feet, sighting, attackRange, waypoints, jumpLinks, groundLayers, blockers);
+                FindRoute(route, actor, world, target.Body, feet, observation, approachDistance, waypoints, jumpLinks, groundLayers, blockers);
                 if (route.next >= 0) { route.id = ++_nextRouteId; }
             }
             if (route.next < 0) { return false; }
@@ -197,7 +280,7 @@ namespace Game.Runtime
                 : Vector3.Distance(feet, route.steps[route.next]) + route.remainingCost[route.next];
             float travelSeconds = remaining / speed;
             if (!float.IsFinite(travelSeconds)) { return false; }
-            decision = new Decision(owner, sighting, route.id, route.steps[0], travelSeconds);
+            decision = new Decision(owner, observation.actor, observation.tick, observation.feet, route.id, route.steps[0], travelSeconds);
             return true;
         }
 
@@ -214,7 +297,7 @@ namespace Game.Runtime
                 || !actor.IsAlive || GameManager.Data.GetFlags(decision.Owner.Hash).IsVanished
                 || !actor.Motor.IsGrounded || !actor.Body.enabled
                 || !MultiLockTargeting3D.TryGetActor(target, out CharacterActor3D liveTarget)
-                || liveTarget.gameObject.scene != scene || !IsHostile(decision.Owner, target)
+                || liveTarget.gameObject.scene != scene || !HasRelation(decision.Owner, target, route.relation)
                 || (liveTarget.Motor.FeetPosition - decision.ObservedTargetPosition).sqrMagnitude > k_TargetDrift * k_TargetDrift)
             {
                 return false;
@@ -260,11 +343,11 @@ namespace Game.Runtime
             return true;
         }
 
-        private static bool IsHostile(ActorRef owner, ActorRef target)
+        private static bool HasRelation(ActorRef owner, ActorRef target, AttackTargetRelation relation)
         {
             SoACharaDataDic data = GameManager.Data;
             return AttackTargetRules.CanAffect(owner, data.GetFlags(owner.Hash).Belong, target,
-                data.GetFlags(target.Hash).Belong, AttackTargetRelation.Hostile);
+                data.GetFlags(target.Hash).Belong, relation);
         }
 
         internal bool TryContinueJump(CharacterActor3D actor, bool movementBlocked, out Vector3 direction)
@@ -305,7 +388,7 @@ namespace Game.Runtime
         }
 
         private void FindRoute(Route route, CharacterActor3D actor, PhysicsScene world, CharacterController target,
-            Vector3 feet, in EncounterSighting3D sighting, float attackRange, Transform[] waypoints,
+            Vector3 feet, in ObservedTarget observation, float approachDistance, Transform[] waypoints,
             EncounterJumpLink3D[] jumpLinks, LayerMask groundLayers, LayerMask blockers)
         {
             Scene scene = actor.gameObject.scene;
@@ -351,16 +434,16 @@ namespace Game.Runtime
                 _settled[current] = true;
                 Vector3 start = _nodes[current];
 
-                Vector3 targetOffset = start - sighting.Position;
+                Vector3 targetOffset = start - observation.feet;
                 targetOffset.y = 0f;
-                Vector3 proposed = sighting.Position + Vector3.ClampMagnitude(targetOffset, attackRange * 0.75f);
+                Vector3 proposed = observation.feet + Vector3.ClampMagnitude(targetOffset, approachDistance * 0.75f);
                 if (TryGetGround(world, proposed, groundLayers, out Vector3 landing)
-                    && (landing - sighting.Position).sqrMagnitude <= attackRange * attackRange
+                    && (landing - observation.feet).sqrMagnitude <= approachDistance * approachDistance
                     && currentCost + Vector3.Distance(start, landing) < goalCost
                     && CanWalk(world, start, landing, radius, height, groundLayers, blockers,
                         current == 0 ? k_MaxDirectApproach : k_MaxSegment)
                     && IsClearAt(world, landing, radius, height, blockers, body)
-                    && HasSight(world, landing + aimOffset, sighting.TargetCenter, blockers, target))
+                    && HasSight(world, landing + aimOffset, observation.center, blockers, target))
                 {
                     goalNode = current;
                     goalCost = currentCost + Vector3.Distance(start, landing);

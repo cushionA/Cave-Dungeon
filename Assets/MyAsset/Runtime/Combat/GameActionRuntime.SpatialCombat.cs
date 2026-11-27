@@ -270,6 +270,7 @@ namespace Game.Runtime
             }
 
             CharacterActor3D nearest = null;
+            ExplosiveProp3D nearestProp = null;
             float nearestDistance = float.PositiveInfinity;
             bool multiLock = combat.multiLockRange > 0f;
             ActionTargetSelection hits = default;
@@ -277,6 +278,26 @@ namespace Game.Runtime
             {
                 Collider hit = _spatialOverlaps[i];
                 _spatialOverlaps[i] = null;
+                if (hit == null) { continue; }
+                ExplosiveProp3D prop = multiLock ? null : ExplosiveProp3D.FindLiveContact(hit);
+                if (prop != null)
+                {
+                    Vector3 toProp = hit.bounds.center - origin;
+                    float propDistance = toProp.sqrMagnitude;
+                    if (propDistance > nearestDistance || (propDistance == nearestDistance
+                        && (nearest != null || (nearestProp != null
+                            && ExplosiveProp3D.CompareContactOrder(hit, nearestProp.HitCollider) >= 0)))) { continue; }
+                    // 経路をふさぐ別のコライダーがあれば、その奥にある爆発物には届かない。
+                    if (propDistance > 0f && world.Raycast(origin, toProp.normalized, out RaycastHit obstruction,
+                        Mathf.Sqrt(propDistance), profile.obstructionLayers, QueryTriggerInteraction.Ignore)
+                        && obstruction.collider != hit) { continue; }
+
+                    nearest = null;
+                    nearestProp = prop;
+                    nearestDistance = propDistance;
+                    continue;
+                }
+
                 CharacterActor3D target = hit.GetComponentInParent<CharacterActor3D>();
                 if (!CanHit3D(target, world, profile.targetLayers, context)
                     || !CanRegisterSpatialHit(combat, target.Actor, phaseTime)) { continue; }
@@ -293,17 +314,24 @@ namespace Game.Runtime
 
                 Vector3 offset = target.Body.bounds.center - origin;
                 float distance = offset.sqrMagnitude;
-                if (nearest != null && (distance > nearestDistance
-                    || (distance == nearestDistance && target.Actor.Hash >= nearest.Actor.Hash))) { continue; }
+                if (distance > nearestDistance || (distance == nearestDistance && nearest != null
+                    && target.Actor.Hash >= nearest.Actor.Hash)) { continue; }
                 if (distance > 0f && world.Raycast(origin, offset.normalized, Mathf.Sqrt(distance),
                     profile.obstructionLayers, QueryTriggerInteraction.Ignore)) { continue; }
 
                 nearest = target;
+                nearestProp = null;
                 nearestDistance = distance;
             }
             if (nearest != null)
             {
                 ApplySpatialHit(owner, nearest, combat, context, origin, phaseTime);
+            }
+            else if (nearestProp != null && Execution.CanApplyExecutionEffects(combat.attack.actionInstanceId)
+                && Execution.TryGetInstance(combat.attack.actionInstanceId, out ActionExecution current)
+                && current.ownerRef == context.Owner && current.phase == AnimationPhase.Active)
+            {
+                nearestProp.TryDetonate(context, world);
             }
             if (!multiLock) { return; }
             for (int i = 0; i < combat.multiLockTargets.Count; i++)
