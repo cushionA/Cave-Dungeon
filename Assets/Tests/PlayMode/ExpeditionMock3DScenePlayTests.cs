@@ -148,6 +148,7 @@ namespace Game.Tests.PlayMode
             Assert.AreEqual(4201, loadout.CurrentWeaponId);
             Assert.AreEqual(4211, loadout.CurrentCoreId);
             Assert.AreEqual(4221, loadout.GetSpellId(0));
+            Assert.AreEqual(4241, loadout.CurrentCooperationId);
             Assert.AreEqual(1, progression.Level);
             int intelligence = GameManager.Data.GetAttributes(hash).intel;
 
@@ -167,6 +168,11 @@ namespace Game.Tests.PlayMode
             Submit(root, "loadout-magic-4222");
             Assert.AreEqual(1, loadout.ActiveSpellSlot);
             Assert.AreEqual(4222, loadout.GetSpellId(1));
+            Submit(root, "loadout-tab-cooperation");
+            Assert.AreEqual("防御支援", root.Q<Button>("loadout-cooperation-4241")?.text);
+            Assert.AreEqual("攻撃支援", root.Q<Button>("loadout-cooperation-4242")?.text);
+            Submit(root, "loadout-cooperation-4242");
+            Assert.AreEqual(4242, loadout.CurrentCooperationId);
             Submit(root, "loadout-close");
             Assert.AreEqual("Player", input.currentActionMap.name);
 

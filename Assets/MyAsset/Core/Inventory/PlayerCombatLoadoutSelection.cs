@@ -18,16 +18,19 @@ namespace Game.Core
             public int coreId = k_EmptyItem;
             public int activeSpellSlot;
             public int[] spellIds;
+            public bool cooperationInitialized;
+            public int cooperationId = k_EmptyItem;
         }
 
         private readonly InventoryManager _inventory;
         private readonly BeltShortcut _spellSlots = new BeltShortcut(k_SpellSlotCount);
-
         public string SaveId => "PlayerCombatLoadout";
         public bool IsInitialized { get; private set; }
+        public bool IsCooperationInitialized { get; private set; }
         public int WeaponId { get; private set; } = k_EmptyItem;
         public int CoreId { get; private set; } = k_EmptyItem;
         public int ActiveSpellSlot => _spellSlots.ActiveIndex;
+        public int CooperationId { get; private set; } = k_EmptyItem;
 
         public PlayerCombatLoadoutSelection(InventoryManager inventory) =>
             _inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
@@ -36,6 +39,13 @@ namespace Game.Core
         {
             if (IsInitialized) { return false; }
             IsInitialized = true;
+            return true;
+        }
+
+        public bool TryInitializeCooperation()
+        {
+            if (IsCooperationInitialized) { return false; }
+            IsCooperationInitialized = true;
             return true;
         }
 
@@ -52,6 +62,14 @@ namespace Game.Core
             if (!Owns(itemId, ItemCategory.Core)) { return false; }
             CoreId = itemId;
             IsInitialized = true;
+            return true;
+        }
+
+        public bool TryEquipCooperation(int itemId)
+        {
+            if (!Owns(itemId, ItemCategory.CompanionMagic)) { return false; }
+            CooperationId = itemId;
+            IsCooperationInitialized = true;
             return true;
         }
 
@@ -96,6 +114,8 @@ namespace Game.Core
                 coreId = CoreId,
                 activeSpellSlot = ActiveSpellSlot,
                 spellIds = spellIds,
+                cooperationInitialized = IsCooperationInitialized,
+                cooperationId = CooperationId,
             };
         }
 
@@ -118,6 +138,9 @@ namespace Game.Core
             IsInitialized = initialized;
             WeaponId = snapshot != null && Owns(snapshot.weaponId, ItemCategory.Weapon) ? snapshot.weaponId : k_EmptyItem;
             CoreId = snapshot != null && Owns(snapshot.coreId, ItemCategory.Core) ? snapshot.coreId : k_EmptyItem;
+            CooperationId = snapshot != null && Owns(snapshot.cooperationId, ItemCategory.CompanionMagic)
+                ? snapshot.cooperationId : k_EmptyItem;
+            IsCooperationInitialized = snapshot?.cooperationInitialized == true || CooperationId != k_EmptyItem;
             int[] spellIds = snapshot?.spellIds ?? Array.Empty<int>();
             for (int i = 0; i < k_SpellSlotCount; i++)
             {

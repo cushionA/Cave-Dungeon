@@ -7,16 +7,16 @@ using UnityEngine.UIElements;
 
 namespace Game.Runtime
 {
-    /// <summary>探索中の騎士の装備、魔法枠、能力値を編集する。</summary>
+    /// <summary>探索中の騎士の装備、魔法枠、連携、能力値を編集する。</summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(UIDocument))]
     public sealed class ExpeditionLoadoutPanel3D : MonoBehaviour
     {
-        private enum Section { Weapons, Cores, Magic, Growth }
+        private enum Section { Weapons, Cores, Magic, Growth, Cooperation }
 
         private static readonly (string id, string title)[] s_Sections =
         {
-            ("weapons", "武器"), ("cores", "コア"), ("magic", "魔法"), ("growth", "能力値"),
+            ("weapons", "武器"), ("cores", "コア"), ("magic", "魔法"), ("growth", "能力値"), ("cooperation", "連携"),
         };
 
         private static readonly (StatType stat, string title)[] s_Attributes =
@@ -199,6 +199,10 @@ namespace Game.Runtime
                 (string id, string label) = s_Sections[i];
                 Button button = NewButton($"loadout-tab-{id}", label, () => Select(section));
                 button.style.flexGrow = 1f;
+                if (section == Section.Cooperation && loadout.CooperationOptions.Count == 0)
+                {
+                    button.style.display = DisplayStyle.None;
+                }
                 _tabs[i] = button;
                 tabs.Add(button);
             }
@@ -240,6 +244,10 @@ namespace Game.Runtime
                     break;
                 case Section.Growth:
                     RenderGrowth();
+                    break;
+                case Section.Cooperation:
+                    AddChoices("cooperation", loadout.CooperationOptions, option => option.ItemId, option => option.DisplayName,
+                        loadout.OwnsCooperation, loadout.CurrentCooperationId, loadout.TryEquipCooperation);
                     break;
             }
         }

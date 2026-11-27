@@ -23,6 +23,8 @@ namespace Game.Runtime
             if (TryGetCooperationRequester(out ActorRef requester)) { _pendingCooperation = requester; }
         }
 
+        internal void ClearPendingCooperation() => _pendingCooperation = default;
+
         private void ConsumeCooperation()
         {
             if (!_pendingCooperation.IsValid) { return; }
