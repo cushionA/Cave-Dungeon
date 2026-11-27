@@ -52,7 +52,7 @@ Tab／LT または `GEAR & GROWTH` 台で「戦闘準備」を開く。武器は
 
 ## 自動検証
 
-2026-11-27の全体回帰では、Unity 6000.6.8f1 で EditMode 2,390件と PlayMode 537件がすべて通過した。転移で先読み区画に到着すると対象スロットへのオートセーブが一度だけ実行され、到着が成立しなければ保存の通知は発生しないことも確認した。転移では未ロードの区画の復帰、中断後の区画解放と再選択、通常遷移への引き継ぎ、壁との干渉、35度の斜面への到着を検証した。Linux Playerでは旧形式のセーブから入口を再開し、新しい地点IDで訪問記録が保存されることを確認した。PlayModeでは書き込み失敗時に訪問が登録されないことを確認した。[転移の試験](../../../Assets/Tests/PlayMode/ExpeditionFastTravel3DPlayTests.cs)・[保存失敗の試験](../../../Assets/Tests/PlayMode/ExpeditionSavePointMockPlayTests.cs)
+2026-11-27の全体回帰では、Unity 6000.6.8f1 で EditMode 2,390件と PlayMode 538件がすべて通過した。転移で先読み区画に到着すると対象スロットへのオートセーブが一度だけ実行され、到着が成立しなければ保存の通知は発生しないことも確認した。転移では未ロードの区画の復帰、中断後の区画解放と再選択、通常遷移への引き継ぎ、壁との干渉、35度の斜面への到着を検証した。Linux Playerでは旧形式のセーブから入口を再開し、新しい地点IDで訪問記録が保存されることを確認した。PlayModeでは書き込み失敗時に訪問が登録されないことを確認した。[転移の試験](../../../Assets/Tests/PlayMode/ExpeditionFastTravel3DPlayTests.cs)・[保存失敗の試験](../../../Assets/Tests/PlayMode/ExpeditionSavePointMockPlayTests.cs)
 
 装備と魔法枠はディスク往復と旧セーブの読み込みを確認した。PlayModeでは石碑の長押しから専用イベントが始まり、通常終了とスキップのどちらでも元の騎士でガードできることを確認した。実シーンの装備台では武器とコアを交換して魔法枠を登録し、測量で得たポイントを配分した。番人の150経験値も実戦で確認した。[装備の保存](../../../Assets/Tests/EditMode/PlayerCombatLoadoutSelectionTests.cs)・[イベントの実入力](../../../Assets/Tests/PlayMode/ExpeditionEvent3DScenePlayTests.cs)・[統合モック試験](../../../Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs)
 

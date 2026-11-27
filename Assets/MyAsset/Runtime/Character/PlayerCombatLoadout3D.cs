@@ -313,12 +313,12 @@ namespace Game.Runtime
                     missingStarters++;
                 }
             }
-            if (missingStarters > InventoryManager.k_MaxSlotCount - inventory.ItemCount
-                || !selection.TryInitializeCooperation()) { return; }
+            if (missingStarters > InventoryManager.k_MaxSlotCount - inventory.ItemCount) { return; }
             foreach (CooperationOption option in cooperationOptions)
             {
-                if (IsCooperationStarter(option)) { GrantStarter(option.ItemId, ItemCategory.CompanionMagic); }
+                if (IsCooperationStarter(option) && !GrantStarter(option.ItemId, ItemCategory.CompanionMagic)) { return; }
             }
+            if (!selection.TryInitializeCooperation()) { return; }
             if (FindCooperation(startingCooperationId) != null) { selection.TryEquipCooperation(startingCooperationId); }
         }
 
@@ -327,10 +327,8 @@ namespace Game.Runtime
 
         private static bool Owns(int itemId, ItemCategory category) => itemId >= 0 && GameManager.Inventory?.GetCount(itemId, category) > 0;
 
-        private static void GrantStarter(int itemId, ItemCategory category)
-        {
-            if (!Owns(itemId, category)) { GameManager.Inventory.Add(itemId, category, 1, 1); }
-        }
+        private static bool GrantStarter(int itemId, ItemCategory category) =>
+            Owns(itemId, category) || GameManager.Inventory.Add(itemId, category, 1, 1) == 1;
 
         private WeaponOption FindWeapon(int id)
         {

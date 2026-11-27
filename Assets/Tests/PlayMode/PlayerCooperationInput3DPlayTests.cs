@@ -222,6 +222,29 @@ namespace Game.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Cooperation_WhenControllerIsDestroyedDuringStart_CancelsTheAcceptedCast()
+        {
+            ActorRef source = _companion.GetComponent<CharacterActor3D>().Actor;
+            ActionExecutionSystem execution = GameManager.Actions.Execution;
+            long started = 0;
+            void RetireController(ActionExecutionEvent change)
+            {
+                if (change.kind != ActionSignalKind.Started || change.execution.ownerRef != source) { return; }
+                started = change.execution.instanceId;
+                Object.DestroyImmediate(_companion);
+            }
+
+            execution.Changed += RetireController;
+            try { Assert.That(_companion.TryCooperate(_knight), Is.False); }
+            finally { execution.Changed -= RetireController; }
+            Assert.That(started, Is.Positive);
+            Assert.That(GameManager.Actors.IsCurrent(source), Is.True);
+            Assert.That(execution.TryGetInstance(started, out _), Is.False);
+            Assert.That(DefenseMultiplier(), Is.EqualTo(1f));
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator KeyboardCooperation_FullLegacyInventoryKeepsWardUntilAllStartersFit()
         {
             const int ward = 7311;

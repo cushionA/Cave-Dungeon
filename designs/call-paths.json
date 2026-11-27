@@ -1916,7 +1916,7 @@
       "verification_hashes": {
         "Assets/MyAsset/Core/AI/Companion/CompanionMpManager.cs": "317c034eb6a3b84ca6d5c1e7638942bcf13f7753a70cf20c5b05ceb525bc0155",
         "Assets/MyAsset/Core/Damage/HitResolver.cs": "5c34e3f089e9103cf57e562a48a24dba9ab843a16b5cf144c6967ecfa2ff7db2",
-        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "19de26adb29026fc2809c74da984b67e5cd0f66c75f10416a3b1bb0bdaee0d36",
+        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "54d45f2d4f19fcded31e733eb856fd3676fdc69bf815a20a0930fcdd7fbf854e",
         "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "3d29d7835bcca15680cb8972a2539c5e8ec2344937f10b99a1c14840626796cb",
         "Assets/Tests/PlayMode/CompanionController3DPlayTests.cs": "7fd6342d91eed2a73fe3bdc1f260caa90f4d685cd146597dba74875cbb202f00",
         "Assets/Tests/PlayMode/CompanionSharedMpFlowTests.cs": "014b581b93c825d865796999a980a82862010bf18d110df5502ab1f67d330a6a",
@@ -8698,13 +8698,13 @@
         "Assets/MyAsset/Core/AI/Coop/CoopCooldownTracker.cs": "e9cf5933ddae7fd7d56b540555649085da4977da37075d6522b1d62d50a79cab",
         "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "906affd99f13b1d343389f12e8cf59e9e9f396eebcc43cb2b44d9427016616c8",
         "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs": "07736920ccf4c9614a9ad6b9ed6693748b20694b3873574e9bc92fb94d2f3dad",
-        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "19de26adb29026fc2809c74da984b67e5cd0f66c75f10416a3b1bb0bdaee0d36",
+        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "54d45f2d4f19fcded31e733eb856fd3676fdc69bf815a20a0930fcdd7fbf854e",
         "Assets/MyAsset/Runtime/AI/CompanionTactics3D.cs": "20b10306db375277be736cfcd764695a6ee78f2453e9025904cb0efde06ef22d",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.Cooperation.cs": "9332f1a5bb10b8f7013395192a841ea6e813c241a2e7792d8044aee6a07b3563",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.cs": "51dbe300b4ffb75417862df9483470855a7814d11eeff80f6e741db1c875c076",
         "Assets/Scenes/ExpeditionMock3DScene.unity": "2409906d6cd07ea1eb7fe6bb8a337809e63b83d30c54d38ceaa9f1c8938de2ec",
         "Assets/Tests/PlayMode/CompanionController3DPlayTests.cs": "7fd6342d91eed2a73fe3bdc1f260caa90f4d685cd146597dba74875cbb202f00",
-        "Assets/Tests/PlayMode/PlayerCooperationInput3DPlayTests.cs": "ef71af7f383157cc4121d9e35a9dbc3afcca0afec5b46bd2ce4a04b6cdacd154"
+        "Assets/Tests/PlayMode/PlayerCooperationInput3DPlayTests.cs": "0b0b8d1c4ef871f6ec341334d510ea87db2cabfba12c336e7d191492c8196f78"
       }
     }
   },
@@ -8751,7 +8751,7 @@
       "verification_hashes": {
         "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "3741d244d117f332dee2adfd21d684c93c762b0273cccfeb195d763beaf8d09b",
         "Assets/MyAsset/Core/AI/Core/ModeController.cs": "80e57eefa69c82ce61dec1feef230dabddab6bf5fa256dd8df64410f51572bcd",
-        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "19de26adb29026fc2809c74da984b67e5cd0f66c75f10416a3b1bb0bdaee0d36",
+        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "54d45f2d4f19fcded31e733eb856fd3676fdc69bf815a20a0930fcdd7fbf854e",
         "Assets/MyAsset/Runtime/AI/CompanionTactics3D.cs": "20b10306db375277be736cfcd764695a6ee78f2453e9025904cb0efde06ef22d",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "f55c9a721abec5f602a7a7c6ebf7041bbeddcda5b0615c212f6f47d31b37a6f1",
         "Assets/MyAsset/Runtime/UI/CompanionAISettingsController.Dialogs.ActionPicker.cs": "9a5f9d4fcd141904ef8ba086e85c373c81b902be5745c8f8ad66ca42c2c4e72c",
@@ -8990,7 +8990,7 @@
       "notes": "依頼、召喚、戦術設定、消耗品、Timelineの専用イベント、装備・魔法の選択と成長、ストリーミング、ボスと周回を同じ試作マップで確認する。モックでも工兵の追従先を設定し、会話からの出撃と追従は専用の依頼シーンで検証した。別の集団戦でプリセットを使って増援を呼び、訓練の成功と撤退を確認した。 Unity 6000.6.8f1でExpeditionMock3DScenePlayTests 3件、ExpeditionQuest3DScenePlayTests 1件、BossArena3DScenePlayTests 1件、ExpeditionNextPlaythroughScenePlayTests 1件、ExpeditionConsumablesMockScenePlayTests 1件、ExpeditionEvent3DScenePlayTests 2件、ExpeditionLoadoutPanel3DPlayTests 1件、PlayerProgression3DPlayTests 2件が成功。",
       "verification_hashes": {
         "Assets/Integration/ExpeditionQuestGiver.cs": "0e3133114d9c00d37a79da0d69ccc22e18e7ac18c56c27ad8011af60f1f20ccc",
-        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "19de26adb29026fc2809c74da984b67e5cd0f66c75f10416a3b1bb0bdaee0d36",
+        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "54d45f2d4f19fcded31e733eb856fd3676fdc69bf815a20a0930fcdd7fbf854e",
         "Assets/MyAsset/Runtime/Streaming/LevelStreamingController.cs": "b66ebcc043602838f74a3a603b578bbd7dd88c5a11dab28094bc5d0d0293be0a",
         "Assets/MyAsset/Runtime/UI/ExpeditionNextPlaythroughPanel.cs": "98c96bdc66ef6c3c9c3bbc59832993fe7a7f3ec6b53eda0f675f2bbcf4a09d3d",
         "Assets/MyAsset/Runtime/World/BossEncounter3D.cs": "e747af82ed060712f60694a33678f42fce837145773eb19e8145aacbd4cbdc9d",
@@ -9357,7 +9357,7 @@
         "Assets/MyAsset/Data/PLACEHOLDER_MineCrossbow3D.asset.meta": "9b70cf95c63550b67779c7d1f253172119968e4b805a42362106c7facbca80f2",
         "Assets/MyAsset/Data/PLACEHOLDER_MineFlameCircle3D.asset": "88449e971e69ac9e767a7e2f4a36c636cb81afb16fd586a07808fbfb3c735e9e",
         "Assets/MyAsset/Data/PLACEHOLDER_MineFlameCircle3D.asset.meta": "25785df65f3ced39e6737e72cf19bbb78f52a998b5c2d692c69a67c80b11ea0b",
-        "Assets/MyAsset/Runtime/Character/PlayerCombatLoadout3D.cs": "b5c6a18935cca6b186bc07e99861f92eb7aa5d21ff3b0e29f1e485812602d88e",
+        "Assets/MyAsset/Runtime/Character/PlayerCombatLoadout3D.cs": "43745767e21e77543aa889f186d7185baf38cfc40ab28871b9e1b08b2841d648",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "f55c9a721abec5f602a7a7c6ebf7041bbeddcda5b0615c212f6f47d31b37a6f1",
         "Assets/MyAsset/Runtime/GameManager.cs": "606684ce62e8fb27c13b49074a891a562bd9c0b9a0df8d294e51625eb3b19d17",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.cs": "51dbe300b4ffb75417862df9483470855a7814d11eeff80f6e741db1c875c076",
@@ -9818,7 +9818,7 @@
         "Assets/MyAsset/Data/PLACEHOLDER_MineCrossbow3D.asset": "a95e47ebc6cd600aad3eac7dd7b28dc9de6d6f7c3066a49f1ed424c7ceb05793",
         "Assets/MyAsset/Data/PLACEHOLDER_MineCrossbow3D.asset.meta": "9b70cf95c63550b67779c7d1f253172119968e4b805a42362106c7facbca80f2",
         "Assets/MyAsset/Runtime/Animation/CharacterAnimationController.cs": "d2db8675c9cb6a2cc9a875f449a9f0751588a7a8aa168045b7d9dd48c1fa2735",
-        "Assets/MyAsset/Runtime/Character/PlayerCombatLoadout3D.cs": "b5c6a18935cca6b186bc07e99861f92eb7aa5d21ff3b0e29f1e485812602d88e",
+        "Assets/MyAsset/Runtime/Character/PlayerCombatLoadout3D.cs": "43745767e21e77543aa889f186d7185baf38cfc40ab28871b9e1b08b2841d648",
         "Assets/MyAsset/Runtime/Combat/ActionCatalog.cs": "623b1a5ad74c7922c92c43b1c585875e6cf80874b047929683e06782912fc212",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "f55c9a721abec5f602a7a7c6ebf7041bbeddcda5b0615c212f6f47d31b37a6f1",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "ff140f2a17435128b6fc5a93c6fb465a5d772587e7f966b9633ad7d0ceeebf63",
@@ -9887,7 +9887,7 @@
         "Assets/MyAsset/Data/PLACEHOLDER_MineFlameCircle3D.asset": "88449e971e69ac9e767a7e2f4a36c636cb81afb16fd586a07808fbfb3c735e9e",
         "Assets/MyAsset/Data/PLACEHOLDER_MineFlameCircle3D.asset.meta": "25785df65f3ced39e6737e72cf19bbb78f52a998b5c2d692c69a67c80b11ea0b",
         "Assets/MyAsset/Runtime/Animation/CharacterAnimationController.cs": "d2db8675c9cb6a2cc9a875f449a9f0751588a7a8aa168045b7d9dd48c1fa2735",
-        "Assets/MyAsset/Runtime/Character/PlayerCombatLoadout3D.cs": "b5c6a18935cca6b186bc07e99861f92eb7aa5d21ff3b0e29f1e485812602d88e",
+        "Assets/MyAsset/Runtime/Character/PlayerCombatLoadout3D.cs": "43745767e21e77543aa889f186d7185baf38cfc40ab28871b9e1b08b2841d648",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "f55c9a721abec5f602a7a7c6ebf7041bbeddcda5b0615c212f6f47d31b37a6f1",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "ff140f2a17435128b6fc5a93c6fb465a5d772587e7f966b9633ad7d0ceeebf63",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.cs": "51dbe300b4ffb75417862df9483470855a7814d11eeff80f6e741db1c875c076",
@@ -10464,7 +10464,7 @@
       ],
       "notes": "同じ号令入力から集合、集中攻撃、防衛、おまかせを実行する。目標の敵と床の実体を検証する。探索と集団戦の切り替え、異なる物理シーンの標的拒否、個体再登録での解除を操作と移動で確認した。 遠征が管理する同じ物理シーンの追加区画で防衛を出し、別の加算シーンの床は拒否する。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "19de26adb29026fc2809c74da984b67e5cd0f66c75f10416a3b1bb0bdaee0d36",
+        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "54d45f2d4f19fcded31e733eb856fd3676fdc69bf815a20a0930fcdd7fbf854e",
         "Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs": "7c723e74d600e14fadb169f8902a991ca1393bd0ad865ac7a67c664e13ebb307",
         "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.FieldOrders.cs": "86afb8f84699f3ffa512c76eb2ee2edf8bb1833e352c7b310e403c559b70fb85",
         "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs": "07cfc5beb8ed28560a1b81829588b62f7bc6688d0cce74e2afbf8c759f1cd123",
@@ -10576,19 +10576,19 @@
         "Assets/Tests/PlayMode/PlayerCooperationInput3DPlayTests.cs",
         "Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs"
       ],
-      "notes": "仲間用魔法として所持している支援を1枠に装備する。防御支援と攻撃支援の操作、支援ごとのクールタイム、所持品とセーブの復元、旧セーブでの初期設定を確認した。",
+      "notes": "仲間用魔法として所持している支援を1枠に装備する。防御支援と攻撃支援の操作、支援ごとのクールタイム、所持品とセーブの復元、旧セーブでの初期設定を確認した。 所持枠が満杯の旧セーブでは防御支援を維持する。発動開始の通知中にシスターの連携担当を破棄した場合は、開始済みの実行を取り消す。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs": "07736920ccf4c9614a9ad6b9ed6693748b20694b3873574e9bc92fb94d2f3dad",
         "Assets/MyAsset/Core/Inventory/PlayerCombatLoadoutSelection.cs": "77b828b6114d4f20409d678295cddb7280b05413a54fb1074b5e29a02fc0d916",
-        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "19de26adb29026fc2809c74da984b67e5cd0f66c75f10416a3b1bb0bdaee0d36",
-        "Assets/MyAsset/Runtime/Character/PlayerCombatLoadout3D.cs": "b5c6a18935cca6b186bc07e99861f92eb7aa5d21ff3b0e29f1e485812602d88e",
+        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "54d45f2d4f19fcded31e733eb856fd3676fdc69bf815a20a0930fcdd7fbf854e",
+        "Assets/MyAsset/Runtime/Character/PlayerCombatLoadout3D.cs": "43745767e21e77543aa889f186d7185baf38cfc40ab28871b9e1b08b2841d648",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.Cooperation.cs": "9332f1a5bb10b8f7013395192a841ea6e813c241a2e7792d8044aee6a07b3563",
         "Assets/MyAsset/Runtime/UI/ExpeditionLoadoutPanel3D.cs": "c1f8c3db0284f4c8a41200dd7c2eaf27131ad7a41dc3a721a4f0c1bce51bef98",
         "Assets/Scenes/ExpeditionMock3DScene.unity": "2409906d6cd07ea1eb7fe6bb8a337809e63b83d30c54d38ceaa9f1c8938de2ec",
         "Assets/Tests/EditMode/PlayerCombatLoadoutSelectionTests.cs": "490016d71600689fcd5d22a43057b06660e84e127f6c954d92056edce0e1f225",
         "Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs": "24a9240a8b2a56ab127ed6f0c3b89b8c82197cf7456cd153ff998e80848e2277",
-        "Assets/Tests/PlayMode/PlayerCooperationInput3DPlayTests.cs": "ef71af7f383157cc4121d9e35a9dbc3afcca0afec5b46bd2ce4a04b6cdacd154",
-        "designs/systems/CoopAction.md": "36771114c037ef78e6abf36c1e2150b2194a77c0c5b13596b6892ecad2027f6b"
+        "Assets/Tests/PlayMode/PlayerCooperationInput3DPlayTests.cs": "0b0b8d1c4ef871f6ec341334d510ea87db2cabfba12c336e7d191492c8196f78",
+        "designs/systems/CoopAction.md": "0b8160ec00dea5f0b9d12c26190256dbba17beafb64168d70d2e2bcf77587338"
       }
     }
   }
