@@ -36,6 +36,7 @@ namespace Game.Tests.PlayMode
             _scene = SceneManager.GetSceneByPath(k_ScenePath);
             SceneManager.SetActiveScene(_scene);
             yield return null;
+            yield return ExpeditionEvent3DScenePlayTests.WaitForJournalRestore();
 
             // Pixel Crushers and its adapters are in predefined assemblies that the test asmdef cannot reference.
             _dialogueManager = FindIntegrationType("PixelCrushers.DialogueSystem.DialogueManager");
@@ -56,6 +57,8 @@ namespace Game.Tests.PlayMode
             ExpeditionSquad squad = GameManager.GetSubManager<ExpeditionSquadManager>()?.Squad;
             Assert.IsNotNull(squad);
 
+            Assert.That(questGiverType.GetProperty("Stage").GetValue(giver), Is.EqualTo(0),
+                "The authored scene's journal must open with the quest available.");
             Assert.AreEqual(0, ReadStage());
             Assert.IsEmpty(squad.GetUnlockedSpecies());
             Assert.IsFalse((bool)RunLua("return ExpeditionReportQuest()", "asBool"));

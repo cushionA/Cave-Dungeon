@@ -191,7 +191,11 @@ namespace Game.Runtime
             return false;
         }
 
-        private void OnDisable() => ForgetFieldOrders();
+        private void OnDisable()
+        {
+            if (_actionExecutorController != null) { _actionExecutorController.CancelGimmickApproach(); }
+            ForgetFieldOrders();
+        }
 
         protected override void OnDestroy()
         {

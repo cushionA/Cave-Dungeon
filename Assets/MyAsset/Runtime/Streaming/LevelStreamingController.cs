@@ -208,7 +208,7 @@ namespace Game.Runtime
             LoadAdditiveIfAvailable(fallbackSceneName);
         }
 
-        /// <summary>外部からエリアロードを要求する。AreaBoundaryTriggerから呼ばれる。</summary>
+        /// <summary><see cref="AreaBoundaryTrigger3D"/> などからエリアロードを要求する。</summary>
         public bool RequestAreaLoad(string sceneName)
         {
             if (_orchestrator == null || string.IsNullOrWhiteSpace(sceneName))

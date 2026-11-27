@@ -74,6 +74,202 @@ namespace Game.Tests.PlayMode
             float beforeRepeat = GameManager.Data.GetVitals(sister.Actor.Hash).currentMp;
             Assert.IsTrue(companion.TryCooperate(knight));
             Assert.AreEqual(beforeRepeat - 12f, GameManager.Data.GetVitals(sister.Actor.Hash).currentMp, 0.001f);
+
+            for (int i = 0; i < 60 && companion.IsCooperating; i++) { yield return new WaitForFixedUpdate(); }
+            int hash = sister.Actor.Hash;
+            GameManager.Data.GetVitals(hash).currentMp = 12f;
+            Assert.IsTrue(companion.TryCooperate(knight));
+            Assert.AreEqual(0f, GameManager.Data.GetVitals(hash).currentMp);
+            yield return new WaitForFixedUpdate();
+            Assert.IsTrue(GameManager.Data.GetFlags(hash).IsVanished);
+            Assert.IsTrue(companion.IsCooperating, "The final paid cast was already accepted when Sister vanished.");
+            Assert.IsFalse(companion.TryCooperate(knight));
+            for (int i = 0; i < 60 && companion.IsCooperating; i++) { yield return new WaitForFixedUpdate(); }
+            Assert.IsFalse(companion.IsCooperating);
+            Assert.IsTrue(GameManager.Data.GetFlags(hash).IsVanished);
+        }
+
+        [UnityTest]
+        public IEnumerator SisterBarrier_RoutesGuardAdjustedDamageToMp_AndReturnsAtTheSamePosition()
+        {
+            CharacterActor3D knight = Actor("Knight", Vector3.back * 2f, CharacterBelong.Ally, CharacterFeature.Player);
+            CharacterActor3D sister = Actor("Sister", Vector3.zero, CharacterBelong.Ally, CharacterFeature.Companion);
+            CharacterActor3D enemy = Actor("Enemy", Vector3.forward * 3f, CharacterBelong.Enemy, CharacterFeature.Minion);
+            CharacterActor3D ally = Actor("Ordinary ally", Vector3.right * 3f, CharacterBelong.Ally, CharacterFeature.Companion);
+            CompanionController3D companion = sister.gameObject.AddComponent<CompanionController3D>();
+            companion.ConfigureForTest(knight);
+            typeof(CompanionController3D).GetField("mpSettings", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(companion, new CompanionMpSettings
+                {
+                    baseRecoveryRate = 75f, vanishRecoveryMultiplier = 2f, returnThresholdRatio = 0.5f, maxReserveMp = 60,
+                });
+            yield return new WaitForFixedUpdate();
+
+            int hash = sister.Actor.Hash;
+            int hp = GameManager.Data.GetVitals(hash).currentHp;
+            float mp = GameManager.Data.GetVitals(hash).currentMp;
+            GameManager.Data.GetCombatStats(hash).guardStats = new GuardStats
+            {
+                guardDirection = GuardDirection.Front, slashCut = 0.5f,
+            };
+            DamageReceiver receiver = sister.GetComponent<DamageReceiver>();
+            AttackContext context = AttackContext.Capture(enemy.Actor, new ElementalStatus { slash = 20 },
+                1f, CharacterBelong.Enemy, null);
+            DamageData incoming = new DamageData { motionValue = 1f, attackElement = Element.Slash };
+            context.ApplyTo(ref incoming, sister.Actor);
+            receiver.SetGuarding(true);
+            Assert.AreEqual(GuardResult.JustGuard, receiver.ReceiveDamage3D(incoming, enemy.transform.position).guardResult);
+            Assert.AreEqual(mp, GameManager.Data.GetVitals(hash).currentMp);
+
+            GameManager.Data.GetDefenseState(hash).guardElapsedTime = GuardJudgmentLogic.k_JustGuardWindow + 0.1f;
+            GameManager.Data.GetDefenseState(hash).continuousJustGuardUntil = -1f;
+            DamageResult guarded = receiver.ReceiveDamage3D(incoming, enemy.transform.position);
+            Assert.AreEqual(GuardResult.Guarded, guarded.guardResult);
+            Assert.That(guarded.totalDamage, Is.Positive);
+            Assert.AreEqual(mp - guarded.totalDamage, GameManager.Data.GetVitals(hash).currentMp);
+            Assert.AreEqual(hp, GameManager.Data.GetVitals(hash).currentHp);
+
+            int allyHash = ally.Actor.Hash;
+            CharacterVitals allyVitals = GameManager.Data.GetVitals(allyHash);
+            context.ApplyTo(ref incoming, ally.Actor);
+            DamageResult ordinary = ally.GetComponent<DamageReceiver>().ReceiveDamage3D(incoming, enemy.transform.position);
+            Assert.Greater(ordinary.totalDamage, guarded.totalDamage);
+            Assert.AreEqual(allyVitals.currentHp - ordinary.totalDamage, GameManager.Data.GetVitals(allyHash).currentHp);
+            Assert.AreEqual(allyVitals.currentMp, GameManager.Data.GetVitals(allyHash).currentMp);
+
+            receiver.SetGuarding(false);
+            context.ApplyTo(ref incoming, sister.Actor);
+            incoming.motionValue = 20f;
+            Vector3 beforeVanish = sister.transform.position;
+            int deaths = 0;
+            void CountDeath(int defender, int _) { if (defender == hash) { deaths++; } }
+            GameManager.Events.OnCharacterDeathEvent += CountDeath;
+            DamageResult depleted = receiver.ReceiveDamage3D(incoming, enemy.transform.position);
+            GameManager.Events.OnCharacterDeathEvent -= CountDeath;
+            Assert.Greater(depleted.totalDamage, hp);
+            Assert.IsFalse(depleted.isKill);
+            Assert.AreEqual(0, deaths);
+            Assert.AreEqual(hp, GameManager.Data.GetVitals(hash).currentHp);
+            Assert.AreEqual(0f, GameManager.Data.GetVitals(hash).currentMp);
+            Assert.IsTrue(GameManager.Data.GetFlags(hash).IsVanished);
+            Assert.IsFalse(sister.Body.enabled);
+            Assert.AreEqual(0, receiver.ReceiveDamage3D(incoming, enemy.transform.position).totalDamage);
+
+            for (int i = 0; i < 30 && GameManager.Data.GetFlags(hash).IsVanished; i++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+            Assert.IsFalse(GameManager.Data.GetFlags(hash).IsVanished);
+            Assert.IsTrue(sister.Body.enabled);
+            Assert.GreaterOrEqual(GameManager.Data.GetVitals(hash).currentMp, mp * 0.5f);
+            Assert.Less(Vector3.Distance(beforeVanish, sister.transform.position), 0.07f);
+        }
+
+        [UnityTest]
+        public IEnumerator SisterBarrier_DepletingHitKeepsTheAcceptedGroupCastAndItsSlot()
+        {
+            CharacterActor3D knight = Actor("Knight", Vector3.back * 2f, CharacterBelong.Ally, CharacterFeature.Player);
+            CharacterActor3D sister = Actor("Sister", Vector3.zero, CharacterBelong.Ally, CharacterFeature.Companion);
+            CharacterActor3D enemy = Actor("Enemy", Vector3.forward * 3f, CharacterBelong.Enemy, CharacterFeature.Minion);
+            CompanionController3D companion = sister.gameObject.AddComponent<CompanionController3D>();
+            companion.ConfigureForTest(knight);
+            yield return null;
+            GameManager.Instance.enabled = false;
+            Physics.SyncTransforms();
+
+            int hash = sister.Actor.Hash;
+            GameManager.Data.GetVitals(hash).currentArmor = 0f;
+            DamageReceiver receiver = sister.GetComponent<DamageReceiver>();
+            AttackContext context = AttackContext.Capture(enemy.Actor, new ElementalStatus { slash = 20 },
+                1f, CharacterBelong.Enemy, null);
+            DamageData hit = new DamageData { motionValue = 1f, attackElement = Element.Slash };
+            context.ApplyTo(ref hit, sister.Actor);
+            DamageResult ordinary = receiver.ReceiveDamage3D(hit, enemy.transform.position);
+            Assert.AreEqual(HitReaction.Flinch, ordinary.hitReaction, "A hit that leaves MP still causes the usual reaction.");
+            Assert.Greater(GameManager.Data.GetVitals(hash).currentMp, 0f);
+
+            GameActionRuntime actions = GameManager.Actions;
+            actions.Execution.Tick(1f);
+            AttackInfo spell = MakeAttack();
+            spell.category = AttackCategory.Magic;
+            spell.attack3D.shape = AttackShape3D.Projectile;
+            spell.attack3D.projectileRadius = 0.08f;
+            spell.projectileInfo = new ProjectileInfo
+            {
+                hasProjectile = true, trajectory = BulletMoveType.Straight, speed = 10f, lifetime = 1f,
+            };
+            GameManager.Data.GetVitals(hash).currentMp = 5f;
+            using var slots = new MissionAttackSlots3D(actions, GameManager.Events);
+            Assert.IsTrue(slots.TryExecute(sister, enemy.Actor, spell, out long cast));
+            Assert.IsTrue(actions.Execution.TryGetInstance(cast, out ActionExecution windup));
+            Assert.AreEqual(AnimationPhase.Anticipation, windup.phase);
+
+            DamageResult depleted = receiver.ReceiveDamage3D(hit, enemy.transform.position);
+            Assert.AreEqual(HitReaction.None, depleted.hitReaction);
+            Assert.IsTrue(GameManager.Data.GetFlags(hash).IsVanished);
+            Assert.AreEqual(ActState.AttackPrep, GameManager.Data.GetFlags(hash).ActState);
+            Assert.IsTrue(actions.Execution.IsGroupActive(windup.groupId));
+            slots.Refresh();
+            Assert.AreEqual(1, slots.ActiveCount);
+            Assert.IsFalse(slots.TryExecute(knight, enemy.Actor, spell, out _));
+            Assert.AreEqual(0, GameManager.Projectiles3D.ActiveCount);
+
+            actions.Execution.Tick(spell.GetMotion().preMotionDuration);
+            Assert.AreEqual(1, GameManager.Projectiles3D.ActiveCount, "The accepted spell fires after the barrier vanishes.");
+            actions.Execution.Tick(1f);
+            Assert.AreEqual(0, slots.ActiveCount);
+            Assert.IsFalse(slots.TryExecute(sister, enemy.Actor, spell, out _), "A vanished actor cannot reserve a new cast.");
+            Assert.IsTrue(slots.TryExecute(knight, enemy.Actor, spell, out _));
+        }
+
+        [UnityTest]
+        public IEnumerator SisterBarrier_ControllerToggleRetainsTheVanishedBodyUntilRecoveryOrActorRemoval()
+        {
+            CharacterActor3D knight = Actor("Knight", Vector3.back * 2f, CharacterBelong.Ally, CharacterFeature.Player);
+            CharacterActor3D sister = Actor("Sister", Vector3.zero, CharacterBelong.Ally, CharacterFeature.Companion);
+            CompanionController3D companion = sister.gameObject.AddComponent<CompanionController3D>();
+            companion.ConfigureForTest(knight);
+            GameObject visual = new GameObject("Sister presentation");
+            visual.transform.SetParent(sister.transform, false);
+            const BindingFlags fields = BindingFlags.Instance | BindingFlags.NonPublic;
+            typeof(CompanionController3D).GetField("presentation", fields).SetValue(companion, visual);
+            typeof(CompanionController3D).GetField("mpSettings", fields).SetValue(companion, new CompanionMpSettings
+            {
+                baseRecoveryRate = 75f, vanishRecoveryMultiplier = 2f, returnThresholdRatio = 0.25f, maxReserveMp = 60,
+            });
+            yield return new WaitForFixedUpdate();
+
+            ActorRef owner = sister.Actor;
+            CompanionMpManager barrier = companion.GetDamageBarrier(owner);
+            float reserve = barrier.ReserveMp;
+            barrier.ApplyBarrierDamage(barrier.CurrentMp);
+            companion.enabled = false;
+            yield return new WaitForFixedUpdate();
+
+            Assert.AreEqual(owner, sister.Actor);
+            Assert.AreSame(barrier, companion.GetDamageBarrier(owner));
+            Assert.AreEqual(0f, barrier.CurrentMp);
+            Assert.AreEqual(reserve, barrier.ReserveMp);
+            Assert.IsFalse(sister.Body.enabled);
+            Assert.IsFalse(visual.activeSelf);
+
+            companion.enabled = true;
+            Assert.IsFalse(sister.Body.enabled);
+            for (int i = 0; i < 30 && barrier.IsVanished; i++) { yield return new WaitForFixedUpdate(); }
+            Assert.IsFalse(barrier.IsVanished);
+            Assert.IsTrue(sister.Body.enabled);
+            Assert.IsTrue(visual.activeSelf);
+            Assert.Less(barrier.ReserveMp, reserve);
+
+            barrier.ApplyBarrierDamage(barrier.CurrentMp);
+            companion.enabled = false;
+            sister.enabled = false;
+            Assert.IsTrue(sister.Body.enabled, "Removing an actor releases the old generation's body suspension.");
+            Assert.IsTrue(visual.activeSelf);
+            sister.enabled = true;
+            Assert.AreNotEqual(owner, sister.Actor);
+            Assert.IsNull(companion.GetDamageBarrier(owner));
+            Assert.AreNotSame(barrier, companion.GetDamageBarrier(sister.Actor));
         }
 
         [UnityTest]

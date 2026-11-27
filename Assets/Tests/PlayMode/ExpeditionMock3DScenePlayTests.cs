@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Game.Core;
 using Game.Runtime;
@@ -20,7 +21,9 @@ namespace Game.Tests.PlayMode
         private const string k_Mock = "Assets/Scenes/ExpeditionMock3DScene.unity";
         private const string k_PassageA = "Assets/Scenes/StreamingAreaA3DTestScene.unity";
         private const string k_PassageB = "Assets/Scenes/StreamingAreaB3DTestScene.unity";
+        private readonly HashSet<GameObject> _existingVendorSaves = new HashSet<GameObject>();
         private Scene _mock;
+        private string _saveDirectory;
 
         [UnityTearDown]
         public IEnumerator UnloadMock()
@@ -31,19 +34,20 @@ namespace Game.Tests.PlayMode
                 if (passage.isLoaded) { yield return SceneManager.UnloadSceneAsync(passage); }
             }
             if (_mock.isLoaded) { yield return SceneManager.UnloadSceneAsync(_mock); }
+            foreach (GameObject root in ExpeditionEvent3DScenePlayTests.VendorSaveRoots())
+            {
+                if (!_existingVendorSaves.Contains(root)) { Object.Destroy(root); }
+            }
+            _existingVendorSaves.Clear();
             TestSceneHelper.Cleanup();
             yield return null;
+            if (Directory.Exists(_saveDirectory)) { Directory.Delete(_saveDirectory, recursive: true); }
         }
 
         [UnityTest]
         public IEnumerator AuthoredExpedition_SisterWardsKnightAndNativeRouteStreamsBothPassages()
         {
-            TestSceneHelper.Cleanup();
-            yield return null;
-            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(k_Mock,
-                new LoadSceneParameters(LoadSceneMode.Additive));
-            _mock = SceneManager.GetSceneByPath(k_Mock);
-            yield return new WaitForFixedUpdate();
+            yield return LoadMock();
 
             CharacterActor3D knight = Find<CharacterActor3D>("[PLACEHOLDER] Knight");
             CharacterActor3D sister = Find<CharacterActor3D>("[PLACEHOLDER] Expedition sister");
@@ -131,11 +135,7 @@ namespace Game.Tests.PlayMode
         [UnityTest]
         public IEnumerator AuthoredExpedition_EquipmentTableAndSurveyLeadToPlayerGrowth()
         {
-            TestSceneHelper.Cleanup();
-            yield return null;
-            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(k_Mock, new LoadSceneParameters(LoadSceneMode.Additive));
-            _mock = SceneManager.GetSceneByPath(k_Mock);
-            yield return new WaitForFixedUpdate();
+            yield return LoadMock();
 
             CharacterActor3D knight = Find<CharacterActor3D>("[PLACEHOLDER] Knight");
             knight.GetComponent<PlayerCharacterInput3D>().enabled = false;
@@ -191,12 +191,7 @@ namespace Game.Tests.PlayMode
         {
             const string species = "goblin-engineer";
             const string questCompletion = "test.mine-survey.report";
-            TestSceneHelper.Cleanup();
-            yield return null;
-            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(k_Mock, new LoadSceneParameters(LoadSceneMode.Additive));
-            _mock = SceneManager.GetSceneByPath(k_Mock);
-            Assert.IsTrue(SceneManager.SetActiveScene(_mock));
-            yield return new WaitForFixedUpdate();
+            yield return LoadMock(makeActive: true);
 
             CharacterActor3D knight = Find<CharacterActor3D>("[PLACEHOLDER] Knight");
             PlayerCharacterInput3D controls = knight.GetComponent<PlayerCharacterInput3D>();
@@ -295,12 +290,7 @@ namespace Game.Tests.PlayMode
         {
             const string species = "goblin-engineer";
             const string questCompletion = "test.mine-survey.report";
-            TestSceneHelper.Cleanup();
-            yield return null;
-            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(k_Mock, new LoadSceneParameters(LoadSceneMode.Additive));
-            _mock = SceneManager.GetSceneByPath(k_Mock);
-            Assert.IsTrue(SceneManager.SetActiveScene(_mock));
-            yield return new WaitForFixedUpdate();
+            yield return LoadMock(makeActive: true);
 
             ExpeditionReinforcementDrill3D drill = Find<ExpeditionReinforcementDrill3D>("Reinforcement drill");
             EncounterGoal3D encounter = drill.GetComponent<EncounterGoal3D>();
@@ -337,6 +327,32 @@ namespace Game.Tests.PlayMode
 
             yield return SceneManager.UnloadSceneAsync(_mock);
             CollectionAssert.AreEqual(new[] { ChallengeState.Failed }, endings);
+        }
+
+        private IEnumerator LoadMock(bool makeActive = false)
+        {
+            TestSceneHelper.Cleanup();
+            yield return null;
+            _existingVendorSaves.Clear();
+            _existingVendorSaves.UnionWith(ExpeditionEvent3DScenePlayTests.VendorSaveRoots());
+            _saveDirectory = Path.Combine(Application.temporaryCachePath, nameof(ExpeditionMock3DScenePlayTests),
+                System.Guid.NewGuid().ToString("N"));
+            var store = new SaveDataStore(_saveDirectory);
+            void Configure(Scene scene, LoadSceneMode _)
+            {
+                if (scene.path != k_Mock) { return; }
+                _mock = scene;
+                ExpeditionEvent3DScenePlayTests.UseSaveStore(scene, store);
+                if (makeActive) { Assert.IsTrue(SceneManager.SetActiveScene(scene)); }
+            }
+
+            SceneManager.sceneLoaded += Configure;
+            try
+            {
+                yield return EditorSceneManager.LoadSceneAsyncInPlayMode(k_Mock, new LoadSceneParameters(LoadSceneMode.Additive));
+                yield return new WaitForFixedUpdate();
+            }
+            finally { SceneManager.sceneLoaded -= Configure; }
         }
 
         private T Find<T>(string name) where T : Component => _mock.GetRootGameObjects()

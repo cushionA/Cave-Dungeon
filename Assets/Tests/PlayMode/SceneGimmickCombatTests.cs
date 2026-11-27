@@ -121,6 +121,32 @@ namespace Game.Tests.PlayMode
             return gimmick;
         }
 
+        private AISceneGimmickController CreateApproachSwitch(float distance = 5f)
+        {
+            GameObject lever = CreateObject("Distant operation lever", new Vector2(-4f, 0f));
+            Transform effect = CreateObject("Distant lever effect", new Vector2(3f, 0f)).transform;
+            var gimmick = lever.AddComponent<AISceneGimmickController>();
+            gimmick.Configure(1 << 4, lever.transform, 0.6f, effect, 0.75f);
+            gimmick.SetApproachDistanceForTest(distance);
+            return gimmick;
+        }
+
+        private BoxCollider2D CreateApproachFloor(float x = 0f, float width = 20f)
+        {
+            GameObject floor = CreateObject("Approach floor", new Vector2(x, -1f));
+            floor.layer = LayerMask.NameToLayer("Ground");
+            BoxCollider2D surface = floor.AddComponent<BoxCollider2D>();
+            surface.size = new Vector2(width, 1f);
+            return surface;
+        }
+
+        private void BlockApproach()
+        {
+            GameObject wall = CreateObject("Wall on approach", new Vector2(-1.5f, 0f));
+            wall.layer = LayerMask.NameToLayer("Ground");
+            wall.AddComponent<BoxCollider2D>().size = new Vector2(0.2f, 1.5f);
+        }
+
         private void StepContactPhysics()
         {
             Physics2D.SyncTransforms();
@@ -177,6 +203,157 @@ namespace Game.Tests.PlayMode
             GameManager.Instance.SimulationTick(DecisionInterval, 1f + DecisionInterval);
             Assert.AreEqual(1, activations);
             Assert.IsTrue(GameManager.Data.GetDefenseState(owner.Hash).isGuarding);
+        }
+
+        [Test]
+        public void AuthoredEnemy_CrossesFlatFloorToTheSwitchBeforeActivatingIt()
+        {
+            CreateApproachFloor();
+            AISceneGimmickController lever = CreateApproachSwitch();
+            int activations = 0;
+            Vector2 operatedFrom = default;
+            lever.OnActivated.AddListener(() => { activations++; operatedFrom = _operator.PhysicsPosition; });
+            GameManager.Instance.SimulationTick(DecisionInterval, 1f);
+
+            ActionExecutorController executor = _operator.GetComponent<ActionExecutorController>();
+            long approachGroup = executor.CurrentGroupId;
+            Assert.AreNotEqual(0, approachGroup);
+            Assert.IsTrue(executor.HasMovementRequest);
+            Assert.IsFalse(lever.IsAvailable, "The operation point is reserved during travel.");
+            Assert.AreEqual(0, activations);
+
+            const float stepSize = 0.02f;
+            for (int step = 1; step <= 120 && activations == 0; step++)
+            {
+                GameManager.Instance.SimulationTick(stepSize, 1f + step * stepSize);
+                StepContactPhysics();
+            }
+
+            Assert.AreEqual(1, activations, $"Operator ended at {_operator.PhysicsPosition}.");
+            Assert.IsTrue(lever.Snapshot.CanOperateFrom(operatedFrom));
+            Assert.Less(operatedFrom.x, -3f, "The operator must walk away from its target towards the control.");
+            Assert.IsFalse(GameManager.Actions.Execution.IsGroupActive(approachGroup));
+            Assert.IsFalse(lever.IsAvailable, "After arrival the switch is consumed.");
+            GameManager.Instance.SimulationTick(DecisionInterval, 4f);
+            Assert.AreEqual(1, activations);
+        }
+
+        [TestCase("gap")]
+        [TestCase("wall")]
+        [TestCase("unconfigured")]
+        public void DistantSwitch_ObservationRequiresOptInAndAReachableFloor(string condition)
+        {
+            if (condition == "gap")
+            {
+                CreateApproachFloor(-4f, 2f);
+                CreateApproachFloor(3f, 8f);
+            }
+            else { CreateApproachFloor(); }
+            if (condition == "wall") { BlockApproach(); }
+            AISceneGimmickController lever = CreateApproachSwitch(condition == "unconfigured" ? 0f : 5f);
+            int activations = 0;
+            lever.OnActivated.AddListener(() => activations++);
+
+            GameManager.Instance.SimulationTick(DecisionInterval, 1f);
+
+            Assert.IsTrue(GameManager.Actors.TryGet(_operator.ObjectHash, out ActorRef owner));
+            Assert.IsFalse(GameManager.Observation.IsGimmickOperationVisible(owner, lever.Snapshot));
+            Assert.IsFalse(_operator.GetComponent<ActionExecutorController>().HasMovementRequest);
+            Assert.IsTrue(GameManager.Data.GetDefenseState(owner.Hash).isGuarding);
+            Assert.AreEqual(0, activations);
+        }
+
+        [TestCase("floor")]
+        [TestCase("wall")]
+        [TestCase("friendly")]
+        [TestCase("target")]
+        [TestCase("recycled")]
+        public void DistantSwitch_LosingItsSafeRouteOrTargetReleasesTheOperation(string change)
+        {
+            BoxCollider2D floor = CreateApproachFloor();
+            AISceneGimmickController lever = CreateApproachSwitch();
+            int activations = 0;
+            lever.OnActivated.AddListener(() => activations++);
+            GameManager.Instance.SimulationTick(DecisionInterval, 1f);
+            ActionExecutorController executor = _operator.GetComponent<ActionExecutorController>();
+            long approachGroup = executor.CurrentGroupId;
+            Assert.AreNotEqual(0, approachGroup);
+            Assert.IsFalse(lever.IsAvailable);
+
+            switch (change)
+            {
+                case "floor": floor.enabled = false; break;
+                case "wall": BlockApproach(); break;
+                case "friendly": _teammate.SetPhysicsPosition(new Vector2(3f, 0f)); break;
+                case "target": _target.SetPhysicsPosition(new Vector2(6f, 0f)); break;
+                case "recycled": _target.OnPoolReturn(); _target.OnPoolAcquire(); break;
+            }
+            ((IActionExecutionBackend)executor).Tick(0.02f);
+
+            Assert.IsFalse(GameManager.Actions.Execution.IsGroupActive(approachGroup));
+            Assert.IsFalse(executor.HasMovementRequest);
+            Assert.IsTrue(lever.IsAvailable);
+            Assert.AreEqual(0, activations);
+        }
+
+        [Test]
+        public void DistantSwitch_DisablingOnlyTheOperatorReleasesItsReservationAndStopsMovement()
+        {
+            CreateApproachFloor();
+            AISceneGimmickController lever = CreateApproachSwitch();
+            GameManager.Instance.SimulationTick(DecisionInterval, 1f);
+            ActionExecutorController executor = _operator.GetComponent<ActionExecutorController>();
+            long approachGroup = executor.CurrentGroupId;
+            Assert.AreNotEqual(0, approachGroup);
+            Assert.IsFalse(lever.IsAvailable);
+            Assert.Less(_operator.PhysicsVelocity.x, 0f);
+
+            _operator.enabled = false;
+
+            Assert.IsTrue(_operator.gameObject.activeInHierarchy);
+            Assert.IsTrue(lever.IsAvailable);
+            Assert.IsFalse(GameManager.Actions.Execution.IsGroupActive(approachGroup));
+            Assert.AreEqual(0f, _operator.PhysicsVelocity.x);
+        }
+
+        [UnityTest]
+        public IEnumerator DistantSwitch_LosingTheFloorDuringAnotherDecisionStopsBeforePhysics()
+        {
+            BoxCollider2D floor = CreateApproachFloor();
+            AISceneGimmickController lever = CreateApproachSwitch();
+            GameManager.Instance.SimulationTick(DecisionInterval, 1f);
+            ActionExecutorController executor = _operator.GetComponent<ActionExecutorController>();
+            long approachGroup = executor.CurrentGroupId;
+            Assert.AreNotEqual(0, approachGroup);
+            Assert.Less(_operator.PhysicsVelocity.x, 0f);
+
+            CreateOperator(7.5f);
+            AISceneGimmickController nearby = CreateSwitch(3f, operationX: 8f);
+            nearby.OnActivated.AddListener(() => floor.enabled = false);
+            yield return null;
+
+            GameManager.Instance.SimulationTick(DecisionInterval, 1f + DecisionInterval);
+
+            Assert.IsFalse(floor.enabled, "The other AI must operate its switch during the decision phase.");
+            Assert.IsTrue(lever.IsAvailable);
+            Assert.IsFalse(GameManager.Actions.Execution.IsGroupActive(approachGroup));
+            Assert.AreEqual(0f, _operator.PhysicsVelocity.x);
+        }
+
+        [Test]
+        public void DistantSwitch_AnImmediateSwitchTakesPriorityEvenIfItsAnchorIsFurther()
+        {
+            CreateApproachFloor();
+            AISceneGimmickController distant = CreateApproachSwitch();
+            AISceneGimmickController nearby = CreateSwitch(3f, operationX: 4.9f);
+            int distantActivations = 0, nearbyActivations = 0;
+            distant.OnActivated.AddListener(() => distantActivations++);
+            nearby.OnActivated.AddListener(() => nearbyActivations++);
+            GameManager.Instance.SimulationTick(DecisionInterval, 1f);
+
+            Assert.AreEqual(1, nearbyActivations);
+            Assert.AreEqual(0, distantActivations);
+            Assert.IsTrue(distant.IsAvailable);
         }
 
 #if UNITY_EDITOR

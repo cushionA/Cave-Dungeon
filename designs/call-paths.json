@@ -919,32 +919,46 @@
     "feature": "ParryGuard_GuardJudgment",
     "path": {
       "key": "guard-point-gap",
-      "title": "GuardPointの評価flagから自動ガードへの未接続区間",
+      "title": "技のガードポイントを2D・3Dの被弾に反映する",
       "implementation_status": "implemented",
-      "connection_status": "partial",
-      "verification": "unverified",
+      "connection_status": "connected",
+      "verification": "runtime_tested",
       "steps": [
         {
           "file": "Assets/MyAsset/Core/Damage/ActionEffectProcessor.cs",
           "symbol": "ActionEffectProcessor.Evaluate",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs",
+          "symbol": "DamageReceiver.ResolveDamage",
           "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Damage/HitResolver.cs",
+          "symbol": "HitResolver.Resolve",
+          "kind": "call"
         },
         {
           "file": "Assets/MyAsset/Core/Guard/GuardJudgmentLogic.cs",
           "symbol": "GuardJudgmentLogic.Evaluate",
-          "kind": "call"
+          "kind": "output"
         }
       ],
       "tests": [
-        "Assets/Tests/EditMode/ActionEffectProcessorTests.cs",
-        "Assets/Tests/EditMode/HitResolverTests.cs"
+        "Assets/Tests/EditMode/HitResolverTests.cs",
+        "Assets/Tests/PlayMode/DamageIntegrationTests.cs",
+        "Assets/Tests/PlayMode/DamageReceiver3DPlayTests.cs"
       ],
-      "notes": "再構造化後のUnity実行/型解決は未確認。以下とhashは以前の検証記録。 Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。GuardPointは評価flagのみ。HitResolverは現時点で自動ガードへ結線しない。JG窓との仕様を決めずにガード入力へORしない。",
+      "notes": "効果時間、方向、ガード不能、スタミナとガード崩しを共有判定で検証した。ジャストガードには実際のガード行動が必要。",
       "verification_hashes": {
-        "Assets/MyAsset/Core/Damage/ActionEffectProcessor.cs": "ce0e796ee4e8b6a11065aaf4d8d34a88f128d32704f7d3fc1c6dfc5302dd2e95",
-        "Assets/MyAsset/Core/Guard/GuardJudgmentLogic.cs": "883cbe4d303c658f1e051ecc0b5bbf7aa3f33c480b8dd51e43cf2b6f17a0712d",
-        "Assets/Tests/EditMode/ActionEffectProcessorTests.cs": "9801d74673cf37729fefb141f31522487a3c9b806571719b4661818ba2e686fd",
-        "Assets/Tests/EditMode/HitResolverTests.cs": "e646bb47a19088d98f936cc8c51e1f6e2d6e897c038a873147b61ca8bfd18bf9"
+        "Assets/MyAsset/Core/Damage/ActionEffectProcessor.cs": "e9fe418246ac212b190255a029b7023b827e80e88dad0401530c567f58309934",
+        "Assets/MyAsset/Core/Damage/HitResolver.cs": "5c34e3f089e9103cf57e562a48a24dba9ab843a16b5cf144c6967ecfa2ff7db2",
+        "Assets/MyAsset/Core/Guard/GuardJudgmentLogic.cs": "0320a823635261ba465f88a29a77d70c6d77e923ebff14a9755fa1665be9bab4",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "fb334fb2c4819e572eb2269811c658d2804d82adedd15d80ee79ee36ef75976f",
+        "Assets/Tests/EditMode/HitResolverTests.cs": "4f3f83a63b42f06c415b6792ffd82fb8a2ca45b3a076e821904dcfb75d80c5eb",
+        "Assets/Tests/PlayMode/DamageIntegrationTests.cs": "4ac45bec1257b4ca700cb4dfd428279851ff105f41c9c726e2a09fe230770cf4",
+        "Assets/Tests/PlayMode/DamageReceiver3DPlayTests.cs": "cec6f19e7cb4669f7a3bdc4995f7dee5325ea67183f18d25a3a45ae0bb038665"
       }
     }
   },
@@ -1814,14 +1828,14 @@
     "feature": "CompanionAI_SharedMp",
     "path": {
       "key": "companion-barrier-hit-gap",
-      "title": "通常被弾のHP処理からシスターMPバリアへの未接続区間",
+      "title": "シスターの通常被弾を共有MPへ反映する",
       "implementation_status": "implemented",
-      "connection_status": "partial",
-      "verification": "unverified",
+      "connection_status": "connected",
+      "verification": "runtime_tested",
       "steps": [
         {
           "file": "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs",
-          "symbol": "DamageReceiver.ReceiveDamage",
+          "symbol": "DamageReceiver.ResolveDamage",
           "kind": "entry"
         },
         {
@@ -1830,34 +1844,29 @@
           "kind": "call"
         },
         {
-          "file": "Assets/MyAsset/Core/Damage/HpArmorLogic.cs",
-          "symbol": "HpArmorLogic.ApplyDamage",
-          "kind": "write"
-        },
-        {
           "file": "Assets/MyAsset/Core/AI/Companion/CompanionMpManager.cs",
           "symbol": "CompanionMpManager.ApplyBarrierDamage",
-          "kind": "call"
+          "kind": "write"
         },
         {
-          "file": "Assets/MyAsset/Core/Actions/ExecutionTypes.cs",
-          "symbol": "IExecutionWorld.CommitActor",
-          "kind": "write"
+          "file": "Assets/MyAsset/Runtime/AI/CompanionController3D.cs",
+          "symbol": "CompanionController3D.OnVanish",
+          "kind": "output"
         }
       ],
       "tests": [
-        "Assets/Tests/EditMode/Integration_CompanionSharedMpTests.cs",
+        "Assets/Tests/PlayMode/CompanionController3DPlayTests.cs",
         "Assets/Tests/PlayMode/CompanionSharedMpFlowTests.cs"
       ],
-      "notes": "再構造化後のUnity実行/型解決は未確認。以下とhashは以前の検証記録。 Unity付属コンパイラと実SourceGeneratorでCore/Runtime/Editor/EditMode/PlayMode全5アセンブリのコンパイル成功。Unity Editor内の実行は未実施。通常被弾はDamageReceiver→HitResolver→HP処理を通り、シスターのApplyBarrierDamageを呼ぶ辺は未接続。ManagerのバリアAPIは共有MPへ書き込む実装と純テストがあるが、通常被弾からMPバリアへの統合成功とは扱わない。残作業はFUTURE_TASKSのDF-13で管理し、HP/MP配分や対象攻撃の仕様確定後に接続する。",
+      "notes": "2D・3Dで防御後の通常被弾をMPへ反映する。ジャストガードは消費なし。3Dでは回復後の同一地点への復帰と最後のMPで受理した連携を確認した。継続ダメージは別経路。 枯渇する被弾から受理済みの魔法と集団戦の攻撃枠を維持する。消滅中に3Dコントローラーを無効・再有効にしても消滅・予備MPを維持する。",
       "verification_hashes": {
-        "Assets/MyAsset/Core/AI/Companion/CompanionMpManager.cs": "7a55bb50388d5e11c6eaf572e4ab641b651d51f5189671588aaf8bd24d143d57",
-        "Assets/MyAsset/Core/Actions/ExecutionTypes.cs": "7ce3b9aa630e5f4a90c5bb70e56ae241ba3a6e39c811cace69119a6e98b06e57",
-        "Assets/MyAsset/Core/Damage/HitResolver.cs": "101d98dccbd9c26c626f8b52d2db24be03e20d2dd1b73e22f15a90a9ed206309",
-        "Assets/MyAsset/Core/Damage/HpArmorLogic.cs": "9865167ed94c9b804e8286fbf2d8097895ded989e536f3a474c09d9b02ffea5c",
-        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "774487ac9224e08ec7817ade0c7a71b10b0408bd7ca57e2ed4f37643b2a98148",
-        "Assets/Tests/EditMode/Integration_CompanionSharedMpTests.cs": "319f8d9b896936434af75c02a1964fa92a1b4bfe2ececadd023f6aceeed77619",
-        "Assets/Tests/PlayMode/CompanionSharedMpFlowTests.cs": "4bc9be903685e7c98738ebf915755f5dcdd2df83d771f25f06fead237aab8124"
+        "Assets/MyAsset/Core/AI/Companion/CompanionMpManager.cs": "317c034eb6a3b84ca6d5c1e7638942bcf13f7753a70cf20c5b05ceb525bc0155",
+        "Assets/MyAsset/Core/Damage/HitResolver.cs": "5c34e3f089e9103cf57e562a48a24dba9ab843a16b5cf144c6967ecfa2ff7db2",
+        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "22ec560f1986acf4603f0a5f49dd9d842c869d4ec3e64ad41fa9993f0fd691c8",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "fb334fb2c4819e572eb2269811c658d2804d82adedd15d80ee79ee36ef75976f",
+        "Assets/Tests/PlayMode/CompanionController3DPlayTests.cs": "7fd6342d91eed2a73fe3bdc1f260caa90f4d685cd146597dba74875cbb202f00",
+        "Assets/Tests/PlayMode/CompanionSharedMpFlowTests.cs": "014b581b93c825d865796999a980a82862010bf18d110df5502ab1f67d330a6a",
+        "Assets/MyAsset/Runtime/AI/MissionAttackSlots3D.cs": "ab20b795ed46fd4152e49b689472de664512a0b01e4c17c329dfc9136d3fa581"
       }
     }
   },
@@ -2849,13 +2858,13 @@
         "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "906affd99f13b1d343389f12e8cf59e9e9f396eebcc43cb2b44d9427016616c8",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "0409a22b44d8cad69829043f89b97b91fc3b3d99d7b04f91492dfe31779d9db5",
         "Assets/MyAsset/Runtime/Combat/GroundAttack3D.cs": "ee949b26e8c87c27379efa29d13d767915911c4529991f6dde5f755533e20ff7",
-        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "5234e24e5d724eac8e5b1a13c1e174fefac4923589e84775dcef9aac0002b6d9",
-        "Assets/MyAsset/Core/Damage/HitResolver.cs": "672971639eca6c9f9d08a1f11ae1cd80cc3988be1ed625b9b0c9b2ad54593b3c",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "fb334fb2c4819e572eb2269811c658d2804d82adedd15d80ee79ee36ef75976f",
+        "Assets/MyAsset/Core/Damage/HitResolver.cs": "5c34e3f089e9103cf57e562a48a24dba9ab843a16b5cf144c6967ecfa2ff7db2",
         "Assets/Tests/EditMode/ActionCatalogSnapshotTests.cs": "3bbd719b65a177fbd16966799cc4c0d30dc32f6783c692824e7d60162b23ca24",
         "Assets/Tests/PlayMode/CharacterMotor3DScenePlayTests.cs": "7b7c05c5110915b28be5cb4c8856dfbfc8b070c802a2431032f2b00de5d58851",
         "Assets/Tests/PlayMode/SpatialCombat3DPlayTests.cs": "6d06bad29dd5adff2b1fcf685f360f9d57b4e53a479df0a5d30f3804111c5ff8",
         "Assets/Tests/PlayMode/GroundAttack3DPlayTests.cs": "3cfd26c6b535c391dc61dfa996d83e6417f9bebf88078b7862bb85aa9be04a64",
-        "Assets/Tests/PlayMode/DamageReceiver3DPlayTests.cs": "354c79b771e84cc9e45a31ba8c158adad68a58ba69ae851cfdcd24c8911af4e7",
+        "Assets/Tests/PlayMode/DamageReceiver3DPlayTests.cs": "cec6f19e7cb4669f7a3bdc4995f7dee5325ea67183f18d25a3a45ae0bb038665",
         "Assets/InputSystem_Actions.inputactions": "31d199426d631b6c852e8830aad54e54f9336e2bcb46dae92a47578c20e9b92f",
         "Assets/MyAsset/Core/Combat/AttackProfile3D.cs": "d043b01e82c3214c38ed1baae13bf6b26d775ff067e520e13aa1f218888fa0cd",
         "Assets/MyAsset/Core/ScriptableObjects/AttackInfo.cs": "7acd9a6551e9e3c1b25c0147be9913d33372c82eb4142c2a255bac451d5dac63",
@@ -2954,8 +2963,8 @@
         "Assets/MyAsset/Runtime/Combat/ActionCatalog.cs": "623b1a5ad74c7922c92c43b1c585875e6cf80874b047929683e06782912fc212",
         "Assets/MyAsset/Runtime/Combat/MultiLockTargeting3D.cs": "2fca5951625196ddd2b073c3877d1eb819063f421c8f5bdc162dda00d793be49",
         "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "58732262d3ce3f322f5ab1cbfcab51d1bf2e7710089fa9c85e1d501331775520",
-        "Assets/MyAsset/Runtime/GameManager.cs": "e1dbb46b0858d77f83ae1f6b5e108f851a3f27dc972c50d29bb70781d5334803",
-        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "5234e24e5d724eac8e5b1a13c1e174fefac4923589e84775dcef9aac0002b6d9",
+        "Assets/MyAsset/Runtime/GameManager.cs": "606684ce62e8fb27c13b49074a891a562bd9c0b9a0df8d294e51625eb3b19d17",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "fb334fb2c4819e572eb2269811c658d2804d82adedd15d80ee79ee36ef75976f",
         "Assets/Tests/EditMode/ActionCatalogSnapshotTests.cs": "3bbd719b65a177fbd16966799cc4c0d30dc32f6783c692824e7d60162b23ca24",
         "Assets/Tests/PlayMode/SpatialCombat3DPlayTests.cs": "6d06bad29dd5adff2b1fcf685f360f9d57b4e53a479df0a5d30f3804111c5ff8",
         "Assets/Tests/PlayMode/CharacterMotor3DScenePlayTests.cs": "7b7c05c5110915b28be5cb4c8856dfbfc8b070c802a2431032f2b00de5d58851",
@@ -3094,8 +3103,8 @@
         "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.GroundImpact.cs": "722cd5ff7894660b6b0a0992de5ebda690046c34fca5f3647e2616dd10ce1d67",
         "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "58732262d3ce3f322f5ab1cbfcab51d1bf2e7710089fa9c85e1d501331775520",
         "Assets/MyAsset/Runtime/UI/ProjectileLockWarningHud3D.cs": "a1f5f33f3113b587d516df9b73fdadbfaca8ca4d411a45d7871b46e369a87f81",
-        "Assets/MyAsset/Runtime/GameManager.cs": "e1dbb46b0858d77f83ae1f6b5e108f851a3f27dc972c50d29bb70781d5334803",
-        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "5234e24e5d724eac8e5b1a13c1e174fefac4923589e84775dcef9aac0002b6d9",
+        "Assets/MyAsset/Runtime/GameManager.cs": "606684ce62e8fb27c13b49074a891a562bd9c0b9a0df8d294e51625eb3b19d17",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "fb334fb2c4819e572eb2269811c658d2804d82adedd15d80ee79ee36ef75976f",
         "Assets/Tests/EditMode/ActionCatalogSnapshotTests.cs": "3bbd719b65a177fbd16966799cc4c0d30dc32f6783c692824e7d60162b23ca24",
         "Assets/Tests/PlayMode/SpatialCombat3DPlayTests.cs": "6d06bad29dd5adff2b1fcf685f360f9d57b4e53a479df0a5d30f3804111c5ff8",
         "Assets/Tests/PlayMode/GroundAttack3DPlayTests.cs": "3cfd26c6b535c391dc61dfa996d83e6417f9bebf88078b7862bb85aa9be04a64",
@@ -3169,10 +3178,10 @@
         "Assets/InputSystem_Actions.inputactions": "31d199426d631b6c852e8830aad54e54f9336e2bcb46dae92a47578c20e9b92f",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.cs": "51dbe300b4ffb75417862df9483470855a7814d11eeff80f6e741db1c875c076",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "0409a22b44d8cad69829043f89b97b91fc3b3d99d7b04f91492dfe31779d9db5",
-        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "5234e24e5d724eac8e5b1a13c1e174fefac4923589e84775dcef9aac0002b6d9",
-        "Assets/MyAsset/Core/Guard/GuardJudgmentLogic.cs": "9ec9104c1888334fda7141e061abd5f6b1e0a621f7c95108083fbe22fd0f4565",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "fb334fb2c4819e572eb2269811c658d2804d82adedd15d80ee79ee36ef75976f",
+        "Assets/MyAsset/Core/Guard/GuardJudgmentLogic.cs": "0320a823635261ba465f88a29a77d70c6d77e923ebff14a9755fa1665be9bab4",
         "Assets/Tests/PlayMode/PlayerGuardInput3DPlayTests.cs": "acbb2f68063748226f62ff632718f4ae42ad0d2a6ce00a80fea4352736eaafc8",
-        "Assets/Tests/PlayMode/DamageReceiver3DPlayTests.cs": "354c79b771e84cc9e45a31ba8c158adad68a58ba69ae851cfdcd24c8911af4e7"
+        "Assets/Tests/PlayMode/DamageReceiver3DPlayTests.cs": "cec6f19e7cb4669f7a3bdc4995f7dee5325ea67183f18d25a3a45ae0bb038665"
       }
     }
   },
@@ -3217,8 +3226,8 @@
       ],
       "notes": "同じ対象世代の枠を一件だけ確保し、行動の受理とグループに結び付ける。拒否、終了、中断、参加個体の失効で枠を返す。 Unity 6000.6.8f1でMissionAttackSlots3DPlayTests 4件、GroupBattle3DScenePlayTests 1件が成功。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "55b13e82a10d5e29915cd12663d106118510717445e7237e90fb889231e53b21",
-        "Assets/MyAsset/Runtime/AI/MissionAttackSlots3D.cs": "7759304bad1ed6c5d1ae243599a3cfcfa90c53fb5d005c4a11269b6fe01ab4d5",
+        "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "154b4982a336554f7aea509e50f9259bb39a445eb110439a2bf702a18fa1b9eb",
+        "Assets/MyAsset/Runtime/AI/MissionAttackSlots3D.cs": "ab20b795ed46fd4152e49b689472de664512a0b01e4c17c329dfc9136d3fa581",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "7ef3a9969cf9645885b3aada797c932f1e0363d17c69dae636face803003898f",
         "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "906affd99f13b1d343389f12e8cf59e9e9f396eebcc43cb2b44d9427016616c8",
         "Assets/Tests/PlayMode/MissionAttackSlots3DPlayTests.cs": "e9cc532cf9a65b2e8bd6ff6823f8bfe8cc0fd9cd371e4b3749ec68920408fbae",
@@ -3313,16 +3322,16 @@
         "Assets/MyAsset/Core/ScriptableObjects/AttackInfo.cs": "7acd9a6551e9e3c1b25c0147be9913d33372c82eb4142c2a255bac451d5dac63",
         "Assets/MyAsset/Runtime/Combat/ActionCatalog.cs": "623b1a5ad74c7922c92c43b1c585875e6cf80874b047929683e06782912fc212",
         "Assets/MyAsset/Core/Common/CombatDataHelper.cs": "54e72d5cc9ebdc3dcf74eb12bd0dbcdd81c151f1fec9d80641ac97ba7150738f",
-        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "07e1f5fef564c26d51526878d1596e83bbeff75d8d3819c88276e3c242a6963e",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "9fb2c4bcb81e619c5c411475410b3bc18e34a32c45292589723a26afb83cd847",
         "Assets/MyAsset/Runtime/Combat/HitBox.cs": "21d935ac4c134a333d4f9405ac7fda35bd36ff9ebd48b10bfa4246e0ad54895b",
         "Assets/MyAsset/Runtime/Combat/DamageDealer.cs": "8c655fb23d0dbd48bfe4b5b546b2b2b8b7c9591269433b146b8af7e909057f3b",
         "Assets/MyAsset/Core/Weapon/HitboxLogic.cs": "9c6b23c8b1cc41b8879067a9528329d92d4e95728ac43c46529869134cb7aea2",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "7ef3a9969cf9645885b3aada797c932f1e0363d17c69dae636face803003898f",
-        "Assets/MyAsset/Runtime/GameManager.cs": "e1dbb46b0858d77f83ae1f6b5e108f851a3f27dc972c50d29bb70781d5334803",
+        "Assets/MyAsset/Runtime/GameManager.cs": "606684ce62e8fb27c13b49074a891a562bd9c0b9a0df8d294e51625eb3b19d17",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "0409a22b44d8cad69829043f89b97b91fc3b3d99d7b04f91492dfe31779d9db5",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialRepeat.cs": "39a20dc281bfb09b8b1ca1cc94b72333b9315a8e5a4a9d246a4deb3b55cdaaf2",
         "Assets/MyAsset/Core/Combat/AttackHitTracker.cs": "094ad1610b27d2e4fa65d4076f14fd325bd8c764a6c11c0e2689ad63663434ec",
-        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "5234e24e5d724eac8e5b1a13c1e174fefac4923589e84775dcef9aac0002b6d9",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "fb334fb2c4819e572eb2269811c658d2804d82adedd15d80ee79ee36ef75976f",
         "Assets/Tests/EditMode/HitBoxTests.cs": "48111540dfca9b75f2430c2ad59b5e93c59c08bee7e6b103b2a330738838a854",
         "Assets/Tests/EditMode/ActionCatalogSnapshotTests.cs": "3bbd719b65a177fbd16966799cc4c0d30dc32f6783c692824e7d60162b23ca24",
         "Assets/Tests/PlayMode/RepeatContact2DPlayTests.cs": "9efab40bfed23e818e0a2ef5dc648827c2bc87529ecbb3b8ebac662640e6fd05",
@@ -3671,7 +3680,7 @@
         "Assets/MyAsset/Core/Physics/ICharacterPhysics2D.cs": "a88d29e1d83bd32652a644b084a574026ea60858c3d36f6524809b19b009fc60",
         "Assets/MyAsset/Runtime/Character/BaseCharacter.Physics.cs": "4377d65bd30083e7b776aa5a6a81c9ce35bf5d4d5a08e1659e334ecf61b44ae1",
         "Assets/MyAsset/Runtime/Collision/CharacterCollisionController.cs": "6feaaf458009bf3420380e81e114ac14ba1e4a2454034fddd71fef1ce65a0710",
-        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "5234e24e5d724eac8e5b1a13c1e174fefac4923589e84775dcef9aac0002b6d9",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "fb334fb2c4819e572eb2269811c658d2804d82adedd15d80ee79ee36ef75976f",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "0409a22b44d8cad69829043f89b97b91fc3b3d99d7b04f91492dfe31779d9db5",
         "Assets/MyAsset/Runtime/Debug/AutoInputTester.cs": "421a345737e2bfa04b6e405002fa568ba9c7a2f8455e9b32c09f8b644aa650d4",
         "Assets/MyAsset/Runtime/Physics/RigidbodyCharacterPhysics2D.cs": "15063f084e937ac9f1efd893d47b77424659ebce7e4f0f282502a368e81ee090",
@@ -3733,11 +3742,11 @@
       ],
       "notes": "2026-11-06 Unity 6000.6.8f1の本プロジェクトでGame.Tests.EditMode 2097/2097、Game.Tests.PlayMode 223/223成功。失敗・skip・inconclusive 0。正式UPMとOdin Inspector/Validator 4.1.0.0・AnyPortrait 1.7.0を使用。実行ごとのsource/依存3791件のSHAは前後一致。実Burst有効。検証記録: %TEMP%/sistergame-job-validation/regression-prep-20261106/final-native-regression-summary.json。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/Character/BaseCharacter.cs": "ab5714d059f4dc8477ed363e93e027273d759e82cee6376fe0d6df91a7c4f9b1",
-        "Assets/MyAsset/Runtime/Character/CompanionCharacter.cs": "a42ed3a83faf1204047fb24fd5fdda883d1e8f0a4b6f903c11f048fcf3aca365",
-        "Assets/MyAsset/Runtime/Character/EnemyCharacter.cs": "3bc0e4d933a555293620f3bf361e7f2dc8a273f502936753582658b09fe8ec23",
+        "Assets/MyAsset/Runtime/Character/BaseCharacter.cs": "bfc06f683fc7cf32212ce39a5cb5311a403cb4909aeb7d2f8a73b1ac6dc35491",
+        "Assets/MyAsset/Runtime/Character/CompanionCharacter.cs": "a7ee73adf043190c1c5815cb55f20e7ca6bfa760b0eb31036eb4066326500e44",
+        "Assets/MyAsset/Runtime/Character/EnemyCharacter.cs": "1a38c895ba746fc55a1bba2dc8b6760351f140f2080a9859213347c3614547f5",
         "Assets/MyAsset/Runtime/Character/PlayerCharacter.cs": "f8b687ca493a661cefb1d54a8d8520537c38d3ef8a57f020a1f96b059d561f6c",
-        "Assets/MyAsset/Runtime/GameManager.cs": "e1dbb46b0858d77f83ae1f6b5e108f851a3f27dc972c50d29bb70781d5334803",
+        "Assets/MyAsset/Runtime/GameManager.cs": "606684ce62e8fb27c13b49074a891a562bd9c0b9a0df8d294e51625eb3b19d17",
         "Assets/MyAsset/Runtime/Input/PlayerInputHandler.cs": "e29e9c30b7022e9e7df144b683104016ddcb35493b3980833430a632e9806f3a",
         "Assets/Tests/PlayMode/AIObservationFlowTests.cs": "a997eaae90fc4d027f070f3ff68304143e1198da6146c2ac4981b421d6138f24",
         "Assets/Tests/PlayMode/CharacterPhysicsBoundaryTests.cs": "60e17e131156a2b699227a7d8a6929a04dcff770fca44cef8b6f81cd8fb12a47",
@@ -3890,8 +3899,8 @@
         "Assets/MyAsset/Core/Combat/Projectile/ProjectileHitProcessor.cs": "ca6888228b0cb476bcb0fabadc05a092b7d6903104598d1de0710d66bc9a3d0e",
         "Assets/MyAsset/Core/GameManager/ActorRegistry.cs": "7a6f43444e76ff8ceb963bef0efe8578334152b3ae6b012a16bfdeb464ac46d2",
         "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "189cb73d9cb497c594c2c30f59ef57f41dcb0ac89542c5b2238109d42ec004e0",
-        "Assets/MyAsset/Runtime/Character/CharacterActor3D.cs": "22a8a9e9d802a98a76e993e43be451096882884bcfb073a236ad33b96c31176f",
-        "Assets/MyAsset/Runtime/GameManager.cs": "e1dbb46b0858d77f83ae1f6b5e108f851a3f27dc972c50d29bb70781d5334803",
+        "Assets/MyAsset/Runtime/Character/CharacterActor3D.cs": "d4231bf9121109dc9fafb7822f845336bd8f32cfc45c921b10b49d35096a6b4d",
+        "Assets/MyAsset/Runtime/GameManager.cs": "606684ce62e8fb27c13b49074a891a562bd9c0b9a0df8d294e51625eb3b19d17",
         "Assets/Tests/PlayMode/CharacterActor3DPlayTests.cs": "96a7c3dd73ff3e4c52b3e96bb5967d159f05888f2cb932c2cf26cc3f548063c4"
       }
     }
@@ -6192,56 +6201,48 @@
     "feature": "AICore_TerrainDecisionDataFlow",
     "path": {
       "key": "route-native-3d-encounter-approach",
-      "title": "共有された目撃から3Dの攻撃位置を選び、遮蔽物を迂回する",
+      "title": "3D遭遇で観測から選んだ接近経路を移動へ渡す",
       "implementation_status": "implemented",
       "connection_status": "connected",
       "verification": "runtime_tested",
       "steps": [
         {
-          "file": "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs",
-          "symbol": "EncounterCombat3D.CaptureFrame",
+          "file": "Assets/MyAsset/Runtime/AI/EncounterObservation3D.cs",
+          "symbol": "EncounterObservation3D",
           "kind": "entry"
         },
         {
-          "file": "Assets/MyAsset/Runtime/AI/EncounterObservation3D.cs",
-          "symbol": "EncounterObservation3D.Capture",
-          "kind": "read"
-        },
-        {
           "file": "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs",
-          "symbol": "EncounterCombat3D.Drive",
+          "symbol": "EncounterCombat3D",
           "kind": "call"
         },
         {
           "file": "Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs",
-          "symbol": "EncounterApproachRoutes3D.GetDirection / FindRoute",
-          "kind": "call"
-        },
-        {
-          "file": "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs",
-          "symbol": "CharacterMotor3D.SimulateFixedStep",
+          "symbol": "EncounterApproachRoutes3D.TryPrepare",
           "kind": "write"
         },
         {
-          "file": "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs",
-          "symbol": "EncounterCombat3D.Drive / MissionAttackSlots3D.TryExecute",
+          "file": "Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs",
+          "symbol": "EncounterApproachRoutes3D.TryFollow",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs",
+          "symbol": "CharacterMotor3D.Simulate",
           "kind": "output"
         }
       ],
       "tests": [
-        "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs",
-        "Assets/Tests/PlayMode/GroupBattle3DScenePlayTests.cs"
+        "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs"
       ],
-      "notes": "設定した同室の中継点と射程内の候補を、身体幅・接地・遮蔽で照合して歩行経路を選ぶ。味方の目撃を受けて壁が残ったまま短い側を回り、本人の射線が通ってから攻撃する。選んだ側を途中で閉じると反対側へ選び直し、実際に命中する。 Unity 6000.6.8f1でEncounterCombat3DPlayTests 5件、GroupBattle3DScenePlayTests 1件が成功。 遠い標的へ直接向かう場合も床と衝突形状を照合し、約15m先の相手を実際の近接攻撃まで追えることを確認した。",
+      "notes": "経路を同じ観測時点の実行者・標的の世代と結び付ける。壁・橋の迂回と命中、標的変更、世代交代、同じ時点の閉塞と旧経路の拒否を確認した。 移動直前の拒否判定は選んだ観測の位置を基準とし、経路再計画は前回の計画位置を基準とする。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs": "bb4d38938d92b83a6f05bd2f5b736b22f8d9cbe9d3e6a8206279be256257c059",
-        "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "55b13e82a10d5e29915cd12663d106118510717445e7237e90fb889231e53b21",
-        "Assets/MyAsset/Runtime/AI/EncounterObservation3D.cs": "e9997cccca768f561af83cd5d32d78e5096bd09474edc9b1e04f5a6297a5e7d3",
-        "Assets/MyAsset/Runtime/AI/EncounterSighting3D.cs": "b2d2f76be0a7c176294ced991cc4d9a17d56942933f41cb1e4ec68ecb1308782",
+        "Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs": "ce257527062a9dd9ef4f6f6a83986af4f5e7f789d2b9f567913cb4a50edda992",
+        "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "154b4982a336554f7aea509e50f9259bb39a445eb110439a2bf702a18fa1b9eb",
+        "Assets/MyAsset/Runtime/AI/EncounterObservation3D.cs": "d99912d3fbec7609a8fe2b8f3318251b9118126552a7a2d30e9adba86435ba3b",
         "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs": "0f9a5f6e0dc7ca18eb4e5e42343d7eeb4af413be30e07c240d2f3d086b72d8cd",
-        "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs": "2f4a41e0b141f219a33be860d1dbc7f772b341a7c976e3997bdbd9075db9890f",
-        "Assets/Tests/PlayMode/GroupBattle3DScenePlayTests.cs": "cacbaa923d1536e04591d338955628664f6bf41a6eaa3cf48db5faf6805dd095",
-        "designs/systems/AICore.md": "546759de1f279bc1c686bb1c184e5497645493aba66eff82644f7ae169f1f8b7"
+        "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs": "17e1004fcec269e01196f07e69f3e0e82fca36c55fa3d97069c929141e1bb0ce",
+        "Assets/MyAsset/Runtime/AI/EncounterSighting3D.cs": "99b498eaf91f6c59b37379c4a65f18da3c7d50af2bbe6ab5aa642d603d8ac571"
       }
     }
   },
@@ -6344,12 +6345,12 @@
       ],
       "notes": "同じ物理シーンの踏切、着地点と床を作者が指定する。ジャンプ能力と実モーターの距離、上空と着地先の空きを照合する。溝を越えて着地後に命中し、能力なしと着地先の閉塞では橋を渡る。遭遇が飛行中に終了した場合も着地し、古い接近行動はそこで終了する。 Unity 6000.6.8f1でEncounterCombat3DPlayTests 9件、ExpeditionSummonDeployment3DPlayTests 10件が成功。 遭遇の終了・無効化・破棄と参加解除で飛行中のモーターを引き継ぎ、着地後に旧経路を再開しないことを確認した。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs": "bb4d38938d92b83a6f05bd2f5b736b22f8d9cbe9d3e6a8206279be256257c059",
-        "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "55b13e82a10d5e29915cd12663d106118510717445e7237e90fb889231e53b21",
+        "Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs": "ce257527062a9dd9ef4f6f6a83986af4f5e7f789d2b9f567913cb4a50edda992",
+        "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "154b4982a336554f7aea509e50f9259bb39a445eb110439a2bf702a18fa1b9eb",
         "Assets/MyAsset/Runtime/AI/EncounterCombatant3D.cs": "834791e50c6eb46c81b70015d9a5e25d081ebc5509aa4efc3e6d96469ff5e610",
         "Assets/MyAsset/Runtime/AI/EncounterJumpLink3D.cs": "4f8fdf5e0f024f445e594a451cf0349c70eb699942f74d046242b00bb023c793",
         "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs": "0f9a5f6e0dc7ca18eb4e5e42343d7eeb4af413be30e07c240d2f3d086b72d8cd",
-        "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs": "2f4a41e0b141f219a33be860d1dbc7f772b341a7c976e3997bdbd9075db9890f",
+        "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs": "17e1004fcec269e01196f07e69f3e0e82fca36c55fa3d97069c929141e1bb0ce",
         "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "1ce31fccf1879c296191c3676dabb60c9232c218c906bcf32342cd1c79c845c8",
         "designs/systems/AICore.md": "546759de1f279bc1c686bb1c184e5497645493aba66eff82644f7ae169f1f8b7"
       }
@@ -6456,16 +6457,16 @@
         "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "63402fd54528711e3838088c74f7ed879f204bb0b28533af00135a103bcc8e0b",
         "Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs": "10d55c996bbc86a080d47f53bff34b5cdc239bcda1d80a9480fc0461b7db9bc0",
         "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": "b1a9d42549ebcf7572f72b0723c42a24e9a6647f3ca9b19689f9a9eb5910d06e",
-        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "7db94112a9dcf076e1b9ba09cf7b498a9f900db8699ae28e95368a285ad0991b",
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "b333e2aadf452130ec3aea273f62e7dce56f96eced210c9ef2b2343f36493193",
         "Assets/MyAsset/Core/AI/Core/ConditionEvaluator.Compat.cs": "a097e1a78491c055324571caf951b45efe4af2df37bac48f26bf1e6bb9d53bf5",
         "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "3741d244d117f332dee2adfd21d684c93c762b0273cccfeb195d763beaf8d09b",
         "Assets/MyAsset/Core/Common/Enums.cs": "840fc43144be2f92b5fde23d24cdd084bbf4892fff24e56e48c2e4f07a5faee0",
         "Assets/MyAsset/Data/PLACEHOLDER_GroundBurstEnemyAI.asset": "5951d10fc7664eb29b37f4a934ba4032eb060c1c01f01d9e89d9a961927ff3e6",
         "Assets/MyAsset/Runtime/Character/BaseCharacter.Physics.cs": "4377d65bd30083e7b776aa5a6a81c9ce35bf5d4d5a08e1659e334ecf61b44ae1",
-        "Assets/MyAsset/Runtime/GameManager.cs": "e1dbb46b0858d77f83ae1f6b5e108f851a3f27dc972c50d29bb70781d5334803",
+        "Assets/MyAsset/Runtime/GameManager.cs": "606684ce62e8fb27c13b49074a891a562bd9c0b9a0df8d294e51625eb3b19d17",
         "Assets/Tests/EditMode/AIDecisionSystemTests.cs": "3483456cdff50c7d785b874c8486844fce8f8f7acaa8fe1bcb2a67433fc6aeff",
         "Assets/Tests/EditMode/AIInfoConverterTests.cs": "80b5a165140eaf6d9388bebe21412e4b27e1397817b593bb9af0a3eee622f9b8",
-        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs": "157eb4234efaeda74e584a0bcbc1ddbfa1fee24306ad46196f995d322b10a955",
+        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs": "86f2728c15ac83d5bc27f621e2f78007344773f4edf9ecb11b3505a4b048a689",
         "designs/systems/AICore.md": "546759de1f279bc1c686bb1c184e5497645493aba66eff82644f7ae169f1f8b7",
         "Assets/Tests/EditMode/AICore_JudgmentLoopTests.cs": "7fc880d218fdd5da85376a563ca5712c69e0cde486d6b541da91d90873109e52"
       }
@@ -6510,7 +6511,7 @@
         "Assets/Tests/EditMode/SceneGimmickDecisionTests.cs",
         "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs"
       ],
-      "notes": "使い切りスイッチはactivate-observed-gimmick、接触板はarm-observed-target-contact-plateで検証した。退避地点まで敵を誘導する経路はlead-observed-pursuer-to-contact-plate、実際の近接命中で爆発物を起動する経路はdetonate-2d-prop-with-meleeで確認した。離れた操作点への一般経路、飛翔体の命中、AIが爆発物を独立して評価・照準する処理、連動装置の分岐・合流・循環は残る。",
+      "notes": "使い切りスイッチはactivate-observed-gimmick、接触板はarm-observed-target-contact-plateで検証した。退避地点まで敵を誘導する経路はlead-observed-pursuer-to-contact-plate、実際の近接命中で爆発物を起動する経路はdetonate-2d-prop-with-meleeで確認した。上下移動を含む操作点への経路と、連動装置の分岐・合流・循環は残る。 設定した平地の操作地点はapproach-and-operate-observed-2d-gimmick、攻撃弾による起爆とAIの単発直進弾はdetonate-2d-prop-with-projectileとaim-ai-projectile-at-observed-explosiveで検証済み。",
       "verification_hashes": {}
     }
   },
@@ -6566,13 +6567,13 @@
       "notes": "接触板の先に退避地点を置く。観測した敵が誘導役を狙い、平坦な進路を使える場合に板を予約する。誘導役は既存の歩行アクションで退避地点に進み、敵自身の歩行で板に接触して一度だけ作動する。追跡対象が変わった場合は予約を解除する。同期とBurstで同一の標的と装置を選ぶ。 Unity 6000.6.8f1でSceneGimmickDecisionTests 20件、SceneGimmickCombatTests 24件が成功。 同じ観測で二人が競合した場合の予約、期限切れ後の再予約、回避・逃走・被弾による解除を確認した。",
       "verification_hashes": {
         "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "63402fd54528711e3838088c74f7ed879f204bb0b28533af00135a103bcc8e0b",
-        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "7db94112a9dcf076e1b9ba09cf7b498a9f900db8699ae28e95368a285ad0991b",
-        "Assets/MyAsset/Core/AI/Core/AISceneGimmick.cs": "e53db6930713a7298dcc471303378c218952367c3e0f362064322d729b6ed298",
-        "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs": "bda998f2fcd4cd257c26dd1ac64a3308bf551c735711e8f08f378ed05294efd4",
-        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "07e1f5fef564c26d51526878d1596e83bbeff75d8d3819c88276e3c242a6963e",
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "b333e2aadf452130ec3aea273f62e7dce56f96eced210c9ef2b2343f36493193",
+        "Assets/MyAsset/Core/AI/Core/AISceneGimmick.cs": "4be7a547c774aab354426fc1fb9adffa625b422c4905ebe75985bbb034ca1506",
+        "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs": "2b9e34ff0ac9a5c262654f2dd4574555618064dba814ccbd0332eb7d4ebc33ad",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "9fb2c4bcb81e619c5c411475410b3bc18e34a32c45292589723a26afb83cd847",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "0409a22b44d8cad69829043f89b97b91fc3b3d99d7b04f91492dfe31779d9db5",
         "Assets/Tests/EditMode/SceneGimmickDecisionTests.cs": "84d5aed6c833c57541d20c501901d695d8389b1f9eea0492d14d4f6994b0dd1b",
-        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs": "157eb4234efaeda74e584a0bcbc1ddbfa1fee24306ad46196f995d322b10a955",
+        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs": "86f2728c15ac83d5bc27f621e2f78007344773f4edf9ecb11b3505a4b048a689",
         "designs/systems/AICore.md": "546759de1f279bc1c686bb1c184e5497645493aba66eff82644f7ae169f1f8b7"
       }
     }
@@ -6620,10 +6621,10 @@
         "Assets/MyAsset/Core/Common/CombatDataHelper.cs": "54e72d5cc9ebdc3dcf74eb12bd0dbcdd81c151f1fec9d80641ac97ba7150738f",
         "Assets/MyAsset/Core/Damage/AttackContext.cs": "d6e3c5293aebe85f2a4dac590a41c27b2b318ad0252a8262a7540443242b1f7f",
         "Assets/MyAsset/Runtime/Combat/DamageDealer.cs": "8c655fb23d0dbd48bfe4b5b546b2b2b8b7c9591269433b146b8af7e909057f3b",
-        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "5234e24e5d724eac8e5b1a13c1e174fefac4923589e84775dcef9aac0002b6d9",
-        "Assets/MyAsset/Runtime/Combat/ExplosiveProp2D.cs": "f050d97bbf58cb22536acad90c3dd0ade617142ec15f1671ed4cc964e16f9202",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "fb334fb2c4819e572eb2269811c658d2804d82adedd15d80ee79ee36ef75976f",
+        "Assets/MyAsset/Runtime/Combat/ExplosiveProp2D.cs": "32cea86ad15b1a17e545a6a48c26c6b92e63c282490643adf2ccc7100caa3dac",
         "Assets/MyAsset/Runtime/Combat/HitBox.cs": "21d935ac4c134a333d4f9405ac7fda35bd36ff9ebd48b10bfa4246e0ad54895b",
-        "Assets/Tests/PlayMode/ExplosiveProp2DPlayTests.cs": "ec0bca9bcd5b53d92773815be57c75e7ce88349a7b083573583a52ee67889c92",
+        "Assets/Tests/PlayMode/ExplosiveProp2DPlayTests.cs": "5a7a5d02a43c53f9129a993ab1669c2f33be944e25a2cbe49bd993b313ad6133",
         "designs/systems/AICore.md": "546759de1f279bc1c686bb1c184e5497645493aba66eff82644f7ae169f1f8b7"
       }
     }
@@ -6668,9 +6669,9 @@
       ],
       "notes": "固定tickの装置選択で罠を準備し、指定された敵の世代と物理ワールドの実接触を照合する。選択外の敵や別のセンサーでは発動せず、味方が効果範囲にいる間は待つ。安全な接触で扉が一度だけ動き、標的の再登録後は新しい観測が必要になる。 Unity 6000.6.8f1でSceneGimmickCombatTests 22件が成功。 一度に一人の予約を受理し、失効済みの操作で新しい予約を解除しない。",
       "verification_hashes": {
-        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "7db94112a9dcf076e1b9ba09cf7b498a9f900db8699ae28e95368a285ad0991b",
-        "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs": "bda998f2fcd4cd257c26dd1ac64a3308bf551c735711e8f08f378ed05294efd4",
-        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs": "157eb4234efaeda74e584a0bcbc1ddbfa1fee24306ad46196f995d322b10a955",
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "b333e2aadf452130ec3aea273f62e7dce56f96eced210c9ef2b2343f36493193",
+        "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs": "2b9e34ff0ac9a5c262654f2dd4574555618064dba814ccbd0332eb7d4ebc33ad",
+        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs": "86f2728c15ac83d5bc27f621e2f78007344773f4edf9ecb11b3505a4b048a689",
         "designs/systems/AICore.md": "546759de1f279bc1c686bb1c184e5497645493aba66eff82644f7ae169f1f8b7"
       }
     }
@@ -6762,19 +6763,19 @@
       ],
       "notes": "Unity 6000.6.8f1の最終回帰でSceneGimmickDecisionTests（EditMode 18件）、SceneGimmickCombatTests（PlayMode 19件）がすべて成功。敵のAIInfoから中央tickで選択した敵に届く装置を操作し、OnActivatedで扉のColliderを無効にした。同期とBurstは同じ観測tick・ActorRef・装置IDと世代を使い、同距離では登録順を逆にしても同じ装置を選ぶ。ObjectNearbyは物理ワールド、操作圏、操作者ごとの遮蔽を反映し、未観測と既知の0件を区別する。遅延があるときは等速で着弾時の敵位置と味方の移動区間を判定する。実行直前に世代・使用可否・遮蔽・巻き込み・行動制限を再検査し、競合する二者は1回だけ起動する。シスターがプレイヤーの退出までガードし、敵だけが残ってから1回発動する4tickをPlayModeで確認した。型付き要求と拒否時の通常行動はEditModeで確認した。再現手順はdocs/reports/experiments/2026-11-24_ai-terrain-gimmicks.md。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/GameManager.cs": "e1dbb46b0858d77f83ae1f6b5e108f851a3f27dc972c50d29bb70781d5334803",
+        "Assets/MyAsset/Runtime/GameManager.cs": "606684ce62e8fb27c13b49074a891a562bd9c0b9a0df8d294e51625eb3b19d17",
         "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs": "4038fc326cfee9fb16ae22bd6df39fff35b45c288b4db79df03d2ff9ea8be342",
-        "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs": "bda998f2fcd4cd257c26dd1ac64a3308bf551c735711e8f08f378ed05294efd4",
+        "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs": "2b9e34ff0ac9a5c262654f2dd4574555618064dba814ccbd0332eb7d4ebc33ad",
         "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": "b1a9d42549ebcf7572f72b0723c42a24e9a6647f3ca9b19689f9a9eb5910d06e",
         "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "63402fd54528711e3838088c74f7ed879f204bb0b28533af00135a103bcc8e0b",
-        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "7db94112a9dcf076e1b9ba09cf7b498a9f900db8699ae28e95368a285ad0991b",
-        "Assets/MyAsset/Core/AI/Core/AISceneGimmick.cs": "e53db6930713a7298dcc471303378c218952367c3e0f362064322d729b6ed298",
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "b333e2aadf452130ec3aea273f62e7dce56f96eced210c9ef2b2343f36493193",
+        "Assets/MyAsset/Core/AI/Core/AISceneGimmick.cs": "4be7a547c774aab354426fc1fb9adffa625b422c4905ebe75985bbb034ca1506",
         "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "3741d244d117f332dee2adfd21d684c93c762b0273cccfeb195d763beaf8d09b",
         "Assets/MyAsset/Core/AI/Core/ActionExecutor.cs": "8a1b19a6c4f8588f693b4ef9a4cc2e7bb01203304e2a6a2f376355bf99540e06",
-        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "07e1f5fef564c26d51526878d1596e83bbeff75d8d3819c88276e3c242a6963e",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "9fb2c4bcb81e619c5c411475410b3bc18e34a32c45292589723a26afb83cd847",
         "Assets/Tests/EditMode/ActionAuthoringCommandTests.cs": "04218e0c063ce76af7de510ac50cad5943db6693088dbeb7a1b16a5115f94a7f",
         "Assets/Tests/EditMode/SceneGimmickDecisionTests.cs": "84d5aed6c833c57541d20c501901d695d8389b1f9eea0492d14d4f6994b0dd1b",
-        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs": "157eb4234efaeda74e584a0bcbc1ddbfa1fee24306ad46196f995d322b10a955",
+        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs": "86f2728c15ac83d5bc27f621e2f78007344773f4edf9ecb11b3505a4b048a689",
         "Assets/MyAsset/Core/AI/Core/AICompiledMode.cs": "3bc7d56abc2848a01762ac811975950fb2f99a1c731bfe6e4806863f62da4794",
         "Assets/MyAsset/Core/AI/Core/AIInfoConverter.cs": "10d55c996bbc86a080d47f53bff34b5cdc239bcda1d80a9480fc0461b7db9bc0",
         "Assets/MyAsset/Core/ScriptableObjects/AIInfo.cs": "d71ec91bd583f69425085ad1d5d0f875bb55a633e816b2488804576db4933bdc",
@@ -6873,13 +6874,13 @@
       ],
       "notes": "AIInfoのモードや仲間AI設定の標的フィルターで、候補が登録プレイヤーを狙うこと、スタン残り秒数が固定値を超えることを個別に指定できる。0秒の設定はスタン条件を無効にする。両方指定した場合は同一候補で照合する。中央tickでActorRef世代ごとの標的関係と有効なStunの残り時間を捕捉し、同期とBurstは同じ観測を読む。未観測の攻撃先と確認済みの標的なし、未知の残り時間と確認済み0秒を区別する。護衛対象は選択条件の入力で、判断結果の戦闘標的には選ばれた敵を渡す。行動側のCoolTimeReady／TargetStatusEffectトリガーは変換対象外のため、それを要求する行動は通常ルールや既定行動に採用しない。護衛対象への攻撃人数が変わらず攻撃先だけが入れ替わる場合と、スタン解除の次tickで通常の距離順に戻る場合をUnity 6000.6.8f1で確認した。PlayModeのシスターは残り1.9秒（設定1秒）の攻撃者を選び、効果を解除した次の観測で残り0秒となって近い敵へ切り替わった。距離上限は境界を含み、残り時間は指定秒と等しければ不成立。接近・硬直・予備動作から初撃時刻を求める比較はcombat-approach-route、味方に任せた攻撃の命中・空振り・期限はterrain-aware-action-selectionで追う。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/GameManager.cs": "e1dbb46b0858d77f83ae1f6b5e108f851a3f27dc972c50d29bb70781d5334803",
+        "Assets/MyAsset/Runtime/GameManager.cs": "606684ce62e8fb27c13b49074a891a562bd9c0b9a0df8d294e51625eb3b19d17",
         "Assets/MyAsset/Core/AI/Core/AIObservationCoordinator.cs": "4038fc326cfee9fb16ae22bd6df39fff35b45c288b4db79df03d2ff9ea8be342",
         "Assets/MyAsset/Core/AI/Core/AITargetRelations.cs": "4ce51288ec1aed9c56768ce5504bce875875e9eba5a0dddaa73c745cdac46a4a",
         "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": "b1a9d42549ebcf7572f72b0723c42a24e9a6647f3ca9b19689f9a9eb5910d06e",
         "Assets/MyAsset/Core/Damage/StatusEffectStore.cs": "aee886ffbd568c92f48d92961e91e145a68e81b50950bf0177ca2f46f3a005a9",
         "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "63402fd54528711e3838088c74f7ed879f204bb0b28533af00135a103bcc8e0b",
-        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "7db94112a9dcf076e1b9ba09cf7b498a9f900db8699ae28e95368a285ad0991b",
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "b333e2aadf452130ec3aea273f62e7dce56f96eced210c9ef2b2343f36493193",
         "Assets/MyAsset/Core/AI/Core/AICompiledMode.cs": "3bc7d56abc2848a01762ac811975950fb2f99a1c731bfe6e4806863f62da4794",
         "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "3741d244d117f332dee2adfd21d684c93c762b0273cccfeb195d763beaf8d09b",
         "Assets/Tests/EditMode/AIObservationContextTests.cs": "37d8db157ed4ea7d36ed4e5e2b6c3979f17f975b43c290b573cc168db34f305c",
@@ -6944,10 +6945,10 @@
         "Assets/Integration/QuestMachineBridge.cs": "4a6a0c8bf0552fc2c2c4a0fa8caeb74a6523867a5725babb06cf60fd34496a2c",
         "Assets/MyAsset/Core/AI/Summon/ExpeditionAidUnlocks.cs": "6e88b3981365e83f982a707affb16769e4451fc7e5dfdd70639421fa5516a544",
         "Assets/MyAsset/Core/Save/FlagManager.cs": "2fd7f35ae4e2fab2a8148e2f350f93c121f4cf92741ae9511d7403cac41be42d",
-        "Assets/MyAsset/Core/Save/SaveManager.cs": "c3acfc77661181bbf3234979d4b86d1853d8a0c2649f8230339c7d2df4149dfc",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "4c6c4ad6f8295f17be5e6c3f4f637bfc1dd73bdd5dad34675d3656a5340156c5",
         "Assets/Tests/EditMode/ExpeditionAidUnlockTests.cs": "e1426a8975f57e57f5e5e615c3b63844f57b6482fe41f207b9da3a9a29197746",
         "Assets/Tests/PlayMode/ExpeditionAidUnlockPlayTests.cs": "512955abd445599238d1da2886118683f39fd385b0279b86999ff5e927003f7a",
-        "Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs": "8e81abfc246fc09b6c15a0ad48a8d790cd00fda9689b75a3577ba935a0a00fb3"
+        "Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs": "f394b1cbd61177ce4f59e0469bdc3bd1dcb688761360fe1f52eb61a447a33b7c"
       }
     }
   },
@@ -7081,14 +7082,14 @@
         "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs": "efc2268e04e701fc14a0c87b9ab875f14456db720f906c1502b6e8964ee53c00",
         "Assets/MyAsset/Runtime/AI/ExpeditionSquadManager.cs": "90e5ff7eedd078988d7ef8a4e198833ca68bc752c1bd7e188440b6dd8f02fabc",
         "Assets/MyAsset/Core/AI/Summon/ExpeditionSquad.cs": "caf061ce01c920367b375a2c9f88b0b1063f0d7eddf1f72e1a81c7a3b372108b",
-        "Assets/MyAsset/Runtime/Character/CharacterActor3D.cs": "22a8a9e9d802a98a76e993e43be451096882884bcfb073a236ad33b96c31176f",
-        "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "55b13e82a10d5e29915cd12663d106118510717445e7237e90fb889231e53b21",
+        "Assets/MyAsset/Runtime/Character/CharacterActor3D.cs": "d4231bf9121109dc9fafb7822f845336bd8f32cfc45c921b10b49d35096a6b4d",
+        "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "154b4982a336554f7aea509e50f9259bb39a445eb110439a2bf702a18fa1b9eb",
         "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "1ce31fccf1879c296191c3676dabb60c9232c218c906bcf32342cd1c79c845c8",
-        "Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs": "8e81abfc246fc09b6c15a0ad48a8d790cd00fda9689b75a3577ba935a0a00fb3",
+        "Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs": "f394b1cbd61177ce4f59e0469bdc3bd1dcb688761360fe1f52eb61a447a33b7c",
         "Assets/MyAsset/Runtime/World/EncounterSession3D.cs": "d663fd2019ed396ff198b2dda383c462f98ee9a7c5b2fe6938830c6c9b8547cc",
         "Assets/MyAsset/Runtime/AI/CompanionTactics3D.cs": "20b10306db375277be736cfcd764695a6ee78f2453e9025904cb0efde06ef22d",
         "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs": "0f9a5f6e0dc7ca18eb4e5e42343d7eeb4af413be30e07c240d2f3d086b72d8cd",
-        "Assets/Scenes/ExpeditionMock3DScene.unity": "7a9cf703e2844ad74df7154a56edcfbef0105f709500ec0a940cb9ae4a772ebd",
+        "Assets/Scenes/ExpeditionMock3DScene.unity": "b7dc9b22cf61f1297bc04ee46a43eb3f4e4d89029393d8f354d90d4d8033cbbd",
         "Assets/Scenes/ExpeditionQuest3DTestScene.unity": "9d88de98f69f3d622bc494da8726ccc1f30fd85e28759d83978c5ee599831a52",
         "designs/systems/SummonSystem.md": "9574bb9ee452d6801f1d95ad50ab7836f615f575593e8c926ec0d7b4605cf5e4"
       }
@@ -7154,7 +7155,7 @@
       "notes": "3D遭遇のボス戦と集団戦は独立した設定。集団戦の進行中に作者指定の追加人数とコストを照合して増援を出す。ボス戦単独、集団戦単独、両方を設定した遭遇を確認した。クリア、撤退、旧状態の再読込では臨時個体だけを解放する。増援用画面からプリセットを選べる。本編での遭遇とボスのフェーズへの接続は制作時に行う。遠征モックに独立した増援訓練を接続した。解放済みの工兵をプリセットから追加出撃し、目標到達と撤退で一時増援だけが解除される。 Unity 6000.6.8f1でExpeditionEncounterBudget3DPlayTests 4件、ExpeditionSummonDeployment3DPlayTests 10件、EncounterGoal3DPlayTests 3件、ExpeditionSquadPanelPlayTests 3件、ExpeditionMock3DScenePlayTests 3件が成功。 表示パネルが先に破棄された場合も増援だけを退場させ、遭遇の終了通知を一度に保つことを確認した。",
       "verification_hashes": {
         "Assets/MyAsset/Core/AI/Summon/ExpeditionSquad.cs": "caf061ce01c920367b375a2c9f88b0b1063f0d7eddf1f72e1a81c7a3b372108b",
-        "Assets/MyAsset/Core/Save/SaveManager.cs": "c3acfc77661181bbf3234979d4b86d1853d8a0c2649f8230339c7d2df4149dfc",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "4c6c4ad6f8295f17be5e6c3f4f637bfc1dd73bdd5dad34675d3656a5340156c5",
         "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs": "efc2268e04e701fc14a0c87b9ab875f14456db720f906c1502b6e8964ee53c00",
         "Assets/MyAsset/Runtime/World/EncounterGoal3D.cs": "3f7b3ee5b087cb1e2d920af2a59c892d318442c15558c66ad1c8cc5b1b1cb4d6",
         "Assets/MyAsset/Runtime/World/EncounterSession3D.cs": "d663fd2019ed396ff198b2dda383c462f98ee9a7c5b2fe6938830c6c9b8547cc",
@@ -7164,8 +7165,8 @@
         "Assets/Tests/PlayMode/ExpeditionSquadPanelPlayTests.cs": "457ba552eb0c688c182d3e32bedc199e6c4e3073e353ff00040d0a8655449bf1",
         "Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.cs": "1ce31fccf1879c296191c3676dabb60c9232c218c906bcf32342cd1c79c845c8",
         "Assets/MyAsset/Runtime/World/ExpeditionReinforcementDrill3D.cs": "17cb4c4475f16894295be34f4ae4afbac309ad6962d9c9516ed5b0c790c6f769",
-        "Assets/Scenes/ExpeditionMock3DScene.unity": "7a9cf703e2844ad74df7154a56edcfbef0105f709500ec0a940cb9ae4a772ebd",
-        "Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs": "fec2358fd603bbfff413eeb3ef5ee66428e7754807fe163c8dd9c26b35213412",
+        "Assets/Scenes/ExpeditionMock3DScene.unity": "b7dc9b22cf61f1297bc04ee46a43eb3f4e4d89029393d8f354d90d4d8033cbbd",
+        "Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs": "7dae47130a464d1807441ca5c9a20eae7846c094c23d36c2438f0bf37d023603",
         "docs/reports/experiments/2026-11-25_expedition-mock-3d.md": "4d63a678464e84f1a4e2449d849ac69ba96c325aeeef61080e3abe89e56f889b"
       }
     }
@@ -7232,9 +7233,9 @@
         "Assets/MyAsset/Core/AI/Summon/ExpeditionSquad.cs": "caf061ce01c920367b375a2c9f88b0b1063f0d7eddf1f72e1a81c7a3b372108b",
         "Assets/MyAsset/Core/GameManager/GameEvents.cs": "970d7710584e29e67cc3aea84dd9cbd75df2e20c9302cf482137d5b947f768a5",
         "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "189cb73d9cb497c594c2c30f59ef57f41dcb0ac89542c5b2238109d42ec004e0",
-        "Assets/MyAsset/Core/Save/ExpeditionPlaythrough.cs": "d09c251974f3a2331bbe67779c806bd7d0ad2231930bae6cf0cf5fc8b91c848c",
-        "Assets/MyAsset/Core/Save/SaveManager.cs": "c3acfc77661181bbf3234979d4b86d1853d8a0c2649f8230339c7d2df4149dfc",
-        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "5234e24e5d724eac8e5b1a13c1e174fefac4923589e84775dcef9aac0002b6d9",
+        "Assets/MyAsset/Core/Save/ExpeditionPlaythrough.cs": "deefad2662e2133f7ee6345fd8b4d101cf9298f88347574bb1c8cb63525c4d82",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "4c6c4ad6f8295f17be5e6c3f4f637bfc1dd73bdd5dad34675d3656a5340156c5",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "fb334fb2c4819e572eb2269811c658d2804d82adedd15d80ee79ee36ef75976f",
         "Assets/MyAsset/Runtime/World/BossEncounter3D.cs": "e747af82ed060712f60694a33678f42fce837145773eb19e8145aacbd4cbdc9d",
         "Assets/MyAsset/Runtime/World/EncounterSession3D.cs": "d663fd2019ed396ff198b2dda383c462f98ee9a7c5b2fe6938830c6c9b8547cc",
         "Assets/Tests/EditMode/ExpeditionPlaythroughTests.cs": "0c3631c2d95cea48cad110109b2388690cbd1055a7d6ee897837f490421867be",
@@ -7315,21 +7316,21 @@
         "Assets/Integration/PixelCrushersSaveSlotBridge.cs": "b130f7411ee1db455a3e66c66d7efd65d00992d64ce1d5980955230add286d08",
         "Assets/MyAsset/Core/Common/Interfaces.cs": "2751d2d7734f6cc0788ab8ba42646505519562bca91e7fbe9d3b52e7e80897ef",
         "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "189cb73d9cb497c594c2c30f59ef57f41dcb0ac89542c5b2238109d42ec004e0",
-        "Assets/MyAsset/Core/Save/ExpeditionNextPlaythrough.cs": "bc06a932c76884500803d81cd8f0897bb257e69ce3f64977ae55de102a61394d",
-        "Assets/MyAsset/Core/Save/ExpeditionPlaythrough.cs": "d09c251974f3a2331bbe67779c806bd7d0ad2231930bae6cf0cf5fc8b91c848c",
+        "Assets/MyAsset/Core/Save/ExpeditionNextPlaythrough.cs": "38246c86c9ceb2257d699c96f264b3a6423c6c3725fd2638226f958f876d7033",
+        "Assets/MyAsset/Core/Save/ExpeditionPlaythrough.cs": "deefad2662e2133f7ee6345fd8b4d101cf9298f88347574bb1c8cb63525c4d82",
         "Assets/MyAsset/Core/Save/FlagManager.cs": "2fd7f35ae4e2fab2a8148e2f350f93c121f4cf92741ae9511d7403cac41be42d",
-        "Assets/MyAsset/Core/Save/SaveDataStore.cs": "a8b3e4283f543fc0dc5330b4a918f76c4eabe21466467f6047194914fad7dd5c",
-        "Assets/MyAsset/Core/Save/SaveManager.cs": "c3acfc77661181bbf3234979d4b86d1853d8a0c2649f8230339c7d2df4149dfc",
-        "Assets/MyAsset/Runtime/Character/BaseCharacter.cs": "ab5714d059f4dc8477ed363e93e027273d759e82cee6376fe0d6df91a7c4f9b1",
-        "Assets/MyAsset/Runtime/GameManager.cs": "e1dbb46b0858d77f83ae1f6b5e108f851a3f27dc972c50d29bb70781d5334803",
-        "Assets/MyAsset/Runtime/UI/ExpeditionNextPlaythroughPanel.cs": "d485515b73443ef1b08797d4db9fdce46aff6962bc0189185780c053330b6d5f",
+        "Assets/MyAsset/Core/Save/SaveDataStore.cs": "2fd539a53787260045681d3bb94662097ba6b6dd6a22e35b4c4b4dcd9cc7f0d3",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "4c6c4ad6f8295f17be5e6c3f4f637bfc1dd73bdd5dad34675d3656a5340156c5",
+        "Assets/MyAsset/Runtime/Character/BaseCharacter.cs": "bfc06f683fc7cf32212ce39a5cb5311a403cb4909aeb7d2f8a73b1ac6dc35491",
+        "Assets/MyAsset/Runtime/GameManager.cs": "606684ce62e8fb27c13b49074a891a562bd9c0b9a0df8d294e51625eb3b19d17",
+        "Assets/MyAsset/Runtime/UI/ExpeditionNextPlaythroughPanel.cs": "98c96bdc66ef6c3c9c3bbc59832993fe7a7f3ec6b53eda0f675f2bbcf4a09d3d",
         "Assets/Scenes/BossArena3DTestScene.unity": "8642b982c4cb96375a4696808a842161f4245e554de0675180055918bdf9ff6f",
         "Assets/Tests/EditMode/ExpeditionNextPlaythroughTests.cs": "28b49f0f17594c31855a9eab9d5955b0369ae26bfc18a6fdd0db1d405ad2a75d",
         "Assets/Tests/EditMode/SaveDataStoreAtomicWriteTests.cs": "c08a682cb2fb3d72d9b7609daaefb36cd461eadf05792c80e639ab2eb83d5a86",
         "Assets/Tests/EditMode/SaveManagerWiringTests.cs": "18bc703f387121b5c3cad36f6f4efa5055293bd40ac00a181561ea5137bd87cd",
         "Assets/Tests/PlayMode/ExpeditionNextPlaythroughScenePlayTests.cs": "e1a7bba600a309bec9239cf489e5f2721574821d0d5ec9ebabcc38f29333b199",
         "Assets/Tests/PlayMode/PixelCrushersStorySlotPlayTests.cs": "3039a64410a9810f99648b7185a26f40c314f234c407381be1dc529d0511aa79",
-        "ProjectSettings/EditorBuildSettings.asset": "9414f7e09e4c8e696f190ed12691b4757421946de6b651bb48c0b66349e0d85f",
+        "ProjectSettings/EditorBuildSettings.asset": "874e4c18b7cab084ac90586bc6f36b7026609a16741a791c4841d482bfca1147",
         "designs/systems/SaveSystem.md": "ae0f84704974d7eef5b55a35ea537454a49f9c5efc78ae786915476c73410cd1"
       }
     }
@@ -7395,7 +7396,7 @@
         "Assets/MyAsset/Core/GameManager/GameEvents.cs": "970d7710584e29e67cc3aea84dd9cbd75df2e20c9302cf482137d5b947f768a5",
         "Assets/MyAsset/Data/PLACEHOLDER_CaveSentinel3D_Info.asset": "0183b39e6a01d9d2a3cff785694e2814a89239fc11d0650569a2845948537ddf",
         "Assets/MyAsset/Data/PLACEHOLDER_CaveSentinelEncounter3D.asset": "be4961a5be81b87fc2a025ef43bd9f50482ce5379744dc5fe0a1f3b672684136",
-        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "5234e24e5d724eac8e5b1a13c1e174fefac4923589e84775dcef9aac0002b6d9",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "fb334fb2c4819e572eb2269811c658d2804d82adedd15d80ee79ee36ef75976f",
         "Assets/MyAsset/Runtime/Combat/ProximityAttack3D.cs": "ff6048b72ca8617801f4f3629282c328dc523da8da50b8bd94832bd9190b79a6",
         "Assets/MyAsset/Runtime/World/BossEncounter3D.cs": "e747af82ed060712f60694a33678f42fce837145773eb19e8145aacbd4cbdc9d",
         "Assets/MyAsset/Runtime/World/EncounterSession3D.cs": "d663fd2019ed396ff198b2dda383c462f98ee9a7c5b2fe6938830c6c9b8547cc",
@@ -7476,9 +7477,9 @@
         "Assets/MyAsset/Core/AI/Summon/ExpeditionSquad.cs": "caf061ce01c920367b375a2c9f88b0b1063f0d7eddf1f72e1a81c7a3b372108b",
         "Assets/MyAsset/Core/Common/Interfaces.cs": "2751d2d7734f6cc0788ab8ba42646505519562bca91e7fbe9d3b52e7e80897ef",
         "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "189cb73d9cb497c594c2c30f59ef57f41dcb0ac89542c5b2238109d42ec004e0",
-        "Assets/MyAsset/Core/Save/ExpeditionPlaythrough.cs": "d09c251974f3a2331bbe67779c806bd7d0ad2231930bae6cf0cf5fc8b91c848c",
+        "Assets/MyAsset/Core/Save/ExpeditionPlaythrough.cs": "deefad2662e2133f7ee6345fd8b4d101cf9298f88347574bb1c8cb63525c4d82",
         "Assets/MyAsset/Core/Save/FlagManager.cs": "2fd7f35ae4e2fab2a8148e2f350f93c121f4cf92741ae9511d7403cac41be42d",
-        "Assets/MyAsset/Core/Save/SaveManager.cs": "c3acfc77661181bbf3234979d4b86d1853d8a0c2649f8230339c7d2df4149dfc",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "4c6c4ad6f8295f17be5e6c3f4f637bfc1dd73bdd5dad34675d3656a5340156c5",
         "Assets/MyAsset/Runtime/World/EncounterSession3D.cs": "d663fd2019ed396ff198b2dda383c462f98ee9a7c5b2fe6938830c6c9b8547cc",
         "Assets/MyAsset/Runtime/World/ExpeditionEncounterBudget3D.cs": "2ccee45db1772aa58caca3682fb637e55e376839a9b1a44562c886f6221d2caf",
         "Assets/Tests/EditMode/ExpeditionPlaythroughTests.cs": "0c3631c2d95cea48cad110109b2388690cbd1055a7d6ee897837f490421867be",
@@ -7559,12 +7560,12 @@
       "notes": "一室の試作で同種の盾持ちを橋の正面と控えに配り、担当離脱時に交代する。陣営ごとの目撃から標的を選び、騎士の号令と奥の目標達成を接続した。集団戦フラグはボス戦と併用でき、号令と陣形は該当する遭遇の進行中に作動する。シスターの既存詳細行動や本編のステージ経路は制作時に接続する。 Unity 6000.6.8f1でEncounterCombat3DPlayTests 2件、PlayerFieldOrderInput3DPlayTests 2件、EncounterObservation3DPlayTests 3件、MissionAttackSlots3DPlayTests 4件、EncounterGoal3DPlayTests 3件、GroupBattle3DScenePlayTests 1件が成功。",
       "verification_hashes": {
         "Assets/Scenes/GroupBattle3DTestScene.unity": "6dac38b8c282e8fcd9891173389d58c93a5b2f1a2f71e3875f00e777b2ae917f",
-        "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "55b13e82a10d5e29915cd12663d106118510717445e7237e90fb889231e53b21",
-        "Assets/MyAsset/Runtime/AI/EncounterObservation3D.cs": "e9997cccca768f561af83cd5d32d78e5096bd09474edc9b1e04f5a6297a5e7d3",
+        "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "154b4982a336554f7aea509e50f9259bb39a445eb110439a2bf702a18fa1b9eb",
+        "Assets/MyAsset/Runtime/AI/EncounterObservation3D.cs": "d99912d3fbec7609a8fe2b8f3318251b9118126552a7a2d30e9adba86435ba3b",
         "Assets/MyAsset/Runtime/Character/CharacterMotor3D.cs": "0f9a5f6e0dc7ca18eb4e5e42343d7eeb4af413be30e07c240d2f3d086b72d8cd",
-        "Assets/MyAsset/Runtime/AI/MissionAttackSlots3D.cs": "7759304bad1ed6c5d1ae243599a3cfcfa90c53fb5d005c4a11269b6fe01ab4d5",
+        "Assets/MyAsset/Runtime/AI/MissionAttackSlots3D.cs": "ab20b795ed46fd4152e49b689472de664512a0b01e4c17c329dfc9136d3fa581",
         "Assets/MyAsset/Runtime/World/EncounterGoal3D.cs": "3f7b3ee5b087cb1e2d920af2a59c892d318442c15558c66ad1c8cc5b1b1cb4d6",
-        "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs": "2f4a41e0b141f219a33be860d1dbc7f772b341a7c976e3997bdbd9075db9890f",
+        "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs": "17e1004fcec269e01196f07e69f3e0e82fca36c55fa3d97069c929141e1bb0ce",
         "Assets/Tests/PlayMode/PlayerFieldOrderInput3DPlayTests.cs": "ba9d95b28e05aec1607925329c0d8e25a947715955eec9b29529df428aa1f66d",
         "Assets/Tests/PlayMode/EncounterObservation3DPlayTests.cs": "e15ce04178c9079104c8bbf5a2c7bed08410bd938e7cad31c896b1ee6dc004b2",
         "Assets/Tests/PlayMode/MissionAttackSlots3DPlayTests.cs": "e9cc532cf9a65b2e8bd6ff6823f8bfe8cc0fd9cd371e4b3749ec68920408fbae",
@@ -7684,12 +7685,12 @@
         "Assets/MyAsset/Core/ScriptableObjects/AIInfo.cs": "d71ec91bd583f69425085ad1d5d0f875bb55a633e816b2488804576db4933bdc",
         "Assets/MyAsset/Core/AI/Companion/CompanionController.cs": "492fcdf3e8119c998a4663d9df951ecfcb60eb26742a327473c6eebd7033b41d",
         "Assets/MyAsset/Core/AI/Enemy/EnemyController.cs": "ebe36a132061fa1b62ea7573c058f626f939a76ab55633a1918ab6469bda2399",
-        "Assets/MyAsset/Runtime/GameManager.cs": "e1dbb46b0858d77f83ae1f6b5e108f851a3f27dc972c50d29bb70781d5334803",
-        "Assets/MyAsset/Runtime/Character/EnemyCharacter.cs": "3bc0e4d933a555293620f3bf361e7f2dc8a273f502936753582658b09fe8ec23",
-        "Assets/MyAsset/Runtime/Character/CompanionCharacter.cs": "a42ed3a83faf1204047fb24fd5fdda883d1e8f0a4b6f903c11f048fcf3aca365",
-        "Assets/MyAsset/Runtime/Character/BaseCharacter.cs": "ab5714d059f4dc8477ed363e93e027273d759e82cee6376fe0d6df91a7c4f9b1",
+        "Assets/MyAsset/Runtime/GameManager.cs": "606684ce62e8fb27c13b49074a891a562bd9c0b9a0df8d294e51625eb3b19d17",
+        "Assets/MyAsset/Runtime/Character/EnemyCharacter.cs": "1a38c895ba746fc55a1bba2dc8b6760351f140f2080a9859213347c3614547f5",
+        "Assets/MyAsset/Runtime/Character/CompanionCharacter.cs": "a7ee73adf043190c1c5815cb55f20e7ca6bfa760b0eb31036eb4066326500e44",
+        "Assets/MyAsset/Runtime/Character/BaseCharacter.cs": "bfc06f683fc7cf32212ce39a5cb5311a403cb4909aeb7d2f8a73b1ac6dc35491",
         "Assets/MyAsset/Runtime/Character/PlayerCharacter.cs": "f8b687ca493a661cefb1d54a8d8520537c38d3ef8a57f020a1f96b059d561f6c",
-        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "07e1f5fef564c26d51526878d1596e83bbeff75d8d3819c88276e3c242a6963e",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "9fb2c4bcb81e619c5c411475410b3bc18e34a32c45292589723a26afb83cd847",
         "Assets/MyAsset/Runtime/Input/PlayerInputHandler.cs": "e29e9c30b7022e9e7df144b683104016ddcb35493b3980833430a632e9806f3a",
         "Assets/MyAsset/Core/Damage/AttackTargetPolicy.cs": "f624220d9eec1c8ce9abf3ee373be75ba538ce36976f55a4478b0bfe9093216b"
       }
@@ -7765,9 +7766,9 @@
         "Assets/MyAsset/Runtime/Input/PlayerInputHandler.MultiLock.cs": "506494b57067ce62d26ff96789c72bd5838c7cce7306c45b70d31a6bf97cebad",
         "Assets/MyAsset/Runtime/UI/HudController.MultiLock.cs": "cdddbb30f7feac67b112fe9f9b4c9a7023429ee5f1dc062d235ff27c9b21b7b5",
         "Assets/MyAsset/Runtime/Character/PlayerCharacter.cs": "f8b687ca493a661cefb1d54a8d8520537c38d3ef8a57f020a1f96b059d561f6c",
-        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "07e1f5fef564c26d51526878d1596e83bbeff75d8d3819c88276e3c242a6963e",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "9fb2c4bcb81e619c5c411475410b3bc18e34a32c45292589723a26afb83cd847",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "0409a22b44d8cad69829043f89b97b91fc3b3d99d7b04f91492dfe31779d9db5",
-        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs": "919e3694037c8c375ea4790f0ef1f983695bdfb2c48dc21d4b8f4d16b8cacb35",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs": "eaa8ff18dba28bb2d10a172c3d67190ee0a46be240df7da5577b36bcc5d2ed83",
         "Assets/Tests/EditMode/ScreenDirectionTests.cs": "d6c3d6abfa92a59f4e70378cd5aaae2ec1d8bd68ceea99c2cc8c498e4bda6e06",
         "Assets/Tests/PlayMode/PlayerMultiLockInputTests.cs": "c4f9f5f798572495098c1660500e158bfa659d4e283b6e3c459741eb25eb8a67"
       }
@@ -7850,12 +7851,12 @@
       ],
       "notes": "攻撃の実行ごとに世代付きの印を保持し、発射前に生存・陣営・射程と射線を再確認する。主標的を維持したまま敵味方の担当弾を分け、一体だけ失効した場合はその弾を省く。即時の直進弾、詠唱中断、世代の再利用、全員失効を検証する。対応した接触攻撃は実際に接触した対象だけに一回ずつ当たる。地点範囲は着弾時に被弾者を求める。 Unity 6000.6.8f1でEditMode ActionTargetSelectionTests 1/1件、PlayMode MultiLockCastPlayTests 6/6件、PlayMode CoreAttackPrototypePlayTests 1/1件。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "07e1f5fef564c26d51526878d1596e83bbeff75d8d3819c88276e3c242a6963e",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "9fb2c4bcb81e619c5c411475410b3bc18e34a32c45292589723a26afb83cd847",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "0409a22b44d8cad69829043f89b97b91fc3b3d99d7b04f91492dfe31779d9db5",
         "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "906affd99f13b1d343389f12e8cf59e9e9f396eebcc43cb2b44d9427016616c8",
         "Assets/MyAsset/Runtime/Combat/MultiLockTargeting.cs": "0df39b6a438f2c5be55673d65b58ac50a24800608e1f579797f0fbdcb46e5d75",
         "Assets/MyAsset/Core/AI/Core/AITargetRelations.cs": "4ce51288ec1aed9c56768ce5504bce875875e9eba5a0dddaa73c745cdac46a4a",
-        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs": "919e3694037c8c375ea4790f0ef1f983695bdfb2c48dc21d4b8f4d16b8cacb35",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs": "eaa8ff18dba28bb2d10a172c3d67190ee0a46be240df7da5577b36bcc5d2ed83",
         "Assets/MyAsset/Core/Combat/Projectile/Projectile.cs": "7e9680d064d8e704a44f39d532865bc7463fa3892abb2094ac137c57d0f3421f",
         "Assets/MyAsset/Runtime/Combat/HitBox.cs": "21d935ac4c134a333d4f9405ac7fda35bd36ff9ebd48b10bfa4246e0ad54895b",
         "Assets/Scenes/CoreTestScene.unity": "bc5c401c79863f882d708b24f0df9d92b43273bebf4c9bfefcd0d29fbb3cdb49",
@@ -7965,11 +7966,11 @@
       "verification_hashes": {
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "0409a22b44d8cad69829043f89b97b91fc3b3d99d7b04f91492dfe31779d9db5",
         "Assets/MyAsset/Runtime/Combat/AttackWarningPresentation.cs": "084db86e82b91ede6738e417f7472c1514b1ad77df0c9e560bfb17c64f169b91",
-        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.GroundImpact.cs": "0107bb198d73625cae75bb7cc7f844516ddde16df14db3bc028378aad415b10a",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.GroundImpact.cs": "4bd5d1808309478c73c805ce4297bc2d1b7d26e68c10e4c5eaed3a124b18de30",
         "Assets/MyAsset/Core/Combat/Projectile/Projectile.cs": "7e9680d064d8e704a44f39d532865bc7463fa3892abb2094ac137c57d0f3421f",
         "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.LockWarnings.cs": "1cc0fe1f740e7d0b5e996f61da87c8de420d7e9e2affdbebf2057145ce07797f",
         "Assets/MyAsset/Runtime/UI/HudController.ProjectileWarnings.cs": "21f86a8ac441a907167dce9e934ea1f0a86cb655e93847f85daf5930c8f98cd8",
-        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs": "919e3694037c8c375ea4790f0ef1f983695bdfb2c48dc21d4b8f4d16b8cacb35",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs": "eaa8ff18dba28bb2d10a172c3d67190ee0a46be240df7da5577b36bcc5d2ed83",
         "Assets/Tests/EditMode/ProjectileWarningDirectionTests.cs": "20db41076d396afdda5d9f79b033df8056d58d193eee7e3ad1df4f26497fe881",
         "Assets/Tests/PlayMode/ProjectileLockWarningPlayTests.cs": "79a4895cac5b5d61bc84f0018d46577c9b717343f807103457894fa27a725e82",
         "Assets/Tests/PlayMode/GroundAndMeleeWarningPlayTests.cs": "3248883cff8b4003d8f5ff9fb0bbc604b09ff00a66e90f10be39d42cee696eaa",
@@ -8218,12 +8219,12 @@
       "notes": "登録世代を照合した同じ物理空間の参加者だけを対象とする。距離と遮蔽を3Dで判定し、目撃側の陣営に標的と座標を渡す。 Unity 6000.6.8f1でEncounterObservation3DPlayTests 3件、GroupBattle3DScenePlayTests 1件が成功。",
       "verification_hashes": {
         "Assets/Scenes/GroupBattle3DTestScene.unity": "6dac38b8c282e8fcd9891173389d58c93a5b2f1a2f71e3875f00e777b2ae917f",
-        "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "55b13e82a10d5e29915cd12663d106118510717445e7237e90fb889231e53b21",
-        "Assets/MyAsset/Runtime/AI/EncounterObservation3D.cs": "e9997cccca768f561af83cd5d32d78e5096bd09474edc9b1e04f5a6297a5e7d3",
+        "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "154b4982a336554f7aea509e50f9259bb39a445eb110439a2bf702a18fa1b9eb",
+        "Assets/MyAsset/Runtime/AI/EncounterObservation3D.cs": "d99912d3fbec7609a8fe2b8f3318251b9118126552a7a2d30e9adba86435ba3b",
         "Assets/Tests/PlayMode/EncounterObservation3DPlayTests.cs": "e15ce04178c9079104c8bbf5a2c7bed08410bd938e7cad31c896b1ee6dc004b2",
         "Assets/Tests/PlayMode/GroupBattle3DScenePlayTests.cs": "cacbaa923d1536e04591d338955628664f6bf41a6eaa3cf48db5faf6805dd095",
-        "Assets/MyAsset/Runtime/Character/CharacterActor3D.cs": "22a8a9e9d802a98a76e993e43be451096882884bcfb073a236ad33b96c31176f",
-        "Assets/MyAsset/Runtime/AI/EncounterSighting3D.cs": "b2d2f76be0a7c176294ced991cc4d9a17d56942933f41cb1e4ec68ecb1308782",
+        "Assets/MyAsset/Runtime/Character/CharacterActor3D.cs": "d4231bf9121109dc9fafb7822f845336bd8f32cfc45c921b10b49d35096a6b4d",
+        "Assets/MyAsset/Runtime/AI/EncounterSighting3D.cs": "99b498eaf91f6c59b37379c4a65f18da3c7d50af2bbe6ab5aa642d603d8ac571",
         "Assets/MyAsset/Runtime/World/EncounterSession3D.cs": "d663fd2019ed396ff198b2dda383c462f98ee9a7c5b2fe6938830c6c9b8547cc"
       }
     }
@@ -8277,11 +8278,11 @@
       "verification_hashes": {
         "Assets/InputSystem_Actions.inputactions": "31d199426d631b6c852e8830aad54e54f9336e2bcb46dae92a47578c20e9b92f",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.FieldOrders.cs": "3f142bf31b798c960c05e7074c2f0cb7d36fcb40fe95aa23a86954f1132704d1",
-        "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "55b13e82a10d5e29915cd12663d106118510717445e7237e90fb889231e53b21",
+        "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "154b4982a336554f7aea509e50f9259bb39a445eb110439a2bf702a18fa1b9eb",
         "Assets/MyAsset/Core/AI/Core/FieldOrder.cs": "fca55ef61bcae84b2228b4f7440dfb2ffb159588430f4463fe347e331726b697",
-        "Assets/MyAsset/Runtime/AI/EncounterObservation3D.cs": "e9997cccca768f561af83cd5d32d78e5096bd09474edc9b1e04f5a6297a5e7d3",
+        "Assets/MyAsset/Runtime/AI/EncounterObservation3D.cs": "d99912d3fbec7609a8fe2b8f3318251b9118126552a7a2d30e9adba86435ba3b",
         "Assets/Tests/PlayMode/PlayerFieldOrderInput3DPlayTests.cs": "ba9d95b28e05aec1607925329c0d8e25a947715955eec9b29529df428aa1f66d",
-        "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs": "2f4a41e0b141f219a33be860d1dbc7f772b341a7c976e3997bdbd9075db9890f",
+        "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs": "17e1004fcec269e01196f07e69f3e0e82fca36c55fa3d97069c929141e1bb0ce",
         "Assets/Tests/PlayMode/GroupBattle3DScenePlayTests.cs": "cacbaa923d1536e04591d338955628664f6bf41a6eaa3cf48db5faf6805dd095",
         "Assets/MyAsset/Runtime/World/EncounterSession3D.cs": "d663fd2019ed396ff198b2dda383c462f98ee9a7c5b2fe6938830c6c9b8547cc"
       }
@@ -8446,7 +8447,7 @@
         "Assets/Integration/ExpeditionDialogueActions.cs": "fe961a583bcac3238a3ffaa8a71ee208fd937a5818ce8a168cd85b88cab2d1cc",
         "Assets/MyAsset/Runtime/UI/ExpeditionSquadPanel.cs": "b44a5d9a22ccad211b84d9732ca54c9ae0c26f9715c2efc3e1160a5287cf0b46",
         "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs": "efc2268e04e701fc14a0c87b9ab875f14456db720f906c1502b6e8964ee53c00",
-        "Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs": "8e81abfc246fc09b6c15a0ad48a8d790cd00fda9689b75a3577ba935a0a00fb3",
+        "Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs": "f394b1cbd61177ce4f59e0469bdc3bd1dcb688761360fe1f52eb61a447a33b7c",
         "Assets/Tests/PlayMode/PlayerInteractionInput3DPlayTests.cs": "89d6747b2a310f761852b268cde72cf641e95edfdedd5060b87b9ea09e40f473",
         "Assets/Tests/PlayMode/ExpeditionDialogueActionsPlayTests.cs": "b309c9c1faab414324a77a398dc62702cefae98ce2ea8ce1db31c53735d31625",
         "Assets/Tests/PlayMode/ExpeditionAidUnlockPlayTests.cs": "512955abd445599238d1da2886118683f39fd385b0279b86999ff5e927003f7a",
@@ -8519,7 +8520,7 @@
       "verification_hashes": {
         "Assets/MyAsset/Core/AI/Summon/ExpeditionDeckPresets.cs": "9cb72e6515c452ca091f95b0c90a043cd624742c5a9d30546aecc581b1bb4930",
         "Assets/MyAsset/Core/AI/Summon/ExpeditionSquad.cs": "caf061ce01c920367b375a2c9f88b0b1063f0d7eddf1f72e1a81c7a3b372108b",
-        "Assets/MyAsset/Core/Save/SaveManager.cs": "c3acfc77661181bbf3234979d4b86d1853d8a0c2649f8230339c7d2df4149dfc",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "4c6c4ad6f8295f17be5e6c3f4f637bfc1dd73bdd5dad34675d3656a5340156c5",
         "Assets/MyAsset/Runtime/AI/ExpeditionSquadManager.cs": "90e5ff7eedd078988d7ef8a4e198833ca68bc752c1bd7e188440b6dd8f02fabc",
         "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs": "efc2268e04e701fc14a0c87b9ab875f14456db720f906c1502b6e8964ee53c00",
         "Assets/MyAsset/Runtime/UI/ExpeditionSquadPanel.cs": "b44a5d9a22ccad211b84d9732ca54c9ae0c26f9715c2efc3e1160a5287cf0b46",
@@ -8593,11 +8594,11 @@
         "Assets/Integration/PixelCrushersSaveSlotBridge.cs": "b130f7411ee1db455a3e66c66d7efd65d00992d64ce1d5980955230add286d08",
         "Assets/Integration/QuestMachineBridge.cs": "4a6a0c8bf0552fc2c2c4a0fa8caeb74a6523867a5725babb06cf60fd34496a2c",
         "Assets/MyAsset/Core/Common/Interfaces.cs": "2751d2d7734f6cc0788ab8ba42646505519562bca91e7fbe9d3b52e7e80897ef",
-        "Assets/MyAsset/Core/Save/SaveDataStore.cs": "a8b3e4283f543fc0dc5330b4a918f76c4eabe21466467f6047194914fad7dd5c",
-        "Assets/MyAsset/Core/Save/SaveManager.cs": "c3acfc77661181bbf3234979d4b86d1853d8a0c2649f8230339c7d2df4149dfc",
+        "Assets/MyAsset/Core/Save/SaveDataStore.cs": "2fd539a53787260045681d3bb94662097ba6b6dd6a22e35b4c4b4dcd9cc7f0d3",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "4c6c4ad6f8295f17be5e6c3f4f637bfc1dd73bdd5dad34675d3656a5340156c5",
         "Assets/Scenes/ExpeditionQuest3DTestScene.unity": "9d88de98f69f3d622bc494da8726ccc1f30fd85e28759d83978c5ee599831a52",
         "Assets/Tests/EditMode/SaveManagerWiringTests.cs": "18bc703f387121b5c3cad36f6f4efa5055293bd40ac00a181561ea5137bd87cd",
-        "Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs": "8e81abfc246fc09b6c15a0ad48a8d790cd00fda9689b75a3577ba935a0a00fb3",
+        "Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs": "f394b1cbd61177ce4f59e0469bdc3bd1dcb688761360fe1f52eb61a447a33b7c",
         "Assets/Tests/PlayMode/PixelCrushersStorySlotPlayTests.cs": "3039a64410a9810f99648b7185a26f40c314f234c407381be1dc529d0511aa79",
         "designs/systems/SaveSystem.md": "ae0f84704974d7eef5b55a35ea537454a49f9c5efc78ae786915476c73410cd1"
       }
@@ -8643,12 +8644,12 @@
         "Assets/MyAsset/Core/AI/Coop/CoopCooldownTracker.cs": "e9cf5933ddae7fd7d56b540555649085da4977da37075d6522b1d62d50a79cab",
         "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "906affd99f13b1d343389f12e8cf59e9e9f396eebcc43cb2b44d9427016616c8",
         "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs": "07736920ccf4c9614a9ad6b9ed6693748b20694b3873574e9bc92fb94d2f3dad",
-        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "82e5bd022280b019238a2b77d33c64f5bab929c519249eed001cf4495a4e78a2",
+        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "22ec560f1986acf4603f0a5f49dd9d842c869d4ec3e64ad41fa9993f0fd691c8",
         "Assets/MyAsset/Runtime/AI/CompanionTactics3D.cs": "20b10306db375277be736cfcd764695a6ee78f2453e9025904cb0efde06ef22d",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.Cooperation.cs": "e6950439e3f1485a9dbe035d8e8b997a1684c93b6578eb7734c44f2e339ff10d",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.cs": "51dbe300b4ffb75417862df9483470855a7814d11eeff80f6e741db1c875c076",
-        "Assets/Scenes/ExpeditionMock3DScene.unity": "7a9cf703e2844ad74df7154a56edcfbef0105f709500ec0a940cb9ae4a772ebd",
-        "Assets/Tests/PlayMode/CompanionController3DPlayTests.cs": "8e130a2ffa574d8ee4994e0366ac4bee8fe5f5e2630dec1f845eafa604dcade8",
+        "Assets/Scenes/ExpeditionMock3DScene.unity": "b7dc9b22cf61f1297bc04ee46a43eb3f4e4d89029393d8f354d90d4d8033cbbd",
+        "Assets/Tests/PlayMode/CompanionController3DPlayTests.cs": "7fd6342d91eed2a73fe3bdc1f260caa90f4d685cd146597dba74875cbb202f00",
         "Assets/Tests/PlayMode/PlayerCooperationInput3DPlayTests.cs": "b743e27f80c6c0b16db4740813806b1692e5d26eba5bd0edb4a9ce79775442d3"
       }
     }
@@ -8696,14 +8697,14 @@
       "verification_hashes": {
         "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "3741d244d117f332dee2adfd21d684c93c762b0273cccfeb195d763beaf8d09b",
         "Assets/MyAsset/Core/AI/Core/ModeController.cs": "80e57eefa69c82ce61dec1feef230dabddab6bf5fa256dd8df64410f51572bcd",
-        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "82e5bd022280b019238a2b77d33c64f5bab929c519249eed001cf4495a4e78a2",
+        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "22ec560f1986acf4603f0a5f49dd9d842c869d4ec3e64ad41fa9993f0fd691c8",
         "Assets/MyAsset/Runtime/AI/CompanionTactics3D.cs": "20b10306db375277be736cfcd764695a6ee78f2453e9025904cb0efde06ef22d",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "7ef3a9969cf9645885b3aada797c932f1e0363d17c69dae636face803003898f",
         "Assets/MyAsset/Runtime/UI/CompanionAISettingsController.Dialogs.ActionPicker.cs": "9a5f9d4fcd141904ef8ba086e85c373c81b902be5745c8f8ad66ca42c2c4e72c",
         "Assets/MyAsset/Runtime/UI/CompanionAISettingsController.cs": "a2b10b9b17c6de99086358016fdf2a3437db51a73636721ea027ffbbd42a30c1",
-        "Assets/Scenes/ExpeditionMock3DScene.unity": "7a9cf703e2844ad74df7154a56edcfbef0105f709500ec0a940cb9ae4a772ebd",
+        "Assets/Scenes/ExpeditionMock3DScene.unity": "b7dc9b22cf61f1297bc04ee46a43eb3f4e4d89029393d8f354d90d4d8033cbbd",
         "Assets/Tests/PlayMode/CompanionAISettings3DPlayTests.cs": "181d09fa7ea5ac1562be8d5f1ea8addd7979e8602de724c515859a482e0e86d3",
-        "Assets/Tests/PlayMode/CompanionController3DPlayTests.cs": "8e130a2ffa574d8ee4994e0366ac4bee8fe5f5e2630dec1f845eafa604dcade8"
+        "Assets/Tests/PlayMode/CompanionController3DPlayTests.cs": "7fd6342d91eed2a73fe3bdc1f260caa90f4d685cd146597dba74875cbb202f00"
       }
     }
   },
@@ -8744,13 +8745,13 @@
       "notes": "実シーンの境界を越えて加算ロードとアンロードを行う。騎士の同じ登録世代を保ち、外部アンロードで残った読み込み済み情報を取り除く。 Unity 6000.6.8f1でLevelStreaming3DPlayTests 1件、ExpeditionMock3DScenePlayTests 1件が成功。",
       "verification_hashes": {
         "Assets/MyAsset/Runtime/Streaming/AreaBoundaryTrigger3D.cs": "09c1af53d469a3f57f2d4458ac948158a9e2c1670fa986edf743a7d3e4adb671",
-        "Assets/MyAsset/Runtime/Streaming/LevelStreamingController.cs": "58c337230e3fe2fda1a235f4b47a9e49522fcd959116b4858df914a01d69f65f",
-        "Assets/Scenes/ExpeditionMock3DScene.unity": "7a9cf703e2844ad74df7154a56edcfbef0105f709500ec0a940cb9ae4a772ebd",
+        "Assets/MyAsset/Runtime/Streaming/LevelStreamingController.cs": "b3fa95cfc1be07fecc8b8950bde1e4943fd2abd982044315827adf7dd1da43b1",
+        "Assets/Scenes/ExpeditionMock3DScene.unity": "b7dc9b22cf61f1297bc04ee46a43eb3f4e4d89029393d8f354d90d4d8033cbbd",
         "Assets/Scenes/StreamingAreaA3DTestScene.unity": "d02e031e89ea52ef860a49a6e343b06d2f6ecfa8675c15dde1f13c5b973e7165",
         "Assets/Scenes/StreamingAreaB3DTestScene.unity": "695b7c4f077a0ae030da8c8b8b0bcca8597fe559a3e63d6d702b7121fdb43e46",
-        "Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs": "fec2358fd603bbfff413eeb3ef5ee66428e7754807fe163c8dd9c26b35213412",
+        "Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs": "7dae47130a464d1807441ca5c9a20eae7846c094c23d36c2438f0bf37d023603",
         "Assets/Tests/PlayMode/LevelStreaming3DPlayTests.cs": "fd8faad4d2a1459dccb60c88f19bc06c135a657987c3fbbc3ef1408580b7bb08",
-        "ProjectSettings/EditorBuildSettings.asset": "9414f7e09e4c8e696f190ed12691b4757421946de6b651bb48c0b66349e0d85f"
+        "ProjectSettings/EditorBuildSettings.asset": "874e4c18b7cab084ac90586bc6f36b7026609a16741a791c4841d482bfca1147"
       }
     }
   },
@@ -8792,7 +8793,7 @@
       "verification_hashes": {
         "Assets/MyAsset/Core/LevelUp/LevelUpLogic.cs": "31d8f789d4dd966859b357315aee4250c4d16ac29bc68bb976f4fa291fbbd306",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "7ef3a9969cf9645885b3aada797c932f1e0363d17c69dae636face803003898f",
-        "Assets/MyAsset/Runtime/GameManager.cs": "e1dbb46b0858d77f83ae1f6b5e108f851a3f27dc972c50d29bb70781d5334803",
+        "Assets/MyAsset/Runtime/GameManager.cs": "606684ce62e8fb27c13b49074a891a562bd9c0b9a0df8d294e51625eb3b19d17",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.cs": "51dbe300b4ffb75417862df9483470855a7814d11eeff80f6e741db1c875c076",
         "Assets/Tests/PlayMode/CharacterStatRegistrationFlowTests.cs": "9985df71ab4f63aa544d8445c139d825de89e7adde83a39a9064045fb18ecb7a",
         "Assets/Tests/PlayMode/PlayerCombatLoadout3DPlayTests.cs": "eb4d205605b5fb743bd55fb6977b3f82c6f9361a2e52b7b1611e6d4d1bcae438"
@@ -8842,11 +8843,11 @@
       "notes": "移動する明示ロック先を追うこと、遮蔽された候補の除外と弾ごとの命中、起伏でのAI移動と命中、技・装備の別々の蓄積と一時バフ解除時の装備能力保持を検証する。 Unity 6000.6.8f1でSpatialCombat3DPlayTests 20件、EncounterCombat3DPlayTests 3件が成功。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs": "07736920ccf4c9614a9ad6b9ed6693748b20694b3873574e9bc92fb94d2f3dad",
-        "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "55b13e82a10d5e29915cd12663d106118510717445e7237e90fb889231e53b21",
-        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "5234e24e5d724eac8e5b1a13c1e174fefac4923589e84775dcef9aac0002b6d9",
+        "Assets/MyAsset/Runtime/AI/EncounterCombat3D.cs": "154b4982a336554f7aea509e50f9259bb39a445eb110439a2bf702a18fa1b9eb",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "fb334fb2c4819e572eb2269811c658d2804d82adedd15d80ee79ee36ef75976f",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "7ef3a9969cf9645885b3aada797c932f1e0363d17c69dae636face803003898f",
         "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "58732262d3ce3f322f5ab1cbfcab51d1bf2e7710089fa9c85e1d501331775520",
-        "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs": "2f4a41e0b141f219a33be860d1dbc7f772b341a7c976e3997bdbd9075db9890f",
+        "Assets/Tests/PlayMode/EncounterCombat3DPlayTests.cs": "17e1004fcec269e01196f07e69f3e0e82fca36c55fa3d97069c929141e1bb0ce",
         "Assets/Tests/PlayMode/SpatialCombat3DPlayTests.StatusEffects.cs": "e936cac2f97ac8b03c4bf9f5ed1d7791d1a5355a99bbe3a28548c2315a550dcc",
         "Assets/Tests/PlayMode/SpatialCombat3DPlayTests.cs": "6d06bad29dd5adff2b1fcf685f360f9d57b4e53a479df0a5d30f3804111c5ff8"
       }
@@ -8935,16 +8936,16 @@
       "notes": "依頼、召喚、戦術設定、消耗品、Timelineの専用イベント、装備・魔法の選択と成長、ストリーミング、ボスと周回を同じ試作マップで確認する。モックでも工兵の追従先を設定し、会話からの出撃と追従は専用の依頼シーンで検証した。別の集団戦でプリセットを使って増援を呼び、訓練の成功と撤退を確認した。 Unity 6000.6.8f1でExpeditionMock3DScenePlayTests 3件、ExpeditionQuest3DScenePlayTests 1件、BossArena3DScenePlayTests 1件、ExpeditionNextPlaythroughScenePlayTests 1件、ExpeditionConsumablesMockScenePlayTests 1件、ExpeditionEvent3DScenePlayTests 2件、ExpeditionLoadoutPanel3DPlayTests 1件、PlayerProgression3DPlayTests 2件が成功。",
       "verification_hashes": {
         "Assets/Integration/ExpeditionQuestGiver.cs": "0e3133114d9c00d37a79da0d69ccc22e18e7ac18c56c27ad8011af60f1f20ccc",
-        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "82e5bd022280b019238a2b77d33c64f5bab929c519249eed001cf4495a4e78a2",
-        "Assets/MyAsset/Runtime/Streaming/LevelStreamingController.cs": "58c337230e3fe2fda1a235f4b47a9e49522fcd959116b4858df914a01d69f65f",
-        "Assets/MyAsset/Runtime/UI/ExpeditionNextPlaythroughPanel.cs": "d485515b73443ef1b08797d4db9fdce46aff6962bc0189185780c053330b6d5f",
+        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "22ec560f1986acf4603f0a5f49dd9d842c869d4ec3e64ad41fa9993f0fd691c8",
+        "Assets/MyAsset/Runtime/Streaming/LevelStreamingController.cs": "b3fa95cfc1be07fecc8b8950bde1e4943fd2abd982044315827adf7dd1da43b1",
+        "Assets/MyAsset/Runtime/UI/ExpeditionNextPlaythroughPanel.cs": "98c96bdc66ef6c3c9c3bbc59832993fe7a7f3ec6b53eda0f675f2bbcf4a09d3d",
         "Assets/MyAsset/Runtime/World/BossEncounter3D.cs": "e747af82ed060712f60694a33678f42fce837145773eb19e8145aacbd4cbdc9d",
-        "Assets/Scenes/ExpeditionMock3DScene.unity": "7a9cf703e2844ad74df7154a56edcfbef0105f709500ec0a940cb9ae4a772ebd",
+        "Assets/Scenes/ExpeditionMock3DScene.unity": "b7dc9b22cf61f1297bc04ee46a43eb3f4e4d89029393d8f354d90d4d8033cbbd",
         "Assets/Tests/PlayMode/BossArena3DScenePlayTests.cs": "82f5f0832c72b5c8cfc794f6eea90eaca8a7e33490ca3171184eb3d6d1fa5104",
-        "Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs": "fec2358fd603bbfff413eeb3ef5ee66428e7754807fe163c8dd9c26b35213412",
+        "Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs": "7dae47130a464d1807441ca5c9a20eae7846c094c23d36c2438f0bf37d023603",
         "Assets/Tests/PlayMode/ExpeditionNextPlaythroughScenePlayTests.cs": "e1a7bba600a309bec9239cf489e5f2721574821d0d5ec9ebabcc38f29333b199",
-        "Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs": "8e81abfc246fc09b6c15a0ad48a8d790cd00fda9689b75a3577ba935a0a00fb3",
-        "ProjectSettings/EditorBuildSettings.asset": "9414f7e09e4c8e696f190ed12691b4757421946de6b651bb48c0b66349e0d85f",
+        "Assets/Tests/PlayMode/ExpeditionQuest3DScenePlayTests.cs": "f394b1cbd61177ce4f59e0469bdc3bd1dcb688761360fe1f52eb61a447a33b7c",
+        "ProjectSettings/EditorBuildSettings.asset": "874e4c18b7cab084ac90586bc6f36b7026609a16741a791c4841d482bfca1147",
         "docs/reports/experiments/2026-11-25_expedition-mock-3d.md": "4d63a678464e84f1a4e2449d849ac69ba96c325aeeef61080e3abe89e56f889b",
         "Assets/MyAsset/Data/PLACEHOLDER_ConsumableUseParticles3D.mat": "79557a66ae41d5c2f1f88b4aacbed6c5e9cecad9197ec5bb8e653896e9e31105",
         "Assets/MyAsset/Data/PLACEHOLDER_ConsumableUseParticles3D.mat.meta": "fe42b7d20822347fe5375863c9a39e4d56a3279b6570059682716d4b7118d93a",
@@ -8986,7 +8987,7 @@
         "Assets/MyAsset/Runtime/World/ExpeditionEventEntry3D.cs": "829777962f5ba16cf9f175ababea1f1c3c20d16e17f314f287fc78c678784020",
         "Assets/MyAsset/Runtime/World/ExplorationExperience3D.cs": "5b4795bda167f6a9d79c59af1b17bf4f56e01f3a41a9d194dca382251643fa08",
         "Assets/Scenes/ExpeditionEvent3DScene.unity": "b13e39fcabdb6d2819c40631f6d53b004afe4dfa3353dcc72b26e96c32d0d2f7",
-        "Assets/Tests/PlayMode/ExpeditionEvent3DScenePlayTests.cs": "5f53d51ebf3e43ec80c976cf050adf9b287171d8b0b01c260da46f6467e2bb40",
+        "Assets/Tests/PlayMode/ExpeditionEvent3DScenePlayTests.cs": "bb64d8fa8f1b4d9411fd52063202bb9792b9faec2a83dcef0c0b36ea15394ba1",
         "Assets/Tests/PlayMode/ExpeditionLoadoutPanel3DPlayTests.cs": "6ac934499a8195931129a1d9ba028f26eb5caf0840ac21749bc6b20ccc5f945b",
         "Assets/Tests/PlayMode/PlayerProgression3DPlayTests.cs": "c36ff8b5e3014a89ec64fa841f0ae2cadffe08030dccb06b594efde9f2fc7107",
         "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs": "efc2268e04e701fc14a0c87b9ab875f14456db720f906c1502b6e8964ee53c00",
@@ -9076,7 +9077,7 @@
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "7ef3a9969cf9645885b3aada797c932f1e0363d17c69dae636face803003898f",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "0409a22b44d8cad69829043f89b97b91fc3b3d99d7b04f91492dfe31779d9db5",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.Items.cs": "fa0ff8f54de98b92d3cf65a77690499875fc6e53802bf6da17d56ab28bf253d5",
-        "Assets/Scenes/ExpeditionMock3DScene.unity": "7a9cf703e2844ad74df7154a56edcfbef0105f709500ec0a940cb9ae4a772ebd",
+        "Assets/Scenes/ExpeditionMock3DScene.unity": "b7dc9b22cf61f1297bc04ee46a43eb3f4e4d89029393d8f354d90d4d8033cbbd",
         "Assets/Tests/PlayMode/ExpeditionConsumablesMockScenePlayTests.cs": "4e394eeeaf71ddc82765268f47aaad973cc1a6d3ea1868264d565256b113a445",
         "Assets/Tests/PlayMode/PlayerItemInput3DPlayTests.cs": "debc0ded886a65a0353377ecb33d8b81fb0c8913dde39216b3c312c5641b69c5",
         "Assets/Tests/PlayMode/PlayerItemUse3DPlayTests.cs": "630bb847b37dd72d54a8bf0811a15e20644e6b22ca60372a89190877c8987980"
@@ -9135,7 +9136,7 @@
         "Assets/MyAsset/Core/Inventory/ConsumableBelt.cs": "3f503035f85d45fb2d29820c9f4ead2ff714cecf72f5bfdd57bfbbe573f3588d",
         "Assets/MyAsset/Core/Inventory/ConsumableDefinition.cs": "427596b62edc2c07dfae0d24753dbd2f152095aa12c39778a5b4efed2e3c6a2f",
         "Assets/MyAsset/Core/Inventory/InventoryManager.cs": "a9a23c4085b8b1d41406f12dc56fa3609f4c6073c90ce41e02c8c018a0478c8b",
-        "Assets/MyAsset/Core/Save/SaveManager.cs": "c3acfc77661181bbf3234979d4b86d1853d8a0c2649f8230339c7d2df4149dfc",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "4c6c4ad6f8295f17be5e6c3f4f637bfc1dd73bdd5dad34675d3656a5340156c5",
         "Assets/MyAsset/Data/PLACEHOLDER_ConsumableUseParticles3D.mat": "79557a66ae41d5c2f1f88b4aacbed6c5e9cecad9197ec5bb8e653896e9e31105",
         "Assets/MyAsset/Data/PLACEHOLDER_ConsumableUseParticles3D.mat.meta": "fe42b7d20822347fe5375863c9a39e4d56a3279b6570059682716d4b7118d93a",
         "Assets/MyAsset/Data/PLACEHOLDER_EmberFlask3D.asset": "fe9eea37e38622bede433c17794d429e24366d17c984e4e5de65f479e11770bb",
@@ -9155,9 +9156,9 @@
         "Assets/MyAsset/Data/PLACEHOLDER_HealingDraughtVfx3D.prefab": "51ffe7fa6a5f342d2834db273107dce0cbb3ac0a1442de280a6bfb97a47bccc6",
         "Assets/MyAsset/Data/PLACEHOLDER_HealingDraughtVfx3D.prefab.meta": "2a3261fbdb636bab92a5fe1e0f7740b6194ad3bf7fdfdc7ae4441a9e3fe2a137",
         "Assets/MyAsset/Runtime/Character/ConsumablePickup3D.cs": "856488faba011c1d6c6031d07741c9c2062c023941936b72c9d6640ee2466abb",
-        "Assets/MyAsset/Runtime/GameManager.cs": "e1dbb46b0858d77f83ae1f6b5e108f851a3f27dc972c50d29bb70781d5334803",
+        "Assets/MyAsset/Runtime/GameManager.cs": "606684ce62e8fb27c13b49074a891a562bd9c0b9a0df8d294e51625eb3b19d17",
         "Assets/MyAsset/Runtime/UI/ConsumableBeltPanel3D.cs": "7b839ddb72c79bfae24b1a3477d03c8bdc22578bf1d9deba2bf571ce07c2489c",
-        "Assets/Scenes/ExpeditionMock3DScene.unity": "7a9cf703e2844ad74df7154a56edcfbef0105f709500ec0a940cb9ae4a772ebd",
+        "Assets/Scenes/ExpeditionMock3DScene.unity": "b7dc9b22cf61f1297bc04ee46a43eb3f4e4d89029393d8f354d90d4d8033cbbd",
         "Assets/Tests/EditMode/InventoryUsageBeltTests.cs": "8db8840598641f001e44bd99407cd2f378f7a4e063409277a34a1a54c0404b2f",
         "Assets/Tests/PlayMode/ConsumableBeltPanel3DPlayTests.cs": "e024c23b7b26e2eec7b2feeea1530a044ec3b4ceb62f429136cb72e305fb0c00",
         "Assets/Tests/PlayMode/ExpeditionConsumablesMockScenePlayTests.cs": "4e394eeeaf71ddc82765268f47aaad973cc1a6d3ea1868264d565256b113a445",
@@ -9216,7 +9217,7 @@
       "notes": "坑道の石碑からイベントシーンを加算ロードし、専用カメラとTimelineを再生する。終了とスキップで一度だけ完了を保存し、イベントシーンを解放して、元の3D騎士にカメラと操作を返す。 Unity 6000.6.8f1でExpeditionEvent3DScenePlayTests 2件が成功。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Save/FlagManager.cs": "2fd7f35ae4e2fab2a8148e2f350f93c121f4cf92741ae9511d7403cac41be42d",
-        "Assets/MyAsset/Core/Save/SaveManager.cs": "c3acfc77661181bbf3234979d4b86d1853d8a0c2649f8230339c7d2df4149dfc",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "4c6c4ad6f8295f17be5e6c3f4f637bfc1dd73bdd5dad34675d3656a5340156c5",
         "Assets/MyAsset/Data/PLACEHOLDER_ExpeditionEvent3D.playable": "a05358d306718286a0f4cdce01c46dee28df37a92b10bb000eedc559a4e0404b",
         "Assets/MyAsset/Data/PLACEHOLDER_ExpeditionEvent3D.playable.meta": "524abb0acb936b707edb327d3ee6bec6259038e3cf92b9cf90081b452b590cd0",
         "Assets/MyAsset/Runtime/Character/NpcInteraction3D.cs": "ace4f5aa2997351402e2f487a5a0ebc68249c313f007ab436d5b2741ab392398",
@@ -9225,9 +9226,9 @@
         "Assets/MyAsset/Runtime/World/ExpeditionEventPlayback3D.cs": "06149abb24178920dfc1de28ffb54e27f2f44e017df1e099baba8144c86164c4",
         "Assets/Scenes/ExpeditionEvent3DScene.unity": "b13e39fcabdb6d2819c40631f6d53b004afe4dfa3353dcc72b26e96c32d0d2f7",
         "Assets/Scenes/ExpeditionEvent3DScene.unity.meta": "8301bf9b3007a5e8a161f677cce0de6c78345d925cc65530fefa4c9c611e9299",
-        "Assets/Scenes/ExpeditionMock3DScene.unity": "7a9cf703e2844ad74df7154a56edcfbef0105f709500ec0a940cb9ae4a772ebd",
-        "Assets/Tests/PlayMode/ExpeditionEvent3DScenePlayTests.cs": "5f53d51ebf3e43ec80c976cf050adf9b287171d8b0b01c260da46f6467e2bb40",
-        "ProjectSettings/EditorBuildSettings.asset": "9414f7e09e4c8e696f190ed12691b4757421946de6b651bb48c0b66349e0d85f"
+        "Assets/Scenes/ExpeditionMock3DScene.unity": "b7dc9b22cf61f1297bc04ee46a43eb3f4e4d89029393d8f354d90d4d8033cbbd",
+        "Assets/Tests/PlayMode/ExpeditionEvent3DScenePlayTests.cs": "bb64d8fa8f1b4d9411fd52063202bb9792b9faec2a83dcef0c0b36ea15394ba1",
+        "ProjectSettings/EditorBuildSettings.asset": "874e4c18b7cab084ac90586bc6f36b7026609a16741a791c4841d482bfca1147"
       }
     }
   },
@@ -9289,7 +9290,7 @@
         "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "189cb73d9cb497c594c2c30f59ef57f41dcb0ac89542c5b2238109d42ec004e0",
         "Assets/MyAsset/Core/Inventory/InventoryManager.cs": "a9a23c4085b8b1d41406f12dc56fa3609f4c6073c90ce41e02c8c018a0478c8b",
         "Assets/MyAsset/Core/Inventory/PlayerCombatLoadoutSelection.cs": "09c833830ae92e74cf160be542765e8473d4548f2a526449e5c87af0b63ce2c7",
-        "Assets/MyAsset/Core/Save/SaveManager.cs": "c3acfc77661181bbf3234979d4b86d1853d8a0c2649f8230339c7d2df4149dfc",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "4c6c4ad6f8295f17be5e6c3f4f637bfc1dd73bdd5dad34675d3656a5340156c5",
         "Assets/MyAsset/Data/PLACEHOLDER_ExpeditionBowEquipment.asset": "ea9c460f799928e5c8c693a29c00a27d0a2876da0099aee907453ba6dfdea158",
         "Assets/MyAsset/Data/PLACEHOLDER_ExpeditionBowEquipment.asset.meta": "4b66a6c65c6d71f572a151e8a7858954c0cfa9d5e2c44a10e62327436ff77290",
         "Assets/MyAsset/Data/PLACEHOLDER_ExpeditionEmberCore.asset": "02fd6956cbd3538c81d2619ca44374dd1d71d00a23ef1134100745192d7c995c",
@@ -9304,13 +9305,13 @@
         "Assets/MyAsset/Data/PLACEHOLDER_MineFlameCircle3D.asset.meta": "25785df65f3ced39e6737e72cf19bbb78f52a998b5c2d692c69a67c80b11ea0b",
         "Assets/MyAsset/Runtime/Character/PlayerCombatLoadout3D.cs": "8915e9407520b0e23495a210317a8037113a7124291a623a3499c40fc0d4fe9e",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "7ef3a9969cf9645885b3aada797c932f1e0363d17c69dae636face803003898f",
-        "Assets/MyAsset/Runtime/GameManager.cs": "e1dbb46b0858d77f83ae1f6b5e108f851a3f27dc972c50d29bb70781d5334803",
+        "Assets/MyAsset/Runtime/GameManager.cs": "606684ce62e8fb27c13b49074a891a562bd9c0b9a0df8d294e51625eb3b19d17",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.cs": "51dbe300b4ffb75417862df9483470855a7814d11eeff80f6e741db1c875c076",
         "Assets/MyAsset/Runtime/UI/ExpeditionLoadoutPanel3D.cs": "32f51715bed827a002cb1185c631c1653ee6e46842f13b4e3d5c0feb13647a5d",
-        "Assets/Scenes/ExpeditionMock3DScene.unity": "7a9cf703e2844ad74df7154a56edcfbef0105f709500ec0a940cb9ae4a772ebd",
+        "Assets/Scenes/ExpeditionMock3DScene.unity": "b7dc9b22cf61f1297bc04ee46a43eb3f4e4d89029393d8f354d90d4d8033cbbd",
         "Assets/Tests/EditMode/PlayerCombatLoadoutSelectionTests.cs": "84ad9f7696737bad7dc9d576a57bdd659dabd127891c2a98da6477f87007b945",
         "Assets/Tests/PlayMode/ExpeditionLoadoutPanel3DPlayTests.cs": "6ac934499a8195931129a1d9ba028f26eb5caf0840ac21749bc6b20ccc5f945b",
-        "Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs": "fec2358fd603bbfff413eeb3ef5ee66428e7754807fe163c8dd9c26b35213412",
+        "Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs": "7dae47130a464d1807441ca5c9a20eae7846c094c23d36c2438f0bf37d023603",
         "Assets/Tests/PlayMode/PlayerCombatLoadout3DPlayTests.cs": "eb4d205605b5fb743bd55fb6977b3f82c6f9361a2e52b7b1611e6d4d1bcae438",
         "designs/systems/WeaponSystem.md": "08d4cbc5c803a1eb9e391c2d5580f44878b28c26664031ab98812782c15921f6"
       }
@@ -9366,15 +9367,15 @@
         "Assets/MyAsset/Core/GameManager/GameManagerCore.cs": "189cb73d9cb497c594c2c30f59ef57f41dcb0ac89542c5b2238109d42ec004e0",
         "Assets/MyAsset/Core/LevelUp/LevelUpLogic.cs": "31d8f789d4dd966859b357315aee4250c4d16ac29bc68bb976f4fa291fbbd306",
         "Assets/MyAsset/Core/Save/FlagManager.cs": "2fd7f35ae4e2fab2a8148e2f350f93c121f4cf92741ae9511d7403cac41be42d",
-        "Assets/MyAsset/Core/Save/SaveManager.cs": "c3acfc77661181bbf3234979d4b86d1853d8a0c2649f8230339c7d2df4149dfc",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "4c6c4ad6f8295f17be5e6c3f4f637bfc1dd73bdd5dad34675d3656a5340156c5",
         "Assets/MyAsset/Runtime/Character/PlayerProgression3D.cs": "3d62ef67959f06f5a914e5d9539c25663f271b37e5d447c772766a3f63fa877d",
-        "Assets/MyAsset/Runtime/GameManager.cs": "e1dbb46b0858d77f83ae1f6b5e108f851a3f27dc972c50d29bb70781d5334803",
+        "Assets/MyAsset/Runtime/GameManager.cs": "606684ce62e8fb27c13b49074a891a562bd9c0b9a0df8d294e51625eb3b19d17",
         "Assets/MyAsset/Runtime/UI/ExpeditionLoadoutPanel3D.cs": "32f51715bed827a002cb1185c631c1653ee6e46842f13b4e3d5c0feb13647a5d",
         "Assets/MyAsset/Runtime/World/DefeatExperience3D.cs": "49fb68006f529221ce3f744b06e94575233672d7e02c9b956c9b32912f7c1385",
         "Assets/MyAsset/Runtime/World/ExplorationExperience3D.cs": "5b4795bda167f6a9d79c59af1b17bf4f56e01f3a41a9d194dca382251643fa08",
-        "Assets/Scenes/ExpeditionMock3DScene.unity": "7a9cf703e2844ad74df7154a56edcfbef0105f709500ec0a940cb9ae4a772ebd",
+        "Assets/Scenes/ExpeditionMock3DScene.unity": "b7dc9b22cf61f1297bc04ee46a43eb3f4e4d89029393d8f354d90d4d8033cbbd",
         "Assets/Tests/PlayMode/ExpeditionLoadoutPanel3DPlayTests.cs": "6ac934499a8195931129a1d9ba028f26eb5caf0840ac21749bc6b20ccc5f945b",
-        "Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs": "fec2358fd603bbfff413eeb3ef5ee66428e7754807fe163c8dd9c26b35213412",
+        "Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs": "7dae47130a464d1807441ca5c9a20eae7846c094c23d36c2438f0bf37d023603",
         "Assets/Tests/PlayMode/PlayerProgression3DPlayTests.cs": "c36ff8b5e3014a89ec64fa841f0ae2cadffe08030dccb06b594efde9f2fc7107",
         "designs/systems/LevelUpSystem.md": "c4de1897af942908f22b4f220a4433b76360f3cee071111980c058baec7027f3"
       }
@@ -9429,10 +9430,10 @@
       "verification_hashes": {
         "Assets/MyAsset/Core/AI/Core/AIDecisionSystem.cs": "63402fd54528711e3838088c74f7ed879f204bb0b28533af00135a103bcc8e0b",
         "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": "b1a9d42549ebcf7572f72b0723c42a24e9a6647f3ca9b19689f9a9eb5910d06e",
-        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "7db94112a9dcf076e1b9ba09cf7b498a9f900db8699ae28e95368a285ad0991b",
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "b333e2aadf452130ec3aea273f62e7dce56f96eced210c9ef2b2343f36493193",
         "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.LockWarnings.cs": "1cc0fe1f740e7d0b5e996f61da87c8de420d7e9e2affdbebf2057145ce07797f",
         "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileSpatialIndex.cs": "54067e8bc38861b2baf4f3a1d154282cbd1175661240ce26d852ca5b5c550d97",
-        "Assets/MyAsset/Runtime/GameManager.cs": "e1dbb46b0858d77f83ae1f6b5e108f851a3f27dc972c50d29bb70781d5334803",
+        "Assets/MyAsset/Runtime/GameManager.cs": "606684ce62e8fb27c13b49074a891a562bd9c0b9a0df8d294e51625eb3b19d17",
         "Assets/Tests/EditMode/AIDecisionSystemTests.cs": "3483456cdff50c7d785b874c8486844fce8f8f7acaa8fe1bcb2a67433fc6aeff",
         "Assets/Tests/EditMode/ProjectileSpatialIndexTests.cs": "508e2c9d7985b56248173b4bb6e95a72b3b96aff834a80677519f2a9f118a559",
         "Assets/Tests/PlayMode/ProjectileTargetPolicyPlayTests.cs": "2f6c729f52e622bca186a39d0a07a76d0b9485a24c02832ddb80539b97a9997d",
@@ -9482,12 +9483,12 @@
       "notes": "3DはXYZの球と同一PhysicsSceneで候補を絞る。味方の弾は数えず、敵弾が増えると設定されたガードを始め、弾の消去後は既存の持続時間に従ってガードを終える。 新しい条件を設定した場合に、従来のガード経路へ観測を渡す。",
       "verification_hashes": {
         "Assets/MyAsset/Core/AI/Core/AIObservationContext.cs": "b1a9d42549ebcf7572f72b0723c42a24e9a6647f3ca9b19689f9a9eb5910d06e",
-        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "7db94112a9dcf076e1b9ba09cf7b498a9f900db8699ae28e95368a285ad0991b",
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "b333e2aadf452130ec3aea273f62e7dce56f96eced210c9ef2b2343f36493193",
         "Assets/MyAsset/Runtime/AI/CompanionTactics3D.cs": "20b10306db375277be736cfcd764695a6ee78f2453e9025904cb0efde06ef22d",
         "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager3D.cs": "58732262d3ce3f322f5ab1cbfcab51d1bf2e7710089fa9c85e1d501331775520",
         "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileSpatialIndex.cs": "54067e8bc38861b2baf4f3a1d154282cbd1175661240ce26d852ca5b5c550d97",
         "Assets/Tests/EditMode/ProjectileSpatialIndexTests.cs": "508e2c9d7985b56248173b4bb6e95a72b3b96aff834a80677519f2a9f118a559",
-        "Assets/Tests/PlayMode/CompanionController3DPlayTests.cs": "8e130a2ffa574d8ee4994e0366ac4bee8fe5f5e2630dec1f845eafa604dcade8",
+        "Assets/Tests/PlayMode/CompanionController3DPlayTests.cs": "7fd6342d91eed2a73fe3bdc1f260caa90f4d685cd146597dba74875cbb202f00",
         "Assets/MyAsset/Core/Common/Enums.cs": "840fc43144be2f92b5fde23d24cdd084bbf4892fff24e56e48c2e4f07a5faee0"
       }
     }
@@ -9628,12 +9629,12 @@
       ],
       "notes": "試作シーンの操作で現在スロットへ保存し、ディスク確定後にHP・MP・スタミナを回復する。ディスク書き込みに失敗した場合は以前のスロットを保持する。",
       "verification_hashes": {
-        "Assets/MyAsset/Core/Save/ExpeditionCheckpoint.cs": "76f40fbf8a11bb08ec46eedc0b78ada7515d822edfbc5c3f28ddb79b64105645",
-        "Assets/MyAsset/Core/Save/SaveDataStore.cs": "a8b3e4283f543fc0dc5330b4a918f76c4eabe21466467f6047194914fad7dd5c",
-        "Assets/MyAsset/Core/Save/SaveManager.cs": "c3acfc77661181bbf3234979d4b86d1853d8a0c2649f8230339c7d2df4149dfc",
+        "Assets/MyAsset/Core/Save/ExpeditionCheckpoint.cs": "8d699391b47438e9d7f1713945f272f5a9e94f263834761067906f279a748598",
+        "Assets/MyAsset/Core/Save/SaveDataStore.cs": "2fd539a53787260045681d3bb94662097ba6b6dd6a22e35b4c4b4dcd9cc7f0d3",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "4c6c4ad6f8295f17be5e6c3f4f637bfc1dd73bdd5dad34675d3656a5340156c5",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.Interaction.cs": "f9d4b350b6cbfa3c2ff4a75177912a7a73efdb11a64f12fb3691f8c7311cb25a",
-        "Assets/MyAsset/Runtime/World/ExpeditionSavePoint3D.cs": "5f201e8d7aa4f748be3a131d67db976b0215e3d253cb585737b2f671658f89f8",
-        "Assets/Scenes/ExpeditionMock3DScene.unity": "7a9cf703e2844ad74df7154a56edcfbef0105f709500ec0a940cb9ae4a772ebd",
+        "Assets/MyAsset/Runtime/World/ExpeditionSavePoint3D.cs": "aae3183909e51a1b49ae21439b2e530c14ee59359b1122a884c6980120a43bd6",
+        "Assets/Scenes/ExpeditionMock3DScene.unity": "b7dc9b22cf61f1297bc04ee46a43eb3f4e4d89029393d8f354d90d4d8033cbbd",
         "Assets/Tests/EditMode/ExpeditionCheckpointTests.cs": "2135a2149adaf0a167e2db57d7d6d6e023cf97ec69e239e4ce60e322355ed76b",
         "Assets/Tests/PlayMode/ExpeditionSavePointMockPlayTests.cs": "674cf11382f36d1a74b17d5f9f46207ff4d216f983f4b5d2b727be02ecf3903a"
       }
@@ -9680,10 +9681,10 @@
       ],
       "notes": "シーンと保存地点IDが一致すると、保存した物語・編成・周回を復元して騎士を指定位置へ配置する。別地点の保存と次周開始の記録を区別する。 実シーンで起動時からアクティブの場合と、加算ロード後にアクティブになる場合の両方で、自動再開を確認した。",
       "verification_hashes": {
-        "Assets/MyAsset/Core/Save/ExpeditionCheckpoint.cs": "76f40fbf8a11bb08ec46eedc0b78ada7515d822edfbc5c3f28ddb79b64105645",
-        "Assets/MyAsset/Core/Save/SaveDataStore.cs": "a8b3e4283f543fc0dc5330b4a918f76c4eabe21466467f6047194914fad7dd5c",
-        "Assets/MyAsset/Core/Save/SaveManager.cs": "c3acfc77661181bbf3234979d4b86d1853d8a0c2649f8230339c7d2df4149dfc",
-        "Assets/MyAsset/Runtime/World/ExpeditionSavePoint3D.cs": "5f201e8d7aa4f748be3a131d67db976b0215e3d253cb585737b2f671658f89f8",
+        "Assets/MyAsset/Core/Save/ExpeditionCheckpoint.cs": "8d699391b47438e9d7f1713945f272f5a9e94f263834761067906f279a748598",
+        "Assets/MyAsset/Core/Save/SaveDataStore.cs": "2fd539a53787260045681d3bb94662097ba6b6dd6a22e35b4c4b4dcd9cc7f0d3",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "4c6c4ad6f8295f17be5e6c3f4f637bfc1dd73bdd5dad34675d3656a5340156c5",
+        "Assets/MyAsset/Runtime/World/ExpeditionSavePoint3D.cs": "aae3183909e51a1b49ae21439b2e530c14ee59359b1122a884c6980120a43bd6",
         "Assets/Tests/EditMode/ExpeditionCheckpointTests.cs": "2135a2149adaf0a167e2db57d7d6d6e023cf97ec69e239e4ce60e322355ed76b",
         "Assets/Tests/PlayMode/ExpeditionSavePointMockPlayTests.cs": "674cf11382f36d1a74b17d5f9f46207ff4d216f983f4b5d2b727be02ecf3903a"
       }
@@ -9768,7 +9769,7 @@
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "7ef3a9969cf9645885b3aada797c932f1e0363d17c69dae636face803003898f",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "0409a22b44d8cad69829043f89b97b91fc3b3d99d7b04f91492dfe31779d9db5",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.cs": "51dbe300b4ffb75417862df9483470855a7814d11eeff80f6e741db1c875c076",
-        "Assets/Scenes/ExpeditionMock3DScene.unity": "7a9cf703e2844ad74df7154a56edcfbef0105f709500ec0a940cb9ae4a772ebd",
+        "Assets/Scenes/ExpeditionMock3DScene.unity": "b7dc9b22cf61f1297bc04ee46a43eb3f4e4d89029393d8f354d90d4d8033cbbd",
         "Assets/Tests/PlayMode/ExpeditionActionAnimationMockPlayTests.cs": "df4fe20eaad93407cea0a060dc8f72ec103ea61638f4337732bd2d0f3408857c",
         "Assets/Tests/PlayMode/MotionPresentationTests.cs": "7294be77b764c8e45c4d03572f5dd7674f15b2e18f8830ad77d1d7644316f97e"
       }
@@ -9836,7 +9837,7 @@
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "7ef3a9969cf9645885b3aada797c932f1e0363d17c69dae636face803003898f",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "0409a22b44d8cad69829043f89b97b91fc3b3d99d7b04f91492dfe31779d9db5",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.cs": "51dbe300b4ffb75417862df9483470855a7814d11eeff80f6e741db1c875c076",
-        "Assets/Scenes/ExpeditionMock3DScene.unity": "7a9cf703e2844ad74df7154a56edcfbef0105f709500ec0a940cb9ae4a772ebd",
+        "Assets/Scenes/ExpeditionMock3DScene.unity": "b7dc9b22cf61f1297bc04ee46a43eb3f4e4d89029393d8f354d90d4d8033cbbd",
         "Assets/Tests/PlayMode/ExpeditionActionAnimationMockPlayTests.cs": "df4fe20eaad93407cea0a060dc8f72ec103ea61638f4337732bd2d0f3408857c"
       }
     }
@@ -9895,10 +9896,10 @@
         "Assets/MyAsset/Data/PLACEHOLDER_HealingDraughtMotion3D.asset.meta": "f1d492d66b391910e35fc2457e11af45ebac101950ee5eea0880cda0608c7635",
         "Assets/MyAsset/Runtime/Animation/CharacterAnimationController.cs": "d2db8675c9cb6a2cc9a875f449a9f0751588a7a8aa168045b7d9dd48c1fa2735",
         "Assets/MyAsset/Runtime/Character/PlayerItemUse3D.cs": "00d0603650ca341ff3276e994e195fb389b68b4acf6fde3887b7195a9ff15313",
-        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "5234e24e5d724eac8e5b1a13c1e174fefac4923589e84775dcef9aac0002b6d9",
+        "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "fb334fb2c4819e572eb2269811c658d2804d82adedd15d80ee79ee36ef75976f",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.Consumables3D.cs": "ff703ab5f5da164c557711352d5c5520d2fc5c0178905389451046ee60b20960",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "0409a22b44d8cad69829043f89b97b91fc3b3d99d7b04f91492dfe31779d9db5",
-        "Assets/Scenes/ExpeditionMock3DScene.unity": "7a9cf703e2844ad74df7154a56edcfbef0105f709500ec0a940cb9ae4a772ebd",
+        "Assets/Scenes/ExpeditionMock3DScene.unity": "b7dc9b22cf61f1297bc04ee46a43eb3f4e4d89029393d8f354d90d4d8033cbbd",
         "Assets/Tests/PlayMode/ExpeditionActionAnimationMockPlayTests.cs": "df4fe20eaad93407cea0a060dc8f72ec103ea61638f4337732bd2d0f3408857c",
         "Assets/Tests/PlayMode/ExpeditionConsumablesMockScenePlayTests.cs": "4e394eeeaf71ddc82765268f47aaad973cc1a6d3ea1868264d565256b113a445"
       }
@@ -9945,7 +9946,277 @@
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.cs": "0409a22b44d8cad69829043f89b97b91fc3b3d99d7b04f91492dfe31779d9db5",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.Dodge.cs": "d807c02264e36a9618f02cdf947dbb4b1c9447af874f7da0ee93d734bd3f79b0",
         "Assets/Tests/EditMode/PlayerCharacterInput3DEditModeTests.cs": "d823ec5b0c4536b00be2fb359dc74c39675a17dbc814986e23780ec90dfa6246",
-        "Assets/Tests/PlayMode/PlayerDodgeInput3DPlayTests.cs": "c9fdf42afa646f65bc0bf58f56c9c45468a405cf0fabba469d0608fceee4c19a"
+        "Assets/Tests/PlayMode/PlayerDodgeInput3DPlayTests.cs": "201a8478c61a2f6639e79103741ffbf53283d8db2253dca87910007cd029e907"
+      }
+    }
+  },
+  {
+    "feature": "CharacterPhysics_Boundary",
+    "path": {
+      "key": "recover-native-3d-player-stamina",
+      "title": "3Dプレイヤーのスタミナを固定更新で回復する",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "runtime_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/GameManager.cs",
+          "symbol": "ISimulationTickWorld.AdvanceSharedSimulation",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Character/CharacterActor3D.cs",
+          "symbol": "CharacterActor3D.RecoverPlayerStamina",
+          "kind": "write"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/PlayMode/PlayerDodgeInput3DPlayTests.cs"
+      ],
+      "notes": "回避中の停止、消費後の回復待ち、枯渇ペナルティ、能力値の速度と上限、再登録後の初期化を確認した。",
+      "verification_hashes": {
+        "Assets/MyAsset/Runtime/Character/CharacterActor3D.cs": "d4231bf9121109dc9fafb7822f845336bd8f32cfc45c921b10b49d35096a6b4d",
+        "Assets/MyAsset/Runtime/GameManager.cs": "606684ce62e8fb27c13b49074a891a562bd9c0b9a0df8d294e51625eb3b19d17",
+        "Assets/Tests/PlayMode/PlayerDodgeInput3DPlayTests.cs": "201a8478c61a2f6639e79103741ffbf53283d8db2253dca87910007cd029e907"
+      }
+    }
+  },
+  {
+    "feature": "AICore_TerrainDecisionDataFlow",
+    "path": {
+      "key": "approach-and-operate-observed-2d-gimmick",
+      "title": "2DのAIが選んだ操作スイッチへ歩いて起動する",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "runtime_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs",
+          "symbol": "AISceneGimmickController.Capture",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs",
+          "symbol": "AIQueryKernel.TryChooseGimmick",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs",
+          "symbol": "ActionExecutorController.DispatchGimmick",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/AI/AISceneGimmickController.Approach.cs",
+          "symbol": "AISceneGimmickController.ApproachReservation",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs"
+      ],
+      "notes": "平坦な経路を指定できるスイッチは、接近して一度だけ起動する。近場のスイッチを優先し、床・遮蔽物・標的・味方の安全条件が変われば中止する。 別の行動が同じ固定更新で床を消したときに物理適用前に止まり、操作役コンポーネントの無効化で予約を直ちに解除する。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "b333e2aadf452130ec3aea273f62e7dce56f96eced210c9ef2b2343f36493193",
+        "Assets/MyAsset/Runtime/AI/AISceneGimmickController.Approach.cs": "fc4cf4207d6c18ad3ce99b146f34550d35d7252b12a233ab8aa0f38320589988",
+        "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs": "2b9e34ff0ac9a5c262654f2dd4574555618064dba814ccbd0332eb7d4ebc33ad",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "9fb2c4bcb81e619c5c411475410b3bc18e34a32c45292589723a26afb83cd847",
+        "Assets/Tests/PlayMode/SceneGimmickCombatTests.cs": "86f2728c15ac83d5bc27f621e2f78007344773f4edf9ecb11b3505a4b048a689",
+        "Assets/MyAsset/Runtime/Character/BaseCharacter.cs": "bfc06f683fc7cf32212ce39a5cb5311a403cb4909aeb7d2f8a73b1ac6dc35491",
+        "Assets/MyAsset/Runtime/Character/EnemyCharacter.cs": "1a38c895ba746fc55a1bba2dc8b6760351f140f2080a9859213347c3614547f5",
+        "Assets/MyAsset/Runtime/Character/CompanionCharacter.cs": "a7ee73adf043190c1c5815cb55f20e7ca6bfa760b0eb31036eb4066326500e44",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.GimmickApproach.cs": "2c86cdd8ce2f808378600bd0537f004699f7bee094bbae93972bea9dd38d9719"
+      }
+    }
+  },
+  {
+    "feature": "AICore_TerrainDecisionDataFlow",
+    "path": {
+      "key": "detonate-2d-prop-with-projectile",
+      "title": "2Dの攻撃弾が爆発物を起動する",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "runtime_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileController.cs",
+          "symbol": "ProjectileController.SweepToCorePosition",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ExplosiveProp2D.cs",
+          "symbol": "ExplosiveProp2D.FindLiveContact",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileController.cs",
+          "symbol": "ProjectileController.OnTriggerEnter2D",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ExplosiveProp2D.cs",
+          "symbol": "ExplosiveProp2D",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/PlayMode/ExplosiveProp2DPlayTests.cs"
+      ],
+      "notes": "手前の個体と爆発物が同じ命中順で処理され、攻撃弾は1回分の命中を消費する。回復弾、別の物理世界、貸し出し直し前の弾を除外した。 発射時の物理シーンを弾と派生弾に保持し、共用マネージャーと発射元の物理シーンが異なる場合はその場の爆発物を起爆しない。 貫通弾の先行ヒット通知で爆発物が移動した場合は、残る着弾候補の接触を再確認する。",
+      "verification_hashes": {
+        "Assets/MyAsset/Runtime/Combat/ExplosiveProp2D.cs": "32cea86ad15b1a17e545a6a48c26c6b92e63c282490643adf2ccc7100caa3dac",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileController.cs": "de7e351ff14ec4bae4e5f3d4bf3ab470abcc09a919b42e6e08ec9a58f86f01f3",
+        "Assets/Tests/PlayMode/ExplosiveProp2DPlayTests.cs": "5a7a5d02a43c53f9129a993ab1669c2f33be944e25a2cbe49bd993b313ad6133",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs": "eaa8ff18dba28bb2d10a172c3d67190ee0a46be240df7da5577b36bcc5d2ed83",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.GroundImpact.cs": "4bd5d1808309478c73c805ce4297bc2d1b7d26e68c10e4c5eaed3a124b18de30"
+      }
+    }
+  },
+  {
+    "feature": "AICore_TerrainDecisionDataFlow",
+    "path": {
+      "key": "aim-ai-projectile-at-observed-explosive",
+      "title": "2DのAIが敵の近くの爆発物へ攻撃弾を撃つ",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "runtime_tested",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs",
+          "symbol": "AISceneGimmickController.Capture",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs",
+          "symbol": "AIQueryKernel.TryChooseGimmick",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/AI/AISceneGimmickController.Projectile.cs",
+          "symbol": "AISceneGimmickController.ReserveShot",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs",
+          "symbol": "ActionExecutorController.DispatchGimmick",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileController.cs",
+          "symbol": "ProjectileController.SweepToCorePosition",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/PlayMode/ExplosiveProp2DPlayTests.cs"
+      ],
+      "notes": "設定済みの単発直進弾で爆発物を撃つ。味方と遮蔽物を避け、実際に弾が当たったときだけ起爆する。 実弾と同じ半径で確認し、狙った爆発物より手前に別の爆発物があれば射撃しない。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/AI/Core/AIQueryKernel.cs": "b333e2aadf452130ec3aea273f62e7dce56f96eced210c9ef2b2343f36493193",
+        "Assets/MyAsset/Runtime/AI/AISceneGimmickController.Projectile.cs": "ef601bce867edc59fbc2469552bf677e0b983b3f7391c140be6a8bee8f7ef349",
+        "Assets/MyAsset/Runtime/AI/AISceneGimmickController.cs": "2b9e34ff0ac9a5c262654f2dd4574555618064dba814ccbd0332eb7d4ebc33ad",
+        "Assets/MyAsset/Runtime/Combat/ActionExecutorController.cs": "9fb2c4bcb81e619c5c411475410b3bc18e34a32c45292589723a26afb83cd847",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileController.cs": "de7e351ff14ec4bae4e5f3d4bf3ab470abcc09a919b42e6e08ec9a58f86f01f3",
+        "Assets/Tests/PlayMode/ExplosiveProp2DPlayTests.cs": "5a7a5d02a43c53f9129a993ab1669c2f33be944e25a2cbe49bd993b313ad6133",
+        "Assets/MyAsset/Runtime/Combat/Projectile/ProjectileManager.cs": "eaa8ff18dba28bb2d10a172c3d67190ee0a46be240df7da5577b36bcc5d2ed83"
+      }
+    }
+  },
+  {
+    "feature": "ExpeditionLaunch_TitleAndAutosave3D",
+    "path": {
+      "key": "select-expedition-title-slot",
+      "title": "タイトルでスロットを選び、開始または保存地点から再開する",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "runtime_tested",
+      "steps": [
+        {
+          "file": "Assets/Scenes/ExpeditionTitle3DTestScene.unity",
+          "symbol": "Expedition title",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/UI/ExpeditionTitle3D.cs",
+          "symbol": "ExpeditionTitle3D.Launch",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Save/ExpeditionLaunch.cs",
+          "symbol": "ExpeditionLaunch.ReadSlot",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/UI/ExpeditionTitle3D.cs",
+          "symbol": "ExpeditionTitle3D.EnterLoadedWorld",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/World/ExpeditionSavePoint3D.cs",
+          "symbol": "ExpeditionSavePoint3D.TryRestoreFromTitle",
+          "kind": "output"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/EditMode/ExpeditionLaunchTests.cs",
+        "Assets/Tests/PlayMode/ExpeditionTitle3DPlayTests.cs"
+      ],
+      "notes": "実際の試作タイトルから選んだスロットを開く。保存地点と番人戦の開始、別スロットの保護、保存地点が欠ける場合のタイトル復帰を確認した。 遷移中はタイトルの入力・音声を停止する。シーンのアクティブ化後に選択スロットを読み直し、同じ時刻でも保存内容が変われば再選択へ戻す。 加算ロード中に別のゲームを開始した場合、タイトルからはその管理オブジェクトや選択中のスロットを変更せず、読み込みを中止する。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Save/ExpeditionLaunch.cs": "e8bfce144f354f68c280a24eb6ab1b737306a9e82f2e210c60682de1d6619826",
+        "Assets/MyAsset/Runtime/UI/ExpeditionTitle3D.cs": "bce49d110e48287dfe640d8fbb1292dcb99b02da4d2c96c4c6d6dcd6951b8419",
+        "Assets/MyAsset/Runtime/World/ExpeditionSavePoint3D.cs": "aae3183909e51a1b49ae21439b2e530c14ee59359b1122a884c6980120a43bd6",
+        "Assets/Scenes/ExpeditionMock3DScene.unity": "b7dc9b22cf61f1297bc04ee46a43eb3f4e4d89029393d8f354d90d4d8033cbbd",
+        "Assets/Scenes/ExpeditionTitle3DTestScene.unity": "01d0def1edb3d46877223a99f6fc1243cedce85adb5212e0899ac58be538f9d7",
+        "Assets/Tests/EditMode/ExpeditionLaunchTests.cs": "36d2ff9a218910470fa718154030bac01b975092020dd3edf32db85b07836826",
+        "Assets/Tests/PlayMode/ExpeditionTitle3DPlayTests.cs": "107e4d71f7869415a09d8c1bc048920240eae4360abecedb36ea8d70950bdaf3",
+        "ProjectSettings/EditorBuildSettings.asset": "874e4c18b7cab084ac90586bc6f36b7026609a16741a791c4841d482bfca1147",
+        "Assets/MyAsset/Core/Save/SaveDataStore.cs": "2fd539a53787260045681d3bb94662097ba6b6dd6a22e35b4c4b4dcd9cc7f0d3",
+        "Assets/MyAsset/Runtime/GameManager.cs": "606684ce62e8fb27c13b49074a891a562bd9c0b9a0df8d294e51625eb3b19d17"
+      }
+    }
+  },
+  {
+    "feature": "ExpeditionLaunch_TitleAndAutosave3D",
+    "path": {
+      "key": "autosave-expedition-after-streaming-or-victory",
+      "title": "指定区画への移動と指定遭遇の勝利でオートセーブする",
+      "implementation_status": "implemented",
+      "connection_status": "connected",
+      "verification": "runtime_tested",
+      "steps": [
+        {
+          "file": "Assets/Scenes/ExpeditionMock3DScene.unity",
+          "symbol": "[PLACEHOLDER] Expedition save point",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/World/ExpeditionAutosave3D.cs",
+          "symbol": "ExpeditionAutosave3D.OnAreaLoaded / OnEncounterEnded",
+          "kind": "event"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/World/ExpeditionAutosave3D.cs",
+          "symbol": "ExpeditionAutosave3D.LateUpdate",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Save/ExpeditionCheckpoint.cs",
+          "symbol": "ExpeditionCheckpoint",
+          "kind": "write"
+        }
+      ],
+      "tests": [
+        "Assets/Tests/PlayMode/ExpeditionAutosave3DPlayTests.cs"
+      ],
+      "notes": "指定区画の読み込み成功と勝利を契機に、選択スロットと現在のHP・MP・スタミナ・アーマーを保存する。中止・古いスロット・旧世代の要求は保存せず、休息の回復を発生させない。 通知元の無効化後も受理した要求を常駐オブジェクトが処理する。後続の同スロット書き込み・削除や往復切り替えで旧要求を無効にする。保存待機を経由した区画のアンロード後に復元を確認した。",
+      "verification_hashes": {
+        "Assets/MyAsset/Core/Save/ExpeditionCheckpoint.cs": "8d699391b47438e9d7f1713945f272f5a9e94f263834761067906f279a748598",
+        "Assets/MyAsset/Runtime/World/ExpeditionAutosave3D.cs": "38dbe3156cfbe357d0c97014168f8887f45b35b2a52d8c0447b629d600a50985",
+        "Assets/Scenes/ExpeditionMock3DScene.unity": "b7dc9b22cf61f1297bc04ee46a43eb3f4e4d89029393d8f354d90d4d8033cbbd",
+        "Assets/Tests/PlayMode/ExpeditionAutosave3DPlayTests.cs": "abd9426825e84252fcdfa3f6891aea033fa63c27c262299169c6694359f5eac0",
+        "Assets/MyAsset/Core/Save/SaveManager.cs": "4c6c4ad6f8295f17be5e6c3f4f637bfc1dd73bdd5dad34675d3656a5340156c5",
+        "Assets/MyAsset/Core/Save/SaveDataStore.cs": "2fd539a53787260045681d3bb94662097ba6b6dd6a22e35b4c4b4dcd9cc7f0d3",
+        "Assets/MyAsset/Runtime/World/ExpeditionSavePoint3D.cs": "aae3183909e51a1b49ae21439b2e530c14ee59359b1122a884c6980120a43bd6"
       }
     }
   }

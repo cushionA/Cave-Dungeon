@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using Game.Core;
@@ -27,6 +28,7 @@ namespace Game.Tests.PlayMode
         private readonly HashSet<GameObject> _existingVendorSaves = new HashSet<GameObject>();
         private Scene _previous;
         private Scene _mock;
+        private string _saveDirectory;
         private ExpeditionEventEntry3D _entry;
         private Gamepad _pad;
         private float _originalTimeScale;
@@ -42,10 +44,24 @@ namespace Game.Tests.PlayMode
             _existingVendorSaves.Clear();
             _existingVendorSaves.UnionWith(VendorSaveRoots());
             _pad = InputSystem.AddDevice<Gamepad>();
-            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(k_MockScene, new LoadSceneParameters(LoadSceneMode.Additive));
-            _mock = SceneManager.GetSceneByPath(k_MockScene);
-            Assert.IsTrue(SceneManager.SetActiveScene(_mock));
-            yield return new WaitForFixedUpdate();
+            _saveDirectory = Path.Combine(Application.temporaryCachePath, nameof(ExpeditionEvent3DScenePlayTests),
+                Guid.NewGuid().ToString("N"));
+            var store = new SaveDataStore(_saveDirectory);
+            void Configure(Scene scene, LoadSceneMode _)
+            {
+                if (scene.path != k_MockScene) { return; }
+                _mock = scene;
+                UseSaveStore(scene, store);
+                Assert.IsTrue(SceneManager.SetActiveScene(scene));
+            }
+
+            SceneManager.sceneLoaded += Configure;
+            try
+            {
+                yield return EditorSceneManager.LoadSceneAsyncInPlayMode(k_MockScene, new LoadSceneParameters(LoadSceneMode.Additive));
+                yield return new WaitForFixedUpdate();
+            }
+            finally { SceneManager.sceneLoaded -= Configure; }
         }
 
         [UnityTearDown]
@@ -75,6 +91,7 @@ namespace Game.Tests.PlayMode
             yield return null;
             if (_pad != null && _pad.added) { InputSystem.RemoveDevice(_pad); }
             _pad = null;
+            if (Directory.Exists(_saveDirectory)) { Directory.Delete(_saveDirectory, recursive: true); }
         }
 
         [UnityTest]
@@ -206,7 +223,22 @@ namespace Game.Tests.PlayMode
                 "The mock's quest restore must settle before the next load or scene unload.");
         }
 
-        private static IEnumerable<GameObject> VendorSaveRoots()
+        internal static void UseSaveStore(Scene scene, SaveDataStore store)
+        {
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                foreach (ExpeditionSavePoint3D point in root.GetComponentsInChildren<ExpeditionSavePoint3D>(true))
+                {
+                    point.SetStoreForTest(store);
+                }
+                foreach (ExpeditionNextPlaythroughPanel panel in root.GetComponentsInChildren<ExpeditionNextPlaythroughPanel>(true))
+                {
+                    panel.SetStoreForTest(store);
+                }
+            }
+        }
+
+        internal static IEnumerable<GameObject> VendorSaveRoots()
         {
             foreach (Object save in Resources.FindObjectsOfTypeAll(VendorType("PixelCrushers.SaveSystem")))
             {

@@ -17,6 +17,8 @@ namespace Game.Runtime
         private DamageReceiver _damageReceiver;
         private int _objectHash;
         private ActorRef _animationOwner;
+        private float _lastStamina;
+        private float _staminaRecoveryWait;
 
         public override int ObjectHash => _objectHash;
         public override IDamageable Damageable => _damageReceiver != null ? _damageReceiver : null;
@@ -66,11 +68,40 @@ namespace Game.Runtime
             _world = GameManager.Instance;
             _world.RegisterCharacter(this, characterInfo);
             ActorRef actor = Actor;
-            if (animationController != null && actor.IsValid)
+            if (!actor.IsValid) { return; }
+            _lastStamina = GameManager.Data.GetVitals(actor.Hash).currentStamina;
+            _staminaRecoveryWait = 0f;
+            if (animationController != null)
             {
                 _animationOwner = actor;
                 animationController.Initialize3D(this, actor);
             }
+        }
+
+        internal void RecoverPlayerStamina(float deltaTime, bool dodging)
+        {
+            ref CharacterVitals vitals = ref GameManager.Data.GetVitals(_objectHash);
+            if (vitals.currentHp <= 0) { return; }
+
+            float current = vitals.currentStamina;
+            // 装備で上限が下がっても、上限に収めた分は消費扱いにしない。
+            bool spent = current < Mathf.Min(_lastStamina, vitals.maxStamina);
+            if (spent)
+            {
+                _staminaRecoveryWait = current <= 0f
+                    ? Mathf.Max(0f, characterInfo.staminaExhaustionPenalty)
+                    : vitals.staminaRecoveryDelay > 0f ? vitals.staminaRecoveryDelay : 1f;
+            }
+            else
+            {
+                float recoveryTime = Mathf.Max(0f, deltaTime - _staminaRecoveryWait);
+                _staminaRecoveryWait = Mathf.Max(0f, _staminaRecoveryWait - deltaTime);
+                if (!dodging && vitals.staminaRecoveryRate > 0f && current < vitals.maxStamina)
+                {
+                    vitals.currentStamina = Mathf.Min(vitals.maxStamina, current + vitals.staminaRecoveryRate * recoveryTime);
+                }
+            }
+            _lastStamina = vitals.currentStamina;
         }
 
         internal void ReleaseAnimation()

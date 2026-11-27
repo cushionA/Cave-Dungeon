@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Game.Core;
+using UnityEngine.SceneManagement;
 
 namespace Game.Runtime
 {
@@ -23,6 +24,7 @@ namespace Game.Runtime
         private bool _canCollide;
         private bool _hasSimulated;
         private ulong _leaseId;
+        private PhysicsScene2D? _originWorld;
         private ProjectileManager _manager;
         private Vector3 _baseLocalScale;
         private bool _localScaleModified;
@@ -34,6 +36,7 @@ namespace Game.Runtime
         internal MagicDefinition CapturedMagic => _magic;
         public bool IsActive => _isActive;
         internal ulong LeaseId => _leaseId;
+        internal PhysicsScene2D? OriginWorld => _originWorld;
         internal int ActiveIndex { get; set; } = -1;
         internal GameObject PoolPrefab { get; private set; }
 
@@ -72,6 +75,10 @@ namespace Game.Runtime
 
         /// <summary>状態を先に設定し、OnEnableが完全な個体を観測できる順序で有効化する。</summary>
         public void Activate(Projectile projectile, MagicDefinition magic, ProjectileManager manager, bool canCollide = true)
+            => Activate(projectile, magic, manager, ProjectileManager.CaptureOriginWorld(projectile.CasterRef), canCollide);
+
+        internal void Activate(Projectile projectile, MagicDefinition magic, ProjectileManager manager,
+            PhysicsScene2D? originWorld, bool canCollide)
         {
             EnsureComponents();
             if (magic.childBullet != null)
@@ -85,6 +92,7 @@ namespace Game.Runtime
             }
             _coreProjectile = projectile;
             _leaseId = projectile.LeaseId;
+            _originWorld = originWorld;
             _magic = magic;
             _manager = manager;
             _isActive = true;
@@ -108,6 +116,7 @@ namespace Game.Runtime
             _magic = default;
             _manager = null;
             _leaseId = 0;
+            _originWorld = null;
             _hasSimulated = false;
             _hitCounts.Clear();
             _sweptTargets.Clear();
@@ -156,11 +165,10 @@ namespace Game.Runtime
             if (_spriteRenderer != null) { _spriteRenderer.enabled = visible; }
         }
 
-        private float WorldRadius()
-        {
-            Vector3 scale = transform.lossyScale;
-            return _triggerCollider.radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.y));
-        }
+        private float WorldRadius() => GetWorldRadius(_triggerCollider.radius, transform.lossyScale);
+
+        internal static float GetWorldRadius(float radius, Vector3 scale)
+            => radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.y));
 
         /// <summary>旧位置から新位置までを円で走査し、薄い敵を跨ぐ高速弾も接触順に処理する。</summary>
         internal void SweepToCorePosition(Projectile projectile, ulong leaseId)
@@ -177,13 +185,15 @@ namespace Game.Runtime
             radius = Mathf.Max(radius, WorldRadius());
             Vector2 displacement = endCenter - startCenter;
             float distance = displacement.magnitude;
-            if (distance > 0.000001f && radius > 0f)
+            PhysicsScene2D world = gameObject.scene.GetPhysicsScene2D();
+            if (world.IsValid() && distance > 0.000001f && radius > 0f)
             {
                 ContactFilter2D filter = new ContactFilter2D();
                 filter.SetLayerMask(Physics2D.GetLayerCollisionMask(gameObject.layer));
                 filter.useTriggers = true;
                 _sweepHits.Clear();
-                Physics2D.CircleCast(startCenter, radius, displacement / distance, filter, _sweepHits, distance);
+                world.CircleCast(startCenter, radius, displacement / distance, distance, filter, _sweepHits);
+                bool dispatchedHit = false;
                 for (int i = 0; i < _sweepHits.Count; i++)
                 {
                     if (!Matches(projectile, leaseId) || !projectile.IsAlive) { break; }
@@ -191,12 +201,27 @@ namespace Game.Runtime
                     // Subsequent casts begin inside an existing contact. OnTriggerEnter owns re-entry;
                     // treating that overlap as a fresh hit every tick would turn Stay into multihit.
                     if (_hasSimulated && hit.distance <= 0f) { continue; }
-                    if (!TryResolveTarget(hit.collider, out ActorRef target) || _sweptTargets.Contains(target)) { continue; }
                     Vector2 impact = Vector2.Lerp(startPosition, destination, hit.fraction);
-                    projectile.Position = impact;
-                    bool accepted = ProcessTarget(target, projectile, leaseId);
+                    if (TryResolveTarget(hit.collider, out ActorRef target))
+                    {
+                        if (_sweptTargets.Contains(target)) { continue; }
+                        projectile.Position = impact;
+                        bool accepted = ProcessTarget(target, projectile, leaseId);
+                        if (!Matches(projectile, leaseId)) { return; }
+                        if (accepted)
+                        {
+                            _sweptTargets.Add(target);
+                            dispatchedHit = true;
+                        }
+                    }
+                    else
+                    {
+                        Vector2? sweepCenter = dispatchedHit ? hit.centroid : null;
+                        if (!ProcessProp(hit.collider, projectile, leaseId, world, impact, sweepCenter, radius)) { continue; }
+                        dispatchedHit = true;
+                    }
+
                     if (!Matches(projectile, leaseId)) { return; }
-                    if (accepted) { _sweptTargets.Add(target); }
                     if (projectile.IsAlive) { projectile.Position = destination; }
                 }
             }
@@ -218,9 +243,45 @@ namespace Game.Runtime
         {
             Projectile projectile = _coreProjectile;
             ulong leaseId = _leaseId;
-            if (!_isActive || !_canCollide || projectile == null || projectile.IsSpawnDelayed || !projectile.IsAlive
-                || !TryResolveTarget(other, out ActorRef target) || _sweptTargets.Contains(target)) { return; }
-            ProcessTarget(target, projectile, leaseId);
+            if (!_isActive || !_canCollide || projectile == null || projectile.IsSpawnDelayed || !projectile.IsAlive) { return; }
+            if (TryResolveTarget(other, out ActorRef target))
+            {
+                if (!_sweptTargets.Contains(target)) { ProcessTarget(target, projectile, leaseId); }
+            }
+            else { ProcessProp(other, projectile, leaseId, gameObject.scene.GetPhysicsScene2D(), projectile.Position); }
+        }
+
+        private bool ProcessProp(Collider2D contact, Projectile projectile, ulong leaseId, PhysicsScene2D world,
+            Vector2 impact, Vector2? sweepCenter = null, float sweepRadius = 0f)
+        {
+            MagicDefinition magic = _magic;
+            if (!_canCollide || magic.magicType != MagicType.Attack || !magic.attackContext.IsCaptured
+                || magic.attackContext.Owner != projectile.CasterRef || !world.IsValid()
+                || !_originWorld.HasValue || _originWorld.Value != world) { return false; }
+            ExplosiveProp2D prop = ExplosiveProp2D.FindLiveContact(contact);
+            ProjectileManager manager = _manager;
+            ActorRegistry actors = GameManager.Actors;
+            SoACharaDataDic data = GameManager.Data;
+            if (prop == null || contact.gameObject.scene.GetPhysicsScene2D() != world
+                || (Physics2D.GetLayerCollisionMask(gameObject.layer) & (1 << contact.gameObject.layer)) == 0
+                || actors == null || data == null || manager == null || !manager.IsCurrent(this, projectile, leaseId)
+                || (sweepCenter.HasValue && !StillTouchesSweptCircle(contact, sweepCenter.Value, sweepRadius))
+                || !prop.TryGetBlast(out Vector2 center, out float radiusSquared) || !projectile.RegisterHit()) { return false; }
+
+            projectile.Position = impact;
+            bool shouldDespawn = !projectile.IsAlive;
+            prop.Detonate(magic.attackContext, world, actors, data, center, radiusSquared);
+            FinishHit(projectile, leaseId, manager, magic, shouldDespawn, world);
+            return true;
+        }
+
+        private static bool StillTouchesSweptCircle(Collider2D contact, Vector2 center, float radius)
+        {
+            // A prior impact can move this collider through a synchronous damage or detonation listener.
+            Physics2D.SyncTransforms();
+            const float contactTolerance = 0.001f;
+            float reach = radius + contactTolerance;
+            return (contact.ClosestPoint(center) - center).sqrMagnitude <= reach * reach;
         }
 
         private bool ProcessTarget(ActorRef target, Projectile projectile, ulong leaseId)
@@ -233,18 +294,24 @@ namespace Game.Runtime
             ProjectileManager manager = _manager;
             ProjectileHitProcessor.ProcessHit(projectile, receiver,
                 GameManager.Data, magic, GameManager.Events, GameManager.StatusEffects, GameManager.Actors, target);
-            // ReceiveDamage dispatches synchronous events and can clear/reuse both pools.
-            if (!Matches(projectile, leaseId) || manager == null || !manager.IsCurrent(this, projectile, leaseId)) { return true; }
-            if (BulletFeatureProcessor.ShouldExplode(projectile.CapturedProfile.features)) { manager.ProcessExplosion(projectile, magic); }
-            if (!Matches(projectile, leaseId) || !manager.IsCurrent(this, projectile, leaseId)) { return true; }
+            FinishHit(projectile, leaseId, manager, magic, shouldDespawn);
+            return true;
+        }
+
+        private void FinishHit(Projectile projectile, ulong leaseId, ProjectileManager manager, MagicDefinition magic,
+            bool shouldDespawn, PhysicsScene2D? blastWorld = null)
+        {
+            // Contact effects dispatch synchronous events and can clear/reuse both pools.
+            if (manager == null || !manager.IsCurrent(this, projectile, leaseId)) { return; }
+            if (BulletFeatureProcessor.ShouldExplode(projectile.CapturedProfile.features)) { manager.ProcessExplosion(projectile, magic, blastWorld); }
+            if (!manager.IsCurrent(this, projectile, leaseId)) { return; }
             if (ChildBulletHelper.HasChildBullet(magic) && magic.childBullet.trigger == ChildBulletTrigger.OnHit)
             {
-                manager.SpawnChildProjectiles(projectile, magic);
+                manager.SpawnChildProjectiles(projectile, magic, _originWorld);
             }
-            if (!Matches(projectile, leaseId) || !manager.IsCurrent(this, projectile, leaseId)) { return true; }
+            if (!manager.IsCurrent(this, projectile, leaseId)) { return; }
             if (shouldDespawn && projectile.IsAlive) { projectile.Kill(); }
             if (!projectile.IsAlive) { manager.ReturnProjectile(this); }
-            return true;
         }
 
         internal bool TryRegisterHit(int targetHash, out bool shouldDespawn)

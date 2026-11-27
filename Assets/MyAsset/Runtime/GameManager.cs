@@ -54,6 +54,7 @@ namespace Game.Runtime
         private readonly Dictionary<Type, IGameSubManager> _subManagers = new Dictionary<Type, IGameSubManager>();
 
         public static GameManager Instance { get; private set; }
+        internal Scene OriginScene { get; private set; }
         public GameLoop Loop => _loop;
         public static SoACharaDataDic Data => Instance != null ? Instance._core.Data : null;
         internal static RuntimeFieldOrders FieldOrders => Instance != null ? Instance._fieldOrders : null;
@@ -131,6 +132,7 @@ namespace Game.Runtime
                 return;
             }
 
+            OriginScene = gameObject.scene;
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
@@ -198,7 +200,18 @@ namespace Game.Runtime
             if (projectiles3D != null) { projectiles3D.SimulationTick(deltaTime); }
             for (int i = 0; i < _simulationActors.Count; i++)
             {
-                if (TryGetSimulationCharacter(i, false, out BaseCharacter character)) { character.PrepareObservationTick(deltaTime); }
+                ActorRef actor = _simulationActors[i];
+                if (!_core.Actors.IsCurrent(actor) || !_core.Data.TryGetValue(actor.Hash, out _)) { continue; }
+                switch (_core.Data.GetManaged(actor.Hash))
+                {
+                    case BaseCharacter character when character != null && character.gameObject.activeInHierarchy:
+                        character.PrepareObservationTick(deltaTime);
+                        break;
+                    case CharacterActor3D knight when knight != null && knight.isActiveAndEnabled
+                        && (_core.Data.GetFlags(actor.Hash).Feature & CharacterFeature.Player) != 0:
+                        knight.RecoverPlayerStamina(deltaTime, _actions.IsDodging(actor.Hash));
+                        break;
+                }
             }
         }
 

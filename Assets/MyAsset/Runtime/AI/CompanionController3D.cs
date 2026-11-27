@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Game.Core;
+using R3;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -37,6 +38,7 @@ namespace Game.Runtime
         private GameActionRuntime _actions;
         private CompanionMpManager _mp;
         private CompanionTactics3D _tactics;
+        private IDisposable _actorRemoved;
         private bool _groupWasDriving;
         private int _freeCast;
         private int _paidCast;
@@ -51,8 +53,28 @@ namespace Game.Runtime
         public float CooperationCooldownRemaining => _cooldown.GetRemaining(Time.fixedTime);
         public IReadOnlyList<AttackInfo> AvailableAttacks => attacks;
 
-        private void Awake() => _actor = GetComponent<CharacterActor3D>();
-        private void OnDisable() => ReleaseActor();
+        private void Awake()
+        {
+            _actor = GetComponent<CharacterActor3D>();
+            GetComponent<DamageReceiver>().BindCompanion(this);
+        }
+
+        private void OnDisable()
+        {
+            if (gameObject.activeInHierarchy && _owner.IsValid && _actor != null && _actor.Actor == _owner
+                && ReferenceEquals(_actions, GameManager.Actions))
+            {
+                // AIだけを止めても、同じ個体のMPと消滅表示は維持する。
+                _actions.ReleaseHeldInputs(_owner.Hash);
+                return;
+            }
+            ReleaseActor();
+        }
+
+        private void OnDestroy() => ReleaseActor();
+
+        internal CompanionMpManager GetDamageBarrier(ActorRef target) =>
+            _actor != null && _actor.Actor == target && BindActor() ? _mp : null;
 
         public CompanionAIConfig GetAIConfig() => AIConfigurationCopy.Clone(tactics);
 
@@ -139,7 +161,14 @@ namespace Game.Runtime
             _tactics.SetConfig(tactics);
             _freeCast = _actions.Execution.RegisterDefinition(CastDefinition(0));
             _paidCast = _actions.Execution.RegisterDefinition(CastDefinition(cooperationMpCost));
+            _actorRemoved = GameManager.Events.OnCharacterRemoved.Subscribe(OnActorRemoved);
+            if (_mp.IsVanished) { OnVanish(); }
             return true;
+        }
+
+        private void OnActorRemoved(int hash)
+        {
+            if (_owner.Hash == hash && GameManager.Actors?.IsCurrent(_owner) != true) { ReleaseActor(); }
         }
 
         private ActionDefinitionData CastDefinition(int cost) => new ActionDefinitionData
@@ -152,8 +181,9 @@ namespace Game.Runtime
 
         private void OnVanish()
         {
-            _tactics.Stop();
-            CancelCast();
+            if (_vanishPresentation) { return; }
+            ActorRef owner = _owner;
+            GameActionRuntime actions = _actions;
             _vanishPresentation = true;
             _bodyBeforeVanish = _actor.Body.enabled;
             _actor.Body.enabled = false;
@@ -161,6 +191,11 @@ namespace Game.Runtime
             {
                 _presentationBeforeVanish = presentation.activeSelf;
                 presentation.SetActive(false);
+            }
+            // 受理済みの魔法・連携は共有実行に任せ、保持入力だけを解除する。
+            if (_owner == owner && _actor != null && _actor.Actor == owner && ReferenceEquals(_actions, actions))
+            {
+                actions.ReleaseHeldInputs(owner.Hash);
             }
         }
 
@@ -180,6 +215,8 @@ namespace Game.Runtime
 
         private void ReleaseActor()
         {
+            _actorRemoved?.Dispose();
+            _actorRemoved = null;
             RestorePresentation();
             _tactics?.Dispose();
             _tactics = null;

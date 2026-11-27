@@ -79,7 +79,8 @@ namespace Game.Runtime
             {
                 bool active = _execution.TryGetGroupId(instanceId, out pending.GroupId)
                     && _execution.IsGroupActive(pending.GroupId);
-                if (!active || !accepted || _disposed || pending.Invalidated || !CanShareWorldAndFight(attacker, target))
+                if (!active || !accepted || _disposed || pending.Invalidated
+                    || !CanShareWorldAndFight(attacker, target, allowVanishedSource: true))
                 {
                     Release(pending, cancelExecution: active);
                 }
@@ -99,7 +100,7 @@ namespace Game.Runtime
                     {
                         if (reservation.GroupId != 0 && (reservation.Invalidated
                             || !_execution.IsGroupActive(reservation.GroupId)
-                            || !CanShareWorldAndFight(reservation.Owner, reservation.Target)))
+                            || !CanShareWorldAndFight(reservation.Owner, reservation.Target, allowVanishedSource: true)))
                         {
                             invalid = reservation;
                             break;
@@ -149,9 +150,9 @@ namespace Game.Runtime
             if (cancelExecution && reservation.GroupId != 0) { _execution.CancelGroup(reservation.GroupId); }
         }
 
-        private static bool CanShareWorldAndFight(ActorRef attacker, ActorRef target)
+        private static bool CanShareWorldAndFight(ActorRef attacker, ActorRef target, bool allowVanishedSource = false)
         {
-            if (!MultiLockTargeting3D.TryGetActor(attacker, out CharacterActor3D owner)
+            if (!TryGetSource(attacker, allowVanishedSource, out CharacterActor3D owner)
                 || !MultiLockTargeting3D.TryGetActor(target, out CharacterActor3D defender)
                 || owner.gameObject.scene.GetPhysicsScene() != defender.gameObject.scene.GetPhysicsScene())
             {
@@ -163,6 +164,16 @@ namespace Game.Runtime
             return sourceFlags.ActState != ActState.Dead && targetFlags.ActState != ActState.Dead
                 && AttackTargetRules.CanAffect(attacker, sourceFlags.Belong,
                     target, targetFlags.Belong, AttackTargetRelation.Hostile);
+        }
+
+        private static bool TryGetSource(ActorRef attacker, bool allowVanished, out CharacterActor3D owner)
+        {
+            if (MultiLockTargeting3D.TryGetActor(attacker, out owner)) { return true; }
+            // 受理済みの行動だけ、消滅中の同じ個体が持つ枠を完了まで保持する。
+            if (!allowVanished || GameManager.Actors?.IsCurrent(attacker) != true) { return false; }
+            owner = GameManager.Data.GetManaged(attacker.Hash) as CharacterActor3D;
+            return owner != null && owner.Actor == attacker && owner.IsAlive
+                && GameManager.Data.GetFlags(attacker.Hash).IsVanished;
         }
 
         public void Dispose()

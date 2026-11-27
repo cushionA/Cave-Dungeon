@@ -7,6 +7,7 @@ namespace Game.Runtime
     public class DamageReceiver : MonoBehaviour, IDamageable
     {
         private ManagedCharacter _character;
+        private CompanionController3D _companion3D;
         private int _objectHash;
         private SituationalBonusConfig _bonusConfig = SituationalBonusConfig.Default;
 
@@ -32,6 +33,8 @@ namespace Game.Runtime
             }
             if (_character is BaseCharacter character && character != null) { character.BindDamageReceiver(this); }
         }
+
+        internal void BindCompanion(CompanionController3D companion) => _companion3D = companion;
 
         public void SetGuarding(bool isGuarding)
         {
@@ -162,6 +165,7 @@ namespace Game.Runtime
             }
 
             SoACharaDataDic data = GameManager.Data;
+            CompanionMpManager barrier = GetDamageBarrier(targetRef, data.GetFlags(hash).Feature);
             CharacterDefenseState defense = data.GetDefenseState(hash);
             defense.actionArmorConsumed = 0f;
             ActState previousState = data.GetFlags(hash).ActState;
@@ -173,6 +177,7 @@ namespace Game.Runtime
                     : GameManager.IsCharacterValid(attack.attackerHash)
                     ? data.GetStatusEffects(attack.attackerHash).AttackMultiplier : 1f,
                 isAttackFromFront = isAttackFromFront,
+                usesMpBarrier = barrier != null,
                 currentTime = Time.time,
                 bonusConfig = _bonusConfig,
             };
@@ -198,7 +203,12 @@ namespace Game.Runtime
             GameManager.Actions.Execution.ConsumeArmor(hash, result.actionArmorDamage);
             defense.actionArmorConsumed = GameManager.Actions.Execution.GetConsumedArmor(hash);
             data.GetDefenseState(hash) = defense;
-            if (!result.isKill && !(previousState == ActState.Flinch && result.hitReaction == HitReaction.Flinch))
+            if (result.totalDamage > 0)
+            {
+                barrier?.ApplyBarrierDamage(result.totalDamage);
+            }
+            if (!result.isKill && (!targetRef.IsValid || (actors != null && actors.IsCurrent(targetRef)))
+                && !(previousState == ActState.Flinch && result.hitReaction == HitReaction.Flinch))
             {
                 GameManager.Actions.React(hash, result.hitReaction);
             }
@@ -238,6 +248,17 @@ namespace Game.Runtime
                 character.ApplyPhysicsImpulse(resolution.knockback);
             }
             return result;
+        }
+
+        private CompanionMpManager GetDamageBarrier(ActorRef target, CharacterFeature feature)
+        {
+            if (!target.IsValid) { return null; }
+            if (_character is CompanionCharacter companion && companion != null)
+            {
+                return companion.AIController?.MpManager;
+            }
+            return _companion3D != null && (feature & CharacterFeature.Companion) != 0
+                ? _companion3D.GetDamageBarrier(target) : null;
         }
 
         private static bool IsAttackFromFront(in DamageData attack, BaseCharacter character)

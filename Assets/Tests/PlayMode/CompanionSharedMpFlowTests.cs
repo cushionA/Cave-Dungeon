@@ -37,6 +37,7 @@ namespace Game.Tests.PlayMode
             actor.AddComponent<BoxCollider2D>();
             actor.AddComponent<SpriteRenderer>();
             _companion = actor.AddComponent<CompanionCharacter>();
+            actor.AddComponent<DamageReceiver>();
             _companion.SetCharacterInfoForTest(companionInfo);
             _companion.SetMpSettings(new CompanionMpSettings
             {
@@ -81,6 +82,23 @@ namespace Game.Tests.PlayMode
             Assert.AreEqual(95, _companion.AIController.MpManager.ReserveMp);
             AICondition ratio = new AICondition { conditionType = AIConditionType.MpRatio, filter = new TargetFilter { includeSelf = true } };
             Assert.AreEqual(70f, ConditionEvaluator.GetConditionValue(ratio, owner, 0, GameManager.Data, 0f));
+            yield break;
+        }
+
+        [UnityTest]
+        public IEnumerator CompanionSharedMp_LegacyDamageReceiverUsesTheBarrier()
+        {
+            int hash = _companion.ObjectHash;
+            CharacterVitals before = GameManager.Data.GetVitals(hash);
+            DamageResult result = _companion.DamageReceiver.ReceiveDamage(new DamageData
+            {
+                defenderHash = hash, damage = new ElementalStatus { slash = 20 }, motionValue = 1f,
+                attackElement = Element.Slash,
+            });
+
+            Assert.That(result.totalDamage, Is.Positive);
+            Assert.AreEqual(before.currentHp, GameManager.Data.GetVitals(hash).currentHp);
+            Assert.AreEqual(before.currentMp - result.totalDamage, _companion.AIController.MpManager.CurrentMp);
             yield break;
         }
 
