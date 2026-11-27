@@ -185,6 +185,66 @@ namespace Game.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator KeyboardCooperation_RejectsImmunityWithoutLeavingACastOrStartingCooldown()
+        {
+            ActorRef recipient = _knight.Actor;
+            ActorRef sister = _companion.GetComponent<CharacterActor3D>().Actor;
+            bool gainImmunityDuringStart = true;
+            long rejectedCast = 0;
+            int starts = 0;
+            int interruptions = 0;
+            using var listener = GameManager.Events.OnActionExecution.Subscribe(notification =>
+            {
+                ActionExecution execution = notification.execution;
+                if (execution.ownerRef != sister || execution.targetRef != recipient) { return; }
+                if (notification.kind == ActionSignalKind.Started)
+                {
+                    starts++;
+                    if (gainImmunityDuringStart)
+                    {
+                        rejectedCast = execution.instanceId;
+                        gainImmunityDuringStart = false;
+                        SetWardImmunity(true);
+                    }
+                }
+                else if (notification.kind == ActionSignalKind.Interrupted && execution.instanceId == rejectedCast)
+                {
+                    interruptions++;
+                }
+            });
+
+            TapKeyboard();
+            yield return new WaitForFixedUpdate();
+            Assert.That(rejectedCast, Is.Positive);
+            Assert.That(GameManager.Actions.Execution.TryGetInstance(rejectedCast, out _), Is.False);
+            Assert.That(interruptions, Is.EqualTo(1));
+            Assert.That(_companion.IsCooperating, Is.False);
+            Assert.That(_companion.CooperationCooldownRemaining, Is.Zero);
+            Assert.That(DefenseMultiplier(), Is.EqualTo(1f));
+
+            SetWardImmunity(false);
+            TapKeyboard();
+            yield return new WaitForFixedUpdate();
+            Assert.That(starts, Is.EqualTo(2));
+            Assert.That(_companion.CooperationCooldownRemaining, Is.Positive);
+            Assert.That(DefenseMultiplier(), Is.GreaterThan(1f));
+            yield return WaitForSupportToFinish();
+            Assert.That(GameManager.StatusEffects.Remove(recipient.Hash, StatusEffectId.DefenseUp), Is.True);
+
+            SetWardImmunity(true);
+            GameManager.Data.GetVitals(sister.Hash).currentMp = 25f;
+            TapKeyboard();
+            yield return new WaitForFixedUpdate();
+            Assert.That(starts, Is.EqualTo(2), "Known immunity must reject a paid cast before admission.");
+            Assert.That(GameManager.Data.GetVitals(sister.Hash).currentMp, Is.GreaterThanOrEqualTo(25f));
+            Assert.That(_companion.IsCooperating, Is.False);
+            Assert.That(DefenseMultiplier(), Is.EqualTo(1f));
+
+            void SetWardImmunity(bool immune)
+                => GameManager.Data.GetCombatStats(recipient.Hash).statusDefense.defenseUp.immune = immune;
+        }
+
+        [UnityTest]
         public IEnumerator KeyboardCooperation_UsesEquippedOwnedSupportAndKeepsEachCooldown()
         {
             const int ward = 7301;

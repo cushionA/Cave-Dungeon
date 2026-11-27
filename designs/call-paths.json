@@ -1916,7 +1916,7 @@
       "verification_hashes": {
         "Assets/MyAsset/Core/AI/Companion/CompanionMpManager.cs": "317c034eb6a3b84ca6d5c1e7638942bcf13f7753a70cf20c5b05ceb525bc0155",
         "Assets/MyAsset/Core/Damage/HitResolver.cs": "5c34e3f089e9103cf57e562a48a24dba9ab843a16b5cf144c6967ecfa2ff7db2",
-        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "57e661b612a890ca0c88bf938044542e9ed54ffa80569cb5cac496771b25f19f",
+        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "f08d8e0a1442e3dcee456605687855c34c1318f8aa1dd83e2bfb0a5c4df3b6e0",
         "Assets/MyAsset/Runtime/Combat/DamageReceiver.cs": "3d29d7835bcca15680cb8972a2539c5e8ec2344937f10b99a1c14840626796cb",
         "Assets/Tests/PlayMode/CompanionController3DPlayTests.cs": "7fd6342d91eed2a73fe3bdc1f260caa90f4d685cd146597dba74875cbb202f00",
         "Assets/Tests/PlayMode/CompanionSharedMpFlowTests.cs": "014b581b93c825d865796999a980a82862010bf18d110df5502ab1f67d330a6a",
@@ -8698,13 +8698,13 @@
         "Assets/MyAsset/Core/AI/Coop/CoopCooldownTracker.cs": "e9cf5933ddae7fd7d56b540555649085da4977da37075d6522b1d62d50a79cab",
         "Assets/MyAsset/Core/Actions/ActionExecutionSystem.cs": "906affd99f13b1d343389f12e8cf59e9e9f396eebcc43cb2b44d9427016616c8",
         "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs": "07736920ccf4c9614a9ad6b9ed6693748b20694b3873574e9bc92fb94d2f3dad",
-        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "57e661b612a890ca0c88bf938044542e9ed54ffa80569cb5cac496771b25f19f",
+        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "f08d8e0a1442e3dcee456605687855c34c1318f8aa1dd83e2bfb0a5c4df3b6e0",
         "Assets/MyAsset/Runtime/AI/CompanionTactics3D.cs": "20b10306db375277be736cfcd764695a6ee78f2453e9025904cb0efde06ef22d",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.Cooperation.cs": "9332f1a5bb10b8f7013395192a841ea6e813c241a2e7792d8044aee6a07b3563",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.cs": "51dbe300b4ffb75417862df9483470855a7814d11eeff80f6e741db1c875c076",
         "Assets/Scenes/ExpeditionMock3DScene.unity": "2409906d6cd07ea1eb7fe6bb8a337809e63b83d30c54d38ceaa9f1c8938de2ec",
         "Assets/Tests/PlayMode/CompanionController3DPlayTests.cs": "7fd6342d91eed2a73fe3bdc1f260caa90f4d685cd146597dba74875cbb202f00",
-        "Assets/Tests/PlayMode/PlayerCooperationInput3DPlayTests.cs": "d7adaea4654fb3083b39d65ee1eab420aa2905b75fbd785fdd97673498cd14d6"
+        "Assets/Tests/PlayMode/PlayerCooperationInput3DPlayTests.cs": "18efb665a1b91d0569ddd01d246ee016d32042c7d39d205961ac28c98b301853"
       }
     }
   },
@@ -8751,7 +8751,7 @@
       "verification_hashes": {
         "Assets/MyAsset/Core/AI/Core/JudgmentLoop.cs": "3741d244d117f332dee2adfd21d684c93c762b0273cccfeb195d763beaf8d09b",
         "Assets/MyAsset/Core/AI/Core/ModeController.cs": "80e57eefa69c82ce61dec1feef230dabddab6bf5fa256dd8df64410f51572bcd",
-        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "57e661b612a890ca0c88bf938044542e9ed54ffa80569cb5cac496771b25f19f",
+        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "f08d8e0a1442e3dcee456605687855c34c1318f8aa1dd83e2bfb0a5c4df3b6e0",
         "Assets/MyAsset/Runtime/AI/CompanionTactics3D.cs": "20b10306db375277be736cfcd764695a6ee78f2453e9025904cb0efde06ef22d",
         "Assets/MyAsset/Runtime/Combat/GameActionRuntime.SpatialCombat.cs": "f55c9a721abec5f602a7a7c6ebf7041bbeddcda5b0615c212f6f47d31b37a6f1",
         "Assets/MyAsset/Runtime/UI/CompanionAISettingsController.Dialogs.ActionPicker.cs": "9a5f9d4fcd141904ef8ba086e85c373c81b902be5745c8f8ad66ca42c2c4e72c",
@@ -8990,7 +8990,7 @@
       "notes": "依頼、召喚、戦術設定、消耗品、Timelineの専用イベント、装備・魔法の選択と成長、ストリーミング、ボスと周回を同じ試作マップで確認する。モックでも工兵の追従先を設定し、会話からの出撃と追従は専用の依頼シーンで検証した。別の集団戦でプリセットを使って増援を呼び、訓練の成功と撤退を確認した。 Unity 6000.6.8f1でExpeditionMock3DScenePlayTests 3件、ExpeditionQuest3DScenePlayTests 1件、BossArena3DScenePlayTests 1件、ExpeditionNextPlaythroughScenePlayTests 1件、ExpeditionConsumablesMockScenePlayTests 1件、ExpeditionEvent3DScenePlayTests 2件、ExpeditionLoadoutPanel3DPlayTests 1件、PlayerProgression3DPlayTests 2件が成功。",
       "verification_hashes": {
         "Assets/Integration/ExpeditionQuestGiver.cs": "0e3133114d9c00d37a79da0d69ccc22e18e7ac18c56c27ad8011af60f1f20ccc",
-        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "57e661b612a890ca0c88bf938044542e9ed54ffa80569cb5cac496771b25f19f",
+        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "f08d8e0a1442e3dcee456605687855c34c1318f8aa1dd83e2bfb0a5c4df3b6e0",
         "Assets/MyAsset/Runtime/Streaming/LevelStreamingController.cs": "b66ebcc043602838f74a3a603b578bbd7dd88c5a11dab28094bc5d0d0293be0a",
         "Assets/MyAsset/Runtime/UI/ExpeditionNextPlaythroughPanel.cs": "98c96bdc66ef6c3c9c3bbc59832993fe7a7f3ec6b53eda0f675f2bbcf4a09d3d",
         "Assets/MyAsset/Runtime/World/BossEncounter3D.cs": "e747af82ed060712f60694a33678f42fce837145773eb19e8145aacbd4cbdc9d",
@@ -10464,7 +10464,7 @@
       ],
       "notes": "同じ号令入力から集合、集中攻撃、防衛、おまかせを実行する。目標の敵と床の実体を検証する。探索と集団戦の切り替え、異なる物理シーンの標的拒否、個体再登録での解除を操作と移動で確認した。 遠征が管理する同じ物理シーンの追加区画で防衛を出し、別の加算シーンの床は拒否する。",
       "verification_hashes": {
-        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "57e661b612a890ca0c88bf938044542e9ed54ffa80569cb5cac496771b25f19f",
+        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "f08d8e0a1442e3dcee456605687855c34c1318f8aa1dd83e2bfb0a5c4df3b6e0",
         "Assets/MyAsset/Runtime/AI/EncounterApproachRoutes3D.cs": "7c723e74d600e14fadb169f8902a991ca1393bd0ad865ac7a67c664e13ebb307",
         "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.FieldOrders.cs": "86afb8f84699f3ffa512c76eb2ee2edf8bb1833e352c7b310e403c559b70fb85",
         "Assets/MyAsset/Runtime/AI/ExpeditionSummonDeployment3D.cs": "07cfc5beb8ed28560a1b81829588b62f7bc6688d0cce74e2afbf8c759f1cd123",
@@ -10576,19 +10576,19 @@
         "Assets/Tests/PlayMode/PlayerCooperationInput3DPlayTests.cs",
         "Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs"
       ],
-      "notes": "仲間用魔法として所持している支援を1枠に装備する。防御支援と攻撃支援の操作、支援ごとのクールタイム、所持品とセーブの復元、旧セーブでの初期設定を確認した。 所持枠が満杯の旧セーブでは防御支援を維持する。発動開始の通知中にシスターの連携担当を破棄した場合は、開始済みの実行を取り消す。 未装備の表示と再装備、開始通知中に騎士が交代した場合の中止、初期化されていない保存に含まれるID 0の拒否と正規のID 0の保存復元を確認した。",
+      "notes": "仲間用魔法として所持している支援を1枠に装備する。防御支援と攻撃支援の操作、支援ごとのクールタイム、所持品とセーブの復元、旧セーブでの初期設定を確認した。 所持枠が満杯の旧セーブでは防御支援を維持する。発動開始の通知中にシスターの連携担当を破棄した場合は、開始済みの実行を取り消す。 未装備の表示と再装備、開始通知中に騎士が交代した場合の中止、初期化されていない保存に含まれるID 0の拒否と正規のID 0の保存復元を確認した。 支援の無効化を開始前に確認し、効果を付与できた場合だけクールタイムを確定する。受理後に付与に失敗した連携は中断する。",
       "verification_hashes": {
         "Assets/MyAsset/Core/Damage/StatusEffectSystem.cs": "07736920ccf4c9614a9ad6b9ed6693748b20694b3873574e9bc92fb94d2f3dad",
         "Assets/MyAsset/Core/Inventory/PlayerCombatLoadoutSelection.cs": "512a6dec911ff386b23061a83e34df0114e60500583170fba479d685f5a613f7",
-        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "57e661b612a890ca0c88bf938044542e9ed54ffa80569cb5cac496771b25f19f",
+        "Assets/MyAsset/Runtime/AI/CompanionController3D.cs": "f08d8e0a1442e3dcee456605687855c34c1318f8aa1dd83e2bfb0a5c4df3b6e0",
         "Assets/MyAsset/Runtime/Character/PlayerCombatLoadout3D.cs": "43745767e21e77543aa889f186d7185baf38cfc40ab28871b9e1b08b2841d648",
         "Assets/MyAsset/Runtime/Input/PlayerCharacterInput3D.Cooperation.cs": "9332f1a5bb10b8f7013395192a841ea6e813c241a2e7792d8044aee6a07b3563",
         "Assets/MyAsset/Runtime/UI/ExpeditionLoadoutPanel3D.cs": "b8218dd46e3c8069d4d354cdd955f3731f2735a25b5ae71ddcfad943c5c03170",
         "Assets/Scenes/ExpeditionMock3DScene.unity": "2409906d6cd07ea1eb7fe6bb8a337809e63b83d30c54d38ceaa9f1c8938de2ec",
         "Assets/Tests/EditMode/PlayerCombatLoadoutSelectionTests.cs": "10c5c9c2e7c115e8aa2542c97a5711d8743b15eb268bd377e7c091288f2a6f3d",
         "Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs": "89d7debcf9ac88c9ce3a78a767fb86a15c4681b1e54c4a87038fa7f139750156",
-        "Assets/Tests/PlayMode/PlayerCooperationInput3DPlayTests.cs": "d7adaea4654fb3083b39d65ee1eab420aa2905b75fbd785fdd97673498cd14d6",
-        "designs/systems/CoopAction.md": "a27504d7547bd717a684425db1b74a4b1c03b0c2b4c8dce6bca62a37729b8b27"
+        "Assets/Tests/PlayMode/PlayerCooperationInput3DPlayTests.cs": "18efb665a1b91d0569ddd01d246ee016d32042c7d39d205961ac28c98b301853",
+        "designs/systems/CoopAction.md": "9e85a651703cd19da85fcdce7f9251a98613bea3fe773bf324593dbbea69ea7d"
       }
     }
   }

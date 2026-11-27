@@ -107,7 +107,8 @@ namespace Game.Runtime
             ActorRef source = _owner;
             GameActionRuntime actions = _actions;
             if (!TryResolveCooperation(out int cooperationId, out StatusEffectInfo effect)
-                || !IsCurrentCooperationSource(source, actions) || requester == null || requester.Actor != target) { return false; }
+                || !IsCurrentCooperationSource(source, actions) || requester == null || requester.Actor != target
+                || GameManager.Data.GetCombatStats(target.Hash).statusDefense.Resolve(effect.effect).immune) { return false; }
             if (!_cooperationCooldowns.TryGetValue(cooperationId, out CoopCooldownTracker cooldown))
             {
                 cooldown = new CoopCooldownTracker();
@@ -131,8 +132,13 @@ namespace Game.Runtime
                 return false;
             }
             _cast = cast;
+            if (!GameManager.StatusEffects.Apply(target.Hash, effect, source.Hash))
+            {
+                if (_cast == cast) { _cast = 0; }
+                actions.Execution.Cancel(cast, force: true);
+                return false;
+            }
             cooldown.TryActivate(now, cooperationMpCost, availableMp, cooperationCooldown);
-            GameManager.StatusEffects.Apply(target.Hash, effect, source.Hash);
             return true;
         }
 
