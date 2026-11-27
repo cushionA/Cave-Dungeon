@@ -124,14 +124,13 @@ namespace Game.Runtime
                 definitionId = free ? _freeCast : _paidCast, speedMultiplier = 1f,
             }, out long cast)) { return false; }
 
-            if (!IsCurrentCooperationSource(source, actions))
+            if (!IsCurrentCooperationSource(source, actions)
+                || requester == null || requester.Actor != target || !requester.IsAlive)
             {
                 actions.Execution.Cancel(cast, force: true);
                 return false;
             }
-            // The accepted caster motion can finish even if a start callback retired its recipient.
             _cast = cast;
-            if (requester == null || requester.Actor != target) { return false; }
             cooldown.TryActivate(now, cooperationMpCost, availableMp, cooperationCooldown);
             GameManager.StatusEffects.Apply(target.Hash, effect, source.Hash);
             return true;

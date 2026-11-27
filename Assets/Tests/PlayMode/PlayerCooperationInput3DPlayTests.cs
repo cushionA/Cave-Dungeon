@@ -4,6 +4,7 @@ using System.Reflection;
 using Game.Core;
 using Game.Runtime;
 using NUnit.Framework;
+using R3;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
@@ -141,6 +142,46 @@ namespace Game.Tests.PlayMode
             PressKeyboard(false);
             yield return new WaitForFixedUpdate();
             Assert.IsTrue(_companion.IsCooperating);
+        }
+
+        [UnityTest]
+        public IEnumerator KeyboardCooperation_RetiredRecipientDuringStartCancelsTheAcceptedCast()
+        {
+            ActorRef retiringKnight = _knight.Actor;
+            ActorRef sister = _companion.GetComponent<CharacterActor3D>().Actor;
+            long retiredCast = 0;
+            int interruptions = 0;
+            using var listener = GameManager.Events.OnActionExecution.Subscribe(notification =>
+            {
+                ActionExecution execution = notification.execution;
+                if (execution.ownerRef != sister || execution.targetRef != retiringKnight) { return; }
+                if (notification.kind == ActionSignalKind.Started)
+                {
+                    retiredCast = execution.instanceId;
+                    _knight.enabled = false;
+                    _knight.enabled = true;
+                }
+                else if (notification.kind == ActionSignalKind.Interrupted && execution.instanceId == retiredCast)
+                {
+                    interruptions++;
+                }
+            });
+
+            TapKeyboard();
+            yield return new WaitForFixedUpdate();
+            Assert.That(retiredCast, Is.Positive);
+            Assert.That(_knight.Actor, Is.Not.EqualTo(retiringKnight));
+            Assert.That(GameManager.Actions.Execution.TryGetInstance(retiredCast, out _), Is.False);
+            Assert.That(interruptions, Is.EqualTo(1));
+            Assert.That(_companion.IsCooperating, Is.False);
+            Assert.That(_companion.CooperationCooldownRemaining, Is.Zero);
+            Assert.That(DefenseMultiplier(), Is.EqualTo(1f));
+
+            TapKeyboard();
+            yield return new WaitForFixedUpdate();
+            Assert.That(_companion.IsCooperating, Is.True);
+            Assert.That(DefenseMultiplier(), Is.GreaterThan(1f));
+            Assert.That(interruptions, Is.EqualTo(1));
         }
 
         [UnityTest]

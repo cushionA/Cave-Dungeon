@@ -47,8 +47,9 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(1, inventory.GetCount(k_Spell, ItemCategory.PlayerMagic));
         }
 
-        [Test]
-        public void Save_DiskRoundTrip_RestoresOwnedEquipmentSpellsAndCooperation()
+        [TestCase(k_Cooperation)]
+        [TestCase(0)]
+        public void Save_DiskRoundTrip_RestoresOwnedEquipmentSpellsAndCooperation(int cooperationId)
         {
             string directory = Path.Combine(Path.GetTempPath(), "PlayerLoadout_" + Guid.NewGuid().ToString("N"));
             try
@@ -57,12 +58,12 @@ namespace Game.Tests.EditMode
                 source.Inventory.Add(k_Weapon, ItemCategory.Weapon, 1, 1);
                 source.Inventory.Add(k_Core, ItemCategory.Core, 1, 1);
                 source.Inventory.Add(k_Spell, ItemCategory.PlayerMagic, 1, 1);
-                source.Inventory.Add(k_Cooperation, ItemCategory.CompanionMagic, 1, 1);
+                Assert.AreEqual(1, source.Inventory.Add(cooperationId, ItemCategory.CompanionMagic, 1, 1));
                 Assert.IsTrue(source.CombatLoadout.TryEquipWeapon(k_Weapon));
                 Assert.IsTrue(source.CombatLoadout.TryEquipCore(k_Core));
                 Assert.IsTrue(source.CombatLoadout.TryAssignSpell(2, k_Spell));
                 Assert.IsTrue(source.CombatLoadout.TrySelectSpellSlot(2));
-                Assert.IsTrue(source.CombatLoadout.TryEquipCooperation(k_Cooperation));
+                Assert.IsTrue(source.CombatLoadout.TryEquipCooperation(cooperationId));
                 SaveDataStore store = new SaveDataStore(directory);
                 Assert.IsTrue(store.TryWriteToDisk(source.Saves.Save(1)));
 
@@ -77,7 +78,7 @@ namespace Game.Tests.EditMode
                 Assert.AreEqual(2, restored.CombatLoadout.ActiveSpellSlot);
                 Assert.AreEqual(k_Spell, restored.CombatLoadout.GetSpellId(2));
                 Assert.AreEqual(-1, restored.CombatLoadout.GetSpellId(0));
-                Assert.AreEqual(k_Cooperation, restored.CombatLoadout.CooperationId);
+                Assert.AreEqual(cooperationId, restored.CombatLoadout.CooperationId);
                 Assert.IsFalse(restored.CombatLoadout.TryInitializeCooperation());
             }
             finally
@@ -118,6 +119,7 @@ namespace Game.Tests.EditMode
             world.Inventory.Add(k_Core, ItemCategory.Core, 1, 1);
             world.Inventory.Add(k_Spell, ItemCategory.PlayerMagic, 1, 1);
             world.Inventory.Add(k_Cooperation, ItemCategory.CompanionMagic, 1, 1);
+            Assert.AreEqual(1, world.Inventory.Add(0, ItemCategory.CompanionMagic, 1, 1));
             Assert.IsTrue(loadout.TryEquipCooperation(k_Cooperation));
             SaveSlotData legacy = world.Saves.Save(0);
             legacy.entries[loadout.SaveId] = new JObject
@@ -139,6 +141,26 @@ namespace Game.Tests.EditMode
             Assert.AreEqual(k_Core, loadout.CoreId);
             Assert.AreEqual(1, loadout.ActiveSpellSlot);
             Assert.AreEqual(k_Spell, loadout.GetSpellId(1));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Save_CooperationIdZeroWithoutInitialization_DoesNotEquipOwnedItem(bool includesInitializationMarker)
+        {
+            using GameManagerCore world = new GameManagerCore();
+            PlayerCombatLoadoutSelection loadout = world.CombatLoadout;
+            Assert.AreEqual(1, world.Inventory.Add(0, ItemCategory.CompanionMagic, 1, 1));
+            Assert.IsTrue(loadout.TryEquipCooperation(0));
+            SaveSlotData slot = world.Saves.Save(0);
+            JObject snapshot = new JObject { ["cooperationId"] = 0 };
+            if (includesInitializationMarker) { snapshot["cooperationInitialized"] = false; }
+            slot.entries[loadout.SaveId] = snapshot;
+
+            Assert.IsTrue(world.Saves.Load(0));
+            Assert.AreEqual(1, world.Inventory.GetCount(0, ItemCategory.CompanionMagic));
+            Assert.AreEqual(PlayerCombatLoadoutSelection.k_EmptyItem, loadout.CooperationId);
+            Assert.IsFalse(loadout.IsCooperationInitialized);
+            Assert.IsTrue(loadout.TryInitializeCooperation());
         }
 
         [Test]

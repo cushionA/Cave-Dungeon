@@ -169,10 +169,19 @@ namespace Game.Tests.PlayMode
             Assert.AreEqual(1, loadout.ActiveSpellSlot);
             Assert.AreEqual(4222, loadout.GetSpellId(1));
             Submit(root, "loadout-tab-cooperation");
+            Assert.IsNull(root.Q<Label>("loadout-cooperation-empty"));
             Assert.AreEqual("防御支援", root.Q<Button>("loadout-cooperation-4241")?.text);
             Assert.AreEqual("攻撃支援", root.Q<Button>("loadout-cooperation-4242")?.text);
             Submit(root, "loadout-cooperation-4242");
             Assert.AreEqual(4242, loadout.CurrentCooperationId);
+            Assert.AreEqual(1, GameManager.Inventory.Remove(4242, 1));
+            Submit(root, "loadout-tab-magic");
+            Submit(root, "loadout-tab-cooperation");
+            Assert.AreEqual("連携が未装備です", root.Q<Label>("loadout-cooperation-empty")?.text);
+            Assert.IsNull(root.Q<Button>("loadout-cooperation-4242"));
+            Submit(root, "loadout-cooperation-4241");
+            Assert.AreEqual(4241, loadout.CurrentCooperationId);
+            Assert.IsNull(root.Q<Label>("loadout-cooperation-empty"));
             Submit(root, "loadout-close");
             Assert.AreEqual("Player", input.currentActionMap.name);
 

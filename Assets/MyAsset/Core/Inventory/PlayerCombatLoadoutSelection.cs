@@ -19,7 +19,7 @@ namespace Game.Core
             public int activeSpellSlot;
             public int[] spellIds;
             public bool cooperationInitialized;
-            public int cooperationId = k_EmptyItem;
+            public int? cooperationId;
         }
 
         private readonly InventoryManager _inventory;
@@ -138,9 +138,9 @@ namespace Game.Core
             IsInitialized = initialized;
             WeaponId = snapshot != null && Owns(snapshot.weaponId, ItemCategory.Weapon) ? snapshot.weaponId : k_EmptyItem;
             CoreId = snapshot != null && Owns(snapshot.coreId, ItemCategory.Core) ? snapshot.coreId : k_EmptyItem;
-            CooperationId = snapshot != null && Owns(snapshot.cooperationId, ItemCategory.CompanionMagic)
-                ? snapshot.cooperationId : k_EmptyItem;
-            IsCooperationInitialized = snapshot?.cooperationInitialized == true || CooperationId != k_EmptyItem;
+            IsCooperationInitialized = snapshot?.cooperationInitialized == true;
+            int cooperationId = snapshot?.cooperationId ?? k_EmptyItem;
+            CooperationId = IsCooperationInitialized && Owns(cooperationId, ItemCategory.CompanionMagic) ? cooperationId : k_EmptyItem;
             int[] spellIds = snapshot?.spellIds ?? Array.Empty<int>();
             for (int i = 0; i < k_SpellSlotCount; i++)
             {

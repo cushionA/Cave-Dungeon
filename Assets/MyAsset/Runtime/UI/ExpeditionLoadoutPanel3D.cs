@@ -246,8 +246,13 @@ namespace Game.Runtime
                     RenderGrowth();
                     break;
                 case Section.Cooperation:
+                    int equippedCooperation = loadout.CurrentCooperationId;
+                    if (!loadout.OwnsCooperation(equippedCooperation))
+                    {
+                        _body.Add(new Label("連携が未装備です") { name = "loadout-cooperation-empty", pickingMode = PickingMode.Ignore });
+                    }
                     AddChoices("cooperation", loadout.CooperationOptions, option => option.ItemId, option => option.DisplayName,
-                        loadout.OwnsCooperation, loadout.CurrentCooperationId, loadout.TryEquipCooperation);
+                        loadout.OwnsCooperation, equippedCooperation, loadout.TryEquipCooperation);
                     break;
             }
         }

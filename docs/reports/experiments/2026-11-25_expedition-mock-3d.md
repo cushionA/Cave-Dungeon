@@ -44,7 +44,7 @@ Tab／LT または `GEAR & GROWTH` 台で「戦闘準備」を開く。武器は
 
 2026-11-26にキーボードとマウスで、新規スロットの開始、測量の受注と報告、工兵の編成と召喚、区画の歩行通過、坑道入口と坑道奥の転移の往復、番人の撃破、第2周開始を確認した。第2周では石碑の専用カメラで封印が開く動きと、再生終了後に同じ位置へ戻ることを確認した。探索で集合とおまかせを操作し、移動後のシスターと工兵の追従再開を確認した。[遠征モック](../../../Assets/Scenes/ExpeditionMock3DScene.unity)・[探索号令の試験](../../../Assets/Tests/PlayMode/ExpeditionSummonDeployment3DPlayTests.FieldOrders.cs)
 
-2026-11-27に旧セーブを開き、「戦闘準備」の連携タブで攻撃支援を選択して保存した。Linux Playerを起動し直して同じスロットを開き、攻撃支援が選択済みとして表示されることを確認した。[連携の仕様](../../../designs/systems/CoopAction.md)
+2026-11-27に旧セーブを開き、「戦闘準備」の連携タブで攻撃支援を選択して保存した。Linux Playerを起動し直して同じスロットを開き、攻撃支援が選択済みとして表示されることを確認した。装備中の支援を所持品から除いた検証用セーブでは「連携が未装備です」と表示され、防御支援を装備すると表示が消えた。[連携の仕様](../../../designs/systems/CoopAction.md)
 
 番人の攻撃前に、赤い円が足元の床に表示された。騎士は弩の構えから発射へ移り、武器の動きと弾を確認できた。警告確認用のシーンでは、通常近接の録音が無音で、危険近接の予備動作中だけ警告音の波形が記録された。橋上では赤い床予告、発射後の画面端の方向警告、両方の消去を確認した。橋の下では足元に同じ円は出なかった。[警告確認用シーン](../../../Assets/Scenes/CharacterMotor3DTestScene.unity)
 
@@ -52,7 +52,7 @@ Tab／LT または `GEAR & GROWTH` 台で「戦闘準備」を開く。武器は
 
 ## 自動検証
 
-2026-11-27の全体回帰では、Unity 6000.6.8f1 で EditMode 2,390件と PlayMode 538件がすべて通過した。転移で先読み区画に到着すると対象スロットへのオートセーブが一度だけ実行され、到着が成立しなければ保存の通知は発生しないことも確認した。転移では未ロードの区画の復帰、中断後の区画解放と再選択、通常遷移への引き継ぎ、壁との干渉、35度の斜面への到着を検証した。Linux Playerでは旧形式のセーブから入口を再開し、新しい地点IDで訪問記録が保存されることを確認した。PlayModeでは書き込み失敗時に訪問が登録されないことを確認した。[転移の試験](../../../Assets/Tests/PlayMode/ExpeditionFastTravel3DPlayTests.cs)・[保存失敗の試験](../../../Assets/Tests/PlayMode/ExpeditionSavePointMockPlayTests.cs)
+2026-11-27の全体回帰では、Unity 6000.6.8f1 で EditMode 2,393件と PlayMode 539件がすべて通過した。転移で先読み区画に到着すると対象スロットへのオートセーブが一度だけ実行され、到着が成立しなければ保存の通知は発生しないことも確認した。転移では未ロードの区画の復帰、中断後の区画解放と再選択、通常遷移への引き継ぎ、壁との干渉、35度の斜面への到着を検証した。Linux Playerでは旧形式のセーブから入口を再開し、新しい地点IDで訪問記録が保存されることを確認した。PlayModeでは書き込み失敗時に訪問が登録されないことを確認した。[転移の試験](../../../Assets/Tests/PlayMode/ExpeditionFastTravel3DPlayTests.cs)・[保存失敗の試験](../../../Assets/Tests/PlayMode/ExpeditionSavePointMockPlayTests.cs)
 
 装備と魔法枠はディスク往復と旧セーブの読み込みを確認した。PlayModeでは石碑の長押しから専用イベントが始まり、通常終了とスキップのどちらでも元の騎士でガードできることを確認した。実シーンの装備台では武器とコアを交換して魔法枠を登録し、測量で得たポイントを配分した。番人の150経験値も実戦で確認した。[装備の保存](../../../Assets/Tests/EditMode/PlayerCombatLoadoutSelectionTests.cs)・[イベントの実入力](../../../Assets/Tests/PlayMode/ExpeditionEvent3DScenePlayTests.cs)・[統合モック試験](../../../Assets/Tests/PlayMode/ExpeditionMock3DScenePlayTests.cs)
 
