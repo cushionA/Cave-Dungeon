@@ -57,17 +57,58 @@ namespace Game.Runtime
             internal bool StartingOwned => startingOwned;
         }
 
+        public enum CooperationEffectKind { StatusEffect = 0, ReflectionShield = 1 }
+
+        internal readonly struct CooperationEffect
+        {
+            internal readonly CooperationEffectKind Kind;
+            internal readonly StatusEffectInfo Status;
+            internal readonly float ShieldDuration;
+            internal readonly float ShieldRadius;
+
+            internal CooperationEffect(CooperationEffectKind kind, StatusEffectInfo status, float shieldDuration, float shieldRadius)
+            {
+                Kind = kind;
+                Status = status;
+                ShieldDuration = shieldDuration;
+                ShieldRadius = shieldRadius;
+            }
+
+            internal bool IsValid
+            {
+                get
+                {
+                    switch (Kind)
+                    {
+                        case CooperationEffectKind.ReflectionShield:
+                            return ShieldDuration > 0f && float.IsFinite(ShieldDuration)
+                                && ShieldRadius > 0f && float.IsFinite(ShieldRadius);
+                        case CooperationEffectKind.StatusEffect:
+                            return (Status.effect is StatusEffectId.AttackUp or StatusEffectId.DefenseUp)
+                                && float.IsFinite(Status.duration) && Status.duration > 0f
+                                && Status.modifier > 0f && Status.modifier <= 1f && Status.tickDamage == 0f
+                                && float.IsFinite(Status.accumulateValue) && float.IsFinite(Status.tickInterval);
+                        default:
+                            return false;
+                    }
+                }
+            }
+        }
+
         [Serializable]
         public sealed class CooperationOption
         {
             [SerializeField, Min(0)] private int itemId;
             [SerializeField] private string displayName;
+            [SerializeField] private CooperationEffectKind effectKind;
             [SerializeField] private StatusEffectInfo effect;
+            [SerializeField, Min(0f)] private float shieldDuration;
+            [SerializeField, Min(0f)] private float shieldRadius;
             [SerializeField] private bool startingOwned;
 
             public int ItemId => itemId;
             public string DisplayName => displayName;
-            internal StatusEffectInfo Effect => effect;
+            internal CooperationEffect Effect => new(effectKind, effect, shieldDuration, shieldRadius);
             internal bool StartingOwned => startingOwned;
         }
 
@@ -163,7 +204,7 @@ namespace Game.Runtime
             return true;
         }
 
-        internal bool TryResolveCooperation(out int itemId, out StatusEffectInfo effect)
+        internal bool TryResolveCooperation(out int itemId, out CooperationEffect effect)
         {
             itemId = PlayerCombatLoadoutSelection.k_EmptyItem;
             effect = default;
@@ -353,13 +394,7 @@ namespace Game.Runtime
         {
             if (!HasCooperationOptions) { return null; }
             CooperationOption option = FindUnique(cooperationOptions, id, static entry => entry.ItemId);
-            if (option == null) { return null; }
-            StatusEffectInfo effect = option.Effect;
-            return (effect.effect is StatusEffectId.AttackUp or StatusEffectId.DefenseUp)
-                && float.IsFinite(effect.duration) && effect.duration > 0f
-                && effect.modifier > 0f && effect.modifier <= 1f && effect.tickDamage == 0f
-                && float.IsFinite(effect.accumulateValue) && float.IsFinite(effect.tickInterval)
-                ? option : null;
+            return option != null && option.Effect.IsValid ? option : null;
         }
 
         private static bool Has3DAttack(AttackInfo attack) => attack != null && attack.attack3D.shape != AttackShape3D.None;

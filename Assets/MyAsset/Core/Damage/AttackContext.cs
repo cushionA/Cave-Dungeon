@@ -36,6 +36,17 @@ namespace Game.Core
                 ? Array.Empty<StatusEffectApplicationData>() : (StatusEffectApplicationData[])actionEffects.Clone();
         }
 
+        private AttackContext(in AttackContext original, ActorRef reflector, CharacterBelong belong)
+        {
+            Owner = reflector;
+            AttackStats = original.AttackStats;
+            AttackMultiplier = original.AttackMultiplier;
+            Belong = belong;
+            TargetRelations = AttackTargetRelation.Hostile;
+            _equipmentEffects = original._equipmentEffects;
+            _actionEffects = original._actionEffects;
+        }
+
         public static AttackContext Capture(ActorRef owner, in ElementalStatus stats, float multiplier,
             CharacterBelong belong, IReadOnlyList<StatusEffectApplicationData> equipmentEffects,
             StatusEffectApplicationData[] actionEffects = null,
@@ -44,6 +55,16 @@ namespace Game.Core
             if (!owner.IsValid) { throw new ArgumentException("A captured attack requires an actor generation.", nameof(owner)); }
             AttackTargetRules.Validate(targetRelations);
             return new AttackContext(owner, stats, multiplier, belong, equipmentEffects, actionEffects, targetRelations);
+        }
+
+        /// <summary>発射時に確定した威力・効果を保ち、反射した個体の敵対弾として扱う。</summary>
+        public AttackContext Reflect(ActorRef reflector, CharacterBelong belong)
+        {
+            if (!IsCaptured || !reflector.IsValid)
+            {
+                throw new ArgumentException("Reflection requires captured and reflecting actor generations.");
+            }
+            return new AttackContext(this, reflector, belong);
         }
 
         private static StatusEffectApplicationData[] CopyEquipmentEffects(IReadOnlyList<StatusEffectApplicationData> effects)
