@@ -257,6 +257,18 @@ namespace Game.Tests.PlayMode
             => TraverseGap(canJump: true, blockLanding: true);
 
         [UnityTest]
+        public IEnumerator EncounterTraversal_WithAuthorizedDescent_LandsOnLowerBankAndHits()
+            => TraverseDescent(maxDescent: 0.75f, blockLanding: false, expectCrossing: true);
+
+        [UnityTest]
+        public IEnumerator EncounterTraversal_WhenDropExceedsAuthoredDescent_StaysOnUpperBank()
+            => TraverseDescent(maxDescent: 0.3f, blockLanding: false, expectCrossing: false);
+
+        [UnityTest]
+        public IEnumerator EncounterTraversal_WhenDescendingLandingIsBlocked_StaysOnUpperBank()
+            => TraverseDescent(maxDescent: 0.75f, blockLanding: true, expectCrossing: false);
+
+        [UnityTest]
         public IEnumerator EncounterTraversal_WhenSessionEndsInFlight_LandsWithoutAttack()
             => TraverseGap(canJump: true, blockLanding: false, transition: FlightTransition.CompleteSession);
 
@@ -271,6 +283,68 @@ namespace Game.Tests.PlayMode
         [UnityTest]
         public IEnumerator EncounterTraversal_WhenControllerIsDestroyedInFlight_ActorStillLands()
             => TraverseGap(canJump: true, blockLanding: false, transition: FlightTransition.DestroyController);
+
+        private IEnumerator TraverseDescent(float maxDescent, bool blockLanding, bool expectCrossing)
+        {
+            const float upperHeight = 0.625f;
+            BoxCollider upperBank = Surface("Upper bank", new Vector3(-2.75f, upperHeight - 0.25f, 0f),
+                new Vector3(4f, 0.5f, 8f), Quaternion.identity);
+            BoxCollider lowerBank = Surface("Lower bank", new Vector3(2.75f, -0.25f, 0f),
+                new Vector3(4f, 0.5f, 8f), Quaternion.identity);
+            if (blockLanding)
+            {
+                Surface("Blocked landing", new Vector3(1.25f, 1.8f, 0f), new Vector3(0.55f, 0.6f, 0.9f), Quaternion.identity);
+            }
+            Transform takeoff = At("Upper takeoff", new Vector3(-1.25f, upperHeight, 0f));
+            Transform landing = At("Lower landing", new Vector3(1.25f, 0f, 0f));
+            CharacterActor3D knight = Actor("Knight", new Vector3(3.45f, 0.04f, 0f), CharacterBelong.Ally, CharacterFeature.Player);
+            CharacterActor3D fighter = Actor("Fighter", new Vector3(-3.45f, upperHeight + 0.04f, 0f),
+                CharacterBelong.Enemy, CharacterFeature.Minion);
+            knight.gameObject.layer = LayerMask.NameToLayer("Player");
+            fighter.gameObject.layer = LayerMask.NameToLayer("Enemy");
+            LayerMask ground = LayerMask.GetMask("Ground");
+            EncounterCombat3D encounter = new GameObject("Descending link encounter").AddComponent<EncounterCombat3D>();
+            Set(encounter, "knight", knight);
+            Set(encounter, "obstructionLayers", ground);
+            Set(encounter, "approachGroundLayers", ground);
+            Set(encounter, "approachWaypoints", new[] { takeoff, landing });
+            Set(encounter, "approachJumpLinks", new[] { new EncounterJumpLink3D(takeoff, landing, lowerBank, maxDescent) });
+            EncounterCombatant3D member = fighter.gameObject.AddComponent<EncounterCombatant3D>();
+            Set(member, "attack", CreateMeleeAttack());
+            Set(member, "attackRange", 1.6f);
+            Set(member, "canUseJumpLinks", true);
+            Assert.IsTrue(encounter.Register(member));
+            Physics.SyncTransforms();
+            PhysicsScene world = _room.GetPhysicsScene();
+            world.Simulate(Time.fixedDeltaTime);
+            Assert.IsFalse(world.Raycast(Vector3.up * 2f, Vector3.down, out _, 3f, ground, QueryTriggerInteraction.Ignore));
+
+            int knightHash = knight.Actor.Hash;
+            int fullHp = GameManager.Data.GetVitals(knightHash).currentHp;
+            bool crossedGap = false;
+            bool reachedLowerBank = false;
+            int stepLimit = expectCrossing ? 180 : 100;
+            for (int step = 0; step < stepLimit && GameManager.Data.GetVitals(knightHash).currentHp == fullHp; step++)
+            {
+                yield return new WaitForFixedUpdate();
+                crossedGap |= Mathf.Abs(fighter.Motor.FeetPosition.x) < 0.5f && !fighter.Motor.IsGrounded;
+                reachedLowerBank |= fighter.Motor.Ground.Surface == lowerBank;
+                if (!reachedLowerBank) { Assert.AreEqual(fullHp, GameManager.Data.GetVitals(knightHash).currentHp); }
+            }
+
+            Assert.AreEqual(expectCrossing, crossedGap, $"Fighter feet {fighter.Motor.FeetPosition}.");
+            Assert.AreEqual(expectCrossing, reachedLowerBank, $"Fighter feet {fighter.Motor.FeetPosition}.");
+            if (expectCrossing)
+            {
+                Assert.AreSame(lowerBank, fighter.Motor.Ground.Surface);
+                Assert.That(GameManager.Data.GetVitals(knightHash).currentHp, Is.LessThan(fullHp));
+            }
+            else
+            {
+                Assert.AreSame(upperBank, fighter.Motor.Ground.Surface);
+                Assert.AreEqual(fullHp, GameManager.Data.GetVitals(knightHash).currentHp);
+            }
+        }
 
         private IEnumerator TraverseGap(bool canJump, bool blockLanding, FlightTransition transition = FlightTransition.None)
         {

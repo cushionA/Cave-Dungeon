@@ -58,6 +58,7 @@ namespace Game.Runtime
             ReleaseAnimation();
             if (world != null && actor.IsValid)
             {
+                if (Motor != null) { Motor.ResetMotion(); }
                 world.UnregisterCharacter(this, actor);
             }
         }

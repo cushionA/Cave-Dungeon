@@ -132,10 +132,12 @@ namespace Game.Runtime
             Vector3 toAttacker = origin - target.Body.bounds.center;
             toAttacker.y = 0f;
             bool isAttackFromFront = Vector3.Dot(target.Motor.Facing, toAttacker) >= 0f;
-            return ResolveDamage(attack, isAttackFromFront);
+            Vector3 away = toAttacker.sqrMagnitude > 0.0001f ? -toAttacker.normalized
+                : -Vector3.ProjectOnPlane(target.Motor.Facing, Vector3.up).normalized;
+            return ResolveDamage(attack, isAttackFromFront, away);
         }
 
-        private DamageResult ResolveDamage(DamageData attack, bool isAttackFromFront)
+        private DamageResult ResolveDamage(DamageData attack, bool isAttackFromFront, Vector3 away = default)
         {
             int hash = ObjectHash;
             if (!GameManager.IsCharacterValid(hash))
@@ -210,7 +212,12 @@ namespace Game.Runtime
             if (!result.isKill && (!targetRef.IsValid || (actors != null && actors.IsCurrent(targetRef)))
                 && !(previousState == ActState.Flinch && result.hitReaction == HitReaction.Flinch))
             {
-                GameManager.Actions.React(hash, result.hitReaction);
+                if (_character is CharacterActor3D spatial && result.hitReaction == HitReaction.Knockback)
+                {
+                    Vector3 velocity = away * Mathf.Abs(resolution.knockback.x) + Vector3.up * resolution.knockback.y;
+                    GameManager.Actions.ReactKnockback3D(spatial, targetRef, velocity);
+                }
+                else { GameManager.Actions.React(hash, result.hitReaction); }
             }
             bool sameTarget = !targetRef.IsValid || (actors != null && actors.IsCurrent(targetRef));
             if (sameTarget && attack.attackContext.IsCaptured)

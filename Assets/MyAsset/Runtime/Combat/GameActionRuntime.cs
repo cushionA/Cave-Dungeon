@@ -9,6 +9,7 @@ namespace Game.Runtime
     public sealed partial class GameActionRuntime : IDisposable
     {
         private enum Builtin { Move, Stop, Idle, Dodge, Jump, Guard, Flinch, GuardBreak, Knockback, WakeUp, Effects }
+        private const float k_MaxKnockback3DSeconds = 4f;
         private sealed class CombatExecution
         {
             public AttackMotionData attack;
@@ -354,10 +355,32 @@ namespace Game.Runtime
 
         public void React(int owner, HitReaction reaction)
         {
-            if (reaction == HitReaction.None) { return; }
+            if (reaction == HitReaction.None || !GameManager.IsCharacterValid(owner)) { return; }
+            if (reaction == HitReaction.Knockback && _data.GetManaged(owner) is CharacterActor3D spatial)
+            {
+                ReactKnockback3D(spatial, spatial.Actor, Vector3.zero);
+                return;
+            }
             Builtin kind = reaction == HitReaction.GuardBreak ? Builtin.GuardBreak
                 : reaction == HitReaction.Knockback ? Builtin.Knockback : Builtin.Flinch;
             StartBuiltin(owner, kind, default, 1f, true);
+        }
+
+        internal void ReactKnockback3D(CharacterActor3D actor, ActorRef owner, Vector3 velocity)
+        {
+            if (actor == null || !owner.IsValid || actor.Actor != owner || !actor.IsAlive) { return; }
+            if (actor.Motor == null || !actor.Motor.CanReceiveKnockback
+                || !Finite(velocity.x) || !Finite(velocity.y) || !Finite(velocity.z))
+            {
+                React(owner.Hash, HitReaction.Flinch);
+                return;
+            }
+            if (StartBuiltin(owner.Hash, Builtin.Knockback, default, out long instanceId, forced: true)
+                && actor != null && actor.Actor == owner
+                && Execution.TryGetInstance(instanceId, out _))
+            {
+                actor.Motor.BeginKnockback(actor, owner, instanceId, velocity);
+            }
         }
 
         public void StopActor(int owner)
@@ -374,8 +397,9 @@ namespace Game.Runtime
             {
                 int owner = _ownerBuffer[i];
                 if (!GameManager.IsCharacterValid(owner)) { continue; }
-                if (IsHeld(owner, Builtin.Knockback) && _data.GetManaged(owner) is BaseCharacter actor
-                    && actor.IsGrounded && actor.PhysicsVelocity.y <= 0f)
+                if (_held.TryGetValue((owner, Builtin.Knockback), out long instanceId)
+                    && Execution.TryGetInstance(instanceId, out ActionExecution knockback)
+                    && CanWakeUpFromKnockback(owner, knockback))
                 {
                     ReleaseHeld(owner, Builtin.Knockback);
                     StartBuiltin(owner, Builtin.WakeUp, default, 1f, true);
@@ -383,6 +407,28 @@ namespace Game.Runtime
                 SyncDefense(owner);
             }
             TickSpatialRepeats();
+        }
+
+        private bool CanWakeUpFromKnockback(int owner, in ActionExecution knockback)
+        {
+            ManagedCharacter actor = _data.GetManaged(owner);
+            if (actor is BaseCharacter legacy) { return legacy.IsGrounded && legacy.PhysicsVelocity.y <= 0f; }
+            if (actor is CharacterActor3D spatial)
+            {
+                if (spatial.Motor != null && spatial.Motor.TryGetKnockbackLanding(knockback.instanceId, out bool landed))
+                {
+                    if (landed) { return true; }
+                    // 接地と制限時間が同じ固定更新に重なれば、実際の接地を優先する。
+                    if (knockback.elapsed >= k_MaxKnockback3DSeconds)
+                    {
+                        _held.Remove((owner, Builtin.Knockback));
+                        Execution.Complete(knockback.instanceId);
+                    }
+                    return false;
+                }
+                ReleaseHeld(owner, Builtin.Knockback);
+            }
+            return false;
         }
 
         public void Present()
@@ -441,10 +487,10 @@ namespace Game.Runtime
             TrackConsumableExecution(notification);
             int owner = current.ownerHash;
             CharacterActor3D spatial = _data.TryGetValue(owner, out _) ? _data.GetManaged(owner) as CharacterActor3D : null;
-            if (spatial != null && spatial.AnimationController != null
-                && (notification.kind == ActionSignalKind.Completed || notification.kind == ActionSignalKind.Interrupted))
+            if (spatial != null && (notification.kind == ActionSignalKind.Completed || notification.kind == ActionSignalKind.Interrupted))
             {
-                spatial.AnimationController.EndExecution(current.instanceId);
+                if (spatial.AnimationController != null) { spatial.AnimationController.EndExecution(current.instanceId); }
+                if (spatial.Motor != null) { spatial.Motor.EndKnockback(current.instanceId); }
             }
             if (current.ownerRef.IsValid && (GameManager.Actors == null || !GameManager.Actors.IsCurrent(current.ownerRef)))
             {
@@ -643,7 +689,12 @@ namespace Game.Runtime
 
         private bool StartBuiltin(int owner, Builtin kind, Vector2 direction, float speedMultiplier = 1f,
             bool forced = false, float duration = 0f, ActorRef targetRef = default, long replaceGroupId = 0)
+            => StartBuiltin(owner, kind, direction, out _, speedMultiplier, forced, duration, targetRef, replaceGroupId);
+
+        private bool StartBuiltin(int owner, Builtin kind, Vector2 direction, out long instanceId, float speedMultiplier = 1f,
+            bool forced = false, float duration = 0f, ActorRef targetRef = default, long replaceGroupId = 0)
         {
+            instanceId = 0;
             if (!GameManager.IsCharacterValid(owner) || !Finite(direction) || !Finite(speedMultiplier)
                 || speedMultiplier < 0f || !Finite(duration) || duration < 0f) { return false; }
             int definitionId = Definition(owner, kind);
@@ -661,8 +712,8 @@ namespace Game.Runtime
                 ownerHash = owner, ownerRef = ownerRef, targetHash = targetRef.Hash, targetRef = targetRef,
                 definitionId = definitionId, direction = direction,
                 speedMultiplier = speedMultiplier, forced = forced, replaceGroupId = replaceGroupId,
-            }, out long id);
-            if (accepted && Execution.TryGetInstance(id, out _)) { _held[(owner, kind)] = id; }
+            }, out instanceId);
+            if (accepted && Execution.TryGetInstance(instanceId, out _)) { _held[(owner, kind)] = instanceId; }
             return accepted;
         }
 

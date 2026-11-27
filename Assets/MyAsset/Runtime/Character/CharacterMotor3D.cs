@@ -7,7 +7,7 @@ namespace Game.Runtime
     /// <summary>ワールド座標の移動入力を受け、3Dの移動と接地を確定する。</summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CharacterController))]
-    public sealed class CharacterMotor3D : MonoBehaviour
+    public sealed partial class CharacterMotor3D : MonoBehaviour
     {
         public readonly struct GroundContact
         {
@@ -71,17 +71,26 @@ namespace Game.Runtime
             _controller = GetComponent<CharacterController>();
         }
 
-        private void OnDisable()
+        private void OnDisable() => ResetMotion();
+
+        internal void ResetMotion()
         {
             Ground = default;
             Collisions = CollisionFlags.None;
             Velocity = Vector3.zero;
             _verticalSpeed = 0f;
             _detachedJump = default;
+            _knockback = default;
+            _lastSimulatedFixedTime = double.NegativeInfinity;
         }
 
         private void FixedUpdate()
         {
+            if (HasCurrentKnockback())
+            {
+                SimulateFixedStep(Vector3.zero, false, Time.fixedDeltaTime);
+                return;
+            }
             if (!_detachedJump.actor.IsValid) { return; }
             if (!HasCurrentDetachedJump() || (IsGrounded && _lastSimulatedFixedTime != Time.fixedTimeAsDouble))
             {
@@ -152,7 +161,16 @@ namespace Game.Runtime
                 return;
             }
 
-            if (_detachedJump.actor.IsValid)
+            bool knockback = HasCurrentKnockback();
+            if (knockback)
+            {
+                if (_knockback.landed) { return; }
+                movement = _knockback.planarVelocity;
+                jumpPressed = false;
+                oncePerFixedStep = true;
+                useVelocity = true;
+            }
+            else if (_detachedJump.actor.IsValid)
             {
                 if (!HasCurrentDetachedJump()) { _detachedJump = default; }
                 else if (IsGrounded)
@@ -184,7 +202,7 @@ namespace Game.Runtime
 
             Vector3 move = new Vector3(movement.x, 0f, movement.z);
             if (!useVelocity) { move = Vector3.ClampMagnitude(move, 1f); }
-            if (move.sqrMagnitude > 0f)
+            if (!knockback && move.sqrMagnitude > 0f)
             {
                 transform.rotation = Quaternion.LookRotation(move, Vector3.up);
             }
@@ -202,6 +220,7 @@ namespace Game.Runtime
             {
                 _verticalSpeed = 0f;
             }
+            if (knockback && IsGrounded) { _knockback.landed = true; }
         }
 
         private float CalculateVerticalDistance(bool jumpPressed, float deltaTime)
