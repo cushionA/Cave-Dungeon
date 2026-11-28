@@ -1,5 +1,155 @@
 [
   {
+    "feature": "ExpeditionItems_WorldAcquisition3D",
+    "path": {
+      "key": "collect-authored-world-items-and-chests",
+      "title": "配置アイテムと宝箱から装備・魔法・消耗品を取得する",
+      "implementation_status": "planned",
+      "connection_status": "partial",
+      "verification": "unverified",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Character/ConsumablePickup3D.cs",
+          "symbol": "ConsumablePickup3D.Collect",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Inventory/InventoryManager.cs",
+          "symbol": "InventoryManager.Add",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Save/FlagManager.cs",
+          "symbol": "FlagManager.SetLocalFlag",
+          "kind": "write"
+        }
+      ],
+      "tests": [],
+      "notes": "配置アイテムと宝箱に品目・個数・再取得の可否を設定し、既存の所持品と装備選択につなぐ。受け取った数量だけを所持品へ移し、使い切りの配置は残数を保存する。遠征モックで拾った武器・コア・魔法が装備候補に出ることと、宝箱の残数・取得済み状態が保存・再起動・区画再読込後も復元されることを確認する。",
+      "verification_hashes": {}
+    }
+  },
+  {
+    "feature": "ExpeditionRewards_EnemyDrops3D",
+    "path": {
+      "key": "grant-item-and-currency-drops-on-enemy-defeat",
+      "title": "3Dの敵撃破からアイテム・通貨の報酬を獲得する",
+      "implementation_status": "planned",
+      "connection_status": "partial",
+      "verification": "unverified",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Character/PlayerProgression3D.cs",
+          "symbol": "PlayerProgression3D.OnDeathResolved",
+          "kind": "event"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Enemy/DropTable.cs",
+          "symbol": "DropTableEvaluator.Evaluate",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/AI/Enemy/LootRewardDistributor.cs",
+          "symbol": "LootRewardDistributor.Distribute",
+          "kind": "output"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Economy/CurrencyManager.cs",
+          "symbol": "CurrencyManager.Add",
+          "kind": "write"
+        }
+      ],
+      "tests": [],
+      "notes": "既存の撃破通知から、敵ごとに設定されたテーブルに従ってアイテムを出現させ、ショップと共通の通貨残高へ加算する。出現した品は ExpeditionItems_WorldAcquisition3D の経路で拾う。実際の撃破での通貨・アイテム獲得と抽選に外れた場合を確認する。同じ個体の報酬と既存の経験値加算が重複せず、獲得した所持品と通貨が同じスロットで復元されることを確認する。",
+      "verification_hashes": {}
+    }
+  },
+  {
+    "feature": "ExpeditionShop_BuySell3D",
+    "path": {
+      "key": "trade-authored-items-at-a-shop-npc",
+      "title": "店員NPCから購入・売却し、所持品と残高を保存する",
+      "implementation_status": "planned",
+      "connection_status": "partial",
+      "verification": "unverified",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Runtime/Character/NpcInteraction3D.cs",
+          "symbol": "NpcInteraction3D.Interact",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Shop/ShopLogic.cs",
+          "symbol": "ShopLogic.TryBuy",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Shop/ShopLogic.cs",
+          "symbol": "ShopLogic.TrySell",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Inventory/InventoryManager.cs",
+          "symbol": "InventoryManager",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Economy/CurrencyManager.cs",
+          "symbol": "CurrencyManager",
+          "kind": "write"
+        },
+        {
+          "file": "Assets/MyAsset/Core/GameManager/GameManagerCore.cs",
+          "symbol": "GameManagerCore.Saves",
+          "kind": "output"
+        }
+      ],
+      "tests": [],
+      "notes": "店員NPCに商品と価格を設定し、売買画面を既存の取引処理・所持品・共通の残高へ接続する。店員とのやり取りから購入・売却を行い、所持金不足や所持品の空き不足では状態を維持することを確かめる。取引後の所持数と残高を保存し、同じスロットで復元する。",
+      "verification_hashes": {}
+    }
+  },
+  {
+    "feature": "ExpeditionWorld_FlagConditions3D",
+    "path": {
+      "key": "wire-combined-story-flags-to-scene-actions",
+      "title": "全体・マップ別の複数フラグでシーンの状態を変える",
+      "implementation_status": "planned",
+      "connection_status": "partial",
+      "verification": "unverified",
+      "steps": [
+        {
+          "file": "Assets/MyAsset/Core/Save/FlagManager.cs",
+          "symbol": "FlagManager.SetGlobalFlag",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Save/FlagManager.cs",
+          "symbol": "FlagManager.SetLocalFlag",
+          "kind": "entry"
+        },
+        {
+          "file": "Assets/MyAsset/Core/Streaming/LevelStreamingOrchestrator.cs",
+          "symbol": "LevelStreamingOrchestrator.AttachFlagManager",
+          "kind": "call"
+        },
+        {
+          "file": "Assets/MyAsset/Runtime/World/ExpeditionEventEntry3D.cs",
+          "symbol": "ExpeditionEventEntry3D",
+          "kind": "read"
+        },
+        {
+          "file": "Assets/MyAsset/Core/World/Gate/GateController.cs",
+          "symbol": "GateStateController.TryOpen",
+          "kind": "output"
+        }
+      ],
+      "tests": [],
+      "notes": "既存の全体・マップ別フラグを再利用し、3Dで区画を移動した時に正しいマップのフラグを扱う。各フラグの真偽をすべて・いずれかで評価し、扉の開閉や敵・宝箱の出現、商品の解放をUnity設定からつなぐ。実シーンで依頼完了とボス撃破の組み合わせ、スロット切替、区画再読込とロード復帰を確認する。扉などの状態は復帰時に反映し、一度きりの報酬の再付与を防ぐ。",
+      "verification_hashes": {}
+    }
+  },
+  {
     "feature": "DamageSystem_StatusEffects",
     "path": {
       "key": "effect-core",
