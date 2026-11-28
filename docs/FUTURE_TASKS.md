@@ -54,6 +54,46 @@ PRレビューや実装中に発生した「今すぐではないが後で対応
 
 ---
 
+## 3D遠征のアイテム・経済・進行条件（2026-11-28）
+
+- [ ] 🟡✓ **アイテム配置と拾得** `ExpeditionItems_WorldAcquisition3D`
+  - **背景** 消耗品の配置・拾得が動いている。探索で装備や魔法を手に入れる経路が必要。
+  - **仕様** アイテムと個数を設定した床置きや宝箱から既存の所持品へ渡す。一度きりの配置は取得済み状態をセーブスロットごとに保存する。
+  - **対象ファイル** `Assets/MyAsset/Runtime/Character/ConsumablePickup3D.cs`、`Assets/MyAsset/Core/Inventory/InventoryManager.cs`
+- [ ] 🟡✓ **敵撃破時のドロップ** `ExpeditionRewards_EnemyDrops3D`
+  - **背景** 撃破時の経験値と既存のドロップ抽選を、アイテム・通貨の獲得経路へつなぐ必要がある。
+  - **仕様** 敵ごとのテーブルを撃破時に一度評価する。アイテムは配置・拾得の仕組みを使い、通貨はショップと共通の残高へ加える。
+  - **対象ファイル** `Assets/MyAsset/Core/AI/Enemy/DropTable.cs`、`Assets/MyAsset/Core/AI/Enemy/LootRewardDistributor.cs`
+- [ ] 🟡✓ **ショップの購入・売却** `ExpeditionShop_BuySell3D`
+  - **背景** コアの売買処理を、店員NPCとプレイヤー向けの売買画面から利用できるようにする。
+  - **仕様** 商品・価格を設定し、既存の所持品と通貨で売買する。残高をセーブスロットごとに保存する。
+  - **対象ファイル** `Assets/MyAsset/Core/Shop/ShopLogic.cs`、`Assets/MyAsset/Core/Economy/CurrencyManager.cs`
+- [ ] 🟡✓ **フラグ条件とシーンの連動** `ExpeditionWorld_FlagConditions3D`
+  - **背景** 全体・マップ別フラグの保存と個別連動がある。マップ別フラグの区画切替と、シーン上で再利用できる条件設定が必要。
+  - **仕様** 複数のフラグを「すべて」「いずれか」で評価し、扉、宝箱、敵の出現や商品の解放をつなぐ。フラグの変更とロード復帰の両方で反映する。
+  - **対象ファイル** `Assets/MyAsset/Core/Save/FlagManager.cs`、`Assets/MyAsset/Core/Streaming/LevelStreamingOrchestrator.cs`
+
+4件の計画と受け入れ条件は [機能DBの登録マニフェスト](../designs/call-paths.json) にある。別の作業コピーでは、リポジトリのルートから以下の手順で復元できる。すでに登録済みの `add` は省いてよい。
+
+```bash
+python tools/feature-db.py init
+python tools/feature-db.py add ExpeditionItems_WorldAcquisition3D --category system
+python tools/feature-db.py add ExpeditionRewards_EnemyDrops3D --category system --depends ExpeditionItems_WorldAcquisition3D
+python tools/feature-db.py add ExpeditionShop_BuySell3D --category system
+python tools/feature-db.py add ExpeditionWorld_FlagConditions3D --category system
+python tools/feature-db.py import-call-paths --file <(python -c '
+import json
+from pathlib import Path
+
+features = {
+    "ExpeditionItems_WorldAcquisition3D", "ExpeditionRewards_EnemyDrops3D",
+    "ExpeditionShop_BuySell3D", "ExpeditionWorld_FlagConditions3D",
+}
+rows = json.loads(Path("designs/call-paths.json").read_text(encoding="utf-8"))
+print(json.dumps([row for row in rows if row["feature"] in features], ensure_ascii=False))
+')
+```
+
 ## 3D化前のデータフロー整合（2026-10-26）
 
 敵・プレイヤー・シスターさんで入力元が異なっても、共通データの生成・反映・参照の契約を揃える。3D化とは分けて一項目ずつ進める。DF-00/01は実装・純ロジック検証済み。DF-02は装備付与フラグ・総重量に加え、攻防・6能力・最大HP/MP/SP/アーマーを共有データへ接続し、DF-05は共通実行側への入力転送を実装済み（Unity上の実行確認は保留）。DF-02の残りは重量上限・持ち方による性能の契約と接続。数式やバランス値が未確定の項目は、既存設定の意味を確認してから実装する。
